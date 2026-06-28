@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  .admin-root {
+    @apply antialiased bg-gray-50 font-admin-sans h-screen w-full overflow-hidden text-slate-900;
+  }
+  .admin-root * {
+    @apply box-border;
+  }
+}
+
+/* Custom scrollbar for admin-root */
+.admin-root ::-webkit-scrollbar        { width: 6px; height: 6px; }
+.admin-root ::-webkit-scrollbar-track  { background: #f1f5f9; }
+.admin-root ::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 999px; }
+.admin-root ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Typing Indicator Dots for admin-root  */
+@keyframes typingBounceAdmin {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+.admin-root .typing-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #94a3b8;
+  border-radius: 50%;
+  animation: typingBounceAdmin 1.4s infinite ease-in-out;
+}
+
+.admin-root .typing-dot-sm {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: typingBounceAdmin 1.4s infinite ease-in-out;
+}
+
+/* Hide scrollbars but allow scrolling */
+.invisible-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.invisible-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
