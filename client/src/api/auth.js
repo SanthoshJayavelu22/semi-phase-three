@@ -48,6 +48,11 @@ export const authService = {
     const encodedToken = encodeURIComponent(token);
     return apiClient.get(`/auth/verify-email/${encodedToken}`);
   },
+
+  /**
+   * Check email verification and user details status
+   */
+  checkStatus: () => apiClient.get('/auth/status'),
 };
 
 export default authService;

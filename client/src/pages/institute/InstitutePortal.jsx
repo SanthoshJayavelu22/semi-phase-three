@@ -627,6 +627,23 @@ const InstitutePortal = () => {
           fetchERPData();
         } else if (currentStep === 'pending_review' || currentStep === 'status') {
           fetchApplication();
+        } else if (currentStep === 'verify_pending') {
+          authService.checkStatus()
+            .then(res => {
+              const data = res.data?.data || res.data || {};
+              if (data.isEmailVerified === true) {
+                setUser(prev => {
+                  const updated = { ...prev, emailVerified: true };
+                  localStorage.setItem('semi_user', JSON.stringify(updated));
+                  return updated;
+                });
+                setSuccessBanner('Email verified successfully!');
+                setCurrentStep('onboarding_form');
+              }
+            })
+            .catch(err => {
+              console.warn('Failed to poll user verification status:', err);
+            });
         }
       }, 5000);
     }
@@ -639,8 +656,26 @@ const InstitutePortal = () => {
   useEffect(() => {
     if (localStorage.getItem('token') || localStorage.getItem('semi_token')) {
       fetchApplication();
+      
+      authService.checkStatus()
+        .then(res => {
+          const data = res.data?.data || res.data || {};
+          if (data.isEmailVerified === true) {
+            setUser(prev => {
+              const updated = { ...prev, emailVerified: true };
+              localStorage.setItem('semi_user', JSON.stringify(updated));
+              return updated;
+            });
+            if (currentStep === 'verify_pending') {
+              setCurrentStep('onboarding_form');
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('Failed to fetch user verification status on load:', err);
+        });
     }
-  }, [fetchApplication]);
+  }, [fetchApplication, currentStep]);
 
   // Fetch ERP data when dashboard is active
   useEffect(() => {
