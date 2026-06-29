@@ -3,10 +3,10 @@ import axios from 'axios';
 export const getBaseURL = () => {
   try {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
-      return import.meta.env.VITE_API_BASE_URL || 'https://semi-phase-three.swiflare.com/api';
+      return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
     }
   } catch (e) {}
-  return 'https://semi-phase-three.swiflare.com/api';
+  return 'http://localhost:5000/api';
 };
 
 export const getUploadUrl = (filename) => {
