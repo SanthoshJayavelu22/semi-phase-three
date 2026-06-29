@@ -16,10 +16,10 @@ export const getUploadUrl = (filename) => {
     return filename;
   }
   
-  const baseUrl = getBaseURL().replace('/api', '');
+  const baseUrl = getBaseURL().replace(/\/api$/, '');
   // ensure clean joining
   const cleanFilename = filename.replace(/\\/g, '/').split('/').pop();
-  return `${baseUrl}/uploads/${cleanFilename}`;
+  return `${baseUrl}/api/uploads/${cleanFilename}`;
 };
 
 const apiClient = axios.create({
