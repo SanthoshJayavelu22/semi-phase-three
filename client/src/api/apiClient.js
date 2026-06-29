@@ -3,10 +3,10 @@ import axios from 'axios';
 export const getBaseURL = () => {
   try {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
-      return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5003/api';
     }
   } catch (e) {}
-  return 'http://localhost:5000/api';
+  return 'http://localhost:5003/api';
 };
 
 export const getUploadUrl = (filename) => {
