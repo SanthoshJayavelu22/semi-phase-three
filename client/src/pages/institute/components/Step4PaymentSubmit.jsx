@@ -260,7 +260,7 @@ const Step4PaymentSubmit = ({
             <div className="bg-slate-50/60 border border-gray-150 rounded-3xl p-6 space-y-6">
               <div className="flex items-center justify-between border-b border-gray-200 pb-4">
                 <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-                  {['card', 'upi', 'netbanking'].map((chan) => (
+                  {['card', 'netbanking'].map((chan) => (
                     <button
                       key={chan}
                       type="button"
@@ -271,7 +271,7 @@ const Step4PaymentSubmit = ({
                           : 'text-gray-500 hover:text-gray-800'
                       }`}
                     >
-                      {chan === 'card' ? 'Credit Card' : chan === 'upi' ? 'UPI / QR' : 'Net Banking'}
+                      {chan === 'card' ? 'Credit Card' : 'Net Banking'}
                     </button>
                   ))}
                 </div>
@@ -386,78 +386,6 @@ const Step4PaymentSubmit = ({
                       ) : (
                         <>
                           Pay ₹2,50,000 Instantly
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* UPI ONLINE OPTION */}
-              {onlineChannel === 'upi' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  {/* Visual QR Code Simulator */}
-                  <div className="bg-white border border-gray-200/80 rounded-2xl p-6 text-center space-y-4 shadow-sm w-full max-w-[260px] mx-auto select-none">
-                    <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest block">SEMI Scan & Pay QR</span>
-                    
-                    {/* Simulated visual QR structure */}
-                    <div className="w-40 h-40 bg-gray-50 border border-gray-150 rounded-xl mx-auto flex items-center justify-center relative p-3">
-                      {/* Dynamic visual grid to mock QR code */}
-                      <div className="w-full h-full border-4 border-dashed border-blue-200 rounded-lg flex flex-col justify-between p-2">
-                        <div className="flex justify-between">
-                          <span className="w-6 h-6 border-4 border-slate-800 bg-slate-800"></span>
-                          <span className="w-6 h-6 border-4 border-slate-800 bg-slate-800"></span>
-                        </div>
-                        <div className="w-12 h-12 bg-blue-600 text-white font-black rounded-lg text-[9px] flex items-center justify-center mx-auto shadow-sm select-none">
-                          SEMI
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="w-6 h-6 border-4 border-slate-800 bg-slate-800"></span>
-                          <span className="w-6 h-6 border border-slate-800 p-0.5"><span className="w-full h-full bg-slate-800 block"></span></span>
-                        </div>
-                      </div>
-                      <div className="absolute inset-0 bg-blue-900/5 hover:bg-transparent transition-colors rounded-xl"></div>
-                    </div>
-                    
-                    <div>
-                      <span className="text-[11px] font-black text-gray-800 block">Amount: ₹2,50,000.00</span>
-                      <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold mt-0.5 block">Expires in 04:59</span>
-                    </div>
-                  </div>
-
-                  {/* UPI Inputs Form */}
-                  <form onSubmit={handleOnlinePaymentSimulated} className="space-y-4">
-                    <div className="space-y-2.5">
-                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 text-[10px] text-blue-900 leading-relaxed font-semibold">
-                        Scan the dynamic QR code on the left with any UPI app (BHIM, Google Pay, PhonePe, Paytm) to complete, or enter your UPI ID below to request a simulated collect request.
-                      </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-black text-gray-400 mb-1.5 font-sans">Institutional UPI Virtual Address (VPA)</label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. college@sbi"
-                          value={upiId}
-                          onChange={(e) => setUpiId(e.target.value)}
-                          className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-blue-500 transition-all text-left"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={offlineVerifying}
-                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md hover:shadow-blue-500/20 active:scale-[0.99] transition-all text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5"
-                    >
-                      {offlineVerifying ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                          Verifying UPI Collect Request...
-                        </>
-                      ) : (
-                        <>
-                          Confirm & Verify QR/UPI Payment
                           <ArrowRight className="w-3.5 h-3.5" />
                         </>
                       )}
