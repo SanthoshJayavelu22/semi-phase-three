@@ -134,32 +134,35 @@ const InstitutePortal = () => {
   });
 
   // Onboarding Application form inputs
-  const [appForm, setAppForm] = useState({
-    orgName: '',
-    constitutionType: 'University',
-    instituteAddress: '',
-    registeredOfficeAddress: '',
-    phoneNumber: '',
-    emailAddress: '',
-    commencementDate: '',
-    seatsRequested: '5',
-    officePhone: '',
-    website: '',
-    headName: '',
-    headDesignation: '',
-    hodName: '',
-    bedCount: '',
-    physicianAvailability: 'Yes',
-    physicianExperience: '',
-    courseDirectorEMQualified: 'Yes',
-    emFacultyCount: '',
-    teachingSpace: 'Yes',
-    nabhStatus: 'Yes',
-    paymentBankName: '',
-    paymentTxnNo: '',
-    paymentTxnDate: '',
-    authorizedRepName: '',
-    authorizedRepDesignation: 'Course Director'
+  const [appForm, setAppForm] = useState(() => {
+    const regEmail = localStorage.getItem('semi_registered_email') || '';
+    return {
+      orgName: '',
+      constitutionType: 'University',
+      instituteAddress: '',
+      registeredOfficeAddress: '',
+      phoneNumber: '',
+      emailAddress: regEmail,
+      commencementDate: '',
+      seatsRequested: '5',
+      officePhone: '',
+      website: '',
+      headName: '',
+      headDesignation: '',
+      hodName: '',
+      bedCount: '',
+      physicianAvailability: 'Yes',
+      physicianExperience: '',
+      courseDirectorEMQualified: 'Yes',
+      emFacultyCount: '',
+      teachingSpace: 'Yes',
+      nabhStatus: 'Yes',
+      paymentBankName: '',
+      paymentTxnNo: '',
+      paymentTxnDate: '',
+      authorizedRepName: '',
+      authorizedRepDesignation: 'Course Director'
+    };
   });
 
   // Document upload state (mock file names/presence)
@@ -418,7 +421,7 @@ const InstitutePortal = () => {
           instituteAddress: app.instituteAddress || '',
           registeredOfficeAddress: app.registeredOfficeAddress || '',
           phoneNumber: app.phoneNumber || '',
-          emailAddress: app.emailAddress || '',
+          emailAddress: app.emailAddress || localStorage.getItem('semi_registered_email') || '',
           commencementDate: app.commencementDate ? app.commencementDate.split('T')[0] : '',
           seatsRequested: app.seatsRequested?.toString() || '5',
           officePhone: app.officePhone || '',
@@ -575,6 +578,10 @@ const InstitutePortal = () => {
 
     if (storedAppData && verified) {
       const parsedData = JSON.parse(storedAppData);
+      const registeredEmail = localStorage.getItem('semi_registered_email');
+      if (registeredEmail && !parsedData.form.emailAddress) {
+        parsedData.form.emailAddress = registeredEmail;
+      }
       setAppForm(prev => ({ ...prev, ...parsedData.form }));
       if (parsedData.form?.orgName) {
         setUser(prev => {
@@ -916,6 +923,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       if (userRefreshToken) {
         localStorage.setItem('refreshToken', userRefreshToken);
       }
+      localStorage.setItem('semi_registered_email', regForm.email);
 
       const freshForm = {
         orgName: regForm.instituteName,
@@ -990,6 +998,11 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       setErrorBanner('Please enter your email and password.');
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(loginForm.email)) {
+      setErrorBanner('Invalid email format. Please enter a valid email address.');
+      return;
+    }
 
     try {
       const response = await authService.login({
@@ -1019,6 +1032,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
       setUser(parsedUser);
       localStorage.setItem('semi_user', JSON.stringify(parsedUser));
+      localStorage.setItem('semi_registered_email', parsedUser.email);
 
       await fetchApplication();
 
