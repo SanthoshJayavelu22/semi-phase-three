@@ -9,7 +9,8 @@ const ApplicationStatusPending = ({
   loadApplicationFromStorage,
   saveToLocalStorage,
   setApplicationRecord,
-  setCurrentStep
+  setCurrentStep,
+  handleLogout
 }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   // Sync Status listener
@@ -157,8 +158,12 @@ const ApplicationStatusPending = ({
           confirmText="Logout"
           onConfirm={() => {
             setConfirmOpen(false);
-            localStorage.removeItem('semi_user');
-            setCurrentStep('welcome');
+            if (handleLogout) {
+              handleLogout();
+            } else {
+              localStorage.clear();
+              setCurrentStep('login');
+            }
           }}
           onCancel={() => setConfirmOpen(false)}
         />

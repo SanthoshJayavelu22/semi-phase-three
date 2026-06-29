@@ -2008,6 +2008,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             saveToLocalStorage={saveToLocalStorage}
             setApplicationRecord={setApplicationRecord}
             setCurrentStep={setCurrentStep}
+            handleLogout={handleLogout}
           />
         )}
 
