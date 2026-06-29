@@ -67,7 +67,7 @@ const Step1GeneralInfo = ({ appForm, setAppForm }) => {
           <input
             type="tel"
             required
-            placeholder="e.g. +91 44 2233 4455"
+            placeholder="e.g. 44 2233 4455"
             value={appForm.phoneNumber}
             onChange={(e) => setAppForm({...appForm, phoneNumber: e.target.value})}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-350 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-sm font-bold"

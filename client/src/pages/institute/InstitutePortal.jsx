@@ -800,9 +800,9 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       if (!appForm.instituteAddress) return 'Institution Address is required.';
       if (!appForm.registeredOfficeAddress) return 'Registered Office Address is required.';
       
-      const phoneRegex = /^\d{10}$/;
+      const phoneRegex = /^\d{6,12}$/;
       if (!appForm.phoneNumber) return 'Phone Number is required.';
-      if (!phoneRegex.test(appForm.phoneNumber.replace(/\D/g, ''))) return 'Phone Number must be a valid 10-digit number.';
+      if (!phoneRegex.test(appForm.phoneNumber.replace(/\D/g, ''))) return 'Phone Number must be a valid 6 to 12-digit phone/landline number.';
       
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!appForm.emailAddress) return 'Email Address is required.';
@@ -812,7 +812,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       if (!appForm.seatsRequested || parseInt(appForm.seatsRequested, 10) <= 0) return 'Valid Number of Seats Requested is required.';
       
       if (!appForm.officePhone) return 'Registered Office Phone Number is required.';
-      if (!phoneRegex.test(appForm.officePhone.replace(/\D/g, ''))) return 'Registered Office Phone Number must be a valid 10-digit number.';
+      if (!phoneRegex.test(appForm.officePhone.replace(/\D/g, ''))) return 'Registered Office Phone Number must be a valid 6 to 12-digit phone/landline number.';
       
       const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
       if (!appForm.website) return 'Institutional Website Address is required.';
