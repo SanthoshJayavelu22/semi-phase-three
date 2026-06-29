@@ -324,12 +324,12 @@ const AcademyInspectorModal = ({
         {/* Modal Bottom Actions bar */}
         {selectedApp.status === 'pending_review' && (
           <div className="bg-slate-50 px-8 py-5 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
-            <button
+            {/* <button
               onClick={handleTriggerInspection}
               className="px-5 py-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-extrabold rounded-xl text-xs uppercase tracking-wider shadow-sm transition-colors"
             >
               Trigger Site Inspection
-            </button>
+            </button> */}
             
             <div className="flex gap-3">
               <button
