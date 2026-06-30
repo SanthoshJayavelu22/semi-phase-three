@@ -15,7 +15,18 @@ const InstituteERPEnrollment = ({
   handleEnrollDocUpload,
   removeEnrollDoc
 }) => {
-  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardStep, setWizardStep] = useState(() => {
+    const saved = localStorage.getItem('semi_enrollment_step');
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 4) return parsed;
+    }
+    return 1;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('semi_enrollment_step', wizardStep);
+  }, [wizardStep]);
   const [localError, setLocalError] = useState(null);
 
   // Local state to track "Is FMG Candidate?" matching screenshot dropdown

@@ -24,7 +24,7 @@ const AcademyVerification = ({
   // Check if student is eligible based on criteria
   const isStudentEligible = (student) => {
     if (!student) return false;
-    return student.attendancePercentage >= 75 && student.thesisApproved;
+    return student.attendancePercentage >= 75 && student.thesisApproved && student.remittedToAcademy;
   };
 
   // List of students that are pending review (not Approved)
@@ -219,12 +219,12 @@ const AcademyVerification = ({
             </div>
 
             {/* Thesis Approval Section */}
-            {activeStudent.documents?.thesisDocumentUrl && (
+            {activeStudent.thesisDocumentUrl && (
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex justify-between items-center">
                 <div>
                   <span className="text-[9px] uppercase font-black text-slate-400 block mb-1">Thesis Document</span>
                   <a 
-                    href={getUploadUrl(activeStudent.documents.thesisDocumentUrl)}
+                    href={getUploadUrl(activeStudent.thesisDocumentUrl)}
                     target="_blank" 
                     rel="noreferrer" 
                     className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-xs"
@@ -293,7 +293,7 @@ const AcademyVerification = ({
                 </div>
                 
                 <div className="flex gap-3 w-full sm:w-auto">
-                  {!isStudentEligible(activeStudent) ? (
+                  {!['Approved', 'Rejected'].includes(activeStudent.status) ? (
                     <>
                       <button
                         onClick={() => setShowRejectionForm(true)}
@@ -309,9 +309,11 @@ const AcademyVerification = ({
                       </button>
                     </>
                   ) : (
-                    <div className="flex items-center gap-2 px-5 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span className="text-[10px] uppercase font-black tracking-wider text-emerald-700">Verified & Certified</span>
+                    <div className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border ${activeStudent.status === 'Approved' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
+                      {activeStudent.status === 'Approved' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      <span className="text-[10px] uppercase font-black tracking-wider">
+                        {activeStudent.status === 'Approved' ? 'Verified & Certified' : 'Eligibility Rejected'}
+                      </span>
                     </div>
                   )}
                 </div>

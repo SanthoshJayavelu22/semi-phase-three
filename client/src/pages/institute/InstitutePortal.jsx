@@ -254,31 +254,45 @@ const InstitutePortal = () => {
   const [feeTransactions, setFeeTransactions] = useState([]);
   const [studentAcademicDetails, setStudentAcademicDetails] = useState([]);
 
-  const [enrollForm, setEnrollForm] = useState({
-    firstName: '',
-    middleName: '',
-    lastName: '',
-    homeAddress: '',
-    contactNumber: '',
-    emailAddress: '',
-    qualification: 'MD Emergency Medicine',
-    passingYear: '2025',
-    universityName: '',
-    medCouncilRegNo: '',
-    stateMedCouncil: '',
-    studentCategory: 'General',
-    serialBatch: 'Batch 2026-A',
-    course: 'MD - General Medicine',
-    batch: 'Batch 2026-A',
-    courseDirector: 'Dr. T.V. Ramakrishnan',
-    paymentMode: 'Online Transfer',
-    utrNumber: '',
-    txnDate: new Date().toISOString().split('T')[0],
-    currentDesignation: 'Resident',
-    lifeMembershipNo: '',
-    mcQualifications: 'MBBS, MD',
-    declarationCheck: false
+  const [enrollForm, setEnrollForm] = useState(() => {
+    const saved = localStorage.getItem('semi_enrollment_form');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved enrollment form', e);
+      }
+    }
+    return {
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      homeAddress: '',
+      contactNumber: '',
+      emailAddress: '',
+      qualification: 'MD Emergency Medicine',
+      passingYear: '2025',
+      universityName: '',
+      medCouncilRegNo: '',
+      stateMedCouncil: '',
+      studentCategory: 'General',
+      serialBatch: 'Batch 2026-A',
+      course: 'MD - General Medicine',
+      batch: 'Batch 2026-A',
+      courseDirector: 'Dr. T.V. Ramakrishnan',
+      paymentMode: 'Online Transfer',
+      utrNumber: '',
+      txnDate: new Date().toISOString().split('T')[0],
+      currentDesignation: 'Resident',
+      lifeMembershipNo: '',
+      mcQualifications: 'MBBS, MD',
+      declarationCheck: false
+    };
   });
+
+  React.useEffect(() => {
+    localStorage.setItem('semi_enrollment_form', JSON.stringify(enrollForm));
+  }, [enrollForm]);
 
   const [enrollDocs, setEnrollDocs] = useState({
     photoDoc: null,

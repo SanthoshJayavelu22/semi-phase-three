@@ -11,6 +11,7 @@ const InstituteERPStudentDetails = ({
   const [selectedStudentId, setSelectedStudentId] = useState(''); // This will be the actual MongoDB _id
   const [studentName, setStudentName] = useState('');
   const [attendance, setAttendance] = useState('');
+  const [studentSearchText, setStudentSearchText] = useState('');
   
   // File upload state
   const [dragActive, setDragActive] = useState(false);
@@ -42,15 +43,19 @@ const InstituteERPStudentDetails = ({
     if (id === '') {
       setStudentName('');
       setAttendance('');
+      setStudentSearchText('');
       return;
     }
     const student = students.find(s => String(s.id) === id || String(s._id) === id);
     if (student) {
       setStudentName(student.fullName || '');
       setAttendance(student.attendancePercentage || '');
+      const idStr = student.enrollmentNo || `STUD00${student.id}`;
+      setStudentSearchText(`${idStr} - ${student.fullName}`);
     } else {
       setStudentName('');
       setAttendance('');
+      setStudentSearchText('');
     }
   };
 
@@ -122,6 +127,7 @@ const InstituteERPStudentDetails = ({
       setSelectedStudentId('');
       setStudentName('');
       setAttendance('');
+      setStudentSearchText('');
       setUploadedFile(null);
 
     } catch (err) {
@@ -205,28 +211,39 @@ const InstituteERPStudentDetails = ({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Student ID Dropdown */}
+              {/* Searchable Student Selection */}
               <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Student ID *</label>
-                <select
-                  value={selectedStudentId}
-                  onChange={(e) => handleStudentChange(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer hover:bg-slate-100/55"
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Search Student ID/Name *</label>
+                <input
+                  list="students-datalist"
+                  placeholder="Type ID or Name to search..."
+                  value={studentSearchText}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setStudentSearchText(val);
+                    const matched = students.find(s => {
+                      const idStr = s.enrollmentNo || `STUD00${s.id}`;
+                      return `${idStr} - ${s.fullName}` === val;
+                    });
+                    if (matched) {
+                      setSelectedStudentId(matched.id || matched._id);
+                      setStudentName(matched.fullName || '');
+                      setAttendance(matched.attendancePercentage || '');
+                    } else {
+                      setSelectedStudentId('');
+                      setStudentName('');
+                      setAttendance('');
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
                   required
-                >
-                  <option value="">Select Enrolled Student...</option>
+                />
+                <datalist id="students-datalist">
                   {students.map(s => {
                     const idStr = s.enrollmentNo || `STUD00${s.id}`;
-                    return (
-                      <option key={s.id || s._id} value={s.id || s._id}>
-                        {idStr} - {s.fullName}
-                      </option>
-                    );
+                    return <option key={s.id || s._id} value={`${idStr} - ${s.fullName}`} />;
                   })}
-                  {students.length === 0 && (
-                    <option value="" disabled>No students found</option>
-                  )}
-                </select>
+                </datalist>
               </div>
 
               {/* Student Name (pre-filled) */}

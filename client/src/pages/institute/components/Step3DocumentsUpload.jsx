@@ -59,14 +59,26 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
                         <span className="text-emerald-600 block mt-0.5">{(uploadedDocs[doc.key].size / 1024).toFixed(1)} KB | Uploaded</span>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setToast({ message: `Audit Preview: File "${uploadedDocs[doc.key].name}" is digitally signed & locked under SHA-256.`, type: 'info' })}
-                      className="text-emerald-700 hover:text-emerald-900 font-extrabold flex items-center gap-1 uppercase text-[9px] tracking-wider"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      View
-                    </button>
+                    <div>
+                      <input
+                        type="file"
+                        id={`change-file-${doc.key}`}
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            handleFileUpload(doc.key, file);
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={`change-file-${doc.key}`}
+                        className="text-emerald-700 hover:text-emerald-900 font-extrabold flex items-center gap-1 uppercase text-[9px] tracking-wider cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Change
+                      </label>
+                    </div>
                   </div>
                 ) : progress > 0 && progress < 100 ? (
                   <div className="mt-3 bg-white border border-gray-150 rounded-xl p-3">

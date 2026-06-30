@@ -351,10 +351,12 @@ export const createBatch = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Course not found under this institute' });
     }
 
-    // Check for duplicate batch
-    const duplicateBatch = await Batch.findOne({ course: course._id, year: validatedData.year });
-    if (duplicateBatch) {
-      return sendError({ req, res, statusCode: 400, message: `Duplicate batch: A batch for the year ${validatedData.year} already exists for this course.` });
+    // Check for duplicate batch by name if provided
+    if (validatedData.name) {
+      const duplicateBatch = await Batch.findOne({ course: course._id, name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') } });
+      if (duplicateBatch) {
+        return sendError({ req, res, statusCode: 400, message: `Duplicate batch: A batch with the name ${validatedData.name} already exists for this course.` });
+      }
     }
 
     // Generate batch name if not provided
@@ -459,15 +461,15 @@ export const updateBatch = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Batch not found or does not belong to your institute' });
     }
 
-    // If updating year, check for duplicates
-    if (validatedData.year) {
+    // If updating name, check for duplicates
+    if (validatedData.name) {
       const duplicateBatch = await Batch.findOne({
         _id: { $ne: batchId },
         course: batch.course,
-        year: validatedData.year,
+        name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') },
       });
       if (duplicateBatch) {
-        return sendError({ req, res, statusCode: 400, message: `A batch for the year ${validatedData.year} already exists for this course.` });
+        return sendError({ req, res, statusCode: 400, message: `A batch with the name ${validatedData.name} already exists for this course.` });
       }
     }
 
