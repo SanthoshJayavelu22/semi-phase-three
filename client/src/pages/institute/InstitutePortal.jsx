@@ -306,19 +306,20 @@ const InstitutePortal = () => {
           id: c._id,
           _id: c._id,
           courseName: c.name,
-          courseCode: c.courseCode || 'EM-01',
+          courseCode: c.courseCode || 'N/A',
           courseType: c.courseType || 'Postgraduate',
           programCategory: c.programCategory || 'Emergency Medicine',
           courseDuration: c.courseDuration || '2',
           durationType: c.durationType || 'Years',
-          totalSubjects: c.totalSubjects || '8',
-          courseFee: c.courseFee || '2,50,000',
-          registrationFee: c.registrationFee || '10,000',
-          examinationFee: c.examinationFee || '15,000',
-          certificationFee: c.certificationFee || '5,000',
-          studentsCount: c.studentsCount || 0,
-          batchesCount: c.batchesCount || 1,
-          status: 'Active'
+          subjects: c.subjects || [],
+          totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
+          courseFee: c.courseFee || '0',
+          registrationFee: c.registrationFee || '0',
+          examinationFee: c.examinationFee || '0',
+          certificationFee: c.certificationFee || '0',
+          studentsCount: c.studentsCount ?? 0,
+          batchesCount: c.batchesCount ?? 0,
+          status: c.status || 'Active'
         }));
         const formattedStr = JSON.stringify(formatted);
         setCourses(prev => JSON.stringify(prev) === formattedStr ? prev : formatted);
@@ -1360,6 +1361,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     try {
       await academicService.createCourse({
         name: courseForm.courseName,
+        courseCode: courseForm.courseCode,
+        courseType: courseForm.courseType,
+        programCategory: courseForm.programCategory,
+        courseDuration: courseForm.courseDuration,
+        durationType: courseForm.durationType,
+        subjects: courseForm.subjects,
+        examinationFee: courseForm.examinationFee,
         description: `${courseForm.courseType} - ${courseForm.programCategory}`
       });
 

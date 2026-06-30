@@ -179,7 +179,19 @@ export const getCourses = async (req: Request, res: Response) => {
       query.institute = institute._id;
     }
     const courses = await Course.find(query).sort({ createdAt: -1 });
-    return sendSuccess({ req, res, message: 'Courses retrieved successfully', data: courses });
+    
+    // Fetch batch and student counts for each course
+    const coursesWithCounts = await Promise.all(courses.map(async (course) => {
+      const batchesCount = await Batch.countDocuments({ course: course._id });
+      const studentsCount = await Student.countDocuments({ course: course._id });
+      return {
+        ...course.toObject(),
+        batchesCount,
+        studentsCount
+      };
+    }));
+
+    return sendSuccess({ req, res, message: 'Courses retrieved successfully', data: coursesWithCounts });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
   }

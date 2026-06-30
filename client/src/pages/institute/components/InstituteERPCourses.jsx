@@ -123,6 +123,7 @@ const InstituteERPCourses = ({
             courseDuration: updatedCourse.courseDuration || editForm.courseDuration,
             durationType: updatedCourse.durationType || editForm.durationType,
             subjects: updatedCourse.subjects || editForm.subjects,
+            totalSubjects: (updatedCourse.subjects || editForm.subjects)?.length || 0,
             examinationFee: updatedCourse.examinationFee || editForm.examinationFee,
             status: updatedCourse.status || editForm.status
           };
