@@ -792,27 +792,31 @@ const InstituteERPCourses = ({
                     {viewingCourse.status || 'Active'}
                   </span>
                 </div>
+
+                {/* Subjects List */}
+                <div className="col-span-2 border-t border-gray-100 pt-4 mt-2">
+                  <span className="block text-[10px] uppercase font-black text-gray-400 mb-2">Subjects List</span>
+                  {viewingCourse.subjects && viewingCourse.subjects.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {viewingCourse.subjects.map((sub, i) => (
+                        <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100/50">
+                          {sub}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-xs italic">No subjects registered.</span>
+                  )}
+                </div>
               </div>
 
               {/* Fee Summary */}
               <div className="border-t border-gray-100 pt-4 mt-2">
                 <h4 className="text-[10px] uppercase font-black text-gray-400 mb-3">Fee Structure</h4>
-                <div className="grid grid-cols-2 gap-3 bg-gray-50 rounded-xl p-4">
-                  <div>
-                    <span className="block text-[9px] uppercase text-gray-400">Course Fee</span>
-                    <span className="text-gray-900 font-bold">{viewingCourse.courseFee}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] uppercase text-gray-400">Registration Fee</span>
-                    <span className="text-gray-900 font-bold">{viewingCourse.registrationFee}</span>
-                  </div>
+                <div className="bg-gray-50 rounded-xl p-4">
                   <div>
                     <span className="block text-[9px] uppercase text-gray-400">Examination Fee</span>
-                    <span className="text-gray-900 font-bold">{viewingCourse.examinationFee}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] uppercase text-gray-400">Certification Fee</span>
-                    <span className="text-gray-900 font-bold">{viewingCourse.certificationFee}</span>
+                    <span className="text-gray-900 font-bold text-sm">{viewingCourse.examinationFee}</span>
                   </div>
                 </div>
               </div>

@@ -21,6 +21,45 @@ const InstituteERPEnrollment = ({
   // Local state to track "Is FMG Candidate?" matching screenshot dropdown
   const [isFmgSelected, setIsFmgSelected] = useState(enrollForm.studentCategory === 'FMG' ? 'Yes' : 'No');
 
+  // Filter batches matching the selected course
+  const filteredBatches = React.useMemo(() => {
+    return batches.filter(b => {
+      const courseNameOfBatch = b.course?.name || b.course?.courseName || b.courseName || '';
+      return courseNameOfBatch.toLowerCase() === (enrollForm.course || '').toLowerCase();
+    });
+  }, [batches, enrollForm.course]);
+
+  // Keep course and batch selection synchronized
+  React.useEffect(() => {
+    let selectedCourse = enrollForm.course;
+    let updated = false;
+
+    if (courses.length > 0 && !enrollForm.course) {
+      selectedCourse = courses[0].courseName;
+      updated = true;
+    }
+
+    const matchingBatches = batches.filter(b => {
+      const cName = b.course?.name || b.course?.courseName || b.courseName || '';
+      return cName.toLowerCase() === (selectedCourse || '').toLowerCase();
+    });
+
+    const isCurrentBatchValid = matchingBatches.some(b => b.name === enrollForm.batch);
+
+    if (!isCurrentBatchValid && matchingBatches.length > 0) {
+      setEnrollForm(prev => ({
+        ...prev,
+        course: selectedCourse,
+        batch: matchingBatches[0].name
+      }));
+    } else if (updated) {
+      setEnrollForm(prev => ({
+        ...prev,
+        course: selectedCourse
+      }));
+    }
+  }, [courses, batches, enrollForm.course, enrollForm.batch, setEnrollForm]);
+
   const handleFmgChange = (val) => {
     setIsFmgSelected(val);
     if (val === 'Yes') {
@@ -472,12 +511,26 @@ const InstituteERPEnrollment = ({
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Fellowship Course *</label>
                   <select
                     value={enrollForm.course}
-                    onChange={(e) => setEnrollForm({...enrollForm, course: e.target.value})}
+                    onChange={(e) => {
+                      const selectedCourseName = e.target.value;
+                      const matchingBatches = batches.filter(b => {
+                        const cName = b.course?.name || b.course?.courseName || b.courseName || '';
+                        return cName.toLowerCase() === selectedCourseName.toLowerCase();
+                      });
+                      setEnrollForm(prev => ({
+                        ...prev,
+                        course: selectedCourseName,
+                        batch: matchingBatches.length > 0 ? matchingBatches[0].name : ''
+                      }));
+                    }}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
                   >
                     {courses.map(c => (
-                      <option key={c.id} value={c.courseName}>{c.courseName}</option>
+                      <option key={c.id || c._id} value={c.courseName}>{c.courseName}</option>
                     ))}
+                    {courses.length === 0 && (
+                      <option value="">No courses available</option>
+                    )}
                   </select>
                 </div>
 
@@ -488,9 +541,12 @@ const InstituteERPEnrollment = ({
                     onChange={(e) => setEnrollForm({...enrollForm, batch: e.target.value})}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
                   >
-                    {batches.map(b => (
-                      <option key={b.id} value={b.name}>{b.name}</option>
+                    {filteredBatches.map(b => (
+                      <option key={b.id || b._id} value={b.name}>{b.name}</option>
                     ))}
+                    {filteredBatches.length === 0 && (
+                      <option value="">No batches available</option>
+                    )}
                   </select>
                 </div>
 

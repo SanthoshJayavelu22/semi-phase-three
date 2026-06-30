@@ -3,6 +3,7 @@ import { Pencil, Trash2, Calendar, Users, PlusCircle, XCircle } from 'lucide-rea
 
 const InstituteERPBatches = ({
   batches = [],
+  courses = [],
   newBatch,
   setNewBatch,
   handleCreateBatch,
@@ -80,6 +81,28 @@ const InstituteERPBatches = ({
           
           <form onSubmit={editingBatch ? onEditSubmit : handleCreateBatch} className="space-y-4">
             <div>
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Select Course *</label>
+              <select
+                required
+                disabled={!!editingBatch}
+                value={editingBatch ? (editingBatch.course?._id || editingBatch.course || '') : (newBatch.courseId || '')}
+                onChange={(e) => {
+                  if (!editingBatch) {
+                    setNewBatch({ ...newBatch, courseId: e.target.value });
+                  }
+                }}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold disabled:opacity-75 disabled:cursor-not-allowed"
+              >
+                <option value="">-- Choose Course --</option>
+                {courses.map(course => (
+                  <option key={course.id || course._id} value={course.id || course._id}>
+                    {course.courseName} ({course.courseCode})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Batch Name *</label>
               <input
                 type="text"
@@ -153,6 +176,7 @@ const InstituteERPBatches = ({
             {batches.map((batch) => {
               const ratio = Math.min(100, Math.floor(((batch.activeFellows || 0) / parseInt(batch.seats || 5, 10)) * 100));
               const isEditingThis = editingBatch && (editingBatch._id === batch._id || editingBatch.id === batch.id);
+              const courseDisplayName = batch.course?.name || batch.course?.courseName || batch.courseName || (typeof batch.course === 'string' ? batch.course : '');
 
               return (
                 <div 
@@ -169,7 +193,12 @@ const InstituteERPBatches = ({
                         BATCH ID: #{String(batch.id || batch._id).substring(0, 8).toUpperCase()}
                       </span>
                       <h4 className="text-base font-black text-gray-800 pt-1.5 leading-tight">{batch.name}</h4>
-                      <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Commencement: {batch.startDate}</span>
+                      {courseDisplayName && (
+                        <span className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-100 block w-fit mt-1.5">
+                          Course: {courseDisplayName}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-gray-500 font-semibold block mt-1">Commencement: {batch.startDate}</span>
                     </div>
 
                     {/* Actions buttons */}

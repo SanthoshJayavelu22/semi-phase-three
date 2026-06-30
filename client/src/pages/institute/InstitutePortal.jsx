@@ -246,7 +246,8 @@ const InstitutePortal = () => {
   const [newBatch, setNewBatch] = useState({
     name: '',
     startDate: '',
-    seats: '5'
+    seats: '5',
+    courseId: ''
   });
 
   const [examApplications, setExamApplications] = useState([]);
@@ -1403,24 +1404,25 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       setErrorBanner('Number of available seats must be greater than zero.');
       return;
     }
+    if (!newBatch.courseId) {
+      setErrorBanner('Please select a course for the batch.');
+      return;
+    }
     
     try {
-      const courseIdVal = courses[0]?._id || courses[0]?.id;
-      
-      if (!courseIdVal) {
-        setErrorBanner('No valid course found to link the batch to. Please create a course first.');
-        return;
-      }
-      
+      const courseIdVal = newBatch.courseId;
       const yearVal = new Date(newBatch.startDate).getFullYear() || 2026;
       
       await academicService.createBatch({
         courseId: courseIdVal,
-        year: yearVal
+        year: yearVal,
+        name: newBatch.name,
+        startDate: newBatch.startDate,
+        seats: seats
       });
 
       await fetchERPData();
-      setNewBatch({ name: '', startDate: '', seats: '5' });
+      setNewBatch({ name: '', startDate: '', seats: '5', courseId: '' });
       setSuccessBanner(`🎉 Batch "${newBatch.name}" created successfully!`);
     } catch (err) {
       console.error('Backend batch creation failed:', err);
@@ -1794,6 +1796,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         return (
           <InstituteERPBatches 
             batches={batches}
+            courses={courses}
             newBatch={newBatch}
             setNewBatch={setNewBatch}
             handleCreateBatch={handleCreateBatch}
