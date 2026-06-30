@@ -177,7 +177,7 @@ const AcademyVerification = ({
                   </span>
                   <div className="flex gap-4 mt-1 text-xs font-bold">
                     <span className={activeStudent.remittedToAcademy ? 'text-emerald-600' : 'text-slate-500'}>
-                      Academy Fee: {activeStudent.remittedToAcademy ? '✓' : '—'}
+                      Academy Fee: {activeStudent.remittedToAcademy ? '✓' : '— (Pending Institute Remittance)'}
                     </span>
                     <span className={activeStudent.attendancePercentage >= 75 ? 'text-emerald-600' : 'text-red-500'}>
                       Attendance: {activeStudent.attendancePercentage}% {activeStudent.attendancePercentage >= 75 ? '✓' : '✗'}
@@ -219,12 +219,12 @@ const AcademyVerification = ({
             </div>
 
             {/* Thesis Approval Section */}
-            {activeStudent.thesisDocumentUrl && (
+            {activeStudent.documents?.thesisDocumentUrl && (
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex justify-between items-center">
                 <div>
                   <span className="text-[9px] uppercase font-black text-slate-400 block mb-1">Thesis Document</span>
                   <a 
-                    href={getUploadUrl(activeStudent.thesisDocumentUrl)}
+                    href={getUploadUrl(activeStudent.documents.thesisDocumentUrl)}
                     target="_blank" 
                     rel="noreferrer" 
                     className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-xs"
