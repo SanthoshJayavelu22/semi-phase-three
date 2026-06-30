@@ -894,12 +894,10 @@ export const listStudents = async (req: Request, res: Response) => {
     }
 
     if (isEligible === 'true') {
-      query.remittedToAcademy = true;
       query.attendancePercentage = { $gte: 75 };
       query.thesisApproved = true;
     } else if (isEligible === 'false') {
       query.$or = [
-        { remittedToAcademy: false },
         { attendancePercentage: { $lt: 75 } },
         { thesisApproved: false },
       ];
@@ -912,7 +910,7 @@ export const listStudents = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 });
 
     const formattedStudents = students.map((student) => {
-      const isStudentEligible = student.remittedToAcademy && student.attendancePercentage >= 75 && student.thesisApproved;
+      const isStudentEligible = student.attendancePercentage >= 75 && student.thesisApproved;
       return {
         ...student.toObject(),
         isEligible: isStudentEligible,
@@ -978,7 +976,7 @@ export const updateAcademicMetrics = async (req: Request, res: Response) => {
 
     await student.save();
 
-    const isStudentEligible = student.remittedToAcademy && student.attendancePercentage >= 75 && student.thesisApproved;
+    const isStudentEligible = student.attendancePercentage >= 75 && student.thesisApproved;
 
     return sendSuccess({
       req,
@@ -1017,11 +1015,11 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
 
     const checklist = {
       feeStatus: {
-        status: student.remittedToAcademy ? 'Paid' : 'Pending',
-        isValid: student.remittedToAcademy,
-        description: student.remittedToAcademy
-          ? 'Remittance payment to academy has been completed.'
-          : 'Fee remittance payment of INR 50,000 to the academy is outstanding.',
+        status: student.documents?.paymentReceiptUrl ? 'Paid' : 'Pending',
+        isValid: !!student.documents?.paymentReceiptUrl,
+        description: student.documents?.paymentReceiptUrl
+          ? 'Exam/Enrollment fee payment has been verified.'
+          : 'Exam fee payment is missing.',
       },
       attendance: {
         value: student.attendancePercentage,
@@ -1114,7 +1112,7 @@ export const getStudentById = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized' });
     }
 
-    const isStudentEligible = student.remittedToAcademy && student.attendancePercentage >= 75 && student.thesisApproved;
+    const isStudentEligible = student.attendancePercentage >= 75 && student.thesisApproved;
     const formattedStudent = {
       ...student.toObject(),
       isEligible: isStudentEligible,
@@ -1209,7 +1207,7 @@ export const updateStudent = async (req: Request, res: Response) => {
 
     await student.save();
 
-    const isStudentEligible = student.remittedToAcademy && student.attendancePercentage >= 75 && student.thesisApproved;
+    const isStudentEligible = student.attendancePercentage >= 75 && student.thesisApproved;
     
     // Fetch updated student with populate
     const updatedStudent = await Student.findById(student._id)

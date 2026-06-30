@@ -24,7 +24,7 @@ const AcademyVerification = ({
   // Check if student is eligible based on criteria
   const isStudentEligible = (student) => {
     if (!student) return false;
-    return student.attendancePercentage >= 75 && student.thesisApproved && student.remittedToAcademy;
+    return student.attendancePercentage >= 75 && student.thesisApproved;
   };
 
   // List of students that are pending review (not Approved)
@@ -176,8 +176,8 @@ const AcademyVerification = ({
                     {isStudentEligible(activeStudent) ? '✅ Student meets all eligibility criteria' : '⚠️ Student does not meet all eligibility criteria'}
                   </span>
                   <div className="flex gap-4 mt-1 text-xs font-bold">
-                    <span className={activeStudent.remittedToAcademy ? 'text-emerald-600' : 'text-slate-500'}>
-                      Academy Fee: {activeStudent.remittedToAcademy ? '✓' : '— (Pending Institute Remittance)'}
+                    <span className={activeStudent.documents?.paymentReceiptUrl ? 'text-emerald-600' : 'text-slate-500'}>
+                      Exam Fee: {activeStudent.documents?.paymentReceiptUrl ? '✓' : '✗'}
                     </span>
                     <span className={activeStudent.attendancePercentage >= 75 ? 'text-emerald-600' : 'text-red-500'}>
                       Attendance: {activeStudent.attendancePercentage}% {activeStudent.attendancePercentage >= 75 ? '✓' : '✗'}
