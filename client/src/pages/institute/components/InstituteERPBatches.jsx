@@ -141,6 +141,7 @@ const InstituteERPBatches = ({
               <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Intake Capacity (Seats) *</label>
               <input
                 type="number"
+                min="1"
                 required
                 placeholder="Intake limit"
                 value={editingBatch ? editForm.seats : newBatch.seats}

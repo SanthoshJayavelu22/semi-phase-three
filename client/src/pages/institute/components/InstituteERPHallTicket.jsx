@@ -21,6 +21,8 @@ const InstituteERPHallTicket = ({
   // State for previewing ticket cards
   const [viewingTickets, setViewingTickets] = useState(null); // Array of ticket objects
   const [viewingBatchInfo, setViewingBatchInfo] = useState(null);
+  
+  const [showDevPopup, setShowDevPopup] = useState(true);
 
   // Initialize selected values
   useEffect(() => {
@@ -159,6 +161,24 @@ const InstituteERPHallTicket = ({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+      
+      {showDevPopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-sm w-full p-6 text-center">
+            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-black text-slate-800 mb-2">Under Development</h3>
+            <p className="text-sm text-slate-500 mb-6">This page is currently under development. Some features may not work as expected.</p>
+            <button
+              onClick={() => setShowDevPopup(false)}
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider w-full cursor-pointer"
+            >
+              Acknowledge
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Messages */}
       {successMsg && (

@@ -4,6 +4,7 @@ export interface IExamApplication extends Document {
   institute: mongoose.Types.ObjectId;
   course: mongoose.Types.ObjectId;
   batch: mongoose.Types.ObjectId;
+  semesterNumber: number;
   students: mongoose.Types.ObjectId[];
   subjects: string[];
 
@@ -45,6 +46,10 @@ const examApplicationSchema: Schema = new Schema(
     batch: {
       type: Schema.Types.ObjectId,
       ref: 'Batch',
+      required: true,
+    },
+    semesterNumber: {
+      type: Number,
       required: true,
     },
     students: [

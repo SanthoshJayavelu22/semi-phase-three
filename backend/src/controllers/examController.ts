@@ -43,6 +43,7 @@ const jsonStringArray = z.preprocess(parseJsonArray, z.array(z.string().min(1)))
 const examApplySchema = z.object({
   courseId:   z.string().min(1, 'Course ID is required'),
   batchId:    z.string().min(1, 'Batch ID is required'),
+  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
   studentIds: z.preprocess(parseJsonArray, z.array(z.string().min(1)).min(1, 'At least one student must be selected')),
   utrNumber:  z.string().optional(),
   subjects:   z.preprocess(parseJsonArray, z.array(z.string().min(1)).min(1, 'At least one subject is required')),
@@ -109,34 +110,42 @@ export const applyForExam = async (req: Request, res: Response) => {
     const FeeRecord = require('../models/feeRecordModel').FeeRecord;
     const feeRecords = await FeeRecord.find({
       student: { $in: validatedData.studentIds },
+      semesterNumber: validatedData.semesterNumber,
       paymentPurpose: 'Examination fee'
     });
     const paidStudentIds = new Set(feeRecords.map((f: any) => f.student.toString()));
 
     // Eligibility check
-    const ineligible = students.filter(s => !(s.attendancePercentage >= 75 && s.thesisApproved && paidStudentIds.has(s._id.toString())));
+    const ineligible = students.filter(s => {
+      const sem = s.semesters.find((sm: any) => sm.semesterNumber === validatedData.semesterNumber);
+      if (!sem) return true; // ineligible if no semester record
+      return !(sem.attendancePercentage >= 75 && sem.thesisApproved && paidStudentIds.has(s._id.toString()));
+    });
+
     if (ineligible.length > 0) {
       return sendError({
         req, res, statusCode: 400,
         message: 'Cannot apply for exam. One or more selected students are ineligible.',
-        errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or exam fee)' })),
+        errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or exam fee) for this semester' })),
       });
     }
 
     // Duplicate check
     const existing = await ExamApplication.findOne({
       batch: batch._id,
+      semesterNumber: validatedData.semesterNumber,
       students: { $in: validatedData.studentIds },
       status: { $in: ['Pending', 'Approved', 'SchedulePublished'] },
     });
     if (existing) {
-      return sendError({ req, res, statusCode: 400, message: 'An exam application already exists for one or more selected students in this batch.' });
+      return sendError({ req, res, statusCode: 400, message: 'An exam application already exists for one or more selected students in this batch and semester.' });
     }
 
     const application = await ExamApplication.create({
       institute: institute._id,
       course: course._id,
       batch: batch._id,
+      semesterNumber: validatedData.semesterNumber,
       students: validatedData.studentIds,
       subjects: validatedData.subjects,
       status: 'Pending',
@@ -235,16 +244,22 @@ export const updateExamApplication = async (req: Request, res: Response) => {
       const FeeRecord = require('../models/feeRecordModel').FeeRecord;
       const feeRecords = await FeeRecord.find({
         student: { $in: validatedData.studentIds },
+        semesterNumber: application.semesterNumber,
         paymentPurpose: 'Examination fee'
       });
       const paidStudentIds = new Set(feeRecords.map((f: any) => f.student.toString()));
 
-      const ineligible = students.filter(s => !(s.attendancePercentage >= 75 && s.thesisApproved && paidStudentIds.has(s._id.toString())));
+      const ineligible = students.filter(s => {
+        const sem = s.semesters.find((sm: any) => sm.semesterNumber === application.semesterNumber);
+        if (!sem) return true;
+        return !(sem.attendancePercentage >= 75 && sem.thesisApproved && paidStudentIds.has(s._id.toString()));
+      });
+
       if (ineligible.length > 0) {
         return sendError({
           req, res, statusCode: 400,
           message: 'One or more updated students are ineligible.',
-          errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or exam fee)' })),
+          errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or exam fee) for this semester' })),
         });
       }
       application.students = validatedData.studentIds.map((id: string) => id as any);

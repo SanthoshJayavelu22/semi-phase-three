@@ -24,7 +24,7 @@ const InstituteERPCourses = ({
     courseDuration: '2',
     durationType: 'Years',
     subjects: [],
-    examinationFee: '1500',
+    examinationFee: '',
     status: 'Active'
   });
   const [isEditLoading, setIsEditLoading] = useState(false);
@@ -56,7 +56,7 @@ const InstituteERPCourses = ({
       courseDuration: course.courseDuration || '2',
       durationType: course.durationType || 'Years',
       subjects: course.subjects || [],
-      examinationFee: course.examinationFee || '15,000',
+      examinationFee: course.examinationFee || '',
       status: course.status || 'Active'
     });
     setEditError(null);
@@ -84,8 +84,15 @@ const InstituteERPCourses = ({
         setIsEditLoading(false);
         return;
       }
-      if (!editForm.examinationFee || isNaN(editForm.examinationFee.replace(/,/g, ''))) {
-        setEditError('Please enter a valid numeric examination fee.');
+      const feeVal = parseFloat(editForm.examinationFee.replace(/,/g, ''));
+      if (!editForm.examinationFee || isNaN(feeVal) || feeVal < 0) {
+        setEditError('Please enter a valid non-negative numeric examination fee.');
+        setIsEditLoading(false);
+        return;
+      }
+      const durationVal = parseFloat(editForm.courseDuration);
+      if (!editForm.courseDuration || isNaN(durationVal) || durationVal <= 0) {
+        setEditError('Please enter a valid positive numeric course duration.');
         setIsEditLoading(false);
         return;
       }
@@ -298,7 +305,8 @@ const InstituteERPCourses = ({
             <div>
               <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Course Duration *</label>
               <input
-                type="text"
+                type="number"
+                min="0"
                 required
                 placeholder="e.g. 3"
                 value={courseForm.courseDuration}
@@ -372,7 +380,8 @@ const InstituteERPCourses = ({
               <div>
                 <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Examination Fee *</label>
                 <input
-                  type="text"
+                  type="number"
+                  min="0"
                   required
                   value={courseForm.examinationFee}
                   onChange={(e) => setCourseForm({...courseForm, examinationFee: e.target.value})}
@@ -599,7 +608,8 @@ const InstituteERPCourses = ({
                 <div>
                   <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-1.5">Course Duration</label>
                   <input
-                    type="text"
+                    type="number"
+                    min="0"
                     value={editForm.courseDuration}
                     onChange={(e) => setEditForm({...editForm, courseDuration: e.target.value})}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
@@ -682,7 +692,8 @@ const InstituteERPCourses = ({
                   <div>
                     <label className="block text-[10px] uppercase font-extrabold tracking-wider text-gray-500 mb-1">Examination Fee</label>
                     <input
-                      type="text"
+                      type="number"
+                      min="0"
                       value={editForm.examinationFee}
                       onChange={(e) => setEditForm({...editForm, examinationFee: e.target.value})}
                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"

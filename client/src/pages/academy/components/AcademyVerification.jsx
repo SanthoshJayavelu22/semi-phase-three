@@ -18,45 +18,67 @@ const AcademyVerification = ({
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
 
+  const [filterInstitute, setFilterInstitute] = useState('');
+  const [filterCourse, setFilterCourse] = useState('');
+  const [filterBatch, setFilterBatch] = useState('');
+
+  const institutes = useMemo(() => [...new Set(students.map(s => s.institute).filter(Boolean))], [students]);
+  const courses = useMemo(() => [...new Set(students.map(s => s.course).filter(Boolean))], [students]);
+  const batches = useMemo(() => [...new Set(students.map(s => s.batch).filter(Boolean))], [students]);
+
   const activeId = selectedStudentId !== undefined && selectedStudentId !== '' ? selectedStudentId : internalSelectedId;
   const setActiveId = setSelectedStudentId !== undefined ? setSelectedStudentId : setInternalSelectedId;
 
-  // Check if student is eligible based on criteria
-  const isStudentEligible = (student) => {
-    if (!student) return false;
-    return student.attendancePercentage >= 75 && student.thesisApproved;
-  };
-
-  // List of students that are pending review (not Approved)
+  // List of student-semester pairs that are pending review
   const pendingStudents = useMemo(() => {
-    return students.filter(s => !isStudentEligible(s));
-  }, [students]);
+    const list = [];
+    students.forEach(s => {
+      if (filterInstitute && s.institute !== filterInstitute) return;
+      if (filterCourse && s.course !== filterCourse) return;
+      if (filterBatch && s.batch !== filterBatch) return;
 
-  // Current selected student
+      if (s.semesters && Array.isArray(s.semesters)) {
+        s.semesters.forEach(sem => {
+          if (sem.eligibilityStatus === 'Pending' || !sem.eligibilityStatus) {
+            list.push({
+              ...s,
+              semesterNumber: sem.semesterNumber,
+              attendancePercentage: sem.attendancePercentage,
+              thesisApproved: sem.thesisApproved,
+              eligibilityStatus: sem.eligibilityStatus || 'Pending'
+            });
+          }
+        });
+      }
+    });
+    return list;
+  }, [students, filterInstitute, filterCourse, filterBatch]);
+
+  // Current selected student-semester
   const activeStudent = useMemo(() => {
-    const found = students.find(s => s.enrollmentNo === activeId);
+    // internalSelectedId is now in format `${enrollmentNo}_${semesterNumber}`
+    const found = pendingStudents.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId);
     if (found) return found;
-    // If no match, fallback to first pending or first student
-    return pendingStudents[0] || students[0] || null;
-  }, [students, activeId, pendingStudents]);
+    return pendingStudents[0] || null;
+  }, [pendingStudents, activeId]);
 
   // Automatically select first pending student if selection is empty or invalid
   React.useEffect(() => {
-    if ((!activeId || !students.find(s => s.enrollmentNo === activeId)) && pendingStudents.length > 0) {
-      setActiveId(pendingStudents[0].enrollmentNo);
+    if ((!activeId || !pendingStudents.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId)) && pendingStudents.length > 0) {
+      setActiveId(`${pendingStudents[0].enrollmentNo}_${pendingStudents[0].semesterNumber}`);
     }
-  }, [pendingStudents, activeId, setActiveId, students]);
+  }, [pendingStudents, activeId, setActiveId]);
 
   const handleApprove = () => {
     if (!activeStudent) return;
     setConfirmConfig({
       title: 'Approve Exam Eligibility',
-      message: `Are you sure you want to APPROVE the exam eligibility for ${activeStudent.fullName}?`,
+      message: `Are you sure you want to APPROVE the exam eligibility for ${activeStudent.fullName} (Semester ${activeStudent.semesterNumber})?`,
       type: 'success',
       confirmText: 'Yes, Approve',
       onConfirm: () => {
         setConfirmConfig(null);
-        onVerifyStudent(activeStudent.enrollmentNo, 'Approved');
+        onVerifyStudent(activeStudent.enrollmentNo, activeStudent.semesterNumber, 'Approved');
         setRejectionNotes('');
         setShowRejectionForm(false);
       }
@@ -70,7 +92,7 @@ const AcademyVerification = ({
       setToast({ message: 'Please enter auditor rejection notes before submitting.', type: 'warning' });
       return;
     }
-    onVerifyStudent(activeStudent.enrollmentNo, 'Rejected', rejectionNotes);
+    onVerifyStudent(activeStudent.enrollmentNo, activeStudent.semesterNumber, 'Rejected', rejectionNotes);
     setRejectionNotes('');
     setShowRejectionForm(false);
   };
@@ -79,6 +101,7 @@ const AcademyVerification = ({
     if (!activeStudent) return;
     try {
       await academicService.updateAcademicMetrics(activeStudent._id || activeStudent.id, {
+        semesterNumber: activeStudent.semesterNumber,
         thesisApproved: true
       });
       setToast({ message: 'Thesis approved successfully.', type: 'success' });
@@ -105,6 +128,34 @@ const AcademyVerification = ({
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+        <select 
+          value={filterInstitute}
+          onChange={(e) => setFilterInstitute(e.target.value)}
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
+        >
+          <option value="">All Institutes</option>
+          {institutes.map(inst => <option key={inst} value={inst}>{inst}</option>)}
+        </select>
+        <select 
+          value={filterCourse}
+          onChange={(e) => setFilterCourse(e.target.value)}
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
+        >
+          <option value="">All Courses</option>
+          {courses.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select 
+          value={filterBatch}
+          onChange={(e) => setFilterBatch(e.target.value)}
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
+        >
+          <option value="">All Batches</option>
+          {batches.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+      </div>
+
       {activeStudent ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left panel: List of pending candidates */}
@@ -114,24 +165,24 @@ const AcademyVerification = ({
               {pendingStudents.length > 0 ? (
                 pendingStudents.map(s => (
                   <button
-                    key={s.enrollmentNo}
+                    key={`${s.enrollmentNo}_${s.semesterNumber}`}
                     onClick={() => {
-                      setActiveId(s.enrollmentNo);
+                      setActiveId(`${s.enrollmentNo}_${s.semesterNumber}`);
                       setShowRejectionForm(false);
                       setRejectionNotes('');
                     }}
                     className={`w-full p-4 border rounded-2xl text-left transition-all duration-200 flex justify-between items-center group ${
-                      activeStudent.enrollmentNo === s.enrollmentNo
+                      activeStudent.enrollmentNo === s.enrollmentNo && activeStudent.semesterNumber === s.semesterNumber
                         ? 'border-blue-500 bg-blue-50/50 shadow-sm'
                         : 'border-slate-150 hover:bg-slate-50'
                     }`}
                   >
                     <div className="truncate">
                       <span className="text-xs font-black text-slate-900 block truncate group-hover:text-blue-600 transition-colors">{s.fullName}</span>
-                      <span className="text-[9px] text-slate-400 font-bold block mt-1 truncate">{s.institute}</span>
+                      <span className="text-[9px] text-slate-400 font-bold block mt-1 truncate">{s.institute} | Sem {s.semesterNumber}</span>
                       <span className="font-mono text-[9px] font-extrabold text-slate-500 block mt-0.5">{s.enrollmentNo}</span>
                     </div>
-                    <ChevronRight className={`w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-transform ${activeStudent.enrollmentNo === s.enrollmentNo ? 'translate-x-1' : ''}`} />
+                    <ChevronRight className={`w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-transform ${activeStudent.enrollmentNo === s.enrollmentNo && activeStudent.semesterNumber === s.semesterNumber ? 'translate-x-1' : ''}`} />
                   </button>
                 ))
               ) : (
@@ -147,7 +198,7 @@ const AcademyVerification = ({
           <div className="lg:col-span-2 bg-white border border-gray-200 rounded-3xl p-8 shadow-sm space-y-6">
             <div className="border-b border-gray-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
-                <span className="text-[9px] uppercase font-black tracking-widest text-blue-600 bg-blue-50 border border-blue-200/50 px-2 py-0.5 rounded-md">Auditing Candidate</span>
+                <span className="text-[9px] uppercase font-black tracking-widest text-blue-600 bg-blue-50 border border-blue-200/50 px-2 py-0.5 rounded-md">Auditing Candidate (Sem {activeStudent.semesterNumber})</span>
                 <h3 className="text-lg font-black text-slate-900 mt-2">{activeStudent.fullName}</h3>
                 <span className="text-[10px] text-slate-400 font-semibold">{activeStudent.course} | {activeStudent.batch}</span>
               </div>
@@ -159,28 +210,25 @@ const AcademyVerification = ({
 
             {/* Eligibility Status Display */}
             <div className={`p-4 rounded-2xl border ${
-              isStudentEligible(activeStudent) 
+              activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved
                 ? 'bg-emerald-50 border-emerald-200' 
                 : 'bg-amber-50 border-amber-200'
             }`}>
               <div className="flex items-center gap-3">
-                {isStudentEligible(activeStudent) ? (
+                {activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved ? (
                   <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                 ) : (
                   <XCircle className="w-6 h-6 text-amber-600" />
                 )}
                 <div>
                   <span className={`font-black text-sm ${
-                    isStudentEligible(activeStudent) ? 'text-emerald-800' : 'text-amber-800'
+                    activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved ? 'text-emerald-800' : 'text-amber-800'
                   }`}>
-                    {isStudentEligible(activeStudent) ? '✅ Student meets all eligibility criteria' : '⚠️ Student does not meet all eligibility criteria'}
+                    {activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved ? '✅ Student meets all eligibility criteria' : '⚠️ Student does not meet all eligibility criteria'}
                   </span>
                   <div className="flex gap-4 mt-1 text-xs font-bold">
-                    <span className={activeStudent.documents?.paymentReceiptUrl ? 'text-emerald-600' : 'text-slate-500'}>
-                      Exam Fee: {activeStudent.documents?.paymentReceiptUrl ? '✓' : '✗'}
-                    </span>
                     <span className={activeStudent.attendancePercentage >= 75 ? 'text-emerald-600' : 'text-red-500'}>
-                      Attendance: {activeStudent.attendancePercentage}% {activeStudent.attendancePercentage >= 75 ? '✓' : '✗'}
+                      Attendance: {activeStudent.attendancePercentage || 0}% {activeStudent.attendancePercentage >= 75 ? '✓' : '✗'}
                     </span>
                     <span className={activeStudent.thesisApproved ? 'text-emerald-600' : 'text-red-500'}>
                       Thesis: {activeStudent.thesisApproved ? '✓' : '✗'}
@@ -217,8 +265,6 @@ const AcademyVerification = ({
                 </span>
               </div>
             </div>
-
-            {/* Thesis Approval Section */}
             {activeStudent.documents?.thesisDocumentUrl && (
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex justify-between items-center">
                 <div>

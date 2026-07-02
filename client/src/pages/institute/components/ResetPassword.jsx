@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, ArrowLeft, KeyRound, RefreshCw } from 'lucide-react';
+import { Lock, ArrowLeft, KeyRound, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import authService from '../../../api/auth';
 
 const ResetPassword = ({ setCurrentStep, setErrorBanner, setSuccessBanner }) => {
@@ -7,6 +7,8 @@ const ResetPassword = ({ setCurrentStep, setErrorBanner, setSuccessBanner }) => 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -78,13 +80,20 @@ const ResetPassword = ({ setCurrentStep, setErrorBanner, setSuccessBanner }) => 
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
-              type="password"
+              type={showNewPassword ? "text" : "password"}
               required
               placeholder="Enter new passcode"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm"
+              className="w-full pl-12 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm"
             />
+            <button
+              type="button"
+              onClick={() => setShowNewPassword(!showNewPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
           </div>
         </div>
 
@@ -93,13 +102,20 @@ const ResetPassword = ({ setCurrentStep, setErrorBanner, setSuccessBanner }) => 
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               required
               placeholder="Confirm new passcode"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm"
+              className="w-full pl-12 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm"
             />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
           </div>
         </div>
 

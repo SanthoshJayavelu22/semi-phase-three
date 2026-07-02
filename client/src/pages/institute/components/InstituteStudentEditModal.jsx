@@ -37,7 +37,7 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
         fullName: student.fullName || '',
         email: student.email || '',
         phone: student.phone || student.contactNumber || '',
-        qualification: student.qualification || 'MD Emergency Medicine',
+        qualification: student.qualification || '',
         graduationYear: student.graduationYear || student.yearOfPassing || '',
         enrollmentNo: student.enrollmentNo || student.enrollmentId || '',
         admissionDate: student.admissionDate || (student.createdAt ? student.createdAt.split('T')[0] : ''),
@@ -68,6 +68,10 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
     const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(formData.phone.replace(/\D/g, ''))) {
       setError('Phone Number must be a valid 10-digit number.');
+      return;
+    }
+    if (formData.phone.includes('-')) {
+      setError('Contact Number cannot be negative.');
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

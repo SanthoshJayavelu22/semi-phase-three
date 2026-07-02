@@ -26,12 +26,16 @@ export interface IStudent extends Document {
     fmgeResultCopyUrl?: string;
     paymentReceiptUrl: string;
     semiMembershipFormUrl: string;
-    thesisDocumentUrl?: string;
   };
   remittedToAcademy: boolean;
   remittanceRecord?: mongoose.Types.ObjectId;
-  attendancePercentage: number;
-  thesisApproved: boolean;
+  semesters: {
+    semesterNumber: number;
+    attendancePercentage: number;
+    thesisDocumentUrl?: string;
+    thesisApproved: boolean;
+    eligibilityStatus: 'Pending' | 'Approved' | 'Rejected';
+  }[];
 }
 
 const studentSchema: Schema = new Schema(
@@ -122,21 +126,8 @@ const studentSchema: Schema = new Schema(
       fmgeResultCopyUrl: { type: String },
       paymentReceiptUrl: { type: String, required: true },
       semiMembershipFormUrl: { type: String, required: true },
-      thesisDocumentUrl: { type: String },
     },
     remittedToAcademy: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-    attendancePercentage: {
-      type: Number,
-      required: true,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
-    thesisApproved: {
       type: Boolean,
       required: true,
       default: false,
@@ -145,6 +136,19 @@ const studentSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Remittance',
     },
+    semesters: [
+      {
+        semesterNumber: { type: Number, required: true },
+        attendancePercentage: { type: Number, required: true, default: 0, min: 0, max: 100 },
+        thesisDocumentUrl: { type: String },
+        thesisApproved: { type: Boolean, required: true, default: false },
+        eligibilityStatus: { 
+          type: String, 
+          enum: ['Pending', 'Approved', 'Rejected'], 
+          default: 'Pending' 
+        },
+      }
+    ],
   },
   {
     timestamps: true,

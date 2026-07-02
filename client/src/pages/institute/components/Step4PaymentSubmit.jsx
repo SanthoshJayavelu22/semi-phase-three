@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Eye, FileCheck, RefreshCw, CheckCircle2, ShieldCheck, 
+  Eye, EyeOff, FileCheck, RefreshCw, CheckCircle2, ShieldCheck, 
   CreditCard, Landmark, Copy, Check, UploadCloud, ArrowRight 
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
@@ -22,6 +22,7 @@ const Step4PaymentSubmit = ({
   // Local error state
   const [localError, setLocalError] = useState(null);
   const [toast, setToast] = useState(null);
+  const [showCvv, setShowCvv] = useState(false);
   
   // Payment methods: 'online' or 'offline'
   const [paymentMethod, setPaymentMethod] = useState('online');
@@ -360,15 +361,24 @@ const Step4PaymentSubmit = ({
                         </div>
                         <div>
                           <label className="block text-[10px] uppercase font-black text-gray-400 mb-1.5">CVV / CVN</label>
-                          <input
-                            type="password"
-                            required
-                            maxLength="3"
-                            placeholder="***"
-                            value={cardForm.cvv}
-                            onChange={(e) => setCardForm({ ...cardForm, cvv: e.target.value.replace(/\D/g, '') })}
-                            className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:border-blue-500 transition-all"
-                          />
+                          <div className="relative">
+                            <input
+                              type={showCvv ? "text" : "password"}
+                              required
+                              maxLength="3"
+                              placeholder="***"
+                              value={cardForm.cvv}
+                              onChange={(e) => setCardForm({ ...cardForm, cvv: e.target.value.replace(/\D/g, '') })}
+                              className="w-full px-3.5 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:border-blue-500 transition-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowCvv(!showCvv)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                            >
+                              {showCvv ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -138,30 +138,30 @@ const InstitutePortal = () => {
     const regEmail = localStorage.getItem('semi_registered_email') || '';
     return {
       orgName: '',
-      constitutionType: 'University',
+      constitutionType: '',
       instituteAddress: '',
       registeredOfficeAddress: '',
       phoneNumber: '',
       emailAddress: regEmail,
       commencementDate: '',
-      seatsRequested: '5',
+      seatsRequested: '',
       officePhone: '',
       website: '',
       headName: '',
       headDesignation: '',
       hodName: '',
       bedCount: '',
-      physicianAvailability: 'Yes',
+      physicianAvailability: '',
       physicianExperience: '',
-      courseDirectorEMQualified: 'Yes',
+      courseDirectorEMQualified: '',
       emFacultyCount: '',
-      teachingSpace: 'Yes',
-      nabhStatus: 'Yes',
+      teachingSpace: '',
+      nabhStatus: '',
       paymentBankName: '',
       paymentTxnNo: '',
       paymentTxnDate: '',
       authorizedRepName: '',
-      authorizedRepDesignation: 'Course Director'
+      authorizedRepDesignation: ''
     };
   });
 
@@ -234,19 +234,19 @@ const InstitutePortal = () => {
   const [courseForm, setCourseForm] = useState({
     courseName: '',
     courseCode: '',
-    courseType: 'Postgraduate',
-    programCategory: 'Emergency Medicine',
-    courseDuration: '2',
-    durationType: 'Years',
+    courseType: '',
+    programCategory: '',
+    courseDuration: '',
+    durationType: '',
     subjects: [],
-    examinationFee: '15,000',
+    examinationFee: '',
   });
 
   const [batches, setBatches] = useState([]);
   const [newBatch, setNewBatch] = useState({
     name: '',
     startDate: '',
-    seats: '5',
+    seats: '',
     courseId: ''
   });
 
@@ -270,22 +270,22 @@ const InstitutePortal = () => {
       homeAddress: '',
       contactNumber: '',
       emailAddress: '',
-      qualification: 'MD Emergency Medicine',
-      passingYear: '2025',
+      qualification: '',
+      passingYear: '',
       universityName: '',
       medCouncilRegNo: '',
       stateMedCouncil: '',
-      studentCategory: 'General',
-      serialBatch: 'Batch 2026-A',
-      course: 'MD - General Medicine',
-      batch: 'Batch 2026-A',
-      courseDirector: 'Dr. T.V. Ramakrishnan',
-      paymentMode: 'Online Transfer',
+      studentCategory: '',
+      serialBatch: '',
+      course: '',
+      batch: '',
+      courseDirector: '',
+      paymentMode: '',
       utrNumber: '',
       txnDate: new Date().toISOString().split('T')[0],
-      currentDesignation: 'Resident',
+      currentDesignation: '',
       lifeMembershipNo: '',
-      mcQualifications: 'MBBS, MD',
+      mcQualifications: '',
       declarationCheck: false
     };
   });
@@ -1368,8 +1368,14 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       setErrorBanner('Please add at least one valid subject.');
       return;
     }
-    if (!courseForm.examinationFee || isNaN(courseForm.examinationFee.replace(/,/g, ''))) {
-      setErrorBanner('Please enter a valid numeric examination fee.');
+    const feeVal = parseFloat(courseForm.examinationFee.replace(/,/g, ''));
+    if (!courseForm.examinationFee || isNaN(feeVal) || feeVal < 0) {
+      setErrorBanner('Please enter a valid non-negative numeric examination fee.');
+      return;
+    }
+    const durationVal = parseFloat(courseForm.courseDuration);
+    if (!courseForm.courseDuration || isNaN(durationVal) || durationVal <= 0) {
+      setErrorBanner('Please enter a valid positive numeric course duration.');
       return;
     }
 
@@ -1392,12 +1398,12 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       setCourseForm({
         courseName: '',
         courseCode: '',
-        courseType: 'Postgraduate',
-        programCategory: 'Emergency Medicine',
-        courseDuration: '2',
-        durationType: 'Years',
+        courseType: '',
+        programCategory: '',
+        courseDuration: '',
+        durationType: '',
         subjects: [],
-        examinationFee: '15,000'
+        examinationFee: ''
       });
     } catch (err) {
       console.error('Backend course creation failed:', err);
@@ -1436,7 +1442,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       });
 
       await fetchERPData();
-      setNewBatch({ name: '', startDate: '', seats: '5', courseId: '' });
+      setNewBatch({ name: '', startDate: '', seats: '', courseId: '' });
       setSuccessBanner(`🎉 Batch "${newBatch.name}" created successfully!`);
     } catch (err) {
       console.error('Backend batch creation failed:', err);

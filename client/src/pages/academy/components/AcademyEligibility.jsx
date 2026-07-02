@@ -34,7 +34,7 @@ const AcademyEligibility = ({
       const matchSearch = 
         (app.institute?.orgName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (app.course?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (app.batch?.year ? `Batch ${app.batch.year}` : app.batch?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+        (app.semesterNumber ? `Semester ${app.semesterNumber}` : '').toLowerCase().includes(searchQuery.toLowerCase());
       
       const appStatus = app.status || 'Pending';
       const matchFilter = statusFilter === 'All' || appStatus === statusFilter;
@@ -209,7 +209,7 @@ const AcademyEligibility = ({
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest w-12 text-center">#</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Institute</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Course</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Batch</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Semester</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Students</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Exam Date</th>
@@ -231,7 +231,7 @@ const AcademyEligibility = ({
                       </td>
                       <td className="px-6 py-4 font-extrabold text-slate-900">{app.institute?.orgName || 'N/A'}</td>
                       <td className="px-6 py-4 text-slate-500 font-semibold">{app.course?.name || 'MBBS'}</td>
-                      <td className="px-6 py-4 font-extrabold text-slate-900">{app.batch?.year ? `Batch ${app.batch.year}` : app.batch?.name || 'Batch'}</td>
+                      <td className="px-6 py-4 font-extrabold text-slate-900">{app.semesterNumber ? `Semester ${app.semesterNumber}` : 'N/A'}</td>
                       <td className="px-6 py-4 text-center font-extrabold text-slate-900">{app.students?.length || 0}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] uppercase tracking-wider font-black border ${
@@ -341,8 +341,8 @@ const AcademyEligibility = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2.5">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Batch Year</span>
-                    <span className="text-slate-800 font-bold block mt-0.5">{reviewingApp.batch?.year ? `Batch ${reviewingApp.batch.year}` : reviewingApp.batch?.name || 'Batch'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
+                    <span className="text-slate-800 font-bold block mt-0.5">{reviewingApp.semesterNumber ? `Semester ${reviewingApp.semesterNumber}` : 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrolled Candidates</span>
@@ -497,8 +497,8 @@ const AcademyEligibility = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Batch</span>
-                    <span className="text-slate-800 font-bold">{publishingApp.batch?.year ? `Batch ${publishingApp.batch.year}` : publishingApp.batch?.name || 'Batch'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
+                    <span className="text-slate-800 font-bold">{publishingApp.semesterNumber ? `Semester ${publishingApp.semesterNumber}` : 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Students</span>

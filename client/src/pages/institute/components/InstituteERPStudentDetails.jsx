@@ -12,6 +12,8 @@ const InstituteERPStudentDetails = ({
   const [studentName, setStudentName] = useState('');
   const [attendance, setAttendance] = useState('');
   const [studentSearchText, setStudentSearchText] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
+  const [availableSemesters, setAvailableSemesters] = useState([]);
   
   // File upload state
   const [dragActive, setDragActive] = useState(false);
@@ -44,18 +46,39 @@ const InstituteERPStudentDetails = ({
       setStudentName('');
       setAttendance('');
       setStudentSearchText('');
+      setAvailableSemesters([]);
+      setSelectedSemester('');
       return;
     }
     const student = students.find(s => String(s.id) === id || String(s._id) === id);
     if (student) {
       setStudentName(student.fullName || '');
-      setAttendance(student.attendancePercentage || '');
       const idStr = student.enrollmentNo || `STUD00${student.id}`;
       setStudentSearchText(`${idStr} - ${student.fullName}`);
+      setAvailableSemesters(student.semesters || []);
+      if (student.semesters && student.semesters.length > 0) {
+        setSelectedSemester(student.semesters[0].semesterNumber);
+        setAttendance(student.semesters[0].attendancePercentage || '');
+      } else {
+        setSelectedSemester('');
+        setAttendance('');
+      }
     } else {
       setStudentName('');
       setAttendance('');
       setStudentSearchText('');
+      setAvailableSemesters([]);
+      setSelectedSemester('');
+    }
+  };
+
+  const handleSemesterChange = (semNum) => {
+    setSelectedSemester(semNum);
+    const student = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
+    if (student && student.semesters) {
+      const sem = student.semesters.find(s => String(s.semesterNumber) === String(semNum));
+      if (sem) setAttendance(sem.attendancePercentage || '');
+      else setAttendance('');
     }
   };
 
@@ -95,8 +118,8 @@ const InstituteERPStudentDetails = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedStudentId || !studentName || !attendance) {
-      setToast({ message: 'Please select a student and enter attendance.', type: 'warning' });
+    if (!selectedStudentId || !studentName || !attendance || !selectedSemester) {
+      setToast({ message: 'Please select a student, semester and enter attendance.', type: 'warning' });
       return;
     }
 
@@ -110,7 +133,10 @@ const InstituteERPStudentDetails = ({
     setErrorMsg(null);
 
     try {
-      const payload = { attendancePercentage: attendanceNum };
+      const payload = { 
+        semesterNumber: parseInt(selectedSemester),
+        attendancePercentage: attendanceNum 
+      };
       if (uploadedFile) {
         payload.thesisDocument = uploadedFile;
       }
@@ -128,6 +154,8 @@ const InstituteERPStudentDetails = ({
       setStudentName('');
       setAttendance('');
       setStudentSearchText('');
+      setAvailableSemesters([]);
+      setSelectedSemester('');
       setUploadedFile(null);
 
     } catch (err) {
@@ -144,12 +172,13 @@ const InstituteERPStudentDetails = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteDetails = async (studentId) => {
-    if (!window.confirm("Are you sure you want to clear this student's attendance and thesis records?")) return;
+  const handleDeleteDetails = async (studentId, semNum) => {
+    if (!window.confirm(`Are you sure you want to clear this student's attendance and thesis records for Semester ${semNum}?`)) return;
     
     setIsSubmitting(true);
     try {
       await academicService.updateAcademicMetrics(studentId, {
+        semesterNumber: semNum,
         clearAttendance: true,
         clearThesis: true,
       });
@@ -257,6 +286,24 @@ const InstituteERPStudentDetails = ({
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none cursor-not-allowed opacity-80"
                 />
               </div>
+
+              {/* Semester Selection */}
+              {availableSemesters.length > 0 && (
+                <div>
+                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Select Semester *</label>
+                  <select
+                    value={selectedSemester}
+                    onChange={(e) => handleSemesterChange(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                    required
+                  >
+                    <option value="">Select Semester</option>
+                    {availableSemesters.map(sem => (
+                      <option key={sem.semesterNumber} value={sem.semesterNumber}>Semester {sem.semesterNumber}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Attendance percentage */}
               <div>
@@ -367,69 +414,71 @@ const InstituteERPStudentDetails = ({
                   {paginatedStudents.map((s, idx) => {
                     const globalIdx = (activePage - 1) * itemsPerPage + idx;
                     const serialNo = String(globalIdx + 1).padStart(2, '0');
-                    const hasThesis = s.documents && s.documents.thesisDocumentUrl;
-                    return (
-                      <tr key={s.id || s._id} className="hover:bg-slate-50/30 transition-colors">
-                        <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
-                        <td className="px-6 py-4 font-mono font-bold text-blue-600">{s.enrollmentNo || `STUD00${s.id}`}</td>
-                        <td className="px-6 py-4">
-                          <span className="font-extrabold text-slate-800">{s.fullName}</span>
-                        </td>
-                        <td className="px-6 py-4 font-mono font-bold text-slate-700">
-                          {s.attendancePercentage !== undefined && s.attendancePercentage !== null ? `${s.attendancePercentage}%` : 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          {hasThesis ? (
-                            <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-green-50 text-green-700 border border-green-100 shadow-sm">
-                              {s.thesisApproved ? 'Approved' : 'Uploaded'}
-                            </span>
-                          ) : (
-                            <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                              Missing
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setViewingDetails(s)}
-                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleEditDetails(s)}
-                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
-                              title="Edit Details"
-                            >
-                              <FileText className="w-4 h-4" />
-                            </button>
-                            {hasThesis && (
-                              <a
-                                href={getDocUrl(s.documents.thesisDocumentUrl)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer inline-flex"
-                                title="Download Thesis File"
-                              >
-                                <Download className="w-4 h-4" />
-                              </a>
+                    return s.semesters && s.semesters.map((sem, sIdx) => {
+                      const hasThesis = sem.thesisDocumentUrl;
+                      return (
+                        <tr key={`${s.id || s._id}-${sem.semesterNumber}`} className="hover:bg-slate-50/30 transition-colors">
+                          <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{sIdx === 0 ? serialNo : ''}</td>
+                          <td className="px-6 py-4 font-mono font-bold text-blue-600">{sIdx === 0 ? (s.enrollmentNo || `STUD00${s.id}`) : ''}</td>
+                          <td className="px-6 py-4">
+                            <span className="font-extrabold text-slate-800">{sIdx === 0 ? s.fullName : `Sem ${sem.semesterNumber}`}</span>
+                          </td>
+                          <td className="px-6 py-4 font-mono font-bold text-slate-700">
+                            {sem.attendancePercentage !== undefined && sem.attendancePercentage !== null ? `${sem.attendancePercentage}%` : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {hasThesis ? (
+                              <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-green-50 text-green-700 border border-green-100 shadow-sm">
+                                {sem.thesisApproved ? 'Approved' : 'Uploaded'}
+                              </span>
+                            ) : (
+                              <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                Missing
+                              </span>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteDetails(s._id || s.id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                              title="Delete Details"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setViewingDetails({ ...s, viewSem: sem })}
+                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleEditDetails(s)}
+                                className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
+                                title="Edit Details"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </button>
+                              {hasThesis && (
+                                <a
+                                  href={getDocUrl(sem.thesisDocumentUrl)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer inline-flex"
+                                  title="Download Thesis File"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDetails(s._id || s.id, sem.semesterNumber)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                title="Delete Details"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    });
                   })}
                   {students.length === 0 && (
                     <tr>
@@ -525,28 +574,28 @@ const InstituteERPStudentDetails = ({
                     <Percent className="w-4 h-4 text-slate-400" />
                     <div>
                       <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Attendance Rate</span>
-                      <span className="text-slate-800 font-bold">{viewingDetails.attendancePercentage !== undefined ? `${viewingDetails.attendancePercentage}%` : 'N/A'}</span>
+                      <span className="text-slate-800 font-bold">{viewingDetails.viewSem?.attendancePercentage !== undefined ? `${viewingDetails.viewSem.attendancePercentage}%` : 'N/A'}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     <div>
                       <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Thesis Approval</span>
-                      <span className="text-emerald-700 font-bold uppercase tracking-wider text-[10px]">{viewingDetails.thesisApproved ? 'Approved' : 'Pending'}</span>
+                      <span className="text-emerald-700 font-bold uppercase tracking-wider text-[10px]">{viewingDetails.viewSem?.thesisApproved ? 'Approved' : 'Pending'}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="border-t border-slate-50 pt-3.5 space-y-1">
                   <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Thesis Document</span>
-                  {viewingDetails.documents && viewingDetails.documents.thesisDocumentUrl ? (
+                  {viewingDetails.viewSem?.thesisDocumentUrl ? (
                     <div className="flex items-center gap-2 bg-slate-50 border border-slate-150 p-3 rounded-xl">
                       <FileText className="w-8 h-8 text-blue-600 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <span className="block text-slate-700 font-bold truncate text-[11px]">{viewingDetails.documents.thesisDocumentUrl.split('/').pop()}</span>
+                        <span className="block text-slate-700 font-bold truncate text-[11px]">{viewingDetails.viewSem.thesisDocumentUrl.split('/').pop()}</span>
                       </div>
                       <a
-                        href={getDocUrl(viewingDetails.documents.thesisDocumentUrl)}
+                        href={getDocUrl(viewingDetails.viewSem.thesisDocumentUrl)}
                         target="_blank"
                         rel="noreferrer"
                         className="p-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-500 hover:text-blue-600 transition-colors shadow-sm inline-flex"

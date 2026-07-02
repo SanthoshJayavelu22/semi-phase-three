@@ -109,6 +109,7 @@ const studentUpdateSchema = z.object({
 });
 
 const feeRecordSchema = z.object({
+  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   paymentMode: z.string().min(1, 'Payment Mode is required'),
   utrNumber: z.string().min(1, 'UTR Number is required'),
@@ -629,6 +630,16 @@ export const addStudent = async (req: Request, res: Response) => {
       }
     }
 
+    const numYears = parseInt(course.courseDuration || '1') || 1;
+    const totalSemesters = course.durationType === 'Years' ? numYears * 2 : 1; 
+    
+    const semesters = Array.from({ length: totalSemesters }, (_, i) => ({
+      semesterNumber: i + 1,
+      attendancePercentage: 0,
+      thesisApproved: false,
+      eligibilityStatus: 'Pending' as const,
+    }));
+
     const student = await Student.create({
       enrollmentId,
       firstName: validatedData.firstName,
@@ -657,6 +668,7 @@ export const addStudent = async (req: Request, res: Response) => {
         semiMembershipFormUrl: getFileUrl(files['semiMembershipForm'][0].path),
       },
       remittedToAcademy: false,
+      semesters,
     });
 
     // Update batch active fellows count
@@ -701,6 +713,7 @@ export const recordStudentFee = async (req: Request, res: Response) => {
 
     const feeRecord = await FeeRecord.create({
       student: student._id,
+      semesterNumber: validatedData.semesterNumber,
       amount: validatedData.amount,
       paymentMode: validatedData.paymentMode,
       utrNumber: validatedData.utrNumber,
@@ -857,6 +870,7 @@ export const recordRemittance = async (req: Request, res: Response) => {
 // ==========================================
 
 const studentMetricsUpdateSchema = z.object({
+  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
   attendancePercentage: z.coerce.number().min(0).max(100, 'Attendance must be between 0 and 100').optional(),
   thesisApproved: z.preprocess(
     (val) => val === 'true' || val === true || val === '1',
@@ -868,7 +882,7 @@ const studentMetricsUpdateSchema = z.object({
 
 export const listStudents = async (req: Request, res: Response) => {
   try {
-    const { courseId, batchId, search, isEligible } = req.query;
+    const { courseId, batchId, search, isEligible, semesterNumber } = req.query;
     const query: any = {};
 
     if (req.user.role === 'institute') {
@@ -893,14 +907,29 @@ export const listStudents = async (req: Request, res: Response) => {
       ];
     }
 
-    if (isEligible === 'true') {
-      query.attendancePercentage = { $gte: 75 };
-      query.thesisApproved = true;
-    } else if (isEligible === 'false') {
-      query.$or = [
-        { attendancePercentage: { $lt: 75 } },
-        { thesisApproved: false },
-      ];
+    // We can't query nested array conditions perfectly with just isEligible if we don't have semesterNumber
+    // but if we do have it:
+    if (semesterNumber) {
+      const semNum = parseInt(semesterNumber as string);
+      if (isEligible === 'true') {
+        query.semesters = {
+          $elemMatch: {
+            semesterNumber: semNum,
+            attendancePercentage: { $gte: 75 },
+            thesisApproved: true
+          }
+        };
+      } else if (isEligible === 'false') {
+        query.semesters = {
+          $elemMatch: {
+            semesterNumber: semNum,
+            $or: [
+              { attendancePercentage: { $lt: 75 } },
+              { thesisApproved: false },
+            ]
+          }
+        };
+      }
     }
 
     const students = await Student.find(query)
@@ -910,7 +939,17 @@ export const listStudents = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 });
 
     const formattedStudents = students.map((student) => {
-      const isStudentEligible = student.attendancePercentage >= 75 && student.thesisApproved;
+      // Find current sem if provided, else use first one or calculate generally
+      let isStudentEligible = false;
+      if (semesterNumber) {
+        const sem = student.semesters.find(s => s.semesterNumber === parseInt(semesterNumber as string));
+        if (sem) {
+          isStudentEligible = sem.attendancePercentage >= 75 && sem.thesisApproved;
+        }
+      } else {
+        // Just general fallback
+        isStudentEligible = student.semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+      }
       return {
         ...student.toObject(),
         isEligible: isStudentEligible,
@@ -947,36 +986,34 @@ export const updateAcademicMetrics = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized' });
     }
 
+    const semesterIndex = student.semesters.findIndex(s => s.semesterNumber === validatedData.semesterNumber);
+    if (semesterIndex === -1) {
+      return sendError({ req, res, statusCode: 404, message: 'Semester not found for this student' });
+    }
+
     if (validatedData.clearAttendance) {
-      student.attendancePercentage = undefined as any; // Or whatever works for mongoose number to clear
-      student.set('attendancePercentage', undefined);
+      student.semesters[semesterIndex].attendancePercentage = 0;
     } else if (validatedData.attendancePercentage !== undefined) {
-      student.attendancePercentage = validatedData.attendancePercentage;
+      student.semesters[semesterIndex].attendancePercentage = validatedData.attendancePercentage;
     }
     
     if (validatedData.clearThesis) {
-      student.thesisApproved = false;
-      student.documents = {
-        ...student.documents,
-        thesisDocumentUrl: '',
-      } as any;
+      student.semesters[semesterIndex].thesisApproved = false;
+      student.semesters[semesterIndex].thesisDocumentUrl = undefined;
     } else if (validatedData.thesisApproved !== undefined) {
-      student.thesisApproved = validatedData.thesisApproved;
+      student.semesters[semesterIndex].thesisApproved = validatedData.thesisApproved;
     }
 
     if (!validatedData.clearThesis && req.files) {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       if (files['thesisDocument'] && files['thesisDocument'].length > 0) {
-        student.documents = {
-          ...student.documents,
-          thesisDocumentUrl: getFileUrl(files['thesisDocument'][0].path),
-        } as any;
+        student.semesters[semesterIndex].thesisDocumentUrl = getFileUrl(files['thesisDocument'][0].path);
       }
     }
 
     await student.save();
 
-    const isStudentEligible = student.attendancePercentage >= 75 && student.thesisApproved;
+    const isStudentEligible = student.semesters[semesterIndex].attendancePercentage >= 75 && student.semesters[semesterIndex].thesisApproved;
 
     return sendSuccess({
       req,
@@ -996,7 +1033,12 @@ export const updateAcademicMetrics = async (req: Request, res: Response) => {
 export const evaluateEligibility = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
+    const { semesterNumber } = req.query;
     const query: any = { _id: studentId };
+
+    if (!semesterNumber) {
+      return sendError({ req, res, statusCode: 400, message: 'Semester Number is required to evaluate eligibility' });
+    }
 
     if (req.user.role === 'institute') {
       const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
@@ -1013,26 +1055,36 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized' });
     }
 
+    const semNum = parseInt(semesterNumber as string);
+    const semesterRecord = student.semesters.find(s => s.semesterNumber === semNum);
+    
+    if (!semesterRecord) {
+      return sendError({ req, res, statusCode: 404, message: 'Semester record not found for this student' });
+    }
+
+    // Check fee record for this student and semester
+    const feeRecord = await FeeRecord.findOne({ student: student._id, semesterNumber: semNum, paymentPurpose: 'Examination fee' });
+
     const checklist = {
       feeStatus: {
-        status: student.documents?.paymentReceiptUrl ? 'Paid' : 'Pending',
-        isValid: !!student.documents?.paymentReceiptUrl,
-        description: student.documents?.paymentReceiptUrl
-          ? 'Exam/Enrollment fee payment has been verified.'
-          : 'Exam fee payment is missing.',
+        status: feeRecord ? 'Paid' : 'Pending',
+        isValid: !!feeRecord,
+        description: feeRecord
+          ? 'Exam fee payment has been verified for this semester.'
+          : 'Exam fee payment is missing for this semester.',
       },
       attendance: {
-        value: student.attendancePercentage,
+        value: semesterRecord.attendancePercentage,
         threshold: 75,
-        isValid: student.attendancePercentage >= 75,
-        description: student.attendancePercentage >= 75
-          ? `Attendance is ${student.attendancePercentage}%, which meets the minimum 75% requirement.`
-          : `Attendance is ${student.attendancePercentage}%, which is below the minimum 75% requirement.`,
+        isValid: semesterRecord.attendancePercentage >= 75,
+        description: semesterRecord.attendancePercentage >= 75
+          ? `Attendance is ${semesterRecord.attendancePercentage}%, which meets the minimum 75% requirement.`
+          : `Attendance is ${semesterRecord.attendancePercentage}%, which is below the minimum 75% requirement.`,
       },
       thesisApproval: {
-        status: student.thesisApproved ? 'Approved' : 'Pending',
-        isValid: student.thesisApproved,
-        description: student.thesisApproved
+        status: semesterRecord.thesisApproved ? 'Approved' : 'Pending',
+        isValid: semesterRecord.thesisApproved,
+        description: semesterRecord.thesisApproved
           ? 'Thesis evaluation has been approved by the board.'
           : 'Thesis submission is pending approval or has not been approved.',
       },
@@ -1093,6 +1145,7 @@ export const getRemittances = async (req: Request, res: Response) => {
 export const getStudentById = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
+    const { semesterNumber } = req.query;
     const query: any = { _id: studentId };
 
     if (req.user.role === 'institute') {
@@ -1112,7 +1165,14 @@ export const getStudentById = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized' });
     }
 
-    const isStudentEligible = student.attendancePercentage >= 75 && student.thesisApproved;
+    let isStudentEligible = false;
+    if (semesterNumber) {
+      const sem = student.semesters.find(s => s.semesterNumber === parseInt(semesterNumber as string));
+      if (sem) {
+        isStudentEligible = sem.attendancePercentage >= 75 && sem.thesisApproved;
+      }
+    }
+
     const formattedStudent = {
       ...student.toObject(),
       isEligible: isStudentEligible,

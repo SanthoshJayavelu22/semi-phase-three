@@ -21,6 +21,8 @@ const fmtDate = (val) => {
 const InstituteERPFees = ({ students = [], courses = [] }) => {
   // ─── Form State ────────────────────────────────────────────────────────────
   const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
+  const [unpaidSemesters, setUnpaidSemesters] = useState([]);
   const [feeType, setFeeType] = useState('Examination fee');
   const [amount, setAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('Online Transfer');
@@ -56,15 +58,44 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   useEffect(() => { fetchFeeRecords(); }, [fetchFeeRecords]);
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
-  // Filter students who haven't paid the exam fee yet
-  const eligibleStudents = students.filter(s => 
-    !feeRecords.some(r => 
-      (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id) && 
-      r.paymentPurpose === 'Examination fee'
-    )
-  );
+  // Filter students who have unpaid semesters
+  const eligibleStudents = students.filter(s => {
+    if (!s.semesters) return false;
+    return s.semesters.some(sem => 
+      !feeRecords.some(r => 
+        (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id) && 
+        r.paymentPurpose === 'Examination fee' && r.semesterNumber === sem.semesterNumber
+      )
+    );
+  });
 
   const selectedStudent = students.find(s => s._id === selectedStudentId || s.id === selectedStudentId);
+
+  useEffect(() => {
+    if (selectedStudentId) {
+      const student = students.find(s => s._id === selectedStudentId || s.id === selectedStudentId);
+      if (student && student.semesters) {
+        const unpaid = student.semesters.filter(sem => 
+          !feeRecords.some(r => 
+            (r.student?._id === student._id || r.student === student._id || r.student?.id === student.id) && 
+            r.paymentPurpose === 'Examination fee' && r.semesterNumber === sem.semesterNumber
+          )
+        );
+        setUnpaidSemesters(unpaid);
+        if (unpaid.length > 0) {
+          setSelectedSemester(unpaid[0].semesterNumber);
+        } else {
+          setSelectedSemester('');
+        }
+      } else {
+        setUnpaidSemesters([]);
+        setSelectedSemester('');
+      }
+    } else {
+      setUnpaidSemesters([]);
+      setSelectedSemester('');
+    }
+  }, [selectedStudentId, feeRecords, students]);
 
   useEffect(() => {
     if (selectedStudent && courses.length > 0) {
@@ -90,13 +121,23 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       setToast({ message: 'Please select a student.', type: 'warning' });
       return;
     }
+    if (!selectedSemester) {
+      setToast({ message: 'Please select a semester.', type: 'warning' });
+      return;
+    }
     if (!receiptFile) {
       setToast({ message: 'Payment Receipt upload is mandatory.', type: 'warning' });
+      return;
+    }
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setToast({ message: 'Amount must be a positive number.', type: 'warning' });
       return;
     }
     try {
       setSubmitting(true);
       await academicService.payStudentFees(selectedStudentId, {
+        semesterNumber: parseInt(selectedSemester),
         amount: parseFloat(amount),
         paymentMode,
         utrNumber: transactionNo,
@@ -107,6 +148,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       setToast({ message: '🎉 Fee payment recorded successfully!', type: 'success' });
       // Reset form
       setSelectedStudentId('');
+      setSelectedSemester('');
       setAmount('');
       setTransactionNo('');
       setReceiptFile(null);
@@ -207,6 +249,22 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                       readOnly
                       className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 focus:outline-none cursor-not-allowed"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Select Semester *</label>
+                    <select
+                      value={selectedSemester}
+                      onChange={(e) => setSelectedSemester(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                      required
+                    >
+                      <option value="">Select Semester...</option>
+                      {unpaidSemesters.map(sem => (
+                        <option key={sem.semesterNumber} value={sem.semesterNumber}>
+                          Semester {sem.semesterNumber}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </>
               )}
@@ -367,7 +425,10 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                         <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
                         <td className="px-6 py-4 font-extrabold text-slate-800">{studentName}</td>
                         <td className="px-6 py-4 font-mono font-bold text-blue-600">{enrollmentId}</td>
-                        <td className="px-6 py-4 font-bold text-slate-700">{rec.paymentPurpose}</td>
+                        <td className="px-6 py-4 font-bold text-slate-700">
+                          {rec.paymentPurpose}
+                          {rec.semesterNumber && <span className="block text-[10px] text-slate-400">Sem {rec.semesterNumber}</span>}
+                        </td>
                         <td className="px-6 py-4 font-mono font-bold text-slate-800">{fmtCurrency(rec.amount)}</td>
                         <td className="px-6 py-4 text-slate-600">{rec.paymentMode}</td>
                         <td className="px-6 py-4 text-slate-500">{fmtDate(rec.paymentDate)}</td>
@@ -493,7 +554,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Fee Purpose</span>
-                    <span className="text-slate-800 font-bold block mt-0.5">{viewingTx.paymentPurpose}</span>
+                    <span className="text-slate-800 font-bold block mt-0.5">{viewingTx.paymentPurpose} {viewingTx.semesterNumber ? `(Sem ${viewingTx.semesterNumber})` : ''}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Payment Mode</span>

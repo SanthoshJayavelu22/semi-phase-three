@@ -135,6 +135,7 @@ const InstituteERPEnrollment = ({
       
       const phoneRegex = /^\d{10}$/;
       if (!enrollForm.contactNumber?.trim()) return 'Contact Number is a mandatory field.';
+      if (enrollForm.contactNumber.includes('-')) return 'Contact Number cannot be negative.';
       if (!phoneRegex.test(enrollForm.contactNumber.replace(/\D/g, ''))) return 'Contact Number must be a valid 10-digit number.';
       
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -392,6 +393,7 @@ const InstituteERPEnrollment = ({
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Passing Year *</label>
                   <input
                     type="number"
+                    min="1900"
                     required
                     placeholder="2025"
                     value={enrollForm.passingYear}

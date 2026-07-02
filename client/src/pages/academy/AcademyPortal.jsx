@@ -184,6 +184,7 @@ const AcademyPortal = () => {
           utrNumber: s.utrNumber,
           homeAddress: s.homeAddress,
           contactNumber: s.contactNumber,
+          semesters: s.semesters || []
         }));
         setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
@@ -320,19 +321,18 @@ const AcademyPortal = () => {
     setIsStudentModalOpen(true);
   }, []);
 
-  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, eligibilityStatus, reason = '') => {
+  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus, reason = '') => {
     try {
       const student = students.find(s => s.enrollmentNo === enrollmentNo);
       if (student && (student._id || student.id)) {
         const targetId = student._id || student.id;
-        const attendance = eligibilityStatus === 'Approved' ? 85 : 50;
-        const thesis = eligibilityStatus === 'Approved';
+        
         await academicService.updateAcademicMetrics(targetId, {
-          attendancePercentage: attendance,
-          thesisApproved: thesis
+          semesterNumber: semesterNumber,
+          eligibilityStatus: eligibilityStatus
         });
         await fetchBoardData();
-        setSuccessMsg(`Eligibility status for student ${enrollmentNo} updated successfully.`);
+        setSuccessMsg(`Eligibility status for student ${enrollmentNo} (Sem ${semesterNumber}) updated successfully.`);
       }
     } catch (err) {
       setErrorMsg(err.parsedMessage || err.message || 'Failed to update student eligibility.');

@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IFeeRecord extends Document {
   student: mongoose.Types.ObjectId;
+  semesterNumber?: number;
   amount: number;
   paymentMode: string;
   utrNumber: string;
@@ -16,6 +17,10 @@ const feeRecordSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Student',
       required: true,
+    },
+    semesterNumber: {
+      type: Number,
+      required: false,
     },
     amount: {
       type: Number,
