@@ -283,6 +283,7 @@ const InstituteERPCourses = ({
                 onChange={(e) => setCourseForm({...courseForm, courseType: e.target.value})}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold"
               >
+                <option value="" disabled>Select course type</option>
                 <option value="Undergraduate">Undergraduate</option>
                 <option value="Postgraduate">Postgraduate</option>
                 <option value="Diploma">Diploma</option>
@@ -322,6 +323,7 @@ const InstituteERPCourses = ({
                 onChange={(e) => setCourseForm({...courseForm, durationType: e.target.value})}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold"
               >
+                <option value="" disabled>Select duration type</option>
                 <option value="Years">Years</option>
                 <option value="Months">Months</option>
                 <option value="Weeks">Weeks</option>
@@ -588,6 +590,7 @@ const InstituteERPCourses = ({
                     onChange={(e) => setEditForm({...editForm, courseType: e.target.value})}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold"
                   >
+                    <option value="" disabled>Select course type</option>
                     <option value="Undergraduate">Undergraduate</option>
                     <option value="Postgraduate">Postgraduate</option>
                     <option value="Diploma">Diploma</option>
@@ -623,6 +626,7 @@ const InstituteERPCourses = ({
                     onChange={(e) => setEditForm({...editForm, durationType: e.target.value})}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold"
                   >
+                    <option value="" disabled>Select duration type</option>
                     <option value="Years">Years</option>
                     <option value="Months">Months</option>
                     <option value="Weeks">Weeks</option>
