@@ -1090,7 +1090,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
       setSuccessBanner('Login authenticated successfully!');
     } catch (err) {
-      console.error('Login failed:', err);
       setErrorBanner(err.parsedMessage || err.message || 'Invalid credentials. Email or password do not match.');
     }
   };
