@@ -46,6 +46,7 @@ const Step2DepartmentInfo = ({ appForm, setAppForm }) => {
             onChange={(e) => setAppForm({...appForm, physicianAvailability: e.target.value})}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-sm font-bold cursor-pointer"
           >
+            <option value="" disabled>Select availability</option>
             <option value="Yes">Yes (Mandatory)</option>
             <option value="No">No</option>
           </select>
@@ -76,6 +77,7 @@ const Step2DepartmentInfo = ({ appForm, setAppForm }) => {
             onChange={(e) => setAppForm({...appForm, courseDirectorEMQualified: e.target.value})}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-sm font-bold cursor-pointer"
           >
+            <option value="" disabled>Select qualification</option>
             <option value="Yes">EM Qualified</option>
             <option value="No">Non-Qualified</option>
           </select>
@@ -106,6 +108,7 @@ const Step2DepartmentInfo = ({ appForm, setAppForm }) => {
             onChange={(e) => setAppForm({...appForm, teachingSpace: e.target.value})}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-sm font-bold cursor-pointer"
           >
+            <option value="" disabled>Select availability</option>
             <option value="Yes">Yes (Mandatory)</option>
             <option value="No">No</option>
           </select>
@@ -118,6 +121,7 @@ const Step2DepartmentInfo = ({ appForm, setAppForm }) => {
             onChange={(e) => setAppForm({...appForm, nabhStatus: e.target.value})}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-sm font-bold cursor-pointer"
           >
+            <option value="" disabled>Select status</option>
             <option value="Yes">Accredited</option>
             <option value="No">Non-Accredited</option>
           </select>

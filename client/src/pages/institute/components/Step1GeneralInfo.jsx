@@ -28,6 +28,7 @@ const Step1GeneralInfo = ({ appForm, setAppForm }) => {
             onChange={(e) => setAppForm({...appForm, constitutionType: e.target.value})}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-sm font-bold cursor-pointer"
           >
+            <option value="" disabled>Select constitution type</option>
             <option value="Trust">Trust</option>
             <option value="Society">Society</option>
             <option value="Company">Company</option>
