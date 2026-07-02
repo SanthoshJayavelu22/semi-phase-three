@@ -86,7 +86,7 @@ const InstituteERPExams = ({
         return;
       }
       const isAttendanceOk = (sem.attendancePercentage || 0) >= 75;
-      const isThesisOk = sem.thesisApproved === true;
+      const isThesisOk = !!sem.thesisDocumentUrl;
       const isExamFeePaid = feeRecords.some(r => 
         (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id || r.student === s.id) && 
         r.paymentPurpose === 'Examination fee' && r.semesterNumber?.toString() === selectedSemester.toString()
@@ -96,7 +96,7 @@ const InstituteERPExams = ({
       
       const reasons = [];
       if (!isAttendanceOk) reasons.push(`Attendance low (${sem.attendancePercentage || 0}%)`);
-      if (!isThesisOk) reasons.push("Thesis not approved");
+      if (!isThesisOk) reasons.push("Thesis not uploaded");
       if (!isExamFeePaid) reasons.push("Exam fee not paid");
       
       map[s.id || s._id] = {

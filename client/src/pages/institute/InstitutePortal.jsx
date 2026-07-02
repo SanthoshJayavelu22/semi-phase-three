@@ -1360,7 +1360,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     setErrorBanner(null);
     setSuccessBanner(null);
 
-    if (!courseForm.courseName || !courseForm.courseCode) {
+    if (!courseForm.courseName?.trim() || !courseForm.courseCode?.trim()) {
       setErrorBanner('Please fill out all mandatory course fields.');
       return;
     }
@@ -1376,6 +1376,16 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     const durationVal = parseFloat(courseForm.courseDuration);
     if (!courseForm.courseDuration || isNaN(durationVal) || durationVal <= 0) {
       setErrorBanner('Please enter a valid positive numeric course duration.');
+      return;
+    }
+
+    if (courses.some(c => c.courseName?.toLowerCase() === courseForm.courseName.toLowerCase())) {
+      setErrorBanner('A course with this name already exists.');
+      return;
+    }
+
+    if (courses.some(c => c.courseCode?.toLowerCase() === courseForm.courseCode.toLowerCase())) {
+      setErrorBanner('A course with this code already exists.');
       return;
     }
 
@@ -1415,7 +1425,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     e.preventDefault();
     setErrorBanner(null);
     setSuccessBanner(null);
-    if (!newBatch.name || !newBatch.startDate) {
+    if (!newBatch.name?.trim() || !newBatch.startDate) {
       setErrorBanner('Please fill out the batch name and commencement date.');
       return;
     }
@@ -1426,6 +1436,11 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     }
     if (!newBatch.courseId) {
       setErrorBanner('Please select a course for the batch.');
+      return;
+    }
+    
+    if (batches.some(b => b.name?.toLowerCase() === newBatch.name.toLowerCase() && b.course?._id === newBatch.courseId)) {
+      setErrorBanner('A batch with this name already exists for the selected course.');
       return;
     }
     

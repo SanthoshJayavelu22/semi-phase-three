@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Eye, EyeOff, FileCheck, RefreshCw, CheckCircle2, ShieldCheck, 
-  CreditCard, Landmark, Copy, Check, UploadCloud, ArrowRight 
+  CreditCard, Landmark, Copy, Check, UploadCloud, ArrowRight, Trash2
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 
@@ -581,7 +581,7 @@ const Step4PaymentSubmit = ({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <span className="block text-[11px] font-black text-gray-800">Upload Transaction Receipt Proof <span className="text-red-500">*</span></span>
-                    <span className="block text-[10px] text-gray-400 font-bold">Please upload receipt image or transaction PDF copy as validation proof</span>
+                    <span className="block text-[10px] text-gray-400 font-bold">Please upload receipt image or transaction PDF copy as validation proof (max 5MB)</span>
                   </div>
 
                   <div className="w-full sm:w-auto">
@@ -591,14 +591,24 @@ const Step4PaymentSubmit = ({
                           <FileCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                           <span className="text-[10px] font-extrabold text-emerald-900 truncate max-w-[150px]">{uploadedDocs.paymentReceiptDoc.name}</span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setToast({ message: `Audit View: Bank transfer receipt proof: "${uploadedDocs.paymentReceiptDoc.name}" is locked.`, type: 'info' })}
-                          className="text-emerald-700 hover:text-emerald-950 font-black text-[9px] uppercase tracking-wider flex items-center gap-1"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          View
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setToast({ message: `Audit View: Bank transfer receipt proof: "${uploadedDocs.paymentReceiptDoc.name}" is locked.`, type: 'info' })}
+                            className="text-emerald-700 hover:text-emerald-950 font-black text-[9px] uppercase tracking-wider flex items-center gap-1"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setUploadedDocs(prev => ({ ...prev, paymentReceiptDoc: null }))}
+                            className="text-rose-600 hover:text-rose-800 font-black text-[9px] uppercase tracking-wider flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     ) : uploadProgress.paymentReceiptDoc > 0 && uploadProgress.paymentReceiptDoc < 100 ? (
                       <div className="bg-white border border-gray-150 rounded-xl p-3 min-w-[200px]">

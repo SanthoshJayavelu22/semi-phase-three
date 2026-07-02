@@ -134,6 +134,14 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       setToast({ message: 'Amount must be a positive number.', type: 'warning' });
       return;
     }
+    if (!transactionNo?.trim()) {
+      setToast({ message: 'Transaction Number is mandatory.', type: 'warning' });
+      return;
+    }
+    if (!paymentDate) {
+      setToast({ message: 'Payment Date is mandatory.', type: 'warning' });
+      return;
+    }
     try {
       setSubmitting(true);
       await academicService.payStudentFees(selectedStudentId, {

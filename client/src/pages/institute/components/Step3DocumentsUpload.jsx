@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, FileCheck, RefreshCw } from 'lucide-react';
+import { Eye, FileCheck, RefreshCw, Trash2 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 
 const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, setUploadProgress }) => {
@@ -31,11 +31,19 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
     }, 150);
   };
 
+  const handleFileDelete = (key) => {
+    setUploadedDocs(prev => {
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
+    });
+  };
+
   return (
     <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 shadow-sm text-left space-y-6 animate-in fade-in duration-200">
       <div className="border-b border-gray-100 pb-4">
         <h3 className="text-lg font-black text-gray-900">Mandatory Document Hub</h3>
-        <p className="text-xs text-gray-400 mt-0.5">Please upload required certified lists (PDF format preferred)</p>
+        <p className="text-xs text-gray-400 mt-0.5">Please upload required certified lists (PDF format preferred, max 5MB per file)</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -78,6 +86,13 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
                         <RefreshCw className="w-3.5 h-3.5" />
                         Change
                       </label>
+                      <button
+                        onClick={() => handleFileDelete(doc.key)}
+                        className="text-rose-600 hover:text-rose-800 font-extrabold flex items-center gap-1 uppercase text-[9px] tracking-wider cursor-pointer mt-2"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Delete
+                      </button>
                     </div>
                   </div>
                 ) : progress > 0 && progress < 100 ? (

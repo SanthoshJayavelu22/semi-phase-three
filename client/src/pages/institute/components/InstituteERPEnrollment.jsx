@@ -45,8 +45,14 @@ const InstituteERPEnrollment = ({
     let selectedCourse = enrollForm.course;
     let updated = false;
 
-    if (courses.length > 0 && !enrollForm.course) {
-      selectedCourse = courses[0].courseName;
+    if (courses.length > 0) {
+      const isValidCourse = courses.some(c => (c.courseName || '').toLowerCase() === (enrollForm.course || '').toLowerCase());
+      if (!isValidCourse) {
+        selectedCourse = courses[0].courseName;
+        updated = true;
+      }
+    } else if (courses.length === 0 && enrollForm.course !== '') {
+      selectedCourse = '';
       updated = true;
     }
 

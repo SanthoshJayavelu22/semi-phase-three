@@ -1267,8 +1267,9 @@ export const updateStudent = async (req: Request, res: Response) => {
 
     await student.save();
 
-    const isStudentEligible = student.attendancePercentage >= 75 && student.thesisApproved;
-    
+    const latestSemester = student.semesters?.[student.semesters.length - 1];
+    const isStudentEligible = latestSemester ? (latestSemester.attendancePercentage >= 75 && latestSemester.thesisApproved) : false;
+
     // Fetch updated student with populate
     const updatedStudent = await Student.findById(student._id)
       .populate('course', 'name')
