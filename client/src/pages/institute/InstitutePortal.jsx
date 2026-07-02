@@ -588,7 +588,7 @@ const InstitutePortal = () => {
       setUser(parsedUser);
       if (parsedUser.emailVerified === false) {
         verified = false;
-        setCurrentStep('verify_pending');
+        // Do not forcefully navigate here; the Auth Guard handles it based on target route
       }
     }
 
@@ -740,7 +740,8 @@ const InstitutePortal = () => {
     }
 
     if (activeUser && activeUser.emailVerified === false) {
-      if (targetStep !== 'verify_pending') {
+      const allowedUnverifiedSteps = ['verify_pending', 'login', 'register', 'welcome'];
+      if (!allowedUnverifiedSteps.includes(targetStep)) {
         navigate('/institute/verify-email', { replace: true });
         return;
       }
@@ -1090,7 +1091,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       setSuccessBanner('Login authenticated successfully!');
     } catch (err) {
       console.error('Login failed:', err);
-      setErrorBanner('Invalid credentials. Email or password is not match.');
+      setErrorBanner(err.parsedMessage || err.message || 'Invalid credentials. Email or password do not match.');
     }
   };
 

@@ -147,7 +147,9 @@ apiClient.interceptors.response.use(
     // Extract meaningful error message from backend response
     let message = 
       error.response?.data?.message || 
-      error.message || 
+      error.response?.data?.error || 
+      (typeof error.response?.data === 'string' ? error.response.data : null) ||
+      (error.response?.status === 401 ? 'Invalid credentials. Please check your email and password.' : error.message) || 
       "An unexpected error occurred. Please try again.";
     
     // Support structured validation error lists from backend (e.g. Zod validation arrays)

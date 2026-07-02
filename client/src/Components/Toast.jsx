@@ -16,7 +16,7 @@ const Toast = ({ message, type = 'error', onClose, duration = 6000 }) => {
       bg: 'bg-red-50/90 backdrop-blur border-red-200 text-red-900',
       icon: <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />,
       accent: 'bg-red-500',
-      title: 'Compliance & Verification Error'
+      title: 'Error'
     },
     success: {
       bg: 'bg-emerald-50/90 backdrop-blur border-emerald-250 text-emerald-950',
@@ -95,11 +95,11 @@ const Toast = ({ message, type = 'error', onClose, duration = 6000 }) => {
         
         {/* Render multiple lines if message has newlines */}
         {displayMessage.includes('\n') ? (
-          <ul className="list-disc pl-4 text-xs font-semibold space-y-1 leading-relaxed text-opacity-90">
+          <ul className="list-disc pl-4 text-xs font-bold space-y-1 leading-relaxed text-opacity-90">
             {displayMessage.split('\n').map((m, idx) => m.trim() && <li key={idx}>{m}</li>)}
           </ul>
         ) : (
-          <p className="text-xs font-semibold leading-relaxed text-opacity-90">{displayMessage}</p>
+          <p className="text-xs font-bold leading-relaxed text-opacity-90">{displayMessage}</p>
         )}
       </div>
 
