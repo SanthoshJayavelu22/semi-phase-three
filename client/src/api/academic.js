@@ -43,6 +43,7 @@ export const academicService = {
     }
 
     // Axios sets multipart/form-data with the correct boundary automatically
+    headers['Content-Type'] = undefined;
     return apiClient.post('/academic/students', payload, { headers });
   },
 
@@ -67,6 +68,7 @@ export const academicService = {
     }
 
     // Axios sets multipart/form-data with the correct boundary automatically
+    headers['Content-Type'] = undefined;
     return apiClient.post(`/academic/students/${studentId}/fees`, payload, { headers });
   },
 
@@ -99,6 +101,7 @@ export const academicService = {
     }
 
     // Axios sets multipart/form-data with the correct boundary automatically
+    headers['Content-Type'] = undefined;
     return apiClient.post('/academic/remittance', payload, { headers });
   },
 
@@ -137,6 +140,7 @@ export const academicService = {
     }
 
     // Axios sets multipart/form-data with the correct boundary automatically
+    headers['Content-Type'] = undefined;
     return apiClient.patch(`/academic/students/${studentId}/academic-metrics`, payload, { headers });
   },
 
@@ -147,7 +151,7 @@ export const academicService = {
     let headers = {};
 
     if (studentData instanceof FormData) {
-      // Axios sets multipart/form-data with the correct boundary automatically
+      headers['Content-Type'] = undefined;
     }
 
     return apiClient.put(`/academic/students/${studentId}`, payload, { headers });

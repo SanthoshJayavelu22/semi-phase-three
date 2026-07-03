@@ -114,9 +114,11 @@ const AcademyVerification = ({
         await fetchBoardData();
       }
     } catch (err) {
-      setToast({ message: 'Failed to approve thesis.', type: 'error' });
+      setToast({ message: err.parsedMessage || err.message || 'Failed to approve thesis.', type: 'error' });
     }
   };
+
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left">

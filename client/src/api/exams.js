@@ -21,7 +21,7 @@ export const examService = {
   // ─── Exam Application CRUD ──────────────────────────────────────────────────
   applyForExam: (payload) => {
     const data = buildFormData(payload);
-    return apiClient.post('/exams/apply', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return apiClient.post('/exams/apply', data, { headers: { 'Content-Type': undefined } });
   },
 
   listExamApplications: (params) => apiClient.get('/exams', { params }),

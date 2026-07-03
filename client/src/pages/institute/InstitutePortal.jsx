@@ -1549,8 +1549,9 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
       const appendEnrollFile = (backendKey, fileState) => {
         if (fileState) {
-          if (fileState instanceof File) {
-            studentFormData.append(backendKey, fileState);
+          const actualFile = fileState.fileObj || fileState;
+          if (actualFile instanceof File) {
+            studentFormData.append(backendKey, actualFile);
           } else {
             const mockBlob = new Blob(['Simulated student document for ' + backendKey], { type: 'application/pdf' });
             studentFormData.append(backendKey, mockBlob, fileState.name || `${backendKey}.pdf`);
@@ -1661,7 +1662,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
           [fieldName]: {
             name: file.name,
             size: (file.size / 1024).toFixed(1) + ' KB',
-            uploadedAt: new Date().toLocaleTimeString()
+            uploadedAt: new Date().toLocaleTimeString(),
+            fileObj: file
           }
         }));
       } else {

@@ -11,6 +11,7 @@ export default function AcademyVerificationPage() {
     students,
     selectedStudentId, setSelectedStudentId,
     handleVerifyStudentEligibility,
+    fetchBoardData,
   } = useOutletContext();
 
   return (
@@ -19,6 +20,7 @@ export default function AcademyVerificationPage() {
       selectedStudentId={selectedStudentId}
       setSelectedStudentId={setSelectedStudentId}
       onVerifyStudent={handleVerifyStudentEligibility}
+      fetchBoardData={fetchBoardData}
     />
   );
 }

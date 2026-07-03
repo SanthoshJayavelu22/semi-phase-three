@@ -2,13 +2,13 @@
   "info": {
     "_postman_id": "semi-phase3-v6",
     "name": "Semi Phase 3 - Complete API Collection",
-    "description": "Full backend API.\nBase URL: http://localhost:5000\n\nsuper_admin: superadmin@academy.com / SuperAdmin123!\n\nExam Lifecycle:\n  Pending → Approved → SchedulePublished → (generate hall tickets)\n            ↘ Rejected (any point by board)",
+    "description": "Full backend API.\nBase URL: http://localhost:5003\n\nsuper_admin: superadmin@academy.com / SuperAdmin123!\n\nExam Lifecycle:\n  Pending → Approved → SchedulePublished → (generate hall tickets)\n            ↘ Rejected (any point by board)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:5000"
+      "value": "http://localhost:5003"
     },
     {
       "key": "accessToken",
@@ -336,6 +336,31 @@
                 "reset-password"
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Auth Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "status"
+              ]
+            },
+            "description": "Returns the current user's verification status, email, name, and role."
           },
           "response": []
         }

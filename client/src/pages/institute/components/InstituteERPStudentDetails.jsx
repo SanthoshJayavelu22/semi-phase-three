@@ -423,9 +423,13 @@ const InstituteERPStudentDetails = ({
                   {paginatedStudents.map((s, idx) => {
                     const globalIdx = (activePage - 1) * itemsPerPage + idx;
                     const serialNo = String(globalIdx + 1).padStart(2, '0');
-                    // Show all semesters for a student as separate rows
-                    const semestersList = s.semesters && s.semesters.length > 0 ? s.semesters : [null];
-                    return semestersList.map((sem, sIdx) => {
+                    // Only show semesters where data has actually been submitted
+                    const semestersList = s.semesters && s.semesters.length > 0
+                      ? s.semesters.filter(sem => (sem.attendancePercentage > 0) || !!sem.thesisDocumentUrl)
+                      : [];
+                    // If no submitted semesters, render a single placeholder row
+                    const rowList = semestersList.length > 0 ? semestersList : [null];
+                    return rowList.map((sem, sIdx) => {
                       const hasThesis = sem && sem.thesisDocumentUrl;
                       const showStudentInfo = sIdx === 0; // Only show student name/ID on first row
                       return (

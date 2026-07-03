@@ -151,9 +151,19 @@ export default function AcademyLayout() {
           email: s.email,
           mobile: s.contactNumber,
           course: s.course?.name || 'General Medicine',
+          courseId: s.course?._id || s.course,
           batch: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
+          batchId: s.batch?._id || s.batch,
           status: s.remittedToAcademy ? 'Completed' : 'Active',
           institute: s.institute?.orgName || 'N/A',
+          // Pass the full semesters array so AcademyVerification can iterate per-semester eligibility
+          semesters: (s.semesters || []).map(sem => ({
+            semesterNumber: sem.semesterNumber,
+            attendancePercentage: sem.attendancePercentage ?? 0,
+            thesisApproved: sem.thesisApproved ?? false,
+            thesisDocumentUrl: sem.thesisDocumentUrl || '',
+            eligibilityStatus: sem.eligibilityStatus || 'Pending',
+          })),
           // Eligibility calculation matching backend logic
           eligibilityStatus: s.remittedToAcademy && s.attendancePercentage >= 75 && s.thesisApproved
             ? 'Approved'
@@ -257,18 +267,22 @@ export default function AcademyLayout() {
     setIsStudentModalOpen(true);
   }, []);
 
-  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, eligibilityStatus, reason = '') => {
+  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus, reason = '') => {
     try {
       const student = students.find(s => s.enrollmentNo === enrollmentNo);
       if (student && (student._id || student.id)) {
         const targetId = student._id || student.id;
 
-        // Only update thesisApproved - do not override attendance with hardcoded values
-        await academicService.updateAcademicMetrics(targetId, {
-          thesisApproved: eligibilityStatus === 'Approved'
-        });
+        // Pass semesterNumber (required by backend) and set eligibilityStatus directly
+        const payload = {
+          semesterNumber: parseInt(semesterNumber),
+          eligibilityStatus,
+        };
+        if (reason) payload.rejectionNotes = reason;
+
+        await academicService.updateAcademicMetrics(targetId, payload);
         await fetchBoardData();
-        setSuccessMsg(`Eligibility status for student ${enrollmentNo} updated to ${eligibilityStatus}.`);
+        setSuccessMsg(`Eligibility status for ${enrollmentNo} (Sem ${semesterNumber}) updated to ${eligibilityStatus}.`);
       }
     } catch (err) {
       setErrorMsg(err.parsedMessage || err.message || 'Failed to update student eligibility.');
