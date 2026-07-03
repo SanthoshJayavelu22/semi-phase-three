@@ -39,7 +39,11 @@ const AcademyVerification = ({
 
       if (s.semesters && Array.isArray(s.semesters)) {
         s.semesters.forEach(sem => {
-          if (sem.eligibilityStatus === 'Pending' || !sem.eligibilityStatus) {
+          // Only show if data has been uploaded (attendance > 0 or thesis uploaded)
+          // AND the eligibility is still pending review
+          const hasData = (sem.attendancePercentage !== undefined && sem.attendancePercentage > 0) || !!sem.thesisDocumentUrl;
+          const isPending = sem.eligibilityStatus === 'Pending' || !sem.eligibilityStatus;
+          if (hasData && isPending) {
             list.push({
               ...s,
               semesterNumber: sem.semesterNumber,

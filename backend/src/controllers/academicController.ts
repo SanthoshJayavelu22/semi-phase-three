@@ -878,6 +878,8 @@ const studentMetricsUpdateSchema = z.object({
   ).optional(),
   clearThesis: z.preprocess((val) => val === 'true' || val === true || val === '1', z.boolean()).optional(),
   clearAttendance: z.preprocess((val) => val === 'true' || val === true || val === '1', z.boolean()).optional(),
+  eligibilityStatus: z.enum(['Pending', 'Approved', 'Rejected']).optional(),
+  rejectionNotes: z.string().optional(),
 });
 
 export const listStudents = async (req: Request, res: Response) => {
@@ -1008,6 +1010,13 @@ export const updateAcademicMetrics = async (req: Request, res: Response) => {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       if (files['thesisDocument'] && files['thesisDocument'].length > 0) {
         student.semesters[semesterIndex].thesisDocumentUrl = getFileUrl(files['thesisDocument'][0].path);
+      }
+    }
+
+    if (validatedData.eligibilityStatus) {
+      student.semesters[semesterIndex].eligibilityStatus = validatedData.eligibilityStatus;
+      if (validatedData.rejectionNotes) {
+        (student.semesters[semesterIndex] as any).rejectionNotes = validatedData.rejectionNotes;
       }
     }
 

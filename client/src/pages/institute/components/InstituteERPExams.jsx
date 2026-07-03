@@ -150,7 +150,21 @@ const InstituteERPExams = ({
       setSuccessMsg('🎉 Exam Application submitted successfully to the Academic Board!');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
-      setErrorMsg(err.parsedMessage || err.message || 'Failed to submit exam application.');
+      // Extract a safe string message — never pass an object to setErrorMsg (causes React crash)
+      const apiErrors = err.response?.data?.errors;
+      let errMsg = 'Failed to submit exam application.';
+      if (typeof err.parsedMessage === 'string') {
+        errMsg = err.parsedMessage;
+      } else if (typeof err.message === 'string' && !err.message.includes('[object Object]')) {
+        errMsg = err.message;
+      } else if (typeof err.response?.data?.message === 'string') {
+        errMsg = err.response.data.message;
+      }
+      if (apiErrors && Array.isArray(apiErrors) && apiErrors.length > 0) {
+        const names = apiErrors.map(e => e.name || e.studentId || '').filter(Boolean).join(', ');
+        if (names) errMsg += ` Ineligible: ${names}`;
+      }
+      setErrorMsg(errMsg);
     } finally {
       setLoading(false);
     }

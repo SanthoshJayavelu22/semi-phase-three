@@ -423,81 +423,83 @@ const InstituteERPStudentDetails = ({
                   {paginatedStudents.map((s, idx) => {
                     const globalIdx = (activePage - 1) * itemsPerPage + idx;
                     const serialNo = String(globalIdx + 1).padStart(2, '0');
-                    // Find the latest semester that has any data, or default to sem 1
-                    let latestSem = s.semesters && s.semesters.length > 0 ? s.semesters[0] : null;
-                    if (s.semesters) {
-                      const activeSems = s.semesters.filter(sem => sem.attendancePercentage || sem.thesisDocumentUrl);
-                      if (activeSems.length > 0) {
-                        latestSem = activeSems[activeSems.length - 1];
-                      }
-                    }
-                    const hasThesis = latestSem && latestSem.thesisDocumentUrl;
-                    
-                    return (
-                      <tr key={s.id || s._id} className="hover:bg-slate-50/30 transition-colors">
-                          <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
-                          <td className="px-6 py-4 font-mono font-bold text-blue-600">{s.enrollmentNo || `STUD00${s.id}`}</td>
-                          <td className="px-6 py-4">
-                            <span className="font-extrabold text-slate-800">{s.fullName}</span>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className="font-bold text-slate-600">{latestSem ? `Sem ${latestSem.semesterNumber}` : 'N/A'}</span>
-                          </td>
-                          <td className="px-6 py-4 font-mono font-bold text-slate-700">
-                            {latestSem && latestSem.attendancePercentage ? `${latestSem.attendancePercentage}%` : 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            {hasThesis ? (
-                              <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-green-50 text-green-700 border border-green-100 shadow-sm">
-                                {latestSem.thesisApproved ? 'Approved' : 'Uploaded'}
-                              </span>
-                            ) : (
-                              <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                Missing
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setViewingDetails({ ...s, viewSem: latestSem })}
-                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
-                                title="View Details"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleEditDetails(s)}
-                                className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
-                                title="Edit Details"
-                              >
-                                <FileText className="w-4 h-4" />
-                              </button>
-                              {hasThesis && (
-                                <a
-                                  href={getDocUrl(latestSem.thesisDocumentUrl)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer inline-flex"
-                                  title="Download Thesis File"
-                                >
-                                  <Download className="w-4 h-4" />
-                                </a>
+                    // Show all semesters for a student as separate rows
+                    const semestersList = s.semesters && s.semesters.length > 0 ? s.semesters : [null];
+                    return semestersList.map((sem, sIdx) => {
+                      const hasThesis = sem && sem.thesisDocumentUrl;
+                      const showStudentInfo = sIdx === 0; // Only show student name/ID on first row
+                      return (
+                        <tr key={`${s.id || s._id}-sem-${sem ? sem.semesterNumber : 'none'}`} className="hover:bg-slate-50/30 transition-colors">
+                            <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{showStudentInfo ? serialNo : ''}</td>
+                            <td className="px-6 py-4 font-mono font-bold text-blue-600">{showStudentInfo ? (s.enrollmentNo || `STUD00${s.id}`) : ''}</td>
+                            <td className="px-6 py-4">
+                              <span className="font-extrabold text-slate-800">{showStudentInfo ? s.fullName : ''}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className="font-bold text-slate-600">{sem ? `Sem ${sem.semesterNumber}` : 'N/A'}</span>
+                            </td>
+                            <td className="px-6 py-4 font-mono font-bold text-slate-700">
+                              {sem && sem.attendancePercentage !== undefined && sem.attendancePercentage !== null ? `${sem.attendancePercentage}%` : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {hasThesis ? (
+                                <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-green-50 text-green-700 border border-green-100 shadow-sm">
+                                  {sem.thesisApproved ? 'Approved' : 'Uploaded'}
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                  Missing
+                                </span>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteDetails(s._id || s.id, latestSem ? latestSem.semesterNumber : 1)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                                title="Delete Details"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                      </tr>
-                    );
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {sem && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewingDetails({ ...s, viewSem: sem })}
+                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                                    title="View Details"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {showStudentInfo && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditDetails(s)}
+                                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
+                                    title="Edit Details"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {hasThesis && (
+                                  <a
+                                    href={getDocUrl(sem.thesisDocumentUrl)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer inline-flex"
+                                    title="Download Thesis File"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </a>
+                                )}
+                                {sem && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteDetails(s._id || s.id, sem.semesterNumber)}
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                    title="Delete Details"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                        </tr>
+                      );
+                    });
                   })}
                   {students.length === 0 && (
                     <tr>

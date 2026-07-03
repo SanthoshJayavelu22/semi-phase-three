@@ -42,7 +42,7 @@ const jsonStringArray = z.preprocess(parseJsonArray, z.array(z.string().min(1)))
 
 const examApplySchema = z.object({
   courseId:   z.string().min(1, 'Course ID is required'),
-  batchId:    z.string().min(1, 'Batch ID is required'),
+  batchId:    z.string().optional(),
   semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
   studentIds: z.preprocess(parseJsonArray, z.array(z.string().min(1)).min(1, 'At least one student must be selected')),
   utrNumber:  z.string().optional(),
@@ -91,7 +91,18 @@ export const applyForExam = async (req: Request, res: Response) => {
     const course = await Course.findOne({ _id: validatedData.courseId, institute: institute._id });
     if (!course) return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist under this institute.' });
 
-    const batch = await Batch.findOne({ _id: validatedData.batchId, course: course._id });
+    // Auto-resolve batchId if not provided
+    let batchId = validatedData.batchId;
+    if (!batchId) {
+      // Get batch from the first student
+      const firstStudent = await Student.findOne({ _id: { $in: validatedData.studentIds }, course: course._id });
+      if (firstStudent && firstStudent.batch) {
+        batchId = firstStudent.batch.toString();
+      }
+    }
+    if (!batchId) return sendError({ req, res, statusCode: 400, message: 'Could not determine the batch. Please ensure students have a batch assigned.' });
+
+    const batch = await Batch.findOne({ _id: batchId, course: course._id });
     if (!batch) return sendError({ req, res, statusCode: 404, message: 'Specified Batch does not exist.' });
 
     // Validate students
@@ -99,11 +110,10 @@ export const applyForExam = async (req: Request, res: Response) => {
       _id: { $in: validatedData.studentIds },
       institute: institute._id,
       course: course._id,
-      batch: batch._id,
     });
 
     if (students.length !== validatedData.studentIds.length) {
-      return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to the specified course/batch.' });
+      return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to the specified course.' });
     }
 
     // Fetch fee records for examination fees
