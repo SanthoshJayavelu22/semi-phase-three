@@ -42,7 +42,7 @@ export const academicService = {
       });
     }
 
-    headers['Content-Type'] = 'multipart/form-data';
+    // Axios sets multipart/form-data with the correct boundary automatically
     return apiClient.post('/academic/students', payload, { headers });
   },
 
@@ -66,7 +66,7 @@ export const academicService = {
       });
     }
 
-    headers['Content-Type'] = 'multipart/form-data';
+    // Axios sets multipart/form-data with the correct boundary automatically
     return apiClient.post(`/academic/students/${studentId}/fees`, payload, { headers });
   },
 
@@ -98,7 +98,7 @@ export const academicService = {
       });
     }
 
-    headers['Content-Type'] = 'multipart/form-data';
+    // Axios sets multipart/form-data with the correct boundary automatically
     return apiClient.post('/academic/remittance', payload, { headers });
   },
 
@@ -136,7 +136,7 @@ export const academicService = {
       });
     }
 
-    headers['Content-Type'] = 'multipart/form-data';
+    // Axios sets multipart/form-data with the correct boundary automatically
     return apiClient.patch(`/academic/students/${studentId}/academic-metrics`, payload, { headers });
   },
 
@@ -147,7 +147,7 @@ export const academicService = {
     let headers = {};
 
     if (studentData instanceof FormData) {
-      headers['Content-Type'] = 'multipart/form-data';
+      // Axios sets multipart/form-data with the correct boundary automatically
     }
 
     return apiClient.put(`/academic/students/${studentId}`, payload, { headers });
