@@ -1,0 +1,1 @@
+const mongoose = require('mongoose'); require('dotenv').config(); mongoose.connect(process.env.MONGODB_URI).then(async () => { const s = await mongoose.connection.useDb('test').collection('students').find({ 'semesters.attendancePercentage': { $gt: 0 } }).toArray(); console.log(JSON.stringify(s.map(x => ({id: x._id, sem: x.semesters})), null, 2)); process.exit(0); });

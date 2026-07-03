@@ -403,6 +403,7 @@ const InstitutePortal = () => {
           fmgeClearanceStatus: s.fmgeClearanceStatus,
           isForeignGraduate: s.isForeignGraduate,
           documents: s.documents || {},
+          semesters: s.semesters || [],
         }));
         const formattedStr = JSON.stringify(formatted);
         setStudents(prev => JSON.stringify(prev) === formattedStr ? prev : formatted);
