@@ -77,12 +77,17 @@ export const register = async (req: Request, res: Response) => {
       console.error('Email verification sending failed:', emailErr.message);
     }
 
+    const accessToken = generateToken(user._id.toString(), 'access');
+    const refreshToken = generateToken(user._id.toString(), 'refresh');
+
     return sendSuccess({
       req,
       res,
       statusCode: 201,
       message: 'Registration successful. Please verify your email.',
       data: {
+        accessToken,
+        refreshToken,
         userId: user._id,
         email: user.email,
         name: user.name,

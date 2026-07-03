@@ -15,6 +15,10 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
   ];
 
   const handleFileUpload = (key, file) => {
+    if (file.size > 2 * 1024 * 1024) {
+      setToast({ message: 'File size must be under 2MB', type: 'error' });
+      return;
+    }
     setUploadProgress(prev => ({ ...prev, [key]: 10 }));
     let progress = 10;
     const interval = setInterval(() => {

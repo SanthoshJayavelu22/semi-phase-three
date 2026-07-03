@@ -28,7 +28,8 @@ const OnboardingWizard = ({
   handleWizardBack,
   handleApplicationSubmit,
   handlePaymentInitiate,
-  paymentProcessing
+  paymentProcessing,
+  applicationSubmitting
 }) => {
   return (
     <div className="max-w-4xl mx-auto w-full space-y-8 animate-in fade-in duration-200">
@@ -106,10 +107,20 @@ const OnboardingWizard = ({
           <button
             type="button"
             onClick={handleApplicationSubmit}
-            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-colors"
+            disabled={applicationSubmitting}
+            className={`px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-colors ${applicationSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            <CheckCircle2 className="w-4 h-4" />
-            Submit Application
+            {applicationSubmitting ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Submitting...
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4" />
+                Submit Application
+              </span>
+            )}
           </button>
         )}
       </div>

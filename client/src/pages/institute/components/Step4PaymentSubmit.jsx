@@ -169,24 +169,6 @@ const Step4PaymentSubmit = ({
                 </div>
               </div>
 
-              {/* PDF Preview attached */}
-              {uploadedDocs.paymentReceiptDoc && (
-                <div className="mt-4 bg-emerald-100/50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileCheck className="w-4 h-4 text-emerald-600" />
-                    <span className="text-[11px] text-emerald-900 font-extrabold">{uploadedDocs.paymentReceiptDoc.name}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setToast({ message: 'Receipt Viewer: Verification receipt matches digitally signed lock under SHA-256.', type: 'info' })}
-                    className="text-emerald-800 hover:text-emerald-950 font-black text-[9px] uppercase tracking-wider flex items-center gap-1"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Preview Receipt
-                  </button>
-                </div>
-              )}
-
               {/* Reset Payment Option */}
               <div className="pt-2 flex justify-end">
                 <button
@@ -205,7 +187,7 @@ const Step4PaymentSubmit = ({
           </div>
         </div>
       ) : (
-        /* INTERACTIVE PAYMENT GATEWAY - Same as before, but with no setErrorBanner calls */
+        /* INTERACTIVE PAYMENT GATEWAY */
         <div className="space-y-6">
           {/* Payment Method Selection Tabs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -591,24 +573,14 @@ const Step4PaymentSubmit = ({
                           <FileCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                           <span className="text-[10px] font-extrabold text-emerald-900 truncate max-w-[150px]">{uploadedDocs.paymentReceiptDoc.name}</span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setToast({ message: `Audit View: Bank transfer receipt proof: "${uploadedDocs.paymentReceiptDoc.name}" is locked.`, type: 'info' })}
-                            className="text-emerald-700 hover:text-emerald-950 font-black text-[9px] uppercase tracking-wider flex items-center gap-1"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            View
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setUploadedDocs(prev => ({ ...prev, paymentReceiptDoc: null }))}
-                            className="text-rose-600 hover:text-rose-800 font-black text-[9px] uppercase tracking-wider flex items-center gap-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setUploadedDocs(prev => ({ ...prev, paymentReceiptDoc: null }))}
+                          className="text-rose-600 hover:text-rose-800 font-black text-[9px] uppercase tracking-wider flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
+                        </button>
                       </div>
                     ) : uploadProgress.paymentReceiptDoc > 0 && uploadProgress.paymentReceiptDoc < 100 ? (
                       <div className="bg-white border border-gray-150 rounded-xl p-3 min-w-[200px]">
@@ -670,14 +642,14 @@ const Step4PaymentSubmit = ({
         </div>
       )}
 
-       {/* Authorized representative declaration card */}
+      {/* Authorized representative declaration card */}
       <div className="space-y-4 pt-6 border-t border-gray-100">
         <div className="border-b border-gray-100 pb-4">
           <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">Representative Declaration</h3>
           <p className="text-xs text-gray-400 mt-0.5">Final authorization step under compliance audit</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
           <div>
             <label className="block text-[10px] uppercase font-black text-gray-500 mb-2">Authorized Representative Name <span className="text-red-500">*</span></label>
             <input
@@ -688,56 +660,6 @@ const Step4PaymentSubmit = ({
               onChange={(e) => setAppForm({...appForm, authorizedRepName: e.target.value})}
               className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-350 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-xs font-bold"
             />
-          </div>
-
-          <div>
-            <label className="block text-[10px] uppercase font-black text-gray-500 mb-2">Digital Signature Upload <span className="text-red-500">*</span></label>
-            {uploadedDocs.signatureDoc ? (
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-center justify-between mt-1 animate-in fade-in duration-150">
-                <div className="flex items-center gap-2.5">
-                  <FileCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span className="text-[10px] font-extrabold text-emerald-900 truncate max-w-[140px]">{uploadedDocs.signatureDoc.name}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setToast({ message: `Audit Signature: Verified representative signature for ${appForm.authorizedRepName}.`, type: 'info' })}
-                  className="text-emerald-700 hover:text-emerald-950 font-black flex items-center gap-1 uppercase text-[9px] tracking-wider"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Preview
-                </button>
-              </div>
-            ) : uploadProgress.signatureDoc > 0 && uploadProgress.signatureDoc < 100 ? (
-              <div className="bg-white border border-gray-150 rounded-xl p-3 mt-1">
-                <div className="flex items-center justify-between text-[9px] font-black uppercase text-gray-400 mb-1.5">
-                  <span className="flex items-center gap-1.5"><RefreshCw className="w-3 h-3 animate-spin text-blue-600" /> Signing...</span>
-                  <span>{uploadProgress.signatureDoc}%</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-1">
-                  <div className="bg-blue-600 h-1 rounded-full transition-all duration-200" style={{ width: `${uploadProgress.signatureDoc}%` }}></div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <input
-                  type="file"
-                  id="file-signature"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      handleFileUploadSimulated('signatureDoc', file.name);
-                    }
-                  }}
-                />
-                <label
-                  htmlFor="file-signature"
-                  className="w-full py-2.5 bg-white border border-gray-200 hover:border-slate-300 rounded-xl text-center font-bold text-xs text-slate-700 uppercase tracking-wider block cursor-pointer transition-all shadow-sm"
-                >
-                  Choose Signature File
-                </label>
-              </div>
-            )}
           </div>
         </div>
 

@@ -17,8 +17,13 @@ export const getUploadUrl = (filename) => {
   }
   
   const baseUrl = getBaseURL().replace(/\/api$/, '');
-  // ensure clean joining
-  const cleanFilename = filename.replace(/\\/g, '/').split('/').pop();
+  // ensure clean joining without losing subdirectories
+  let cleanFilename = filename.replace(/\\/g, '/');
+  if (cleanFilename.startsWith('uploads/')) {
+    cleanFilename = cleanFilename.substring(8);
+  } else if (cleanFilename.startsWith('/uploads/')) {
+    cleanFilename = cleanFilename.substring(9);
+  }
   return `${baseUrl}/api/uploads/${cleanFilename}`;
 };
 

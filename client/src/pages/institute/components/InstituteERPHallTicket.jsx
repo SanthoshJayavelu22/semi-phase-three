@@ -169,7 +169,7 @@ const InstituteERPHallTicket = ({
               <AlertTriangle className="w-8 h-8" />
             </div>
             <h3 className="text-xl font-black text-slate-800 mb-2">Under Development</h3>
-            <p className="text-sm text-slate-500 mb-6">This page is currently under development. Some features may not work as expected.</p>
+            <p className="text-sm text-slate-500 mb-6">This page is currently under development.</p>
             <button
               onClick={() => setShowDevPopup(false)}
               className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider w-full cursor-pointer"

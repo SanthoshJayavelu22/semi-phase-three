@@ -288,22 +288,20 @@ const InstituteERPStudentDetails = ({
               </div>
 
               {/* Semester Selection */}
-              {availableSemesters.length > 0 && (
-                <div>
-                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Select Semester *</label>
-                  <select
-                    value={selectedSemester}
-                    onChange={(e) => handleSemesterChange(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                    required
-                  >
-                    <option value="">Select Semester</option>
-                    {availableSemesters.map(sem => (
-                      <option key={sem.semesterNumber} value={sem.semesterNumber}>Semester {sem.semesterNumber}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Select Semester *</label>
+                <select
+                  value={selectedSemester}
+                  onChange={(e) => handleSemesterChange(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  required
+                >
+                  <option value="">Select Semester</option>
+                  {[1, 2, 3, 4, 5, 6].map(sem => (
+                    <option key={sem} value={sem}>Semester {sem}</option>
+                  ))}
+                </select>
+              </div>
 
               {/* Attendance percentage */}
               <div>

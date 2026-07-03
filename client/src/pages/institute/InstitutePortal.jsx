@@ -116,6 +116,7 @@ const InstitutePortal = () => {
   const [errorBanner, setErrorBanner] = useState(null);
   const [successBanner, setSuccessBanner] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
+  const [applicationSubmitting, setApplicationSubmitting] = useState(false);
 
   // Form inputs for registration
   const [regForm, setRegForm] = useState({
@@ -357,7 +358,9 @@ const InstitutePortal = () => {
           startDate: b.startDate || `${b.year || new Date().getFullYear()}-01-10`,
           seats: b.seats || '5',
           activeFellows: b.activeFellows || 0,
-          year: b.year
+          year: b.year,
+          course: b.course,
+          courseName: b.course?.name || b.course?.courseName || b.courseName || ''
         }));
         const formattedStr = JSON.stringify(formatted);
         setBatches(prev => JSON.stringify(prev) === formattedStr ? prev : formatted);
@@ -542,8 +545,8 @@ const InstitutePortal = () => {
 
     if (!storedBatches) {
       const initialBatches = [
-        { id: '1', name: 'Batch 2026-A', startDate: '2026-01-10', seats: '5', activeFellows: 0 },
-        { id: '2', name: 'Batch 2026-B', startDate: '2026-07-01', seats: '5', activeFellows: 0 }
+        { id: '1', name: 'Batch 2026-A', startDate: '2026-01-10', seats: '5', activeFellows: 0, courseName: 'MBBS' },
+        { id: '2', name: 'Batch 2026-B', startDate: '2026-07-01', seats: '5', activeFellows: 0, courseName: 'MD - Emergency Medicine' }
       ];
       localStorage.setItem('semi_batches', JSON.stringify(initialBatches));
       setBatches(initialBatches);
@@ -648,13 +651,13 @@ const InstitutePortal = () => {
             .then(res => {
               const data = res.data?.data || res.data || {};
               if (data.isEmailVerified === true) {
-                setUser(prev => {
-                  const updated = { ...prev, emailVerified: true };
-                  localStorage.setItem('semi_user', JSON.stringify(updated));
-                  return updated;
-                });
-                setSuccessBanner('Email verified successfully!');
-                setCurrentStep('onboarding_form');
+                setSuccessBanner('Email verified successfully! Please login with your credentials.');
+                setUser(null);
+                localStorage.removeItem('semi_user');
+                localStorage.removeItem('token');
+                localStorage.removeItem('semi_token');
+                localStorage.removeItem('refreshToken');
+                setCurrentStep('login');
               }
             })
             .catch(err => {
@@ -829,14 +832,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     
     // Check if verification was successful
     if (response.status === 200) {
-      const verifiedUser = {
-        ...user,
-        emailVerified: true
-      };
-      setUser(verifiedUser);
-      localStorage.setItem('semi_user', JSON.stringify(verifiedUser));
-      setSuccessBanner('Email address successfully verified! Your credentials are now active.');
-      setCurrentStep(applicationRecord?.status !== 'draft' ? 'pending_review' : 'onboarding_form');
+      setSuccessBanner('Email address successfully verified! Please login with your credentials.');
+      setUser(null);
+      localStorage.removeItem('semi_user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('semi_token');
+      localStorage.removeItem('refreshToken');
+      setCurrentStep('login');
     }
   } catch (err) {
     console.error('Email verification failed:', err);
@@ -1227,12 +1229,15 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
   // ─── APPLICATION SUBMIT ──────────────────────────────────────────────────────
   const handleApplicationSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (applicationSubmitting) return;
     setErrorBanner(null);
+    setApplicationSubmitting(true);
 
     const beds = parseInt(appForm.bedCount, 10);
     if (isNaN(beds) || beds < 10) {
       setErrorBanner('🚨 Compliance Violation: Emergency Department Bed Count is less than 10 beds.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      setApplicationSubmitting(false);
       return;
     }
 
@@ -1240,12 +1245,14 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (isNaN(experience) || experience < 24) {
       setErrorBanner('🚨 Compliance Violation: Emergency Physician Experience is less than 24 months.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      setApplicationSubmitting(false);
       return;
     }
 
     if (appForm.physicianAvailability !== 'Yes' && appForm.physicianAvailability !== 'Yes (Mandatory)') {
       setErrorBanner('🚨 Compliance Violation: Emergency Physician Availability is mandatory.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      setApplicationSubmitting(false);
       return;
     }
 
@@ -1253,18 +1260,21 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (isNaN(facCount) || facCount < 1) {
       setErrorBanner('🚨 Compliance Violation: EM Qualified Faculty count must be at least 1.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      setApplicationSubmitting(false);
       return;
     }
 
     if (appForm.teachingSpace !== 'Yes' && appForm.teachingSpace !== 'Yes (Mandatory)') {
       setErrorBanner('🚨 Compliance Violation: Teaching Space Availability is mandatory.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      setApplicationSubmitting(false);
       return;
     }
 
     if (!appForm.authorizedRepName || !uploadedDocs.signatureDoc) {
       setErrorBanner('🚨 Compliance Violation: Representative Name and Digital Signature upload are mandatory.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      setApplicationSubmitting(false);
       return;
     }
 
@@ -1281,11 +1291,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (missingDocs.length > 0) {
       setErrorBanner(`Missing Mandatory Documents: ${missingDocs.join(', ')}.`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      setApplicationSubmitting(false);
       return;
     }
 
     if (!paymentComplete || !appForm.paymentBankName || !appForm.paymentTxnNo || !appForm.paymentTxnDate) {
       setErrorBanner('Inspection Fee Payment and transaction reference fields must be successfully completed.');
+      setApplicationSubmitting(false);
       return;
     }
 
@@ -2041,6 +2053,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
               handleApplicationSubmit={handleApplicationSubmit}
               handlePaymentInitiate={handlePaymentInitiate}
               paymentProcessing={paymentProcessing}
+              applicationSubmitting={applicationSubmitting}
             />
           </div>
         )}

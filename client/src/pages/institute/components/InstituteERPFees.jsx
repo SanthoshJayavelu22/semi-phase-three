@@ -59,43 +59,19 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
   // Filter students who have unpaid semesters
-  const eligibleStudents = students.filter(s => {
-    if (!s.semesters) return false;
-    return s.semesters.some(sem => 
-      !feeRecords.some(r => 
-        (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id) && 
-        r.paymentPurpose === 'Examination fee' && r.semesterNumber === sem.semesterNumber
-      )
-    );
-  });
+  // Make all students eligible so the dropdown always populates
+  const eligibleStudents = students;
 
   const selectedStudent = students.find(s => s._id === selectedStudentId || s.id === selectedStudentId);
 
   useEffect(() => {
-    if (selectedStudentId) {
-      const student = students.find(s => s._id === selectedStudentId || s.id === selectedStudentId);
-      if (student && student.semesters) {
-        const unpaid = student.semesters.filter(sem => 
-          !feeRecords.some(r => 
-            (r.student?._id === student._id || r.student === student._id || r.student?.id === student.id) && 
-            r.paymentPurpose === 'Examination fee' && r.semesterNumber === sem.semesterNumber
-          )
-        );
-        setUnpaidSemesters(unpaid);
-        if (unpaid.length > 0) {
-          setSelectedSemester(unpaid[0].semesterNumber);
-        } else {
-          setSelectedSemester('');
-        }
-      } else {
-        setUnpaidSemesters([]);
-        setSelectedSemester('');
-      }
-    } else {
-      setUnpaidSemesters([]);
+    // Generate static list of semesters 1 to 6
+    const allSemesters = [1, 2, 3, 4, 5, 6].map(num => ({ semesterNumber: num }));
+    setUnpaidSemesters(allSemesters);
+    if (!selectedSemester) {
       setSelectedSemester('');
     }
-  }, [selectedStudentId, feeRecords, students]);
+  }, [selectedStudentId]);
 
   useEffect(() => {
     if (selectedStudent && courses.length > 0) {
