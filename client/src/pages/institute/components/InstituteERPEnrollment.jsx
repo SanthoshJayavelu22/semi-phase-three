@@ -206,7 +206,7 @@ const InstituteERPEnrollment = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmitIntercept = (e) => {
+  const handleSubmitIntercept = async (e) => {
     e.preventDefault();
     setLocalError(null);
     const error = validateStep(4);
@@ -215,7 +215,10 @@ const InstituteERPEnrollment = ({
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    handleEnrollmentSubmit(e);
+    const success = await handleEnrollmentSubmit(e);
+    if (success) {
+      setWizardStep(1);
+    }
   };
 
   const stepsMeta = [

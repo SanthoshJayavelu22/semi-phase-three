@@ -93,18 +93,28 @@ const InstituteERPStudentDetails = ({
     }
   };
 
+  const validateAndSetFile = (file) => {
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setToast({ message: 'File size must be under 10MB.', type: 'warning' });
+        return;
+      }
+      setUploadedFile(file);
+    }
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setUploadedFile(e.dataTransfer.files[0]);
+      validateAndSetFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileSelect = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setUploadedFile(e.target.files[0]);
+      validateAndSetFile(e.target.files[0]);
     }
   };
 
@@ -412,17 +422,18 @@ const InstituteERPStudentDetails = ({
                   {paginatedStudents.map((s, idx) => {
                     const globalIdx = (activePage - 1) * itemsPerPage + idx;
                     const serialNo = String(globalIdx + 1).padStart(2, '0');
-                    return s.semesters && s.semesters.map((sem, sIdx) => {
-                      const hasThesis = sem.thesisDocumentUrl;
+                    const semestersList = (s.semesters && s.semesters.length > 0) ? s.semesters : [null];
+                    return semestersList.map((sem, sIdx) => {
+                      const hasThesis = sem && sem.thesisDocumentUrl;
                       return (
-                        <tr key={`${s.id || s._id}-${sem.semesterNumber}`} className="hover:bg-slate-50/30 transition-colors">
+                        <tr key={`${s.id || s._id}-${sem ? sem.semesterNumber : 'none'}`} className="hover:bg-slate-50/30 transition-colors">
                           <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{sIdx === 0 ? serialNo : ''}</td>
                           <td className="px-6 py-4 font-mono font-bold text-blue-600">{sIdx === 0 ? (s.enrollmentNo || `STUD00${s.id}`) : ''}</td>
                           <td className="px-6 py-4">
                             <span className="font-extrabold text-slate-800">{sIdx === 0 ? s.fullName : `Sem ${sem.semesterNumber}`}</span>
                           </td>
                           <td className="px-6 py-4 font-mono font-bold text-slate-700">
-                            {sem.attendancePercentage !== undefined && sem.attendancePercentage !== null ? `${sem.attendancePercentage}%` : 'N/A'}
+                            {sem && sem.attendancePercentage !== undefined && sem.attendancePercentage !== null ? `${sem.attendancePercentage}%` : 'N/A'}
                           </td>
                           <td className="px-6 py-4 text-center">
                             {hasThesis ? (
@@ -437,22 +448,26 @@ const InstituteERPStudentDetails = ({
                           </td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setViewingDetails({ ...s, viewSem: sem })}
-                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
-                                title="View Details"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleEditDetails(s)}
-                                className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
-                                title="Edit Details"
-                              >
-                                <FileText className="w-4 h-4" />
-                              </button>
+                              {sem && (
+                                <button
+                                  type="button"
+                                  onClick={() => setViewingDetails({ ...s, viewSem: sem })}
+                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                                  title="View Details"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                              )}
+                              {sIdx === 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditDetails(s)}
+                                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
+                                  title="Edit Details"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </button>
+                              )}
                               {hasThesis && (
                                 <a
                                   href={getDocUrl(sem.thesisDocumentUrl)}
@@ -464,14 +479,16 @@ const InstituteERPStudentDetails = ({
                                   <Download className="w-4 h-4" />
                                 </a>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteDetails(s._id || s.id, sem.semesterNumber)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                                title="Delete Details"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {sem && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteDetails(s._id || s.id, sem.semesterNumber)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                  title="Delete Details"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

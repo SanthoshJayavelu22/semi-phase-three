@@ -1485,18 +1485,18 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (!enrollForm.firstName || !enrollForm.lastName || !enrollForm.homeAddress || !enrollForm.contactNumber || !enrollForm.emailAddress) {
       setErrorBanner('Personal Information is incomplete. Mandatory fields are required.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      return false;
     }
 
     if (!enrollForm.passingYear || !enrollForm.universityName || !enrollForm.medCouncilRegNo) {
       setErrorBanner('Academic and Medical Council credentials are required.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      return false;
     }
 
     if (!enrollForm.declarationCheck) {
       setErrorBanner('You must accept the student declaration terms to enroll.');
-      return;
+      return false;
     }
 
     if (!APPROVED_QUALIFICATIONS.includes(enrollForm.qualification)) {
@@ -1594,12 +1594,10 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       setStudents(updatedStudents);
       localStorage.setItem('semi_students', JSON.stringify(updatedStudents));
 
-      // Refresh ERP data
       await fetchERPData();
 
       setSuccessBanner(`🎉 Fellow "${studentRecord.fullName}" verified and successfully enrolled! Enrollment ID: ${enrollNo}`);
       
-      // Reset Form
       setEnrollForm({
         firstName: '',
         middleName: '',
@@ -1640,9 +1638,11 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
       setActiveTab('students');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      return true;
     } catch (err) {
       console.error('Backend enrollment failed:', err);
       setErrorBanner(err.parsedMessage || err.response?.data?.message || err.message || 'Failed to enroll student.');
+      return false;
     }
   }, [enrollForm, enrollDocs, students, courses, batches, fetchERPData]);
 

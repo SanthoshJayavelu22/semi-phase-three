@@ -1,0 +1,1 @@
+const mongoose = require('mongoose'); require('dotenv').config({path: './backend/.env'}); mongoose.connect(process.env.MONGODB_URI).then(async () => { const db = mongoose.connection.useDb('test'); const s = await db.collection('students').find().toArray(); console.log(s.map(x => ({n: x.firstName, sem: x.semesters}))); process.exit(0); }).catch(console.error);

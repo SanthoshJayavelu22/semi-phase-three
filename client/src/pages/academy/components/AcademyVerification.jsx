@@ -45,6 +45,7 @@ const AcademyVerification = ({
               semesterNumber: sem.semesterNumber,
               attendancePercentage: sem.attendancePercentage,
               thesisApproved: sem.thesisApproved,
+              thesisDocumentUrl: sem.thesisDocumentUrl,
               eligibilityStatus: sem.eligibilityStatus || 'Pending'
             });
           }
@@ -265,12 +266,12 @@ const AcademyVerification = ({
                 </span>
               </div>
             </div>
-            {activeStudent.documents?.thesisDocumentUrl && (
+            {activeStudent.thesisDocumentUrl && (
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex justify-between items-center">
                 <div>
                   <span className="text-[9px] uppercase font-black text-slate-400 block mb-1">Thesis Document</span>
                   <a 
-                    href={getUploadUrl(activeStudent.documents.thesisDocumentUrl)}
+                    href={getUploadUrl(activeStudent.thesisDocumentUrl)}
                     target="_blank" 
                     rel="noreferrer" 
                     className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-xs"
