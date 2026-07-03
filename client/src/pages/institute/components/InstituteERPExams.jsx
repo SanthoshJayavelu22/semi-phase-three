@@ -137,7 +137,7 @@ const InstituteERPExams = ({
         semesterNumber: parseInt(selectedSemester),
         studentIds: eligibleStudentIds, // Automatically apply for all eligible students
         subjects: courseSubjects,
-        batchId: filteredStudents[0]?.batch?._id || filteredStudents[0]?.batch || 'dummy_id' 
+        batchId: filteredStudents[0]?.batchId || filteredStudents[0]?.batch?._id || filteredStudents[0]?.batch 
       };
 
       await examService.applyForExam(payload);
