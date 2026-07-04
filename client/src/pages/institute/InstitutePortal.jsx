@@ -505,7 +505,14 @@ const InstitutePortal = () => {
         } else if ((statusMapped === 'pending_review' || statusMapped === 'rejected') && currentStep !== 'pending_review') {
           setCurrentStep('pending_review');
         } else if (statusMapped === 'draft' && currentStep !== 'onboarding_form' && currentStep !== 'verify_pending') {
-          setCurrentStep('onboarding_form');
+          // Do NOT demote if localStorage already has a committed pending_review / approved status.
+          // This prevents a race condition where the API hasn't persisted the new record yet
+          // while the client has already navigated to the status page after submission.
+          const localData = localStorage.getItem('semi_institute_data');
+          const localRecord = localData ? (JSON.parse(localData).record || {}) : {};
+          if (localRecord.status !== 'pending_review' && localRecord.status !== 'approved' && localRecord.status !== 'rejected') {
+            setCurrentStep('onboarding_form');
+          }
         }
 
         const freshDataStr = JSON.stringify({
@@ -1332,40 +1339,45 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       appendDocFile('facultyCommitmentLetter', 'signatureDoc');
       appendDocFile('inspectionPaymentReceipt', 'paymentReceiptDoc');
 
-       const response = await instituteService.apply(formData);
-    const data = extractData(response) || {};
+      const response = await instituteService.apply(formData);
+      const data = extractData(response) || {};
 
-    const newRecord = {
-      status: data.status ? data.status.toLowerCase().replace(' ', '_') : 'pending_review',
-      submittedAt: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
-      inspectedAt: data.inspectionTriggered ? new Date().toLocaleDateString() : null,
-      rejectionReason: data.remarks || null,
-      ...data
-    };
-    setApplicationRecord(newRecord);
-    saveToLocalStorage(user, appForm, uploadedDocs, true, newRecord);
-    
-    setSuccessBanner('Application submitted successfully! Moving to Academic Board for Review.');
-    setCurrentStep('pending_review');
-  } catch (err) {
-    console.error('Application submission failed:', err);
-    
-    // Handle Zod validation errors from backend
-    let errorMessage = err.parsedMessage || err.message || 'Failed to submit application.';
-    
-    // If error contains validation errors, format them nicely
-    if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
-      const validationErrors = err.response.data.errors.map(e => {
-        if (e.message) return e.message;
-        if (e.field) return `${e.field}: ${e.message || 'Invalid value'}`;
-        return JSON.stringify(e);
-      });
-      errorMessage = validationErrors.join('\n');
+      const newRecord = {
+        status: data.status ? data.status.toLowerCase().replace(' ', '_') : 'pending_review',
+        submittedAt: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
+        inspectedAt: data.inspectionTriggered ? new Date().toLocaleDateString() : null,
+        rejectionReason: data.remarks || null,
+        ...data
+      };
+
+      // Persist to state AND localStorage BEFORE navigating so the Auth Guard
+      // and fetchApplication can immediately see pending_review status.
+      setApplicationRecord(newRecord);
+      saveToLocalStorage(user, appForm, uploadedDocs, true, newRecord);
+
+      setSuccessBanner('Application submitted successfully! Moving to Academic Board for Review.');
+      setApplicationSubmitting(false);
+      setCurrentStep('pending_review');
+    } catch (err) {
+      console.error('Application submission failed:', err);
+
+      // Handle Zod validation errors from backend
+      let errorMessage = err.parsedMessage || err.message || 'Failed to submit application.';
+
+      // If error contains validation errors, format them nicely
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        const validationErrors = err.response.data.errors.map(e => {
+          if (e.message) return e.message;
+          if (e.field) return `${e.field}: ${e.message || 'Invalid value'}`;
+          return JSON.stringify(e);
+        });
+        errorMessage = validationErrors.join('\n');
+      }
+
+      setErrorBanner(errorMessage);
+      setApplicationSubmitting(false);
     }
-    
-    setErrorBanner(errorMessage);
-  }
-};
+  };
 
   // ─── ERP HANDLERS ─────────────────────────────────────────────────────────────
   const handleCreateCourse = useCallback(async (e) => {
