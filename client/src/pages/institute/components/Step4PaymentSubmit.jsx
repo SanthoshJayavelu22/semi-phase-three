@@ -126,6 +126,25 @@ const Step4PaymentSubmit = ({
     }, 120);
   };
 
+  // Signature file upload handler — stores actual File object for submission
+  const handleSignatureFileUpload = (file) => {
+    if (file.size > 5 * 1024 * 1024) {
+      setToast({ message: 'Signature file must be under 5MB.', type: 'error' });
+      return;
+    }
+    setUploadProgress(prev => ({ ...prev, signatureDoc: 10 }));
+    let progress = 10;
+    const interval = setInterval(() => {
+      progress += 25;
+      setUploadProgress(prev => ({ ...prev, signatureDoc: Math.min(progress, 100) }));
+      if (progress >= 100) {
+        clearInterval(interval);
+        setUploadedDocs(prev => ({ ...prev, signatureDoc: file }));
+        setUploadProgress(prev => ({ ...prev, signatureDoc: null }));
+      }
+    }, 130);
+  };
+
   return (
     <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 shadow-sm text-left space-y-8 animate-in fade-in duration-200">
       
@@ -660,6 +679,67 @@ const Step4PaymentSubmit = ({
               onChange={(e) => setAppForm({...appForm, authorizedRepName: e.target.value})}
               className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-350 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-xs font-bold"
             />
+          </div>
+        </div>
+
+        {/* Digital Signature Upload */}
+        <div className="border border-gray-150 rounded-2xl p-5 bg-slate-50/40">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="block text-[11px] font-black text-gray-800">Upload Digital Signature <span className="text-red-500">*</span></span>
+              <span className="block text-[10px] text-gray-400 font-bold">Upload authorized representative's digital signature image or PDF (max 5MB)</span>
+            </div>
+
+            <div className="w-full sm:w-auto">
+              {uploadedDocs.signatureDoc ? (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-center justify-between gap-4 animate-in fade-in duration-150">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span className="text-[10px] font-extrabold text-emerald-900 truncate max-w-[150px]">
+                      {uploadedDocs.signatureDoc instanceof File ? uploadedDocs.signatureDoc.name : uploadedDocs.signatureDoc.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUploadedDocs(prev => ({ ...prev, signatureDoc: null }))}
+                    className="text-rose-600 hover:text-rose-800 font-black text-[9px] uppercase tracking-wider flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                </div>
+              ) : uploadProgress.signatureDoc > 0 && uploadProgress.signatureDoc < 100 ? (
+                <div className="bg-white border border-gray-150 rounded-xl p-3 min-w-[200px]">
+                  <div className="flex items-center justify-between text-[9px] font-black uppercase text-gray-400 mb-1.5">
+                    <span className="flex items-center gap-1.5"><RefreshCw className="w-3 h-3 animate-spin text-blue-600" /> Uploading...</span>
+                    <span>{uploadProgress.signatureDoc}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-1">
+                    <div className="bg-blue-600 h-1 rounded-full transition-all duration-200" style={{ width: `${uploadProgress.signatureDoc}%` }}></div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="file"
+                    id="file-signature"
+                    className="hidden"
+                    accept="image/*,.pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) handleSignatureFileUpload(file);
+                    }}
+                  />
+                  <label
+                    htmlFor="file-signature"
+                    className="px-5 py-2.5 bg-white border border-gray-200 hover:border-slate-300 rounded-xl text-center font-bold text-[10px] text-slate-700 uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-sm"
+                  >
+                    <UploadCloud className="w-4 h-4 text-slate-500" />
+                    Choose Signature File
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
