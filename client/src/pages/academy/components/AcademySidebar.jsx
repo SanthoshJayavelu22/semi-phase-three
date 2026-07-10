@@ -1,13 +1,31 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, ClipboardCheck, UserCheck, LogOut, ClipboardList } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Building2, 
+  Users, 
+  ClipboardCheck, 
+  UserCheck, 
+  LogOut, 
+  ClipboardList,
+  FileSpreadsheet ,
+   BarChart3 ,
+   Globe,           // For Publish Results
+  RefreshCw,       // For Publishing Details
+  Award            // For Revaluation
+} from 'lucide-react';
 
 const NAV_ITEMS = [
   { id: 'dashboard',     path: '/academy/dashboard',     label: 'Dashboard',                Icon: LayoutDashboard },
   { id: 'applications',  path: '/academy/applications',  label: 'Institutional Applications', Icon: Building2 },
   { id: 'students',      path: '/academy/students',      label: 'Students list',             Icon: Users },
-  { id: 'eligibility',   path: '/academy/eligibility',   label: 'Exam Approvals',            Icon: ClipboardList },
+  { id: 'eligibility',   path: '/academy/eligibility',   label: 'Exam Eligibility',          Icon: ClipboardList },
   { id: 'verification',  path: '/academy/verification',  label: 'Eligibility Verification',  Icon: UserCheck },
+  { id: 'marks',         path: '/academy/marks',         label: 'Marks Updating',            Icon: FileSpreadsheet },
+    { id: 'student-marks', path: '/academy/student-marks', label: 'Student Marks',             Icon: BarChart3 },
+      { id: 'publish-results',  path: '/academy/publish-results',  label: 'Result Publishing',         Icon: Globe },
+  { id: 'publish-details',  path: '/academy/publish-details',  label: 'Publishing Details',        Icon: RefreshCw },
+  { id: 'revaluation',      path: '/academy/revaluation',      label: 'Revaluation Exam',          Icon: Award },
 ];
 
 const AcademySidebar = ({ boardUser, handleLogout }) => {
@@ -68,7 +86,6 @@ const AcademySidebar = ({ boardUser, handleLogout }) => {
           );
         })}
       </nav>
-
     </aside>
   );
 };

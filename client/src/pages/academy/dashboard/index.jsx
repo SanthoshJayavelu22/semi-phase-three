@@ -17,6 +17,11 @@ export default function AcademyDashboardPage() {
       students: '/academy/students',
       eligibility: '/academy/eligibility',
       verification: '/academy/verification',
+      marks: '/academy/marks',
+      'student-marks': '/academy/student-marks',
+      'publish-results': '/academy/publish-results',
+      'publish-details': '/academy/publish-details',
+      revaluation: '/academy/revaluation',
     };
     navigate(routes[tab] || '/academy/dashboard');
   };

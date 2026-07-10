@@ -6,13 +6,12 @@ import ConfirmModal from '../../../Components/ConfirmModal';
 
 const InstituteERPCourses = ({ 
   courses, 
-  setCourses,  // Added setCourses to update parent state
+  setCourses,  // Required: function to update courses in parent
   courseForm, 
   setCourseForm, 
   courseSearch, 
   setCourseSearch, 
-  handleCreateCourse, 
-  deleteCourse: deleteCourseProp // Renamed to avoid conflict
+  handleCreateCourse
 }) => {
   // ─── State for Edit Modal ──────────────────────────────────────────────────
   const [editingCourse, setEditingCourse] = useState(null);
@@ -29,7 +28,7 @@ const InstituteERPCourses = ({
   });
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [editError, setEditError] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // For delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // ─── View Modal State ──────────────────────────────────────────────────────
   const [viewingCourse, setViewingCourse] = useState(null);
@@ -120,7 +119,6 @@ const InstituteERPCourses = ({
           return {
             ...c,
             ...updatedCourse,
-            // Keep the id/_id mapping consistent
             id: c.id || c._id,
             _id: c._id || c.id,
             courseName: updatedCourse.name || editForm.courseName,
@@ -142,7 +140,6 @@ const InstituteERPCourses = ({
       localStorage.setItem('semi_courses', JSON.stringify(updatedCourses));
       closeEditModal();
       
-      // Show success notification
       setToast({ message: `Course "${editForm.courseName}" updated successfully!`, type: 'success' });
       
     } catch (err) {
@@ -169,19 +166,16 @@ const InstituteERPCourses = ({
           const courseId = course._id || course.id;
           await academicService.deleteCourse(courseId);
 
-          // Remove from local state
           const updatedCourses = courses.filter(c => c.id !== courseId && c._id !== courseId);
           setCourses(updatedCourses);
           localStorage.setItem('semi_courses', JSON.stringify(updatedCourses));
           
-          // Show success notification
           setToast({ message: `Course "${course.courseName}" deleted successfully!`, type: 'success' });
           
         } catch (err) {
           console.error('Delete course error:', err);
           const errorMsg = err.parsedMessage || err.message || 'Failed to delete course.';
           
-          // Check if it's a student/batch constraint error
           if (err.response?.status === 400 && errorMsg.includes('students')) {
             setToast({ message: `${errorMsg}. Please transfer or de-enroll all students from this course first.`, type: 'warning' });
           } else if (err.response?.status === 400 && errorMsg.includes('batches')) {
@@ -219,7 +213,6 @@ const InstituteERPCourses = ({
           const courseId = course._id || course.id;
           await academicService.updateCourse(courseId, { status: newStatus });
 
-          // Update local state
           const updatedCourses = courses.map(c => {
             if (c.id === courseId || c._id === courseId) {
               return { ...c, status: newStatus };
@@ -479,7 +472,6 @@ const InstituteERPCourses = ({
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex justify-center gap-1">
-                          {/* View Button */}
                           <button 
                             type="button" 
                             onClick={() => openViewModal(course)}
@@ -489,7 +481,6 @@ const InstituteERPCourses = ({
                             <Eye className="w-4 h-4" />
                           </button>
                           
-                          {/* Edit Button */}
                           <button 
                             type="button" 
                             onClick={() => openEditModal(course)}
@@ -499,7 +490,6 @@ const InstituteERPCourses = ({
                             <Edit className="w-4 h-4" />
                           </button>
                           
-                          {/* Delete Button */}
                           <button
                             type="button"
                             onClick={() => handleDeleteCourse(course)}

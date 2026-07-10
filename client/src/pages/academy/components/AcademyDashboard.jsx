@@ -199,6 +199,62 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
               </button>
+
+
+              <button
+  onClick={() => setActiveTab('marks')}
+  className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+>
+  <div>
+    <span className="text-xs font-black text-slate-800 block">Marks Updating</span>
+    <span className="text-[9px] text-slate-400 block mt-0.5">Enter and manage student marks</span>
+  </div>
+  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+</button>
+
+              <button
+                onClick={() => setActiveTab('student-marks')}
+                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+              >
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Student Marks</span>
+                  <span className="text-[9px] text-slate-400 block mt-0.5">View student performance</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </button>
+
+              <button
+                onClick={() => setActiveTab('publish-results')}
+                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+              >
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Publish Results</span>
+                  <span className="text-[9px] text-slate-400 block mt-0.5">Publish examination results</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('publish-details')}
+                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+              >
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Publishing Details</span>
+                  <span className="text-[9px] text-slate-400 block mt-0.5">View history of published results</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </button>
+
+              <button
+                onClick={() => setActiveTab('revaluation')}
+                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+              >
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Revaluation</span>
+                  <span className="text-[9px] text-slate-400 block mt-0.5">Manage revaluation requests</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </button>
             </div>
           </div>
 

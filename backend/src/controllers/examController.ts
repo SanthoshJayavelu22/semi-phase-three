@@ -6,6 +6,7 @@ import { Student } from '../models/studentModel';
 import { Institute } from '../models/instituteModel';
 import { Course } from '../models/courseModel';
 import { Batch } from '../models/batchModel';
+import { FeeRecord } from '../models/feeRecordModel';  // ← ADD THIS IMPORT
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -117,7 +118,6 @@ export const applyForExam = async (req: Request, res: Response) => {
     }
 
     // Fetch fee records for examination fees
-    const FeeRecord = require('../models/feeRecordModel').FeeRecord;
     const feeRecords = await FeeRecord.find({
       student: { $in: validatedData.studentIds },
       semesterNumber: validatedData.semesterNumber,
@@ -251,7 +251,6 @@ export const updateExamApplication = async (req: Request, res: Response) => {
       if (students.length !== validatedData.studentIds.length) {
         return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to this course/batch.' });
       }
-      const FeeRecord = require('../models/feeRecordModel').FeeRecord;
       const feeRecords = await FeeRecord.find({
         student: { $in: validatedData.studentIds },
         semesterNumber: application.semesterNumber,

@@ -22,6 +22,11 @@ const AcademyApplicationsPage = lazy(() => import('./pages/academy/applications/
 const AcademyStudentsPage     = lazy(() => import('./pages/academy/students/index'));
 const AcademyEligibilityPage  = lazy(() => import('./pages/academy/eligibility/index'));
 const AcademyVerificationPage = lazy(() => import('./pages/academy/verification/index'));
+const AcademyMarksUpdatingPage = lazy(() => import('./pages/academy/marks/index'));
+const AcademyStudentMarksPage = lazy(() => import('./pages/academy/student-marks/index'));
+const AcademyPublishResultsPage = lazy(() => import('./pages/academy/publish-results/index'));
+const AcademyPublishDetailsPage = lazy(() => import('./pages/academy/publish-details/index'));
+const AcademyRevaluationPage = lazy(() => import('./pages/academy/revaluation/index'));
 
 // ─── Email Verification Page ─────────────────────────────────────────────────
 // Standalone page for email verification links
@@ -100,6 +105,11 @@ function App() {
           <Route path="students"     element={<L><AcademyStudentsPage /></L>} />
           <Route path="eligibility"  element={<L><AcademyEligibilityPage /></L>} />
           <Route path="verification" element={<L><AcademyVerificationPage /></L>} />
+          <Route path="marks" element={<L><AcademyMarksUpdatingPage /></L>} />
+          <Route path="student-marks"    element={<L><AcademyStudentMarksPage /></L>} /> 
+          <Route path="publish-results"  element={<L><AcademyPublishResultsPage /></L>} />
+          <Route path="publish-details"  element={<L><AcademyPublishDetailsPage /></L>} />
+          <Route path="revaluation"      element={<L><AcademyRevaluationPage /></L>} />
         </Route>
 
         {/* Catch-all */}

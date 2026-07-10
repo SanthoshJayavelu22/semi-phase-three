@@ -12,6 +12,11 @@ import AcademyHeader from './components/AcademyHeader';
 import AcademyInspectorModal from './components/AcademyInspectorModal';
 import AcademyRejectionModal from './components/AcademyRejectionModal';
 import AcademyStudentModal from './components/AcademyStudentModal';
+import AcademyMarksUpdating from './components/AcademyMarksUpdating';
+import AcademyStudentMarks from './components/AcademyStudentMarks';
+import AcademyPublishResults from './components/AcademyPublishResults';
+import AcademyPublishDetails from './components/AcademyPublishDetails';
+import AcademyRevaluation from './components/AcademyRevaluation';
 
 // Helper to safely extract data from API responses
 const extractData = (response) => {
@@ -427,6 +432,11 @@ export default function AcademyLayout() {
     setSuccessMsg,
     examApplications,
     setExamApplications,
+     AcademyMarksUpdating,
+      AcademyStudentMarks,
+      AcademyPublishResults,
+      AcademyPublishDetails,
+      AcademyRevaluation,
   };
 
   return (

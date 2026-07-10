@@ -34,7 +34,10 @@ const InstituteERPBatches = ({
 
   const onEditSubmit = async (e) => {
     e.preventDefault();
-    if (!editForm.name || !editForm.startDate) return;
+    if (!editForm.name || !editForm.startDate) {
+      alert('Please fill in the batch name and commencement date.');
+      return;
+    }
     
     const seats = parseInt(editForm.seats, 10);
     if (isNaN(seats) || seats <= 0) {
@@ -43,13 +46,23 @@ const InstituteERPBatches = ({
     }
 
     if (handleUpdateBatch) {
-      await handleUpdateBatch(editingBatch._id || editingBatch.id, {
+      const batchId = editingBatch._id || editingBatch.id;
+      await handleUpdateBatch(batchId, {
         name: editForm.name,
         startDate: editForm.startDate,
         seats: Number(editForm.seats)
       });
     }
     cancelEdit();
+  };
+
+  // Determine if a course already has a batch with the same name
+  const isDuplicateBatchName = (name, courseId, excludeId = null) => {
+    return batches.some(b => {
+      if (excludeId && (b._id === excludeId || b.id === excludeId)) return false;
+      const bCourseId = b.course?._id || b.course || b.courseId;
+      return b.name?.toLowerCase() === name.toLowerCase() && bCourseId === courseId;
+    });
   };
 
   return (
@@ -85,7 +98,7 @@ const InstituteERPBatches = ({
               <select
                 required
                 disabled={!!editingBatch}
-                value={editingBatch ? (editingBatch.course?._id || editingBatch.course || '') : (newBatch.courseId || '')}
+                value={editingBatch ? (editingBatch.course?._id || editingBatch.course || editingBatch.courseId || '') : (newBatch.courseId || '')}
                 onChange={(e) => {
                   if (!editingBatch) {
                     setNewBatch({ ...newBatch, courseId: e.target.value });
@@ -96,7 +109,7 @@ const InstituteERPBatches = ({
                 <option value="">-- Choose Course --</option>
                 {courses.map(course => (
                   <option key={course.id || course._id} value={course.id || course._id}>
-                    {course.courseName} ({course.courseCode})
+                    {course.courseName || course.name} ({course.courseCode || ''})
                   </option>
                 ))}
               </select>
@@ -152,7 +165,7 @@ const InstituteERPBatches = ({
                     setNewBatch({ ...newBatch, seats: e.target.value });
                   }
                 }}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
               />
             </div>
 

@@ -39,7 +39,7 @@ const InstituteERPStudents = ({
     return students.filter(s => {
       const name = s.fullName || '';
       const email = s.email || '';
-      const enroll = s.enrollmentNo || s.applicationId || '';
+      const enroll = s.enrollmentNo || s.applicationId || s.enrollmentId || '';
       const matchesSearch = name.toLowerCase().includes(studentSearch.toLowerCase()) || 
                             enroll.toLowerCase().includes(studentSearch.toLowerCase()) ||
                             email.toLowerCase().includes(studentSearch.toLowerCase());
@@ -85,7 +85,7 @@ const InstituteERPStudents = ({
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search Batches...."
+              placeholder="Search by name, ID, or email..."
               value={studentSearch}
               onChange={(e) => setStudentSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
@@ -155,13 +155,14 @@ const InstituteERPStudents = ({
               {filteredList.map((student, idx) => {
                 const serialNo = String(idx + 1).padStart(2, '0');
                 const batch = student.batchName || student.batch || 'Batch 2026-A';
-                const appId = student.enrollmentNo || student.applicationId || `SEMI00${student.id}`;
+                const appId = student.enrollmentNo || student.applicationId || student.enrollmentId || `SEMI00${student.id || idx}`;
                 const name = student.fullName || 'Dr. Arjun Kumar';
                 const course = student.courseName || student.course || 'General Medicine';
                 const email = student.email || 'arjun@gmail.com';
+                const studentId = student._id || student.id;
 
                 return (
-                  <tr key={student.id} className="hover:bg-slate-50/30 transition-colors">
+                  <tr key={studentId || idx} className="hover:bg-slate-50/30 transition-colors">
                     <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
                     <td className="px-6 py-4 font-bold text-slate-700">{batch}</td>
                     <td className="px-6 py-4 font-mono font-bold text-blue-600 tracking-tight">{appId}</td>
@@ -190,7 +191,7 @@ const InstituteERPStudents = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => removeStudent(student.id)}
+                          onClick={() => removeStudent(studentId)}
                           className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
                           title="De-enroll fellow"
                         >
@@ -213,7 +214,7 @@ const InstituteERPStudents = ({
         </div>
       </div>
 
-      {/* VIEW DETAILS MODAL */}
+      {/* VIEW DETAILS MODAL - same as before, but ensure student._id is used */}
       {selectedStudentForView && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full overflow-hidden flex flex-col scale-in-center">
@@ -251,15 +252,14 @@ const InstituteERPStudents = ({
                       {selectedStudentForView.status || 'Active'}
                     </span>
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                      ID: {selectedStudentForView.enrollmentNo || `SEMI00${selectedStudentForView.id}`}
+                      ID: {selectedStudentForView.enrollmentNo || selectedStudentForView.enrollmentId || `SEMI00${selectedStudentForView.id}`}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Grid sections */}
+              {/* Grid sections - rest of the modal content remains the same as original */}
               <div className="space-y-5">
-                
                 {/* 1. Academic & Course Assignment */}
                 <div>
                   <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-50 pb-1.5 mb-2.5">Academic & Program Details</h4>
@@ -437,7 +437,6 @@ const InstituteERPStudents = ({
                     </div>
                   </div>
                 )}
-
               </div>
             </div>
 
