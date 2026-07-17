@@ -54,7 +54,16 @@ apiClient.interceptors.request.use(
   (config) => {
     try {
       if (typeof localStorage !== 'undefined') {
-        const token = localStorage.getItem('token') || localStorage.getItem('semi_token');
+        let token;
+        // Context-aware token selection to prevent 403s when switching portals
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/institute')) {
+          token = localStorage.getItem('semi_institute_token') || localStorage.getItem('semi_token') || localStorage.getItem('token');
+        } else if (typeof window !== 'undefined' && window.location.pathname.startsWith('/academy')) {
+          token = localStorage.getItem('semi_board_token') || localStorage.getItem('semi_token') || localStorage.getItem('token');
+        } else {
+          token = localStorage.getItem('token') || localStorage.getItem('semi_token');
+        }
+
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }

@@ -118,9 +118,20 @@ const AcademyPublishResults = () => {
         setIsSubmitting(true);
 
         // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         setIsSubmitting(false);
+
+        // Alternate Flow: Missing marks -> Block
+        // Simulating that if Batch 2023-B (id 4) is selected, there are missing marks
+        if (Number(selectedBatch) === 4) {
+          setToast({
+            message: `❌ Cannot publish results. Missing marks detected for 2 students in ${getBatchName(selectedBatch)}. Please upload marks before publishing.`,
+            type: 'error'
+          });
+          return;
+        }
+
         setToast({
           message: `✅ Results published successfully! ${totalStudents} student${totalStudents > 1 ? 's' : ''} will see results on ${new Date(publishDate).toLocaleDateString()} at ${publishTime} ${publishAMPM}`,
           type: 'success'

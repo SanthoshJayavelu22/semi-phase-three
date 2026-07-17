@@ -16,7 +16,7 @@ const AcademyHeader = ({ boardUser, handleLogout }) => {
   const pageTitle = PAGE_TITLES[pathname] || 'Dashboard';
 
   return (
-    <header className="h-16 border-b border-gray-200/80 bg-white flex items-center justify-between px-8 flex-shrink-0">
+    <header className="h-16 border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-40 shadow-sm shadow-slate-100/50">
       <div className="flex items-center gap-2 text-xs font-bold text-gray-400 select-none">
         <span>Home</span>
         <ChevronRight className="w-3 h-3 text-gray-300" />
@@ -28,10 +28,10 @@ const AcademyHeader = ({ boardUser, handleLogout }) => {
       <div className="flex items-center gap-6">
         {/* Profile Indicator */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-xs">
+          <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-extrabold text-xs shadow-inner">
             {boardUser?.name ? boardUser.name.substring(0, 2).toUpperCase() : 'SA'}
           </div>
-          <span className="text-xs font-black text-gray-800">
+          <span className="text-xs font-black text-gray-800 tracking-tight">
             {boardUser?.name || 'Super Admin'}
           </span>
         </div>

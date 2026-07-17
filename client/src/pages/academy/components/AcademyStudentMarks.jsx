@@ -664,13 +664,29 @@ const AcademyStudentMarks = () => {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <button
-                onClick={() => setToast({ message: `📊 Marks data for ${selectedStudent.name} exported!`, type: 'success' })}
-                className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export Marks
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setToast({ message: `📜 Provisional Certificate generated and ready for download for ${selectedStudent.name}!`, type: 'success' })}
+                  className="px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 hover:bg-blue-100 transition-all"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  Generate Provisional Certificate
+                </button>
+                <button
+                  onClick={() => setToast({ message: `📄 Marksheet generated and ready for download for ${selectedStudent.name}!`, type: 'success' })}
+                  className="px-4 py-2 bg-purple-50 border border-purple-200 text-purple-700 font-bold rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 hover:bg-purple-100 transition-all"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  Generate Marksheet
+                </button>
+                <button
+                  onClick={() => setToast({ message: `📊 Marks data for ${selectedStudent.name} exported!`, type: 'success' })}
+                  className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export Marks
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}

@@ -11,30 +11,30 @@ export default {
       },
       colors: {
         primary: {
-          DEFAULT: '#004cb0',
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#004cb0', // User requested primary
-          700: '#003a8c', // Darker shade for hover
-          800: '#1e40af',
-          900: '#1e3a8a',
+          DEFAULT: '#003a8c',
+          50: '#f0f5ff',
+          100: '#e0ebff',
+          200: '#c2d6ff',
+          300: '#94b8ff',
+          400: '#6196ff',
+          500: '#3371ff',
+          600: '#003a8c', // User requested primary
+          700: '#002c6b', // Darker shade for hover
+          800: '#001d47',
+          900: '#000f26',
         },
         blue: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#004cb0', // Overriding blue-600 to match primary
-          700: '#003a8c', // Overriding blue-700 for consistent hover
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#172554',
+          50: '#f0f5ff',
+          100: '#e0ebff',
+          200: '#c2d6ff',
+          300: '#94b8ff',
+          400: '#6196ff',
+          500: '#3371ff',
+          600: '#003a8c', // Overriding blue-600 to match primary
+          700: '#002c6b', // Overriding blue-700 for consistent hover
+          800: '#001d47',
+          900: '#000f26',
+          950: '#000814',
         }
       },
       fontFamily: {

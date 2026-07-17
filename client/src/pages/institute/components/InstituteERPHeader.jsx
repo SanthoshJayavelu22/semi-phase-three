@@ -29,7 +29,7 @@ const InstituteERPHeader = ({ activeTab, user, appForm, handleLogout }) => {
   const displayName = appForm?.orgName || user?.instituteName || user?.name || 'Institute Profile';
 
   return (
-    <header className="h-16 border-b border-slate-100 bg-white flex items-center justify-between px-8 flex-shrink-0 select-none">
+    <header className="h-16 border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-40 shadow-sm shadow-slate-100/50 select-none">
       {/* Breadcrumbs */}
       <div className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold">
         <span className="hover:text-slate-600 cursor-pointer transition-colors">Home</span>
@@ -39,8 +39,8 @@ const InstituteERPHeader = ({ activeTab, user, appForm, handleLogout }) => {
 
       <div className="flex items-center gap-4">
         {/* Profile info dropdown */}
-        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
-          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-extrabold text-[11px] shadow-inner">
+        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50/50 rounded-xl border border-slate-100">
+          <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-extrabold text-[11px] shadow-inner">
             {getInitials(displayName)}
           </div>
           <span className="text-xs font-bold text-slate-700">

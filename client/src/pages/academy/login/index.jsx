@@ -54,6 +54,7 @@ export default function AcademyLoginPage() {
       };
 
       if (userToken) {
+        localStorage.setItem('semi_board_token', userToken);
         localStorage.setItem('token', userToken);
         localStorage.setItem('semi_token', userToken);
       }

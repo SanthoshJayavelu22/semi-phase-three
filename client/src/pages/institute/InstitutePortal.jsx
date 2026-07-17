@@ -27,6 +27,10 @@ import InstituteERPFees from './components/InstituteERPFees';
 import InstituteERPExams from './components/InstituteERPExams';
 import InstituteERPHallTicket from './components/InstituteERPHallTicket';
 import InstituteERPStudentDetails from './components/InstituteERPStudentDetails';
+import InstituteERPResults from './components/InstituteERPResults';
+import InstituteERPRevaluation from './components/InstituteERPRevaluation';
+import InstituteERPRemittance from './components/InstituteERPRemittance';
+import InstituteERPNotifications from './components/InstituteERPNotifications';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import Toast from '../../Components/Toast';
@@ -81,9 +85,13 @@ const ROUTE_STEPS = {
   '/institute/enrollment': 'active_erp',
   '/institute/students': 'active_erp',
   '/institute/fees': 'active_erp',
+  '/institute/remittance': 'active_erp',
+  '/institute/notifications': 'active_erp',
   '/institute/exams': 'active_erp',
   '/institute/studentDetails': 'active_erp',
   '/institute/hallTicket': 'active_erp',
+  '/institute/results': 'active_erp',
+  '/institute/revaluation': 'active_erp',
   '/institute/forgot-password': 'forgot_password',
   '/institute/reset-password': 'reset_password'
 };
@@ -212,6 +220,10 @@ const InstitutePortal = () => {
     if (pathname === '/institute/exams') return 'exams';
     if (pathname === '/institute/studentDetails') return 'studentDetails';
     if (pathname === '/institute/hallTicket') return 'hallTicket';
+    if (pathname === '/institute/notifications') return 'notifications';
+    if (pathname === '/institute/results') return 'results';
+    if (pathname === '/institute/revaluation') return 'revaluation';
+    if (pathname === '/institute/remittance') return 'remittance';
     return 'dashboard';
   }, [location.pathname]);
 
@@ -225,7 +237,11 @@ const InstitutePortal = () => {
       fees: '/institute/fees',
       exams: '/institute/exams',
       studentDetails: '/institute/studentDetails',
-      hallTicket: '/institute/hallTicket'
+      hallTicket: '/institute/hallTicket',
+      notifications: '/institute/notifications',
+      results: '/institute/results',
+      revaluation: '/institute/revaluation',
+      remittance: '/institute/remittance'
     };
     navigate(tabRoutes[tab] || '/institute/dashboard');
   }, [navigate]);
@@ -979,6 +995,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       
       setUser(newUser);
       if (userToken) {
+        localStorage.setItem('semi_institute_token', userToken);
         localStorage.setItem('token', userToken);
         localStorage.setItem('semi_token', userToken);
       }
@@ -1085,6 +1102,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       };
 
       if (userToken) {
+        localStorage.setItem('semi_institute_token', userToken);
         localStorage.setItem('token', userToken);
         localStorage.setItem('semi_token', userToken);
       }
@@ -1305,6 +1323,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
     if (!paymentComplete || !appForm.paymentBankName || !appForm.paymentTxnNo || !appForm.paymentTxnDate) {
       setErrorBanner('Inspection Fee Payment and transaction reference fields must be successfully completed.');
+      setApplicationSubmitting(false);
+      return;
+    }
+
+    if (!appForm.certificationAgreement) {
+      setErrorBanner('You must accept the Certification & Declarations agreement to proceed.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       setApplicationSubmitting(false);
       return;
     }
@@ -1937,6 +1962,30 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             students={students}
             fetchERPData={fetchERPData}
           />
+        );
+      case 'results':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <InstituteERPResults />
+          </div>
+        );
+      case 'revaluation':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <InstituteERPRevaluation />
+          </div>
+        );
+      case 'remittance':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <InstituteERPRemittance />
+          </div>
+        );
+      case 'notifications':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <InstituteERPNotifications />
+          </div>
         );
       default:
         return null;

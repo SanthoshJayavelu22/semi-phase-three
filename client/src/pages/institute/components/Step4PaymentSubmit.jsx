@@ -743,15 +743,23 @@ const Step4PaymentSubmit = ({
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 text-xs text-blue-900 leading-relaxed font-semibold mt-4 flex items-start gap-3">
-          <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <label className="bg-blue-50 border border-blue-100 hover:border-blue-300 rounded-2xl p-5 text-xs text-blue-900 leading-relaxed font-semibold mt-4 flex items-start gap-4 cursor-pointer transition-colors group">
+          <div className="relative flex items-center justify-center mt-0.5">
+            <input 
+              type="checkbox" 
+              className="peer appearance-none w-5 h-5 border-2 border-blue-300 rounded-md bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all cursor-pointer"
+              checked={appForm.certificationAgreement || false}
+              onChange={(e) => setAppForm({...appForm, certificationAgreement: e.target.checked})}
+            />
+            <Check className="w-3.5 h-3.5 text-white absolute pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" strokeWidth={3} />
+          </div>
           <div>
-            <span className="font-extrabold block">Certification & Declarations agreement</span>
+            <span className="font-extrabold block group-hover:text-blue-700 transition-colors">Certification & Declarations agreement</span>
             <span className="text-blue-800 mt-1 block font-medium">
-              By clicking "Submit Application", you certify that all uploaded equipment registers, PG EM clinical qualifications, faculty structures, and hospital beds counts comply with the state Medical Board standard regulations.
+              By checking this box and clicking "Submit Application", you certify that all uploaded equipment registers, PG EM clinical qualifications, faculty structures, and hospital beds counts comply with the state Medical Board standard regulations.
             </span>
           </div>
-        </div>
+        </label>
       </div>
       {toast && (
         <Toast 

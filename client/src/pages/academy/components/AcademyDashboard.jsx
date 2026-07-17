@@ -11,14 +11,13 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
     <div className="space-y-8 animate-in fade-in duration-300">
       
       {/* Welcome Panel */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 to-indigo-950 p-8 rounded-3xl border border-slate-800 shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-primary-900 to-primary-800 p-8 rounded-3xl border border-primary-700/50 shadow-xl shadow-primary-900/10 relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="relative z-10 text-left">
-          <h2 className="text-2xl font-black text-white tracking-tight">Good morning, Board Member</h2>
-          <p className="text-xs text-slate-400 mt-1 font-medium">Academics Board Real-time Management Console</p>
+          <h2 className="text-2xl font-black text-white tracking-tight drop-shadow-sm">Good morning, Board Member</h2>
+          <p className="text-xs text-primary-200 mt-1 font-medium">Academics Board Real-time Management Console</p>
         </div>
 
- 
       </div>
 
       {/* Dynamic Stat cards */}
