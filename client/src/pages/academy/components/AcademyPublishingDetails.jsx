@@ -1,40 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import resultService from '../../../api/results';
 import {
   Search,
   Calendar,
-  Clock,
   Eye,
   Edit,
   Trash2,
-  RefreshCw,
   Filter,
   X,
   ChevronDown,
-  ChevronUp,
-  Building2,
   Users,
-  BookOpen,
   FileSpreadsheet,
   Download,
   Printer,
   CheckCircle2,
-  XCircle,
-  AlertCircle,
   Clock as ClockIcon,
   CalendarDays,
   Mail,
-  Settings,
   Globe,
-  Send,
   Bell,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  BarChart3,
-  ExternalLink,
   Play,
-  Pause,
-  Timer
+  Pause
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
@@ -53,151 +39,66 @@ const AcademyPublishingDetails = () => {
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [activeTab, setActiveTab] = useState('published'); // 'published' | 'scheduled' | 'all'
 
-  // ─── Mock Data ──────────────────────────────────────────────────────────────
-  const mockPublications = [
-    {
-      id: 1,
-      exam: 'Final Exam 2026',
-      batch: 'All Batch',
-      institute: 'Saveetha Medical College',
-      course: 'All Course',
-      date: '2026-07-02',
-      time: '10:00',
-      ampm: 'AM',
-      status: 'Published',
-      autoPublish: true,
-      studentsCount: 45,
-      publishedBy: 'Dr. Ramesh Kumar',
-      publishedAt: '2026-07-02T10:05:00',
-      notificationSent: true,
-      results: [
-        { name: 'Dr. Aarav Sharma', marks: 87, status: 'Passed' },
-        { name: 'Dr. Priya Nair', marks: 76, status: 'Passed' },
-        { name: 'Dr. Rahul Verma', marks: 76, status: 'Passed' },
-      ]
-    },
-    {
-      id: 2,
-      exam: 'Final Exam 2026',
-      batch: 'All Batch',
-      institute: 'Saveetha Medical College',
-      course: 'All Course',
-      date: '2026-07-02',
-      time: '10:00',
-      ampm: 'AM',
-      status: 'Scheduled',
-      autoPublish: true,
-      studentsCount: 38,
-      publishedBy: 'Dr. Ramesh Kumar',
-      publishedAt: null,
-      notificationSent: false,
-      results: []
-    },
-    {
-      id: 3,
-      exam: 'Final Exam 2026',
-      batch: 'All Batch',
-      institute: 'Saveetha Medical College',
-      course: 'All Course',
-      date: '2026-07-02',
-      time: '10:00',
-      ampm: 'AM',
-      status: 'Published',
-      autoPublish: true,
-      studentsCount: 42,
-      publishedBy: 'Dr. Ananya Sen',
-      publishedAt: '2026-07-01T09:30:00',
-      notificationSent: true,
-      results: []
-    },
-    {
-      id: 4,
-      exam: 'Final Exam 2026',
-      batch: 'All Batch',
-      institute: 'Saveetha Medical College',
-      course: 'All Course',
-      date: '2026-07-02',
-      time: '10:00',
-      ampm: 'AM',
-      status: 'Published',
-      autoPublish: false,
-      studentsCount: 40,
-      publishedBy: 'Dr. Ramesh Kumar',
-      publishedAt: '2026-07-02T11:00:00',
-      notificationSent: true,
-      results: []
-    },
-    {
-      id: 5,
-      exam: 'Final Exam 2026',
-      batch: 'All Batch',
-      institute: 'Saveetha Medical College',
-      course: 'All Course',
-      date: '2026-07-02',
-      time: '10:00',
-      ampm: 'AM',
-      status: 'Scheduled',
-      autoPublish: false,
-      studentsCount: 35,
-      publishedBy: 'Dr. Ramesh Kumar',
-      publishedAt: null,
-      notificationSent: false,
-      results: []
-    },
-    {
-      id: 6,
-      exam: 'Final Exam 2026',
-      batch: 'All Batch',
-      institute: 'Saveetha Medical College',
-      course: 'All Course',
-      date: '2026-07-02',
-      time: '10:00',
-      ampm: 'AM',
-      status: 'Published',
-      autoPublish: true,
-      studentsCount: 44,
-      publishedBy: 'Dr. Ananya Sen',
-      publishedAt: '2026-06-30T14:20:00',
-      notificationSent: true,
-      results: []
-    },
-    {
-      id: 7,
-      exam: 'Final Exam 2026',
-      batch: 'All Batch',
-      institute: 'Saveetha Medical College',
-      course: 'All Course',
-      date: '2026-07-02',
-      time: '10:00',
-      ampm: 'AM',
-      status: 'Published',
-      autoPublish: true,
-      studentsCount: 41,
-      publishedBy: 'Dr. Ramesh Kumar',
-      publishedAt: '2026-07-02T08:45:00',
-      notificationSent: true,
-      results: []
-    },
-  ];
+  // ─── Data Fetching ──────────────────────────────────────────────────────────
+  const [publications, setPublications] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPublications = async () => {
+      try {
+        setIsLoading(true);
+        // Note: Actual API for getting 'published' or 'scheduled' bulk publications
+        // Since Result model is per-student, we fetch results and aggregate or list them
+        const res = await resultService.getAllResults();
+        const data = res.data?.data || res.data || [];
+        
+        // Map to expected publication structure in UI
+        // We'll treat each result as a "publication log" or we can just list them
+        const mappedData = data.map(r => ({
+          id: r._id,
+          exam: r.exam?.name || 'Final Exam', // if populated
+          batch: r.student?.batch?.name || 'Batch',
+          institute: r.student?.institute?.orgName || 'Institute',
+          course: r.student?.course?.name || 'Course',
+          date: r.publishedDate ? new Date(r.publishedDate).toISOString().split('T')[0] : 'TBD',
+          time: r.publishedDate ? new Date(r.publishedDate).toLocaleTimeString() : 'TBD',
+          ampm: '',
+          status: r.isPublished ? 'Published' : 'Scheduled',
+          autoPublish: false,
+          studentsCount: 1,
+          publishedBy: 'System',
+          publishedAt: r.publishedDate,
+          notificationSent: true,
+          results: []
+        }));
+        setPublications(mappedData);
+      } catch (err) {
+        setToast({ message: 'Error loading publications', type: 'danger' });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPublications();
+  }, []);
 
   // ─── Computed ──────────────────────────────────────────────────────────────
   const batches = useMemo(() => {
-    const unique = new Set(mockPublications.map(p => p.batch));
+    const unique = new Set(publications.map(p => p.batch));
     return ['All', ...unique];
-  }, []);
+  }, [publications]);
 
   const institutes = useMemo(() => {
-    const unique = new Set(mockPublications.map(p => p.institute));
+    const unique = new Set(publications.map(p => p.institute));
     return ['All', ...unique];
-  }, []);
+  }, [publications]);
 
   const exams = useMemo(() => {
-    const unique = new Set(mockPublications.map(p => p.exam));
+    const unique = new Set(publications.map(p => p.exam));
     return ['All', ...unique];
-  }, []);
+  }, [publications]);
 
   const filteredPublications = useMemo(() => {
-    return mockPublications.filter(p => {
+    return publications.filter(p => {
       const matchSearch = p.exam.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.institute.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.batch.toLowerCase().includes(searchQuery.toLowerCase());
@@ -209,7 +110,7 @@ const AcademyPublishingDetails = () => {
                           (activeTab === 'scheduled' && p.status === 'Scheduled');
       return matchSearch && matchBatch && matchInstitute && matchExam && matchStatus;
     });
-  }, [mockPublications, searchQuery, selectedBatch, selectedInstitute, selectedExam, activeTab]);
+  }, [publications, searchQuery, selectedBatch, selectedInstitute, selectedExam, activeTab]);
 
   const sortedPublications = useMemo(() => {
     if (!sortConfig.key) return filteredPublications;
@@ -231,12 +132,12 @@ const AcademyPublishingDetails = () => {
   }, [filteredPublications, sortConfig]);
 
   const stats = useMemo(() => {
-    const total = mockPublications.length;
-    const published = mockPublications.filter(p => p.status === 'Published').length;
-    const scheduled = mockPublications.filter(p => p.status === 'Scheduled').length;
-    const autoPublish = mockPublications.filter(p => p.autoPublish).length;
+    const total = publications.length;
+    const published = publications.filter(p => p.status === 'Published').length;
+    const scheduled = publications.filter(p => p.status === 'Scheduled').length;
+    const autoPublish = publications.filter(p => p.autoPublish).length;
     return { total, published, scheduled, autoPublish };
-  }, []);
+  }, [publications]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleSort = (key) => {
@@ -671,7 +572,7 @@ const AcademyPublishingDetails = () => {
 
         {/* ─── Footer ────────────────────────────────────────────────────────── */}
         <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-[10px] text-slate-400 font-semibold">
-          <span>Showing {sortedPublications.length} of {mockPublications.length} publications</span>
+          <span>Showing {sortedPublications.length} of {publications.length} publications</span>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>

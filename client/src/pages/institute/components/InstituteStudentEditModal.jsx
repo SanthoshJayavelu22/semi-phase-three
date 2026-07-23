@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, User, Mail, Phone, Book, Calendar, Shield, MapPin, Award, Building2, ExternalLink, CreditCard, Landmark, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { X, Save, User, Mail, Phone, Book, Calendar, Shield, MapPin, Award, Building2, ExternalLink, CreditCard } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, batches }) => {
@@ -30,8 +30,10 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
   });
 
   const [error, setError] = useState(null);
+  const [prevStudent, setPrevStudent] = useState(student);
 
-  useEffect(() => {
+  if (student !== prevStudent) {
+    setPrevStudent(student);
     if (student) {
       setFormData({
         fullName: student.fullName || '',
@@ -55,7 +57,7 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
       });
       setError(null);
     }
-  }, [student]);
+  }
 
   if (!isOpen || !student) return null;
 

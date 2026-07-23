@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Eye, Calendar, UserCheck, Check, AlertTriangle, BookOpen, GraduationCap, X, Send, MapPin, Filter, ShieldCheck, AlertCircle, ExternalLink, IndianRupee, HelpCircle, FileText } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Calendar, UserCheck, X, Send, MapPin } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import examService from '../../../api/exams';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import AcademyPublishingDetails from '../components/AcademyPublishingDetails';
 
 /**

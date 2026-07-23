@@ -1,5 +1,5 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { Eye, Download, CheckCircle2, ChevronLeft, ChevronRight, X, Database, FileText, UploadCloud, Trash2, Calendar, Award, Percent, RefreshCw } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
+import { Eye, Download, CheckCircle2, ChevronLeft, ChevronRight, X, Database, FileText, UploadCloud, Trash2, Percent, RefreshCw } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import Toast from '../../../Components/Toast';
 import academicService from '../../../api/academic';
@@ -13,12 +13,11 @@ const InstituteERPStudentDetails = ({
   const [attendance, setAttendance] = useState('');
   const [studentSearchText, setStudentSearchText] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
-  const [availableSemesters, setAvailableSemesters] = useState([]);
+
   
   // File upload state
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -46,7 +45,6 @@ const InstituteERPStudentDetails = ({
       setStudentName('');
       setAttendance('');
       setStudentSearchText('');
-      setAvailableSemesters([]);
       setSelectedSemester('');
       return;
     }
@@ -55,7 +53,6 @@ const InstituteERPStudentDetails = ({
       setStudentName(student.fullName || '');
       const idStr = student.enrollmentNo || `STUD00${student.id}`;
       setStudentSearchText(`${idStr} - ${student.fullName}`);
-      setAvailableSemesters(student.semesters || []);
       if (student.semesters && student.semesters.length > 0) {
         setSelectedSemester(student.semesters[0].semesterNumber);
         setAttendance(student.semesters[0].attendancePercentage || '');
@@ -67,7 +64,6 @@ const InstituteERPStudentDetails = ({
       setStudentName('');
       setAttendance('');
       setStudentSearchText('');
-      setAvailableSemesters([]);
       setSelectedSemester('');
     }
   };
@@ -120,7 +116,6 @@ const InstituteERPStudentDetails = ({
 
   const removeFile = () => {
     setUploadedFile(null);
-    setUploadProgress(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -164,7 +159,6 @@ const InstituteERPStudentDetails = ({
       setStudentName('');
       setAttendance('');
       setStudentSearchText('');
-      setAvailableSemesters([]);
       setSelectedSemester('');
       setUploadedFile(null);
 
@@ -300,17 +294,22 @@ const InstituteERPStudentDetails = ({
               {/* Semester Selection */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Select Semester *</label>
-                <select
-                  value={selectedSemester}
-                  onChange={(e) => handleSemesterChange(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                  required
-                >
-                  <option value="">Select Semester</option>
+                <div className="flex flex-wrap gap-2">
                   {[1, 2, 3, 4, 5, 6].map(sem => (
-                    <option key={sem} value={sem}>Semester {sem}</option>
+                    <button
+                      key={sem}
+                      type="button"
+                      onClick={() => handleSemesterChange(sem)}
+                      className={`flex-1 min-w-[30%] py-2 rounded-xl text-xs font-bold transition-all border ${
+                        String(selectedSemester) === String(sem)
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                          : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      Sem {sem}
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
 
               {/* Attendance percentage */}

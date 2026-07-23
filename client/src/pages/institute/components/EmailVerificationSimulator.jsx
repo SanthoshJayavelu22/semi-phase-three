@@ -1,5 +1,4 @@
-import React from 'react';
-import { Mail, CheckCircle2 } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
 const EmailVerificationSimulator = ({ user }) => {
   return (

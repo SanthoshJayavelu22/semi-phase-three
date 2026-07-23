@@ -50,6 +50,12 @@ export const authService = {
   },
 
   /**
+   * Resend verification email
+   * @param {string} email
+   */
+  resendVerification: (email) => apiClient.post('/auth/resend-verification', { email }),
+
+  /**
    * Check email verification and user details status
    */
   checkStatus: () => apiClient.get('/auth/status'),

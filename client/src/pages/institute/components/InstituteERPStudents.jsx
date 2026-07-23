@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone, BookOpen, Calendar, Shield, Award } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import InstituteStudentEditModal from './InstituteStudentEditModal';
 
@@ -21,6 +21,8 @@ const InstituteERPStudents = ({
 }) => {
   const [selectedStudentForView, setSelectedStudentForView] = useState(null);
   const [selectedStudentForEdit, setSelectedStudentForEdit] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const getDocUrl = (url) => {
     if (!url) return '';
@@ -56,6 +58,17 @@ const InstituteERPStudents = ({
       return matchesSearch && matchesStatus && matchesBatch && matchesCourse;
     });
   }, [students, studentSearch, studentFilter, selectedStudentFilterBatch, selectedStudentFilterCourse]);
+
+  // Reset page when filters change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [studentSearch, studentFilter, selectedStudentFilterBatch, selectedStudentFilterCourse]);
+
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
+  const paginatedList = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredList.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredList, currentPage]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200 text-left font-sans">
@@ -152,8 +165,8 @@ const InstituteERPStudents = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-600">
-              {filteredList.map((student, idx) => {
-                const serialNo = String(idx + 1).padStart(2, '0');
+              {paginatedList.map((student, idx) => {
+                const serialNo = String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0');
                 const batch = student.batchName || student.batch || 'Batch 2026-A';
                 const appId = student.enrollmentNo || student.applicationId || student.enrollmentId || `SEMI00${student.id || idx}`;
                 const name = student.fullName || 'Dr. Arjun Kumar';
@@ -212,6 +225,34 @@ const InstituteERPStudents = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+            <span className="text-xs text-slate-500 font-medium">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredList.length)} of {filteredList.length} entries
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
+                {currentPage} / {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* VIEW DETAILS MODAL - same as before, but ensure student._id is used */}

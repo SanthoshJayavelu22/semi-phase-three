@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Bell, CheckCircle2, AlertTriangle, Info, Clock, Check } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, CheckCircle2, Info, Clock, Check } from 'lucide-react';
 
 const InstituteERPNotifications = () => {
   // Mock data for notifications matching the Functional Spec events

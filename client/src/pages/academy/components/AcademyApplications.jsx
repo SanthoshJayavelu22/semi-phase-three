@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, RefreshCw, Eye, Edit, Trash2, Compass, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Search, RefreshCw, Eye, Compass } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 
 const AcademyApplications = ({ 

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreditCard, UploadCloud, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import academicService from '../../../api/academic';
 
 const InstituteERPRemittance = () => {
   const [totalAmount, setTotalAmount] = useState('');
@@ -8,16 +9,39 @@ const InstituteERPRemittance = () => {
   const [receiptFile, setReceiptFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock data for remittance history
-  const [remittanceHistory, setRemittanceHistory] = useState([
-    { id: 'REM-001', amount: 150000, date: '2023-11-15', transactionId: 'UTR123456789', status: 'Verified' },
-    { id: 'REM-002', amount: 50000, date: '2023-12-01', transactionId: 'UTR987654321', status: 'Pending Review' },
-  ]);
+  // Real data for remittance history
+  const [remittanceHistory, setRemittanceHistory] = useState([]);
+  const [payableAmount, setPayableAmount] = useState(0);
 
-  // Mock calculation of current payable amount (e.g., pending collected fees)
-  const payableAmount = 75000;
+  const fetchData = async () => {
+    try {
+      const [historyRes, payableRes] = await Promise.all([
+        academicService.getRemittances().catch(() => ({ data: { data: [] } })),
+        academicService.getPayableRemittance().catch(() => ({ data: { amount: 0 } }))
+      ]);
+      const historyData = historyRes.data?.data || historyRes.data || [];
+      const payableData = payableRes.data?.amount || payableRes.data?.payableAmount || 0;
+      
+      const mappedHistory = historyData.map(rem => ({
+        id: rem._id.substring(0, 8),
+        amount: rem.amount,
+        date: new Date(rem.paymentDate || rem.createdAt).toISOString().split('T')[0],
+        transactionId: rem.utrNumber || rem.transactionId || 'N/A',
+        status: rem.status || 'Pending Review',
+        fileUrl: rem.paymentReceiptUrl
+      }));
+      setRemittanceHistory(mappedHistory);
+      setPayableAmount(payableData);
+    } catch (err) {
+      console.error('Error fetching remittance data', err);
+    }
+  };
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!totalAmount || !transactionNo || !paymentDate || !receiptFile) {
       alert('Please fill all required fields and upload the receipt.');
@@ -26,25 +50,25 @@ const InstituteERPRemittance = () => {
     
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setRemittanceHistory([
-        {
-          id: `REM-00${remittanceHistory.length + 1}`,
-          amount: parseFloat(totalAmount),
-          date: paymentDate,
-          transactionId: transactionNo,
-          status: 'Pending Review'
-        },
-        ...remittanceHistory
-      ]);
+    try {
+      const formData = new FormData();
+      formData.append('amount', totalAmount);
+      formData.append('utrNumber', transactionNo);
+      formData.append('paymentDate', paymentDate);
+      formData.append('paymentReceipt', receiptFile);
+      
+      await academicService.submitRemittance(formData);
       
       setTotalAmount('');
       setTransactionNo('');
       setReceiptFile(null);
-      setIsSubmitting(false);
       alert('Remittance recorded successfully! It is now pending Academy review.');
-    }, 1500);
+      fetchData(); // refresh list
+    } catch (error) {
+      alert('Failed to submit remittance. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

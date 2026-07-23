@@ -1,4 +1,3 @@
-import React from 'react';
 import logo from '../../assets/semi logo.png';
 
 const InstitutionalLayout = ({ children, portalType = 'institute', hideHeaderFooter = false }) => {

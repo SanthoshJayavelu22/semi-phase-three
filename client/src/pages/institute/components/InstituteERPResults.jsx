@@ -1,19 +1,59 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Download, FileText, Search, Filter } from 'lucide-react';
+import resultService from '../../../api/results';
 
 const InstituteERPResults = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Mock data for results
-  const [results] = useState([
-    { id: 1, enrollmentId: 'SEMI-2023-001', name: 'Dr. Rahul Sharma', course: 'MD Emergency Medicine', marks: 85, status: 'Pass', date: '2023-12-15' },
-    { id: 2, enrollmentId: 'SEMI-2023-002', name: 'Dr. Priya Patel', course: 'DNB Emergency Medicine', marks: 78, status: 'Pass', date: '2023-12-15' },
-    { id: 3, enrollmentId: 'SEMI-2023-003', name: 'Dr. Amit Kumar', course: 'MEM (Emergency Medicine)', marks: 45, status: 'Fail', date: '2023-12-15' },
-  ]);
+  // Real data for results
+  const [results, setResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      try {
+        setIsLoading(true);
+        const res = await resultService.getAllResults();
+        const data = res.data?.data || res.data || [];
+        
+        const mappedResults = data.map(r => {
+          const totalMarks = r.subjects ? r.subjects.reduce((sum, s) => sum + (s.totalMarks || 0), 0) : 0;
+          return {
+            id: r._id,
+            enrollmentId: r.student?.enrollmentId || 'N/A',
+            name: r.student?.firstName ? `${r.student.firstName} ${r.student.lastName}` : 'Unknown Student',
+            course: r.student?.course?.name || 'Unknown Course',
+            marks: r.totalMarks || totalMarks || 0,
+            status: r.resultStatus === 'PASS' ? 'Pass' : 'Fail',
+            date: r.publishedDate ? new Date(r.publishedDate).toISOString().split('T')[0] : 'N/A'
+          };
+        });
+        setResults(mappedResults);
+      } catch (err) {
+        console.error('Error fetching results:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchResults();
+  }, []);
 
   const filteredResults = results.filter(result => 
     result.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     result.enrollmentId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
+  const paginatedResults = filteredResults.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   return (
@@ -65,8 +105,8 @@ const InstituteERPResults = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredResults.length > 0 ? (
-                filteredResults.map((result) => (
+              {paginatedResults.length > 0 ? (
+                paginatedResults.map((result) => (
                   <tr key={result.id} className="hover:bg-slate-50/80 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -89,7 +129,11 @@ const InstituteERPResults = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
-                        <button className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip-trigger" title="Download Marksheet">
+                        <button 
+                          className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip-trigger" 
+                          title="Download Marksheet"
+                          onClick={() => resultService.downloadMarksheet(result.id)}
+                        >
                           <FileText className="w-4 h-4" />
                         </button>
                         {result.status === 'Pass' && (
@@ -112,6 +156,34 @@ const InstituteERPResults = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
+            <span className="text-xs text-slate-500 font-medium">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredResults.length)} of {filteredResults.length} Results
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-primary-600 shadow-sm">
+                {currentPage} / {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

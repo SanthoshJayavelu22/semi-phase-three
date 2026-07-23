@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Clock, ShieldAlert, CheckCircle2, ShieldCheck, Mail, LogOut } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Clock, ShieldAlert, CheckCircle2, LogOut } from 'lucide-react';
 import ConfirmModal from '../../../Components/ConfirmModal';
 
 const ApplicationStatusPending = ({
   applicationRecord,
   appForm,
-  uploadedDocs,
   loadApplicationFromStorage,
-  saveToLocalStorage,
   setApplicationRecord,
   setCurrentStep,
   handleLogout

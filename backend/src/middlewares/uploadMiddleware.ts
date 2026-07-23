@@ -51,10 +51,20 @@ if (isCloudinaryConfigured) {
   console.log('Cloudinary not configured. Using local disk storage for file uploads.');
 }
 
+const memoryStorage = multer.memoryStorage();
+
 export const upload = multer({ 
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   }
 });
+
+export const uploadMemory = multer({
+  storage: memoryStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
 export { cloudinary };

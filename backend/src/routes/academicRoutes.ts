@@ -25,9 +25,17 @@ import {
   getStudentById,
   updateStudent,
   deleteStudent,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
 } from '../controllers/academicController';
 
 const router = express.Router();
+
+// ==========================================
+// PAYMENT ROUTES (RAZORPAY)
+// ==========================================
+router.post('/payment/create-order', protect, authorize('institute'), createRazorpayOrder);
+router.post('/payment/verify', protect, authorize('institute'), verifyRazorpayPayment);
 
 // ==========================================
 // COURSE CRUD Routes

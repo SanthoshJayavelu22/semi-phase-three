@@ -1,5 +1,4 @@
-import React from 'react';
-import { User, Mail, Phone, School, Award, FileText, CheckCircle, XCircle, ExternalLink, Calendar, BookOpen, UserCheck, ShieldAlert } from 'lucide-react';
+import { User, Award, FileText, CheckCircle, XCircle, ExternalLink, BookOpen, UserCheck, ShieldAlert } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const AcademyStudentModal = ({ student, isOpen, onClose }) => {

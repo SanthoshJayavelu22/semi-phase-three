@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Mail, Lock, LogIn, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrentStep }) => {

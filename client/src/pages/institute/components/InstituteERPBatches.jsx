@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Pencil, Trash2, Calendar, Users, PlusCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Pencil, Trash2, XCircle } from 'lucide-react';
 
 const InstituteERPBatches = ({
   batches = [],
@@ -16,6 +16,11 @@ const InstituteERPBatches = ({
     startDate: '',
     seats: ''
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+  const totalPages = Math.ceil(batches.length / itemsPerPage) || 1;
+  const paginatedBatches = batches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Handle setting edit form when selecting a batch to edit
   const startEdit = (batch) => {
@@ -56,14 +61,7 @@ const InstituteERPBatches = ({
     cancelEdit();
   };
 
-  // Determine if a course already has a batch with the same name
-  const isDuplicateBatchName = (name, courseId, excludeId = null) => {
-    return batches.some(b => {
-      if (excludeId && (b._id === excludeId || b.id === excludeId)) return false;
-      const bCourseId = b.course?._id || b.course || b.courseId;
-      return b.name?.toLowerCase() === name.toLowerCase() && bCourseId === courseId;
-    });
-  };
+
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200 text-left">
@@ -187,7 +185,7 @@ const InstituteERPBatches = ({
           <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-3">Active Batches Registry</h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-semibold text-xs text-gray-600">
-            {batches.map((batch) => {
+            {paginatedBatches.map((batch) => {
               const ratio = Math.min(100, Math.floor(((batch.activeFellows || 0) / parseInt(batch.seats || 5, 10)) * 100));
               const isEditingThis = editingBatch && (editingBatch._id === batch._id || editingBatch.id === batch.id);
               const courseDisplayName = batch.course?.name || batch.course?.courseName || batch.courseName || (typeof batch.course === 'string' ? batch.course : '');
@@ -254,6 +252,34 @@ const InstituteERPBatches = ({
               </div>
             )}
           </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, batches.length)} of {batches.length} Batches
+              </span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                <div className="flex items-center px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
+                  {currentPage} / {totalPages}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

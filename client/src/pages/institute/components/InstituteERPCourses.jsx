@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle } from 'lucide-react';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
@@ -43,6 +43,15 @@ const InstituteERPCourses = ({
       c.courseCode?.toLowerCase().includes(courseSearch?.toLowerCase() || '')
     );
   }, [courses, courseSearch]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  const totalPages = Math.ceil(filteredCoursesList.length / itemsPerPage) || 1;
+  const paginatedCourses = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredCoursesList.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredCoursesList, currentPage]);
 
   // ─── Edit Handlers ──────────────────────────────────────────────────────────
   const openEditModal = useCallback((course) => {
@@ -410,7 +419,10 @@ const InstituteERPCourses = ({
               type="text"
               placeholder="Search Courses..."
               value={courseSearch}
-              onChange={(e) => setCourseSearch(e.target.value)}
+              onChange={(e) => {
+                setCourseSearch(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
             />
           </div>
@@ -431,15 +443,16 @@ const InstituteERPCourses = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white font-medium text-gray-800">
-              {filteredCoursesList.length > 0 ? (
-                filteredCoursesList.map((course, idx) => {
+              {paginatedCourses.length > 0 ? (
+                paginatedCourses.map((course, idx) => {
+                  const globalIdx = (currentPage - 1) * itemsPerPage + idx;
                   const studentCount = course.studentsCount || 0;
                   const batchCount = course.batchesCount || 0;
                   const isActive = course.status === 'Active';
 
                   return (
                     <tr key={course.id || course._id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4 text-gray-400 font-mono">{(idx + 1).toString().padStart(2, '0')}</td>
+                      <td className="px-6 py-4 text-gray-400 font-mono">{(globalIdx + 1).toString().padStart(2, '0')}</td>
                       <td className="px-6 py-4 font-black text-gray-900">{course.courseName}</td>
                       <td className="px-6 py-4">
                         <span className="bg-gray-100 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200/50 font-mono">
@@ -520,6 +533,34 @@ const InstituteERPCourses = ({
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCoursesList.length)} of {filteredCoursesList.length} Courses
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <div className="flex items-center px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
+                {currentPage} / {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─── EDIT COURSE MODAL ────────────────────────────────────────────────── */}

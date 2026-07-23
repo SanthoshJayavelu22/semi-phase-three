@@ -1,4 +1,3 @@
-import React from 'react';
 import { Activity, BookOpen, Layers, GraduationCap, Users, CreditCard, FileText, Database, Ticket } from 'lucide-react';
 
 const InstituteERPSidebar = ({ 
@@ -7,7 +6,7 @@ const InstituteERPSidebar = ({
   user, 
   setErrorBanner, 
   setSuccessBanner,
-  handleLogout
+
 }) => {
   const handleTabClick = (tab) => {
     setErrorBanner(null);

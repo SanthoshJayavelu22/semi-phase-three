@@ -1,36 +1,27 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import academicService from '../../../api/academic';
+import instituteService from '../../../api/institutes';
+import examService from '../../../api/exams';
+import resultService from '../../../api/results';
 import {
   Calendar,
   Clock,
   Send,
   CheckCircle2,
-  XCircle,
   AlertCircle,
   Building2,
   Users,
-  GraduationCap,
   FileSpreadsheet,
-  Download,
-  Printer,
   RefreshCw,
   Eye,
   ChevronDown,
-  ChevronUp,
-  Filter,
-  Search,
-  User,
-  BookOpen,
-  Award,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Globe,
   ShieldCheck,
   Bell,
-  Clock as ClockIcon,
   CalendarDays,
   Mail,
-  BarChart3
+  BarChart3,
+  X
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
@@ -50,39 +41,46 @@ const AcademyPublishResults = () => {
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
 
-  // ─── Mock Data ──────────────────────────────────────────────────────────────
-  const mockInstitutes = [
-    { id: 1, name: 'Saveetha Medical College', location: 'Chennai' },
-    { id: 2, name: 'Madras Medical College', location: 'Chennai' },
-    { id: 3, name: 'Dr.MGR Medical College', location: 'Chennai' },
-    { id: 4, name: 'Apollo Hospitals', location: 'Hyderabad' },
-  ];
+  // ─── Data Fetching ──────────────────────────────────────────────────────────
+  const [institutes, setInstitutes] = useState([]);
+  const [exams, setExams] = useState([]);
+  const [batches, setBatches] = useState([]);
 
-  const mockExams = [
-    { id: 1, name: 'Final Exam 2026', date: '2026-03-15', type: 'Final' },
-    { id: 2, name: 'Mid Term Exam 2026', date: '2026-01-20', type: 'Mid Term' },
-    { id: 3, name: 'Final Exam 2025', date: '2025-12-10', type: 'Final' },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [instRes, examRes, batchRes] = await Promise.all([
+          instituteService.listApplications().catch(() => ({ data: { data: [] } })),
+          examService.listExamApplications().catch(() => ({ data: { data: [] } })),
+          academicService.getBatches().catch(() => ({ data: { data: [] } }))
+        ]);
 
-  const mockBatches = [
-    { id: 1, name: 'Batch 2024-A', year: 2024, students: 12 },
-    { id: 2, name: 'Batch 2024-B', year: 2024, students: 10 },
-    { id: 3, name: 'Batch 2023-A', year: 2023, students: 8 },
-    { id: 4, name: 'Batch 2023-B', year: 2023, students: 6 },
-  ];
+        const instData = instRes.data?.data || [];
+        const examData = examRes.data?.data || [];
+        const batchData = batchRes.data?.data || [];
+
+        setInstitutes(instData.map(i => ({ id: i._id, name: i.orgName || i.organizationName || 'Institute' })));
+        setExams(examData.map(e => ({ id: e._id, name: e.title || e.name || 'Exam' })));
+        setBatches(batchData.map(b => ({ id: b._id, name: b.name, students: b.students?.length || 0 })));
+      } catch (err) {
+        setToast({ message: 'Error loading dropdown data', type: 'danger' });
+      }
+    };
+    fetchData();
+  }, []);
 
   // ─── Computed ──────────────────────────────────────────────────────────────
   const filteredBatches = useMemo(() => {
     if (!selectedInstitute) return [];
-    return mockBatches;
-  }, [selectedInstitute]);
+    return batches;
+  }, [selectedInstitute, batches]);
 
   const totalStudents = useMemo(() => {
     if (includeAllStudents) {
-      return mockBatches.reduce((sum, b) => sum + b.students, 0);
+      return batches.reduce((sum, b) => sum + (b.students || 0), 0);
     }
     return selectedStudents.length;
-  }, [includeAllStudents, selectedStudents]);
+  }, [includeAllStudents, selectedStudents, batches]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleSubmit = () => {
@@ -110,16 +108,20 @@ const AcademyPublishResults = () => {
 
     setConfirmConfig({
       title: 'Publish Results',
-      message: `Are you sure you want to publish results for:\n\n• Institution: ${mockInstitutes.find(i => i.id === Number(selectedInstitute))?.name}\n• Exam: ${mockExams.find(e => e.id === Number(selectedExam))?.name}\n• Students: ${totalStudents}\n• Publish Date: ${new Date(publishDate).toLocaleDateString()}\n• Publish Time: ${publishTime} ${publishAMPM}`,
+      message: `Are you sure you want to publish results for:\n\n• Institution: ${institutes.find(i => String(i.id) === String(selectedInstitute))?.name}\n• Exam: ${exams.find(e => String(e.id) === String(selectedExam))?.name}\n• Students: ${totalStudents}\n• Publish Date: ${new Date(publishDate).toLocaleDateString()}\n• Publish Time: ${publishTime} ${publishAMPM}`,
       type: 'success',
       confirmText: 'Yes, Publish Now',
       onConfirm: async () => {
         setConfirmConfig(null);
         setIsSubmitting(true);
-
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
+        
+        try {
+          // Since there is no bulk publish endpoint that accepts batch/exam ID, we just simulate the UI flow
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        } catch (error) {
+          console.error(error);
+        }
+        
         setIsSubmitting(false);
 
         // Alternate Flow: Missing marks -> Block
@@ -162,24 +164,24 @@ const AcademyPublishResults = () => {
 
   const handleSendNotification = () => {
     setToast({
-      message: `📧 Notification emails sent to ${totalStudents} students and ${mockInstitutes.filter(i => i.id === Number(selectedInstitute)).length} institute(s)!`,
+      message: `📧 Notification emails sent to ${totalStudents} students and ${institutes.filter(i => String(i.id) === String(selectedInstitute)).length} institute(s)!`,
       type: 'success'
     });
   };
 
   // ─── Render Helpers ────────────────────────────────────────────────────────
   const getInstituteName = (id) => {
-    const inst = mockInstitutes.find(i => i.id === Number(id));
+    const inst = institutes.find(i => String(i.id) === String(id));
     return inst ? inst.name : '';
   };
 
   const getExamName = (id) => {
-    const exam = mockExams.find(e => e.id === Number(id));
+    const exam = exams.find(e => String(e.id) === String(id));
     return exam ? exam.name : '';
   };
 
   const getBatchName = (id) => {
-    const batch = mockBatches.find(b => b.id === Number(id));
+    const batch = batches.find(b => String(b.id) === String(id));
     return batch ? batch.name : '';
   };
 
@@ -240,10 +242,8 @@ const AcademyPublishResults = () => {
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer appearance-none"
               >
                 <option value="">Select Institution</option>
-                {mockInstitutes.map(inst => (
-                  <option key={inst.id} value={inst.id}>
-                    {inst.name} ({inst.location})
-                  </option>
+                {institutes.map(inst => (
+                  <option key={inst.id} value={inst.id}>{inst.name}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -263,10 +263,8 @@ const AcademyPublishResults = () => {
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer appearance-none"
               >
                 <option value="">Select Exam</option>
-                {mockExams.map(exam => (
-                  <option key={exam.id} value={exam.id}>
-                    {exam.name} ({exam.type})
-                  </option>
+                {exams.map(exam => (
+                  <option key={exam.id} value={exam.id}>{exam.name}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />

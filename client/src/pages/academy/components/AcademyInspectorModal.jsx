@@ -1,15 +1,12 @@
-import React from 'react';
-import { Eye, CheckCircle2 } from 'lucide-react';
+import { Eye, CheckCircle2, ShieldCheck, X, FileCheck, Building2, MapPin, Contact2, GraduationCap, Banknote, AlertCircle, FileText } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const AcademyInspectorModal = ({
   selectedApp,
   setSelectedApp,
   auditDocs,
-  setPreviewDoc,
   setShowRejectModal,
-  handleApprove,
-  handleTriggerInspection
+  handleApprove
 }) => {
   const getDocUrl = (url) => {
     if (!url) return '';
@@ -18,255 +15,192 @@ const AcademyInspectorModal = ({
     return getUploadUrl(filename);
   };
   
+  const InfoCard = ({ icon: Icon, title, children }) => (
+    <div className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-4 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-50 to-transparent rounded-bl-full -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <h4 className="text-xs uppercase font-bold text-indigo-900/60 tracking-wider flex items-center gap-2 border-b border-slate-100/80 pb-3">
+        <Icon className="w-4 h-4 text-indigo-400" />
+        {title}
+      </h4>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5 text-sm font-medium text-slate-700 relative z-10">
+        {children}
+      </div>
+    </div>
+  );
+
+  const StatBox = ({ label, value, isCompliant }) => (
+    <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
+      <div>
+        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">{label}</span>
+        <span className="text-base font-black text-slate-800 mt-0.5 block">
+          {value}
+        </span>
+      </div>
+      <div className="flex flex-col items-end gap-1.5">
+        {isCompliant ? (
+          <span className="flex items-center gap-1 text-[10px] uppercase font-black px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100/50">
+            <CheckCircle2 className="w-3 h-3" /> Compliant
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-[10px] uppercase font-black px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-100/50">
+            <AlertCircle className="w-3 h-3" /> Non-Compliant
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  const DetailField = ({ label, value, colSpan = 1, isLink = false }) => (
+    <div className={colSpan === 2 ? 'col-span-2' : ''}>
+      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-1">{label}</span>
+      {isLink && value && value !== 'N/A' ? (
+        <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-700 hover:underline font-semibold flex items-center gap-1 w-fit">
+          {value}
+        </a>
+      ) : (
+        <span className={`block ${value === 'N/A' ? 'text-slate-400 italic' : 'text-slate-800'}`}>{value}</span>
+      )}
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-5xl w-full h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="bg-[#f4f7f9] rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] border border-white/20 max-w-6xl w-full h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300 text-left">
+        
         {/* Modal Header */}
-        <div className="bg-slate-900 px-8 py-5 text-white flex justify-between items-center flex-shrink-0">
-          <div>
-            <span className="text-[10px] uppercase font-black tracking-wider text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded border border-blue-500/20">
-              Compliance Audit & Document Inspector
-            </span>
-            <h3 className="text-lg font-black mt-2 text-white">{selectedApp.orgName}</h3>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Admin Email: {selectedApp.email} | Application Registry ID: {selectedApp.id}</span>
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-8 py-6 text-white flex justify-between items-start flex-shrink-0 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+          
+          <div className="relative z-10 flex gap-5 items-center">
+            <div className="w-14 h-14 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-400/30 shadow-inner backdrop-blur-sm">
+              <ShieldCheck className="w-7 h-7 text-indigo-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-[10px] uppercase font-black tracking-widest text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30">
+                  Compliance Audit & Inspector
+                </span>
+                <span className="text-[10px] uppercase font-bold text-slate-400">ID: {selectedApp.id}</span>
+              </div>
+              <h3 className="text-2xl font-black text-white tracking-tight">{selectedApp.orgName}</h3>
+              <div className="flex items-center gap-4 mt-1.5 text-xs text-indigo-200/80 font-medium">
+                <span className="flex items-center gap-1.5"><Contact2 className="w-3.5 h-3.5" /> {selectedApp.email}</span>
+                <span className="w-1 h-1 bg-indigo-500 rounded-full" />
+                <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {selectedApp.form?.instituteAddress || 'Address Not Provided'}</span>
+              </div>
+            </div>
           </div>
+
           <button
             onClick={() => setSelectedApp(null)}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs uppercase transition-colors"
+            className="relative z-10 p-2.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl transition-all duration-200 border border-white/10 group"
           >
-            Close Audit
+            <X className="w-5 h-5 group-hover:scale-110 transition-transform" />
           </button>
         </div>
 
         {/* Modal Scrollable Content split panel */}
-        <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 bg-[#f8fafc]">
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 custom-scrollbar">
           
-          {/* Left Column: Compliance checks & General specs */}
-          <div className="space-y-6">
+          {/* Left Column: Compliance checks & General specs (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Compliance Quick Stats */}
             <div>
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider mb-3">Compliance Specifications</h4>
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                <h4 className="text-xs uppercase font-black text-slate-500 tracking-widest">Compliance Checks</h4>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Bed count */}
-                <div className="bg-white border border-gray-150 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-gray-400 block">Emergency Beds</span>
-                    <span className="text-sm font-extrabold text-gray-900 mt-1 block">
-                      {selectedApp.form?.bedCount || selectedApp.bedCount} Beds
-                    </span>
-                  </div>
-                  <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                    parseInt(selectedApp.form?.bedCount || selectedApp.bedCount, 10) >= 10 
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {parseInt(selectedApp.form?.bedCount || selectedApp.bedCount, 10) >= 10 ? 'Compliant' : 'NON-COMPLIANT'}
-                  </span>
-                </div>
-
-                {/* Experience */}
-                <div className="bg-white border border-gray-150 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-gray-400 block">Physician Exp</span>
-                    <span className="text-sm font-extrabold text-gray-900 mt-1 block">
-                      {selectedApp.form?.physicianExperience || selectedApp.experience} Months
-                    </span>
-                  </div>
-                  <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                    parseInt(selectedApp.form?.physicianExperience || selectedApp.experience, 10) >= 24 
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {parseInt(selectedApp.form?.physicianExperience || selectedApp.experience, 10) >= 24 ? 'Compliant' : 'NON-COMPLIANT'}
-                  </span>
-                </div>
-
-                {/* Faculty count */}
-                <div className="bg-white border border-gray-150 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-gray-400 block">EM Faculty</span>
-                    <span className="text-sm font-extrabold text-gray-900 mt-1 block">
-                      {selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount} Instructors
-                    </span>
-                  </div>
-                  <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                    parseInt(selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount, 10) >= 1 
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {parseInt(selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount, 10) >= 1 ? 'Compliant' : 'NON-COMPLIANT'}
-                  </span>
-                </div>
-
-                {/* Teaching Space */}
-                <div className="bg-white border border-gray-150 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-gray-400 block">Classroom</span>
-                    <span className="text-sm font-extrabold text-gray-900 mt-1 block">
-                      {(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)' ? 'Available' : 'Unavailable'}
-                    </span>
-                  </div>
-                  <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                    (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)'
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)' ? 'Compliant' : 'NON-COMPLIANT'}
-                  </span>
-                </div>
+                <StatBox 
+                  label="Emergency Beds" 
+                  value={`${selectedApp.form?.bedCount || selectedApp.bedCount} Beds`}
+                  isCompliant={parseInt(selectedApp.form?.bedCount || selectedApp.bedCount, 10) >= 10}
+                />
+                <StatBox 
+                  label="Physician Exp" 
+                  value={`${selectedApp.form?.physicianExperience || selectedApp.experience} Months`}
+                  isCompliant={parseInt(selectedApp.form?.physicianExperience || selectedApp.experience, 10) >= 24}
+                />
+                <StatBox 
+                  label="EM Faculty" 
+                  value={`${selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount} Instructors`}
+                  isCompliant={parseInt(selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount, 10) >= 1}
+                />
+                <StatBox 
+                  label="Classroom / Teaching Space" 
+                  value={(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)' ? 'Available' : 'Unavailable'}
+                  isCompliant={(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)'}
+                />
               </div>
             </div>
 
-            {/* 1. Institutional Profile */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                1. Institutional Profile
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Organization Name</span>
-                  <span className="block mt-0.5">{selectedApp.orgName}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Constitution Type</span>
-                  <span className="block mt-0.5">{selectedApp.form?.constitutionType || 'N/A'}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Institutional Address</span>
-                  <span className="block mt-0.5">{selectedApp.form?.instituteAddress || 'N/A'}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Registered Office Address</span>
-                  <span className="block mt-0.5">{selectedApp.form?.registeredOfficeAddress || 'N/A'}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Institutional Website</span>
-                  {selectedApp.form?.website ? (
-                    <a href={selectedApp.form.website.startsWith('http') ? selectedApp.form.website : `https://${selectedApp.form.website}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline block mt-0.5">
-                      {selectedApp.form.website}
-                    </a>
-                  ) : (
-                    <span className="block mt-0.5">N/A</span>
-                  )}
-                </div>
-              </div>
-            </div>
+            <InfoCard icon={Building2} title="1. Institutional Profile">
+              <DetailField label="Organization Name" value={selectedApp.orgName} />
+              <DetailField label="Constitution Type" value={selectedApp.form?.constitutionType || 'N/A'} />
+              <DetailField label="Institutional Address" value={selectedApp.form?.instituteAddress || 'N/A'} colSpan={2} />
+              <DetailField label="Registered Office Address" value={selectedApp.form?.registeredOfficeAddress || 'N/A'} colSpan={2} />
+              <DetailField label="Institutional Website" value={selectedApp.form?.website} colSpan={2} isLink={true} />
+            </InfoCard>
 
-            {/* 2. Contact Registry */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                2. Contact Registry
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Primary Account Email</span>
-                  <span className="block mt-0.5 font-mono">{selectedApp.email}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Application Contact Email</span>
-                  <span className="block mt-0.5 font-mono">{selectedApp.form?.emailAddress || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Office Phone</span>
-                  <span className="block mt-0.5">{selectedApp.form?.officePhone || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Mobile Phone</span>
-                  <span className="block mt-0.5">{selectedApp.form?.phoneNumber || 'N/A'}</span>
-                </div>
-              </div>
-            </div>
+            <InfoCard icon={Contact2} title="2. Contact Registry">
+              <DetailField label="Primary Account Email" value={selectedApp.email} />
+              <DetailField label="Application Contact Email" value={selectedApp.form?.emailAddress || 'N/A'} />
+              <DetailField label="Office Phone" value={selectedApp.form?.officePhone || 'N/A'} />
+              <DetailField label="Mobile Phone" value={selectedApp.form?.phoneNumber || 'N/A'} />
+            </InfoCard>
 
-            {/* 3. Executive Leadership */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                3. Executive Leadership & Representation
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Head of College / Institute</span>
-                  <span className="block mt-0.5">{selectedApp.form?.headName || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Head Designation</span>
-                  <span className="block mt-0.5">{selectedApp.form?.headDesignation || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">HOD (Emergency Medicine)</span>
-                  <span className="block mt-0.5">{selectedApp.form?.hodName || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Authorized Representative</span>
-                  <span className="block mt-0.5">{selectedApp.form?.authorizedRepName || 'N/A'} ({selectedApp.form?.authorizedRepDesignation || 'N/A'})</span>
-                </div>
-              </div>
-            </div>
+            <InfoCard icon={GraduationCap} title="3. Executive Leadership & Representation">
+              <DetailField label="Head of College / Institute" value={selectedApp.form?.headName || 'N/A'} />
+              <DetailField label="Head Designation" value={selectedApp.form?.headDesignation || 'N/A'} />
+              <DetailField label="HOD (Emergency Medicine)" value={selectedApp.form?.hodName || 'N/A'} />
+              <DetailField label="Authorized Representative" value={`${selectedApp.form?.authorizedRepName || 'N/A'} (${selectedApp.form?.authorizedRepDesignation || 'N/A'})`} />
+            </InfoCard>
 
-            {/* 4. Academic Program Intake */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                4. Academic Intake & Specifications
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Proposed Commencement</span>
-                  <span className="block mt-0.5">{selectedApp.form?.commencementDate ? new Date(selectedApp.form.commencementDate).toLocaleDateString() : 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Seats Requested</span>
-                  <span className="block mt-0.5 text-indigo-600 font-extrabold">{selectedApp.form?.seatsRequested || 'N/A'} Seats</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">NABH Accreditation Status</span>
-                  <span className="block mt-0.5">{(selectedApp.form?.nabhStatus || 'Yes') === 'Yes' ? 'Accredited' : 'Non-Accredited'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Course Director EM Qualified</span>
-                  <span className="block mt-0.5">{selectedApp.form?.courseDirectorEMQualified || 'Yes'}</span>
-                </div>
-              </div>
-            </div>
+            <InfoCard icon={FileCheck} title="4. Academic Intake & Specifications">
+              <DetailField label="Proposed Commencement" value={selectedApp.form?.commencementDate ? new Date(selectedApp.form.commencementDate).toLocaleDateString() : 'N/A'} />
+              <DetailField label="Seats Requested" value={`${selectedApp.form?.seatsRequested || 'N/A'} Seats`} />
+              <DetailField label="NABH Accreditation Status" value={(selectedApp.form?.nabhStatus || 'Yes') === 'Yes' ? 'Accredited' : 'Non-Accredited'} />
+              <DetailField label="Course Director EM Qualified" value={selectedApp.form?.courseDirectorEMQualified || 'Yes'} />
+            </InfoCard>
+            
+            <InfoCard icon={Banknote} title="5. Fee Remittance Registry">
+              <DetailField label="Payment Bank Name" value={selectedApp.form?.paymentBankName || 'N/A'} />
+              <DetailField label="Transaction ID / UTR" value={selectedApp.form?.paymentTxnNo || 'N/A'} />
+              <DetailField label="Transaction Date" value={selectedApp.form?.paymentTxnDate ? new Date(selectedApp.form.paymentTxnDate).toLocaleDateString() : 'N/A'} />
+              <DetailField label="Payment Status" value={selectedApp.form?.paymentStatus || 'Completed'} />
+            </InfoCard>
 
-            {/* 5. Payment Transaction Details */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                5. Fee Remittance Registry
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Payment Bank Name</span>
-                  <span className="block mt-0.5">{selectedApp.form?.paymentBankName || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Transaction ID / UTR</span>
-                  <span className="block mt-0.5 text-slate-900 font-mono font-bold">{selectedApp.form?.paymentTxnNo || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Transaction Date</span>
-                  <span className="block mt-0.5">{selectedApp.form?.paymentTxnDate ? new Date(selectedApp.form.paymentTxnDate).toLocaleDateString() : 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Payment Status</span>
-                  <span className="block mt-0.5 text-emerald-700 font-black">{selectedApp.form?.paymentStatus || 'Completed'}</span>
-                </div>
+            {selectedApp.rejectionReason && (
+              <div className="bg-gradient-to-r from-rose-50 to-white border border-rose-100 rounded-2xl p-5 shadow-sm mt-4 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+                <span className="flex items-center gap-1.5 text-[10px] uppercase font-black text-rose-600 mb-2 tracking-widest">
+                  <AlertCircle className="w-3.5 h-3.5" /> Logged Rejection Reason
+                </span>
+                <p className="text-sm font-medium text-slate-700 italic pl-1 border-l-2 border-rose-200">
+                  "{selectedApp.rejectionReason}"
+                </p>
               </div>
+            )}
 
-              {selectedApp.rejectionReason && (
-                <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-rose-800 font-semibold mt-4">
-                  <span className="text-[10px] uppercase font-black text-rose-600 block">Logged Rejection Reason:</span>
-                  <p className="mt-1 leading-relaxed text-xs font-medium">"{selectedApp.rejectionReason}"</p>
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Right Column: Uploaded Documents Audit & Payments */}
-          <div className="space-y-6">
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                Certified Upload Inspections (9 files mandatory)
-              </h4>
+          {/* Right Column: Documents (5 cols) */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            {/* Uploaded Documents */}
+            <div className="bg-white/90 backdrop-blur-sm border border-slate-200/60 rounded-[1.5rem] p-6 shadow-xl shadow-slate-200/20 sticky top-0">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">Certified Upload Inspections</h4>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mt-0.5">9 Mandatory Documents</p>
+                </div>
+              </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2.5">
                 {auditDocs.map((key) => {
                   const titles = {
                     equipmentList: 'Equipment Register PDF',
@@ -281,21 +215,32 @@ const AcademyInspectorModal = ({
                   };
                   const fileData = selectedApp.uploadedDocs?.[key];
                   const docUrl = getDocUrl(fileData?.url || selectedApp.form?.documents?.[key + 'Url'] || selectedApp.form?.documents?.[key] || selectedApp.form?.[key + 'Url'] || selectedApp.form?.[key]);
+                  
                   return (
-                    <div key={key} className="bg-slate-50 border border-gray-150 rounded-xl p-3 flex items-center justify-between">
-                      <span className="font-extrabold text-gray-700 truncate text-[11px]">{titles[key] || key}</span>
+                    <div key={key} className="bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-xl p-3.5 flex items-center justify-between transition-colors group">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${docUrl ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                          {docUrl ? <FileCheck className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                        </div>
+                        <span className="font-semibold text-slate-700 truncate text-xs group-hover:text-slate-900 transition-colors">
+                          {titles[key] || key}
+                        </span>
+                      </div>
+                      
                       {docUrl ? (
                         <a
                           href={docUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-blue-600 hover:text-blue-800 font-black flex items-center gap-1 uppercase text-[9px] tracking-wider transition-colors"
+                          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-slate-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all shadow-sm flex-shrink-0"
+                          title="View Document"
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          Open
+                          <Eye className="w-4 h-4" />
                         </a>
                       ) : (
-                        <span className="text-gray-400 text-[9px] uppercase tracking-wider font-bold">Not Uploaded</span>
+                        <span className="bg-slate-100 text-slate-400 text-[9px] uppercase tracking-wider font-bold px-2 py-1 rounded-md flex-shrink-0">
+                          Missing
+                        </span>
                       )}
                     </div>
                   );
@@ -303,45 +248,43 @@ const AcademyInspectorModal = ({
               </div>
             </div>
 
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                Simulated Transaction Capture
-              </h4>
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-[1.5rem] p-6 text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl transform translate-x-1/3 -translate-y-1/3"></div>
               
-              <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <div className="text-xs leading-relaxed">
-                  <span className="font-extrabold text-emerald-900 block">Inspection Fee Fully Verified</span>
-                  <p className="text-emerald-700 mt-1 font-medium text-[11px]">
-                    Simulation capture verified successfully: transaction reference **{selectedApp.paymentDetails?.transactionId || 'TXN-IMPS-887642'}** for amount **{selectedApp.paymentDetails?.amount || '₹15,000'}** was matched on {selectedApp.paymentDetails?.date || '18 May, 2026'}.
-                  </p>
+              <div className="flex items-center gap-3 mb-4 relative z-10">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20">
+                  <CheckCircle2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white tracking-wide">Simulated Transaction</h4>
+                  <p className="text-[10px] uppercase font-semibold text-emerald-100 tracking-wider mt-0.5">Fully Verified</p>
                 </div>
               </div>
+              
+              <div className="bg-black/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 relative z-10 text-xs text-emerald-50 leading-relaxed font-medium">
+                Simulation capture verified successfully: transaction reference <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails?.transactionId || 'TXN-IMPS-887642'}</span> for amount <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails?.amount || '₹15,000'}</span> was matched on {selectedApp.paymentDetails?.date || '18 May, 2026'}.
+              </div>
             </div>
+            
           </div>
         </div>
 
         {/* Modal Bottom Actions bar */}
         {selectedApp.status === 'pending_review' && (
-          <div className="bg-slate-50 px-8 py-5 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
-            {/* <button
-              onClick={handleTriggerInspection}
-              className="px-5 py-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-extrabold rounded-xl text-xs uppercase tracking-wider shadow-sm transition-colors"
-            >
-              Trigger Site Inspection
-            </button> */}
-            
-            <div className="flex gap-3">
+          <div className="bg-white/80 backdrop-blur-md px-8 py-5 border-t border-slate-200/80 flex justify-end items-center flex-shrink-0">
+            <div className="flex gap-4">
               <button
                 onClick={() => setShowRejectModal(true)}
-                className="px-6 py-3 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-xl font-extrabold text-xs uppercase tracking-wider shadow-sm transition-colors"
+                className="px-6 py-3 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
               >
+                <AlertCircle className="w-4 h-4" />
                 Reject & Log Reason
               </button>
               <button
                 onClick={handleApprove}
-                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider shadow-md transition-colors"
+                className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-[0_8px_16px_-6px_rgba(16,185,129,0.4)] hover:shadow-[0_12px_20px_-6px_rgba(16,185,129,0.5)] hover:-translate-y-0.5 transition-all flex items-center gap-2"
               >
+                <ShieldCheck className="w-4 h-4" />
                 Approve Institution
               </button>
             </div>
@@ -353,3 +296,4 @@ const AcademyInspectorModal = ({
 };
 
 export default AcademyInspectorModal;
+

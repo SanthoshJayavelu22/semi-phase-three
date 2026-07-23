@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Loader from './Components/Loader';
 
@@ -32,6 +32,9 @@ const AcademyRevaluationPage = lazy(() => import('./pages/academy/revaluation/in
 // Standalone page for email verification links
 const EmailVerificationPage = lazy(() => import('./pages/EmailVerificationPage'));
 
+// ─── Public Results Page ──────────────────────────────────────────────────────
+const PublicResultsPage = lazy(() => import('./pages/public/results/index'));
+
 const L = ({ children }) => <Suspense fallback={<Loader />}>{children}</Suspense>;
 
 function App() {
@@ -44,6 +47,11 @@ function App() {
             Direct route for email verification links
             ═══════════════════════════════════════════════════ */}
         <Route path="/verify-email/:token" element={<L><EmailVerificationPage /></L>} />
+
+        {/* ═══════════════════════════════════════════════════
+            PUBLIC RESULTS PORTAL
+            ═══════════════════════════════════════════════════ */}
+        <Route path="/results" element={<L><PublicResultsPage /></L>} />
 
         {/* ═══════════════════════════════════════════════════
             INSTITUTE PORTAL

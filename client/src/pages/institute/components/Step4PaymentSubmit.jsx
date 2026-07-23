@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Eye, EyeOff, FileCheck, RefreshCw, CheckCircle2, ShieldCheck, 
   CreditCard, Landmark, Copy, Check, UploadCloud, ArrowRight, Trash2
@@ -16,11 +16,9 @@ const Step4PaymentSubmit = ({
   setPaymentComplete,
   paymentDetails,
   setPaymentDetails,
-  handlePaymentInitiate,
-  paymentProcessing
+  handlePaymentInitiate
 }) => {
-  // Local error state
-  const [localError, setLocalError] = useState(null);
+
   const [toast, setToast] = useState(null);
   const [showCvv, setShowCvv] = useState(false);
   
@@ -41,7 +39,6 @@ const Step4PaymentSubmit = ({
     cvv: ''
   });
   
-  const [upiId, setUpiId] = useState('');
   const [selectedBank, setSelectedBank] = useState('');
   
   // Offline verification state
@@ -64,9 +61,8 @@ const Step4PaymentSubmit = ({
 
   // Show error using toast
   const showError = (message) => {
-    setLocalError(message);
     setToast({ message, type: 'error' });
-    setTimeout(() => setLocalError(null), 5000);
+    setTimeout(() => setToast(null), 5000);
   };
 
   // Online Payment via Razorpay
@@ -75,7 +71,7 @@ const Step4PaymentSubmit = ({
     if (handlePaymentInitiate) {
       handlePaymentInitiate();
     } else {
-      setLocalError('Payment gateway not initialized.');
+      showError('Payment gateway not initialized.');
     }
   };
 
@@ -214,7 +210,7 @@ const Step4PaymentSubmit = ({
               type="button"
               onClick={() => {
                 setPaymentMethod('online');
-                setLocalError(null);
+                setToast(null);
               }}
               className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
                 paymentMethod === 'online'
@@ -237,7 +233,7 @@ const Step4PaymentSubmit = ({
               type="button"
               onClick={() => {
                 setPaymentMethod('offline');
-                setLocalError(null);
+                setToast(null);
               }}
               className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
                 paymentMethod === 'offline'

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Lock, ArrowLeft, KeyRound, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import authService from '../../../api/auth';
 

@@ -1,5 +1,4 @@
-import React from 'react';
-import { ChevronDown, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 const InstituteERPHeader = ({ activeTab, user, appForm, handleLogout }) => {
   const getTabLabel = () => {

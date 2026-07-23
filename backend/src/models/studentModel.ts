@@ -13,6 +13,7 @@ export interface IStudent extends Document {
   universityName: string;
   medicalCouncilRegistrationNumber: string;
   isForeignGraduate: boolean;
+  dateOfBirth?: Date;
   fmgeClearanceStatus?: 'Cleared' | 'Not Applicable' | 'Failed';
   course: mongoose.Types.ObjectId;
   batch: mongoose.Types.ObjectId;
@@ -90,6 +91,10 @@ const studentSchema: Schema = new Schema(
       type: Boolean,
       required: true,
       default: false,
+    },
+    dateOfBirth: {
+      type: Date,
+      required: false,
     },
     fmgeClearanceStatus: {
       type: String,

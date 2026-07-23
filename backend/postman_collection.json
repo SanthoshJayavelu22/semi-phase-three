@@ -45,6 +45,30 @@
     {
       "key": "hallTicketId",
       "value": ""
+    },
+    {
+      "key": "resultId",
+      "value": ""
+    },
+    {
+      "key": "marksheetId",
+      "value": ""
+    },
+    {
+      "key": "certificateId",
+      "value": ""
+    },
+    {
+      "key": "revaluationRequestId",
+      "value": ""
+    },
+    {
+      "key": "revaluationResultId",
+      "value": ""
+    },
+    {
+      "key": "enrollmentId",
+      "value": "SEMI-2025-0001"
     }
   ],
   "item": [
@@ -2434,6 +2458,754 @@
               "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket data ready for download. Use this data to render a printable PDF.\",\n  \"data\": {\n    \"ticketId\": \"HT-SEMI-2025-4231-1719400000000\",\n    \"enrollmentId\": \"SEMI-2025-4231\",\n    \"studentName\": \"Priya Nair\",\n    \"contactNumber\": \"9876543210\",\n    \"photoUrl\": \"https://res.cloudinary.com/.../photo.jpg\",\n    \"instituteName\": \"City General Hospital\",\n    \"instituteAddress\": \"123 MG Road, Mumbai\",\n    \"courseName\": \"Emergency Medicine\",\n    \"batchYear\": 2025,\n    \"subjects\": [\"Anatomy\",\"Physiology\",\"Emergency Medicine\"],\n    \"examDate\": \"2026-09-15T00:00:00.000Z\",\n    \"examVenue\": \"Examination Hall A, Mumbai Convention Centre\",\n    \"examCenter\": \"Mumbai Central Examination Hub\",\n    \"reportingTime\": \"08:30 AM\",\n    \"isDownloaded\": true,\n    \"downloadedAt\": \"2026-06-26T13:00:00.000Z\"\n  }\n}"
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "📊 Results",
+      "item": [
+        {
+          "name": "🔓 GET Result by Enrollment (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/results/student/{{enrollmentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "student", "{{enrollmentId}}"]
+            },
+            "description": "Public — No auth required. Returns published results for a student by enrollment ID."
+          },
+          "response": []
+        },
+        {
+          "name": "GET All Results (with filters)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "academicYear", "value": "", "disabled": true},
+                {"key": "semester", "value": "", "disabled": true},
+                {"key": "resultStatus", "value": "", "disabled": true},
+                {"key": "search", "value": "", "disabled": true}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Result by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create Result",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('resultId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": \"{{studentId}}\",\n  \"academicYear\": \"2024-25\",\n  \"semester\": 1,\n  \"subjects\": [\n    {\n      \"subjectCode\": \"SUB101\",\n      \"subjectName\": \"Anatomy\",\n      \"internalMarks\": 40,\n      \"externalMarks\": 45,\n      \"credits\": 4\n    },\n    {\n      \"subjectCode\": \"SUB102\",\n      \"subjectName\": \"Physiology\",\n      \"internalMarks\": 38,\n      \"externalMarks\": 42,\n      \"credits\": 4\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/results",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Result",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjects\": [\n    {\n      \"subjectCode\": \"SUB101\",\n      \"subjectName\": \"Anatomy\",\n      \"internalMarks\": 42,\n      \"externalMarks\": 48,\n      \"credits\": 4\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Publish Result",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}/publish",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}", "publish"]
+            },
+            "description": "Sets isPublished=true, sets revaluation deadline to 10 days from now."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Result",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Search Results",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/search?q=&academicYear=&semester=&resultStatus=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "search"],
+              "query": [
+                {"key": "q", "value": ""},
+                {"key": "academicYear", "value": ""},
+                {"key": "semester", "value": ""},
+                {"key": "resultStatus", "value": ""}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Result Statistics",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/statistics?academicYear=&semester=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "statistics"],
+              "query": [
+                {"key": "academicYear", "value": ""},
+                {"key": "semester", "value": ""}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Bulk Upload Results",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"results\": [\n    {\n      \"student\": \"{{studentId}}\",\n      \"academicYear\": \"2024-25\",\n      \"semester\": 1,\n      \"subjects\": [\n        {\n          \"subjectCode\": \"SUB101\",\n          \"subjectName\": \"Anatomy\",\n          \"internalMarks\": 35,\n          \"externalMarks\": 40,\n          \"credits\": 4\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/results/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "bulk"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Bulk Upload Results from File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "src": [],
+                  "type": "file",
+                  "description": "DOCX, PDF, XLSX, or CSV file"
+                },
+                {
+                  "key": "format",
+                  "value": "xlsx",
+                  "type": "text",
+                  "description": "docx | pdf | xlsx | csv"
+                },
+                {
+                  "key": "academicYear",
+                  "value": "2024-25",
+                  "type": "text"
+                },
+                {
+                  "key": "semester",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/results/bulk-upload-file",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "bulk-upload-file"]
+            },
+            "description": "Parses DOCX/PDF/XLSX/CSV and bulk uploads results. Uses memory storage for buffer access."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Student Result History",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/history/{{studentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "history", "{{studentId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Marksheet by Result",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}/marksheet",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}", "marksheet"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📄 Marksheets",
+      "item": [
+        {
+          "name": "GET All Marksheets",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "studentId", "value": "", "disabled": true},
+                {"key": "academicYear", "value": "", "disabled": true},
+                {"key": "semester", "value": "", "disabled": true}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Marksheet by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/{{marksheetId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "{{marksheetId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Generate Marksheet",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('marksheetId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultId\": \"{{resultId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/marksheets",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Marksheet",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isFinal\": true,\n  \"updateReason\": \"Corrected marks after revaluation\",\n  \"regeneratePDF\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/{{marksheetId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "{{marksheetId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Download Marksheet",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/{{marksheetId}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "{{marksheetId}}", "download"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Marksheets by Student",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/student/{{studentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "student", "{{studentId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Bulk Generate Marksheets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultIds\": [\"{{resultId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "bulk"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Marksheet",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/{{marksheetId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "{{marksheetId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🎓 Certificates",
+      "item": [
+        {
+          "name": "GET All Certificates",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "type", "value": "", "disabled": true},
+                {"key": "studentId", "value": "", "disabled": true},
+                {"key": "academicYear", "value": "", "disabled": true}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Certificate by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Issue Certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": \"{{studentId}}\",\n  \"type\": \"PROVISIONAL\",\n  \"academicYear\": \"2024-25\",\n  \"semester\": 1,\n  \"result\": \"{{resultId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/certificates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Generate Provisional (by resultId)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('certificateId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"resultId\": \"{{resultId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/certificates/provisional",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "provisional"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Verify Certificate",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}/verify",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}", "verify"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Revoke Certificate",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Duplicate issued\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}/revoke",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}", "revoke"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Download Certificate",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}", "download"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Certificates by Student",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/student/{{studentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "student", "{{studentId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Certificate",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expiryDate\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Certificate",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔄 Revaluation",
+      "item": [
+        {
+          "name": "GET All Revaluation Requests",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "status", "value": "", "disabled": true},
+                {"key": "academicYear", "value": "", "disabled": true},
+                {"key": "semester", "value": "", "disabled": true}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Revaluation Request by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create Revaluation Request",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('revaluationRequestId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": \"{{studentId}}\",\n  \"result\": \"{{resultId}}\",\n  \"institute\": \"{{instituteId}}\",\n  \"academicYear\": \"2024-25\",\n  \"semester\": 1,\n  \"subjects\": [\n    {\n      \"subjectCode\": \"SUB101\",\n      \"subjectName\": \"Anatomy\",\n      \"originalMarks\": 65,\n      \"originalGrade\": \"B\",\n      \"internalMarks\": 30,\n      \"externalMarks\": 35,\n      \"revaluationReason\": \"Believe marks are higher than awarded\"\n    }\n  ],\n  \"feePerSubject\": 500,\n  \"totalFee\": 500\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Request Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"UNDER_REVIEW\",\n  \"comments\": \"Request received, under initial review\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Cancel Revaluation Request",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Revaluation Results for Request",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}/results",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}", "results"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Add Revaluation Result",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('revaluationResultId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectCode\": \"SUB101\",\n  \"subjectName\": \"Anatomy\",\n  \"revisedInternalMarks\": 35,\n  \"revisedExternalMarks\": 40,\n  \"revisedTotalMarks\": 75,\n  \"revisedGrade\": \"B+\",\n  \"evaluatorComments\": \"Re-evaluated: answer scripts reviewed, marks updated\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}/results",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}", "results"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Approve Revaluation Result",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isFinal\": true,\n  \"comments\": \"Approved. Update original result.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/results/{{revaluationResultId}}/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "results", "{{revaluationResultId}}", "approve"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Revaluation Statistics",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/statistics?academicYear=&semester=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "statistics"],
+              "query": [
+                {"key": "academicYear", "value": ""},
+                {"key": "semester", "value": ""}
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }

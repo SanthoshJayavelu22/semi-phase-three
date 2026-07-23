@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import InstitutionalLayout from '../institute/InstitutionalLayout';
 
@@ -58,22 +58,22 @@ const AcademyPortal = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isLoginPath = location.pathname === '/academy' || location.pathname === '/academy/' || location.pathname === '/academy/login';
-  const isDashboardPath = DASHBOARD_PATHS.includes(location.pathname);
-
-  const [currentStep, setCurrentStepState] = useState(() => {
-    const path = window.location.pathname;
+  const currentStep = useMemo(() => {
+    const path = location.pathname;
     if (path === '/academy' || path === '/academy/' || path === '/academy/login') return 'login';
     if (DASHBOARD_PATHS.includes(path)) return 'dashboard';
     return 'login';
-  });
+  }, [location.pathname]);
 
   const setCurrentStep = useCallback((step) => {
     const route = STEP_ROUTES[step] || '/academy/login';
     navigate(route);
   }, [navigate]);
 
-  const [boardUser, setBoardUser] = useState(null);
+  const [boardUser, setBoardUser] = useState(() => {
+    const storedBoardUser = localStorage.getItem('semi_board_user');
+    return storedBoardUser ? JSON.parse(storedBoardUser) : null;
+  });
 
   const activeTab = getTabFromPath(location.pathname);
   const setActiveTab = useCallback((tab) => {
@@ -197,10 +197,8 @@ const AcademyPortal = () => {
   }, []);
 
   useEffect(() => {
-    const storedBoardUser = localStorage.getItem('semi_board_user');
-    if (storedBoardUser) {
-      setBoardUser(JSON.parse(storedBoardUser));
-      fetchBoardData();
+    if (localStorage.getItem('semi_board_user')) {
+      setTimeout(() => fetchBoardData(), 0);
     }
   }, [fetchBoardData]);
 
@@ -235,10 +233,6 @@ const AcademyPortal = () => {
       navigate('/academy/dashboard', { replace: true });
       return;
     }
-
-    if (isLogin) setCurrentStepState('login');
-    else if (isDashboard) setCurrentStepState('dashboard');
-    else setCurrentStepState('login');
   }, [location.pathname, boardUser, navigate]);
 
   const handleLogin = useCallback(async (e) => {
@@ -324,7 +318,7 @@ const AcademyPortal = () => {
     setIsStudentModalOpen(true);
   }, []);
 
-  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus, reason = '') => {
+  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus) => {
     try {
       const student = students.find(s => s.enrollmentNo === enrollmentNo);
       if (student && (student._id || student.id)) {
@@ -370,7 +364,9 @@ const AcademyPortal = () => {
         try {
           await handleReviewApplication(selectedApp.id, 'approved');
           setSuccessMsg(`🎉 Application Approved! ${selectedApp.orgName} has been activated.`);
-        } catch (err) {}
+        } catch (err) {
+          console.error(err);
+        }
       }
     });
   }, [selectedApp, handleReviewApplication]);
@@ -386,7 +382,9 @@ const AcademyPortal = () => {
       setShowRejectModal(false);
       setRejectionReason('');
       setSuccessMsg(`❌ Application Rejected. Reason logged: "${rejectionReason}"`);
-    } catch (err) {}
+    } catch (err) {
+      console.error(err);
+    }
   }, [rejectionReason, selectedApp, handleReviewApplication]);
 
   const handleTriggerInspection = useCallback(async () => {
@@ -416,7 +414,7 @@ const AcademyPortal = () => {
     setBoardUser(null);
     localStorage.clear();
     setCurrentStep('login');
-  }, []);
+  }, [setCurrentStep]);
 
   const auditDocs = useMemo(() => {
     if (!selectedApp) return [];

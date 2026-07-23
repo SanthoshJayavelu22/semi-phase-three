@@ -165,11 +165,7 @@ export const applyInstitute = async (req: Request, res: Response) => {
 export const createRazorpayOrder = async (req: Request, res: Response) => {
   try {
     const institute = await Institute.findOne({ user: req.user._id });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 404, message: 'Institute application not found' });
-    }
-
-    if (institute.paymentStatus === 'Completed') {
+    if (institute && institute.paymentStatus === 'Completed') {
       return sendError({ req, res, statusCode: 400, message: 'Payment has already been completed for this application.' });
     }
 
@@ -181,14 +177,16 @@ export const createRazorpayOrder = async (req: Request, res: Response) => {
       const options = {
         amount: AMOUNT_PAISE,
         currency: 'INR',
-        receipt: `receipt_inst_${institute._id.toString().substring(0, 10)}_${Date.now()}`,
+        receipt: `receipt_inst_${(institute ? institute._id : req.user._id).toString().substring(0, 10)}_${Date.now()}`,
       };
 
       const order = await razorpayInstance.orders.create(options);
 
-      // Save order id to institute
-      institute.razorpayOrderId = order.id;
-      await institute.save();
+      // Save order id to institute if it exists
+      if (institute) {
+        institute.razorpayOrderId = order.id;
+        await institute.save();
+      }
 
       return sendSuccess({
         req,
@@ -206,9 +204,10 @@ export const createRazorpayOrder = async (req: Request, res: Response) => {
     } else {
       // Mock Mode order creation
       const mockOrderId = `order_mock_${Math.random().toString(36).substring(2, 11)}`;
-      
-      institute.razorpayOrderId = mockOrderId;
-      await institute.save();
+      if (institute) {
+        institute.razorpayOrderId = mockOrderId;
+        await institute.save();
+      }
 
       return sendSuccess({
         req,
@@ -232,11 +231,7 @@ export const createRazorpayOrder = async (req: Request, res: Response) => {
 export const verifyRazorpayPayment = async (req: Request, res: Response) => {
   try {
     const institute = await Institute.findOne({ user: req.user._id });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 404, message: 'Institute application not found' });
-    }
-
-    if (institute.paymentStatus === 'Completed') {
+    if (institute && institute.paymentStatus === 'Completed') {
       return sendError({ req, res, statusCode: 400, message: 'Payment has already been completed for this application.' });
     }
 
@@ -247,7 +242,7 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
       paymentId // Backwards compatibility legacy field
     } = req.body;
 
-    let orderIdToVerify = razorpay_order_id || institute.razorpayOrderId;
+    let orderIdToVerify = razorpay_order_id || (institute ? institute.razorpayOrderId : undefined);
     let paymentIdToVerify = razorpay_payment_id || paymentId;
 
     if (!paymentIdToVerify) {
@@ -276,16 +271,16 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
       }
     }
 
-    // Update payment details
-    institute.paymentStatus = 'Completed';
-    institute.razorpayOrderId = orderIdToVerify;
-    institute.razorpayPaymentId = paymentIdToVerify;
-    institute.razorpaySignature = razorpay_signature || 'mock_signature';
-
-    // Generate a mock payment receipt code
     const receiptNumber = 'REC-' + Math.floor(10000000 + Math.random() * 90000000);
-    
-    await institute.save();
+
+    // Update payment details if application exists
+    if (institute) {
+      institute.paymentStatus = 'Completed';
+      institute.razorpayOrderId = orderIdToVerify;
+      institute.razorpayPaymentId = paymentIdToVerify;
+      institute.razorpaySignature = razorpay_signature || 'mock_signature';
+      await institute.save();
+    }
 
     // Send Payment Receipt Email to the institute
     try {
@@ -337,56 +332,58 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
     }
 
     // Notify the Academic Board
-    try {
-      const boardEmail = process.env.BOARD_EMAIL || 'admin@semiphase3.com';
-      await sendEmail({
-        email: boardEmail,
-        subject: 'New Institute Application Awaiting Board Review - Semi Phase 3',
-        message: `Dear Academic Board,\n\nA new institute application has completed the fee payment and is now ready for review:\nInstitute Name: ${institute.orgName}\nHOD Name: ${institute.hodName}\nRequested Seats: ${institute.seatsRequested}\n\nPlease log in to review the details and documents.`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #0146d8; text-align: center;">New Application for Review</h2>
-            <p>Dear Board Members,</p>
-            <p>A new institute has completed the application fee payment and is now ready for your review and evaluation.</p>
-            
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #0146d8;">
-              <h3 style="margin-top: 0; color: #333;">Institute Application Details</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Healthcare Organization:</td>
-                  <td style="padding: 5px 0; color: #333;">${institute.orgName}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Requested EM Seats:</td>
-                  <td style="padding: 5px 0; color: #333;">${institute.seatsRequested}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Proposed Start Date:</td>
-                  <td style="padding: 5px 0; color: #333;">${new Date(institute.commencementDate).toLocaleDateString()}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">HOD Name:</td>
-                  <td style="padding: 5px 0; color: #333;">${institute.hodName}</td>
-                </tr>
-              </table>
+    if (institute) {
+      try {
+        const boardEmail = process.env.BOARD_EMAIL || 'admin@semiphase3.com';
+        await sendEmail({
+          email: boardEmail,
+          subject: 'New Institute Application Awaiting Board Review - Semi Phase 3',
+          message: `Dear Academic Board,\n\nA new institute application has completed the fee payment and is now ready for review:\nInstitute Name: ${institute.orgName}\nHOD Name: ${institute.hodName}\nRequested Seats: ${institute.seatsRequested}\n\nPlease log in to review the details and documents.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+              <h2 style="color: #0146d8; text-align: center;">New Application for Review</h2>
+              <p>Dear Board Members,</p>
+              <p>A new institute has completed the application fee payment and is now ready for your review and evaluation.</p>
+              
+              <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #0146d8;">
+                <h3 style="margin-top: 0; color: #333;">Institute Application Details</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Healthcare Organization:</td>
+                    <td style="padding: 5px 0; color: #333;">${institute.orgName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Requested EM Seats:</td>
+                    <td style="padding: 5px 0; color: #333;">${institute.seatsRequested}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Proposed Start Date:</td>
+                    <td style="padding: 5px 0; color: #333;">${new Date(institute.commencementDate).toLocaleDateString()}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">HOD Name:</td>
+                    <td style="padding: 5px 0; color: #333;">${institute.hodName}</td>
+                  </tr>
+                </table>
+              </div>
+              
+              <p>Please log in to the admin board portal to check all details, evaluate their uploaded files, and perform actions (Approve/Reject or schedule inspections).</p>
+              
+              <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
+              <p style="font-size: 12px; color: #999999; text-align: center;">This is an system-generated administrative notification.</p>
             </div>
-            
-            <p>Please log in to the admin board portal to check all details, evaluate their uploaded files, and perform actions (Approve/Reject or schedule inspections).</p>
-            
-            <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #999999; text-align: center;">This is an system-generated administrative notification.</p>
-          </div>
-        `
-      });
-    } catch (emailErr: any) {
-      console.error('Board notification email sending failed:', emailErr.message);
+          `
+        });
+      } catch (emailErr: any) {
+        console.error('Board notification email sending failed:', emailErr.message);
+      }
     }
 
     return sendSuccess({
       req,
       res,
       message: 'Payment completed successfully. Application is now ready for board review.',
-      data: institute,
+      data: { paymentId: paymentIdToVerify, receiptNumber, institute },
     });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });

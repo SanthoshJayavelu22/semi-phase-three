@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2, Mail } from 'lucide-react';
 import Toast from '../Components/Toast';
@@ -81,9 +81,10 @@ const EmailVerificationPage = () => {
       }
       
       const user = JSON.parse(storedUser);
-      await authService.forgotPassword(user.email);
+      await authService.resendVerification(user.email);
       setToast({ message: 'A new verification email has been sent to your registered email address.', type: 'success' });
     } catch (err) {
+      console.error('Error resending verification email:', err);
       setToast({ message: 'Failed to resend verification email. Please try again later.', type: 'error' });
     }
   };

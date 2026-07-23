@@ -28,7 +28,11 @@ export const sendSuccess = ({ req, res, message = 'Operation successful', data =
   });
 };
 
-export const sendError = ({ req, res, message = 'Operation failed', errors = [], statusCode = 400 }: ErrorResponseParams) => {
+export const sendError = ({ req, res, message = 'Internal Server Error', errors = [], statusCode = 500 }: ErrorResponseParams) => {
+  if (statusCode === 400) {
+    require('fs').writeFileSync('last_400_error.log', message);
+  }
+  
   // Log the error to terminal logs
   const reqInfo = req ? `[${req.method} ${req.originalUrl}]` : '[API Error]';
   console.error(`🔴 ${reqInfo} Status ${statusCode} - Error: ${message}`, errors && errors.length > 0 ? '\nDetails: ' + JSON.stringify(errors, null, 2) : '');

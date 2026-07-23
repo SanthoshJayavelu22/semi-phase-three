@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import academicService from '../../../api/academic';
+import resultService from '../../../api/results';
 import { 
   Search, 
   User, 
@@ -11,9 +13,6 @@ import {
   Trash2, 
   CheckCircle2, 
   XCircle,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
   FileSpreadsheet,
   Download,
   Printer,
@@ -22,9 +21,7 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Users,
-  Calendar,
-  Clock
+  Users
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
@@ -53,83 +50,59 @@ const AcademyMarksUpdating = () => {
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   
-  const [expandedStudent, setExpandedStudent] = useState(null);
+
   const [activeTab, setActiveTab] = useState('marks'); // 'marks' | 'details'
 
-  // ─── Mock Data ──────────────────────────────────────────────────────────────
-  const mockStudents = [
-    { 
-      id: 1, 
-      name: 'Dr. Aarav Sharma', 
-      enrollmentId: 'SEMI-2026-1001',
-      batch: 'Batch 2026-A', 
-      institute: 'City General Hospital',
-      course: 'Emergency Medicine',
-      email: 'aarav.sharma@example.com',
-      phone: '+91 98765 43210',
-      attendance: 85,
-      thesisStatus: 'Approved',
-      overallPercentage: 81
-    },
-    { 
-      id: 2, 
-      name: 'Dr. Priya Nair', 
-      enrollmentId: 'SEMI-2026-1002',
-      batch: 'Batch 2026-A', 
-      institute: 'City General Hospital',
-      course: 'Emergency Medicine',
-      email: 'priya.nair@example.com',
-      phone: '+91 98765 43211',
-      attendance: 92,
-      thesisStatus: 'Approved',
-      overallPercentage: 78
-    },
-    { 
-      id: 3, 
-      name: 'Dr. Rahul Verma', 
-      enrollmentId: 'SEMI-2026-1003',
-      batch: 'Batch 2026-B', 
-      institute: 'Apollo Hospitals',
-      course: 'Emergency Medicine',
-      email: 'rahul.verma@example.com',
-      phone: '+91 98765 43212',
-      attendance: 68,
-      thesisStatus: 'Pending',
-      overallPercentage: 72
-    },
-    { 
-      id: 4, 
-      name: 'Dr. Neha Patel', 
-      enrollmentId: 'SEMI-2026-1004',
-      batch: 'Batch 2026-B', 
-      institute: 'Apollo Hospitals',
-      course: 'Emergency Medicine',
-      email: 'neha.patel@example.com',
-      phone: '+91 98765 43213',
-      attendance: 76,
-      thesisStatus: 'Approved',
-      overallPercentage: 84
-    },
-  ];
+  // ─── Data Fetching ──────────────────────────────────────────────────────────
+  const [students, setStudents] = useState([]);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const res = await academicService.listStudents();
+        const fetchedStudents = res.data?.data || res.data || [];
+        
+        const formattedStudents = fetchedStudents.map(s => ({
+          id: s._id,
+          name: `${s.firstName} ${s.lastName}`,
+          enrollmentId: s.enrollmentId,
+          batch: s.batch?.name || (typeof s.batch === 'string' ? s.batch : 'Unknown Batch'),
+          course: s.course?.name || (typeof s.course === 'string' ? s.course : 'Unknown Course'),
+          institute: s.institute?.orgName || (typeof s.institute === 'string' ? s.institute : 'Unknown Institute'),
+          email: s.email,
+          phone: s.contactNumber,
+          attendance: s.semesters?.[0]?.attendancePercentage || 0,
+          thesisStatus: s.semesters?.[0]?.thesisApproved ? 'Approved' : 'Pending',
+          overallPercentage: 0
+        }));
+        
+        setStudents(formattedStudents);
+      } catch (err) {
+        console.error('Error fetching students:', err);
+        setToast({ message: 'Failed to load students.', type: 'danger' });
+      }
+    };
+    fetchStudents();
+  }, []);
 
   // ─── Computed ──────────────────────────────────────────────────────────────
   const batches = useMemo(() => {
-    const unique = new Set(mockStudents.map(s => s.batch));
+    const unique = new Set(students.map(s => s.batch));
     return ['All', ...unique];
-  }, []);
+  }, [students]);
 
   const courses = useMemo(() => {
-    const unique = new Set(mockStudents.map(s => s.course));
+    const unique = new Set(students.map(s => s.course));
     return ['All', ...unique];
-  }, []);
+  }, [students]);
 
   const institutes = useMemo(() => {
-    const unique = new Set(mockStudents.map(s => s.institute));
+    const unique = new Set(students.map(s => s.institute));
     return ['All', ...unique];
-  }, []);
+  }, [students]);
 
   const filteredStudents = useMemo(() => {
-    return mockStudents.filter(s => {
+    return students.filter(s => {
       const matchSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           s.enrollmentId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchBatch = selectedBatch === 'All' || s.batch === selectedBatch;
@@ -137,7 +110,7 @@ const AcademyMarksUpdating = () => {
       const matchInstitute = selectedInstitute === 'All' || s.institute === selectedInstitute;
       return matchSearch && matchBatch && matchCourse && matchInstitute;
     });
-  }, [mockStudents, searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
+  }, [students, searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
 
   const overallMarks = useMemo(() => {
     if (!subjects.length) return { obtained: 0, total: 0, percentage: 0 };
@@ -147,15 +120,28 @@ const AcademyMarksUpdating = () => {
   }, [subjects]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
-  const handleSelectStudent = (student) => {
+  const handleSelectStudent = async (student) => {
     setSelectedStudent(student);
-    setExpandedStudent(student.id);
-    // Mock - load subjects for selected student
-    setSubjects([
-      { id: 1, name: 'Anatomy', marksObtained: 87, totalMarks: 100, percentage: 87 },
-      { id: 2, name: 'Physiology', marksObtained: 76, totalMarks: 100, percentage: 76 },
-      { id: 3, name: 'Emergency Medicine', marksObtained: 92, totalMarks: 100, percentage: 92 },
-    ]);
+    setSubjects([]); // clear while loading
+    
+    try {
+      const res = await resultService.getResultByStudent(student.enrollmentId);
+      const resultData = res.data?.data || res.data;
+      if (resultData && resultData.subjects) {
+        const mappedSubjects = resultData.subjects.map((sub, index) => ({
+          id: sub._id || Date.now() + index,
+          name: sub.subjectName,
+          marksObtained: (sub.internalMarks || 0) + (sub.externalMarks || 0),
+          totalMarks: sub.totalMarks || 100,
+          percentage: (((sub.internalMarks || 0) + (sub.externalMarks || 0)) / (sub.totalMarks || 100)) * 100
+        }));
+        setSubjects(mappedSubjects);
+      }
+    } catch (err) {
+      if (err.response?.status !== 404) {
+        setToast({ message: 'Error fetching student results.', type: 'danger' });
+      }
+    }
   };
 
   const handleAddSubject = () => {
@@ -244,14 +230,41 @@ const AcademyMarksUpdating = () => {
         setConfirmConfig(null);
         setIsSubmitting(true);
         
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        setIsSubmitting(false);
-        setToast({ 
-          message: `✅ All marks submitted successfully for ${selectedStudent.name}!`, 
-          type: 'success' 
-        });
+        try {
+          const payload = {
+            student: selectedStudent.id,
+            academicYear: new Date().getFullYear().toString(),
+            semester: 1,
+            subjects: subjects.map(s => ({
+              subjectCode: s.id.toString(),
+              subjectName: s.name,
+              internalMarks: Math.floor(s.marksObtained / 2),
+              externalMarks: Math.ceil(s.marksObtained / 2),
+              totalMarks: s.totalMarks,
+              grade: s.percentage >= 80 ? 'A+' : s.percentage >= 60 ? 'B' : s.percentage >= 50 ? 'C' : 'F',
+              credits: 3,
+            })),
+            totalMarks: overallMarks.obtained,
+            totalCredits: subjects.length * 3,
+            percentage: overallMarks.percentage,
+            cgpa: parseFloat((overallMarks.percentage / 10).toFixed(2)),
+            sgpa: parseFloat((overallMarks.percentage / 10).toFixed(2)),
+            division: overallMarks.percentage >= 60 ? 'First' : 'Second',
+            resultStatus: overallMarks.percentage >= 50 ? 'PASS' : 'FAIL',
+          };
+          
+          await resultService.createResult(payload);
+          
+          setToast({ 
+            message: `✅ All marks submitted successfully for ${selectedStudent.name}!`, 
+            type: 'success' 
+          });
+        } catch (error) {
+          console.error(error);
+          setToast({ message: 'Failed to submit marks.', type: 'danger' });
+        } finally {
+          setIsSubmitting(false);
+        }
       }
     });
   };
@@ -791,7 +804,7 @@ const AcademyMarksUpdating = () => {
                 Choose a student from the list on the left to view and update their marks.
               </p>
               <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-slate-400">
-                <span className="bg-slate-100 px-3 py-1 rounded-full">📊 {mockStudents.length} Students</span>
+                <span className="bg-slate-100 px-3 py-1 rounded-full">📊 {students.length} Students</span>
                 <span className="bg-slate-100 px-3 py-1 rounded-full">📚 {batches.length - 1} Batches</span>
               </div>
             </div>

@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Eye, Send, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, Calendar, BookOpen, FileText, Check, Users, AlertTriangle, Info, ClipboardList } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Eye, Send, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList } from 'lucide-react';
 import examService from '../../../api/exams';
 import academicService from '../../../api/academic';
 
 const InstituteERPExams = ({
   courses = [],
-  batches = [],
   students = [],
   examApplications = [],
-  setExamApplications,
   fetchERPData
 }) => {
   const [selectedCourseId, setSelectedCourseId] = useState('');
@@ -43,7 +41,7 @@ const InstituteERPExams = ({
   // Initialize selected values
   useEffect(() => {
     if (courses.length > 0 && !selectedCourseId) {
-      setSelectedCourseId(courses[0].id || courses[0]._id);
+      setTimeout(() => setSelectedCourseId(courses[0].id || courses[0]._id), 0);
     }
   }, [courses, selectedCourseId]);
 
@@ -69,9 +67,9 @@ const InstituteERPExams = ({
 
   useEffect(() => {
     if (availableSemesters.length > 0 && !selectedSemester) {
-      setSelectedSemester(availableSemesters[0].toString());
+      setTimeout(() => setSelectedSemester(availableSemesters[0].toString()), 0);
     } else if (availableSemesters.length === 0) {
-      setSelectedSemester('');
+      setTimeout(() => setSelectedSemester(''), 0);
     }
   }, [availableSemesters, selectedSemester]);
 

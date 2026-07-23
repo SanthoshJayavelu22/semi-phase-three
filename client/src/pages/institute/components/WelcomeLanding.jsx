@@ -1,4 +1,3 @@
-import React from 'react';
 import { Building2, Plus, ArrowRight, Lock } from 'lucide-react';
 
 const WelcomeLanding = ({ setCurrentStep }) => {

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { BookOpen, Layers, Users, CreditCard, ChevronRight, Activity, HelpCircle } from 'lucide-react';
+import { useMemo } from 'react';
+import { BookOpen, Layers, Users, CreditCard, Activity, HelpCircle } from 'lucide-react';
 
 const InstituteERPDashboard = ({ 
   courses, 

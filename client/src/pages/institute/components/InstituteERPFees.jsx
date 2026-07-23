@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, Download, CheckCircle2, ChevronLeft, ChevronRight, X, CreditCard, FileText, User, Loader2, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Eye, CheckCircle2, ChevronLeft, ChevronRight, X, CreditCard, FileText, User, Loader2, ExternalLink } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import { academicService } from '../../../api/academic';
 import { getUploadUrl } from '../../../api/apiClient';
+import { initiateRazorpayPayment } from '../../../utils/razorpay';
 
 const getDocUrl = (url) => {
   if (!url) return '';
@@ -25,7 +26,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   const [unpaidSemesters, setUnpaidSemesters] = useState([]);
   const [feeType, setFeeType] = useState('Examination fee');
   const [amount, setAmount] = useState('');
-  const [paymentMode, setPaymentMode] = useState('Online Transfer');
+  const [paymentMode, setPaymentMode] = useState('Razorpay Online');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [transactionNo, setTransactionNo] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
@@ -55,7 +56,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
     }
   }, []);
 
-  useEffect(() => { fetchFeeRecords(); }, [fetchFeeRecords]);
+  useEffect(() => { setTimeout(() => fetchFeeRecords(), 0); }, [fetchFeeRecords]);
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
   // Filter students who have unpaid semesters
@@ -65,34 +66,50 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   const selectedStudent = students.find(s => s._id === selectedStudentId || s.id === selectedStudentId);
 
   useEffect(() => {
-    // Generate static list of semesters 1 to 6
-    const allSemesters = [1, 2, 3, 4, 5, 6].map(num => ({ semesterNumber: num }));
-    setUnpaidSemesters(allSemesters);
-    if (!selectedSemester) {
-      setSelectedSemester('');
-    }
-  }, [selectedStudentId]);
+    setTimeout(() => {
+      if (!selectedStudentId) {
+        setUnpaidSemesters([]);
+        return;
+      }
+      
+      const paidSemesters = feeRecords
+        .filter(r => (r.student?._id === selectedStudentId || r.student?.id === selectedStudentId || r.student === selectedStudentId) && r.paymentPurpose === feeType)
+        .map(r => Number(r.semesterNumber));
+        
+      const available = [1, 2, 3, 4, 5, 6]
+        .filter(num => !paidSemesters.includes(num))
+        .map(num => ({ semesterNumber: num }));
+        
+      setUnpaidSemesters(available);
+      
+      if (selectedSemester && paidSemesters.includes(Number(selectedSemester))) {
+        setSelectedSemester('');
+      }
+    }, 0);
+  }, [selectedStudentId, feeRecords, feeType, selectedSemester]);
 
   useEffect(() => {
-    if (selectedStudent && courses.length > 0) {
-      const studentCourseName = selectedStudent.course || selectedStudent.courseName;
-      const course = courses.find(c => 
-        c.name === studentCourseName || 
-        c.courseCode === studentCourseName || 
-        c._id === selectedStudent.courseId
-      );
-      if (course && course.examinationFee) {
-        setAmount(course.examinationFee.toString().replace(/,/g, ''));
+    setTimeout(() => {
+      if (selectedStudent && courses.length > 0) {
+        const studentCourseName = selectedStudent.course || selectedStudent.courseName;
+        const course = courses.find(c => 
+          c.name === studentCourseName || 
+          c.courseCode === studentCourseName || 
+          c._id === selectedStudent.courseId
+        );
+        if (course && course.examinationFee) {
+          setAmount(course.examinationFee.toString().replace(/,/g, ''));
+        } else {
+          setAmount('');
+        }
       } else {
         setAmount('');
       }
-    } else {
-      setAmount('');
-    }
+    }, 0);
   }, [selectedStudent, courses]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!selectedStudentId) {
       setToast({ message: 'Please select a student.', type: 'warning' });
       return;
@@ -101,8 +118,10 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       setToast({ message: 'Please select a semester.', type: 'warning' });
       return;
     }
-    if (!receiptFile) {
-      setToast({ message: 'Payment Receipt upload is mandatory.', type: 'warning' });
+    const isOnline = paymentMode === 'Razorpay Online';
+
+    if (!isOnline && !receiptFile) {
+      setToast({ message: 'Payment Receipt upload is mandatory for offline payments.', type: 'warning' });
       return;
     }
     const parsedAmount = parseFloat(amount);
@@ -110,40 +129,93 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       setToast({ message: 'Amount must be a positive number.', type: 'warning' });
       return;
     }
-    if (!transactionNo?.trim()) {
-      setToast({ message: 'Transaction Number is mandatory.', type: 'warning' });
+    if (!isOnline && !transactionNo?.trim()) {
+      setToast({ message: 'Transaction Number is mandatory for offline payments.', type: 'warning' });
       return;
     }
     if (!paymentDate) {
       setToast({ message: 'Payment Date is mandatory.', type: 'warning' });
       return;
     }
+
     try {
       setSubmitting(true);
-      await academicService.payStudentFees(selectedStudentId, {
-        semesterNumber: parseInt(selectedSemester),
-        amount: parseFloat(amount),
-        paymentMode,
-        utrNumber: transactionNo,
-        paymentDate,
-        paymentPurpose: feeType,
-        paymentReceipt: receiptFile,
-      });
-      setToast({ message: '🎉 Fee payment recorded successfully!', type: 'success' });
-      // Reset form
-      setSelectedStudentId('');
-      setSelectedSemester('');
-      setAmount('');
-      setTransactionNo('');
-      setReceiptFile(null);
-      setFeeType('Examination fee');
-      setPaymentMode('Online Transfer');
-      setPaymentDate(new Date().toISOString().split('T')[0]);
-      await fetchFeeRecords();
+
+      const recordStudentFee = async (txnId) => {
+        await academicService.payStudentFees(selectedStudentId, {
+          semesterNumber: parseInt(selectedSemester),
+          amount: parseFloat(amount),
+          paymentMode,
+          utrNumber: isOnline ? txnId : transactionNo,
+          paymentDate,
+          paymentPurpose: feeType,
+          paymentReceipt: isOnline ? null : receiptFile,
+        });
+        setToast({ message: '🎉 Fee payment recorded successfully!', type: 'success' });
+        // Reset form
+        setSelectedStudentId('');
+        setSelectedSemester('');
+        setAmount('');
+        setTransactionNo('');
+        setReceiptFile(null);
+        setFeeType('Examination fee');
+        setPaymentMode('Razorpay Online');
+        setPaymentDate(new Date().toISOString().split('T')[0]);
+        await fetchFeeRecords();
+      };
+
+      if (isOnline) {
+        const orderRes = await academicService.createRazorpayOrder({ amount: 1, purpose: 'Fee Payment' });
+        const orderData = orderRes?.data?.data || orderRes?.data || orderRes;
+        
+        if (!orderData || !orderData.orderId) {
+          throw new Error('Failed to create payment order from server.');
+        }
+
+        await initiateRazorpayPayment({
+          orderId: orderData.orderId,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          keyId: orderData.keyId,
+          name: 'Semi Phase 3 Student Fees',
+          description: `Exam Fee - Semester ${selectedSemester}`,
+          prefill: {
+            name: selectedStudent?.fullName || '',
+            email: selectedStudent?.email || '',
+          },
+          onSuccess: async (response) => {
+            try {
+              const verifyRes = await academicService.verifyRazorpayPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+              const verifyData = verifyRes?.data?.data || verifyRes?.data || verifyRes;
+              
+              await recordStudentFee(verifyData.paymentId);
+            } catch (verifyErr) {
+              console.error('Verification failed', verifyErr);
+              setToast({ message: 'Payment processed but verification failed. Please contact support.', type: 'error' });
+            } finally {
+              setSubmitting(false);
+            }
+          },
+          onDismiss: () => {
+            setSubmitting(false);
+            setToast({ message: 'Payment window was closed.', type: 'warning' });
+          },
+          onFailure: (error) => {
+            setSubmitting(false);
+            setToast({ message: `Payment failed: ${error?.description || 'Transaction unsuccessful.'}`, type: 'error' });
+          }
+        });
+      } else {
+        await recordStudentFee(transactionNo);
+        setSubmitting(false);
+      }
     } catch (err) {
       const msg = err?.parsedMessage || err?.response?.data?.message || err?.message || 'Failed to record fee payment.';
       setToast({ message: msg, type: 'error' });
-    } finally {
       setSubmitting(false);
     }
   };
@@ -236,19 +308,22 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Select Semester *</label>
-                    <select
-                      value={selectedSemester}
-                      onChange={(e) => setSelectedSemester(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                      required
-                    >
-                      <option value="">Select Semester...</option>
+                    <div className="flex flex-wrap gap-2">
                       {unpaidSemesters.map(sem => (
-                        <option key={sem.semesterNumber} value={sem.semesterNumber}>
-                          Semester {sem.semesterNumber}
-                        </option>
+                        <button
+                          key={sem.semesterNumber}
+                          type="button"
+                          onClick={() => setSelectedSemester(sem.semesterNumber)}
+                          className={`flex-1 min-w-[30%] py-2 rounded-xl text-xs font-bold transition-all border ${
+                            String(selectedSemester) === String(sem.semesterNumber)
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                              : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          Sem {sem.semesterNumber}
+                        </button>
                       ))}
-                    </select>
+                    </div>
                   </div>
                 </>
               )}
@@ -292,22 +367,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                 </div>
               </div>
 
-              {/* Payment Mode */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Payment Mode *</label>
-                <select
-                  value={paymentMode}
-                  onChange={(e) => setPaymentMode(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                >
-                  <option>Online Transfer</option>
-                  <option>UPI</option>
-                  <option>NEFT/RTGS</option>
-                  <option>Demand Draft</option>
-                  <option>Credit Card</option>
-                  <option>Cash</option>
-                </select>
-              </div>
+
 
               {/* Payment Date */}
               <div>
@@ -321,37 +381,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                 />
               </div>
 
-              {/* UTR / Transaction No */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">UTR / Txn No *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter UTR / transaction no..."
-                  value={transactionNo}
-                  onChange={(e) => setTransactionNo(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                />
-              </div>
 
-              {/* Payment Receipt Upload */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
-                  Payment Receipt (PDF/IMG) *
-                </label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  required={!receiptFile}
-                  onChange={(e) => setReceiptFile(e.target.files[0] || null)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-bold file:text-[10px] file:cursor-pointer"
-                />
-                {receiptFile && (
-                  <p className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> {receiptFile.name}
-                  </p>
-                )}
-              </div>
             </div>
           </div>
 

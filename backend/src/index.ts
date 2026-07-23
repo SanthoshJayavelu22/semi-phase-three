@@ -11,6 +11,10 @@ import authRoutes from './routes/authRoutes';
 import instituteRoutes from './routes/instituteRoutes';
 import academicRoutes from './routes/academicRoutes';
 import examRoutes from './routes/examRoutes';
+import resultRoutes from './routes/resultRoutes';
+import revaluationRoutes from './routes/revaluationRoutes';
+import marksheetRoutes from './routes/marksheetRoutes';
+import certificateRoutes from './routes/certificateRoutes';
 import { notFound, errorHandler } from './middlewares/errorMiddleware';
 
 dotenv.config();
@@ -95,6 +99,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/institutes', instituteRoutes);
 app.use('/api/academic', academicRoutes);
 app.use('/api/exams', examRoutes);
+app.use('/api/results', resultRoutes);
+app.use('/api/revaluation', revaluationRoutes);
+app.use('/api/marksheets', marksheetRoutes);
+app.use('/api/certificates', certificateRoutes);
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {

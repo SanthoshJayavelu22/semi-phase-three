@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Eye, Download, Ticket, X, CheckCircle2, XCircle, AlertTriangle, Printer, HelpCircle } from 'lucide-react';
 import examService from '../../../api/exams';
 
 const InstituteERPHallTicket = ({
   courses = [],
   batches = [],
-  students = [],
+
   examApplications = [],
   fetchERPData,
   user
@@ -27,13 +27,13 @@ const InstituteERPHallTicket = ({
   // Initialize selected values
   useEffect(() => {
     if (courses.length > 0 && !selectedCourseId) {
-      setSelectedCourseId(courses[0].id || courses[0]._id);
+      setTimeout(() => setSelectedCourseId(courses[0].id || courses[0]._id), 0);
     }
   }, [courses, selectedCourseId]);
 
   useEffect(() => {
     if (batches.length > 0 && !selectedBatchId) {
-      setSelectedBatchId(batches[0].id || batches[0]._id);
+      setTimeout(() => setSelectedBatchId(batches[0].id || batches[0]._id), 0);
     }
   }, [batches, selectedBatchId]);
 
@@ -129,7 +129,7 @@ const InstituteERPHallTicket = ({
   // Trigger browser print for hall tickets
   const handlePrint = () => {
     const printContent = document.getElementById('hall-tickets-print-area').innerHTML;
-    const originalContent = document.body.innerHTML;
+
     
     // Create temporary styling for printing
     const printWindow = window.open('', '_blank');

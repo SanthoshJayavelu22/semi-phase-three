@@ -8,7 +8,8 @@ import { Remittance } from '../models/remittanceModel';
 import { Institute } from '../models/instituteModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import path from 'path';
-
+import razorpayInstance, { isRazorpayConfigured, keyId, keySecret } from '../config/razorpay';
+import crypto from 'crypto';
 const getFileUrl = (filePath: string) => {
   if (!filePath) return '';
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
@@ -682,7 +683,13 @@ export const addStudent = async (req: Request, res: Response) => {
       data: student,
     });
   } catch (error: any) {
-    if (error instanceof z.ZodError) throw error;
+    if (error instanceof z.ZodError) {
+      console.error('Zod Validation Error:', error.issues);
+      require('fs').writeFileSync('last_error.log', JSON.stringify(error.issues, null, 2));
+      return sendError({ req, res, statusCode: 400, message: 'Validation Error: ' + JSON.stringify(error.issues) });
+    }
+    console.error('Error in addStudent:', error);
+    require('fs').writeFileSync('last_error.log', String(error.message));
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
@@ -707,7 +714,8 @@ export const recordStudentFee = async (req: Request, res: Response) => {
     }
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    if (!files || !files['paymentReceipt'] || files['paymentReceipt'].length === 0) {
+    const isOnline = validatedData.paymentMode === 'Razorpay Online';
+    if (!isOnline && (!files || !files['paymentReceipt'] || files['paymentReceipt'].length === 0)) {
       return sendError({ req, res, statusCode: 400, message: 'Payment Receipt Upload is mandatory' });
     }
 
@@ -717,7 +725,7 @@ export const recordStudentFee = async (req: Request, res: Response) => {
       amount: validatedData.amount,
       paymentMode: validatedData.paymentMode,
       utrNumber: validatedData.utrNumber,
-      paymentReceiptUrl: getFileUrl(files['paymentReceipt'][0].path),
+      paymentReceiptUrl: (!isOnline && files && files['paymentReceipt']) ? getFileUrl(files['paymentReceipt'][0].path) : 'Online Verification',
       paymentDate: validatedData.paymentDate,
       paymentPurpose: validatedData.paymentPurpose,
     });
@@ -1332,6 +1340,104 @@ export const deleteStudent = async (req: Request, res: Response) => {
       res,
       message: 'Student deleted/de-enrolled successfully',
       data: { studentId },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ==========================================
+// PAYMENT CONTROLLERS (RAZORPAY)
+// ==========================================
+
+export const createRazorpayOrder = async (req: Request, res: Response) => {
+  try {
+    const { amount, purpose } = req.body;
+    
+    if (!amount || !purpose) {
+      return sendError({ req, res, statusCode: 400, message: 'Amount and purpose are required' });
+    }
+
+    const AMOUNT_PAISE = Math.round(Number(amount) * 100);
+
+    if (isRazorpayConfigured && razorpayInstance) {
+      const options = {
+        amount: AMOUNT_PAISE,
+        currency: 'INR',
+        receipt: `receipt_${purpose.substring(0, 5)}_${req.user._id.toString().substring(0, 10)}_${Date.now()}`,
+      };
+
+      const order = await razorpayInstance.orders.create(options);
+
+      return sendSuccess({
+        req,
+        res,
+        statusCode: 201,
+        message: 'Razorpay order created successfully',
+        data: {
+          orderId: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          keyId: keyId,
+          isMock: false,
+        },
+      });
+    } else {
+      // Mock Mode
+      const mockOrderId = `order_mock_${Math.random().toString(36).substring(2, 11)}`;
+      return sendSuccess({
+        req,
+        res,
+        statusCode: 201,
+        message: 'Razorpay order created successfully (Mock Mode)',
+        data: {
+          orderId: mockOrderId,
+          amount: AMOUNT_PAISE,
+          currency: 'INR',
+          keyId: 'mock_key_id_123',
+          isMock: true,
+        },
+      });
+    }
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const verifyRazorpayPayment = async (req: Request, res: Response) => {
+  try {
+    const { 
+      razorpay_payment_id, 
+      razorpay_order_id, 
+      razorpay_signature,
+    } = req.body;
+
+    if (!razorpay_payment_id || !razorpay_order_id) {
+      return sendError({ req, res, statusCode: 400, message: 'Payment ID and Order ID are required' });
+    }
+
+    if (isRazorpayConfigured && razorpayInstance && !razorpay_order_id.startsWith('order_mock_')) {
+      const generated_signature = crypto
+        .createHmac('sha256', keySecret as string)
+        .update(razorpay_order_id + '|' + razorpay_payment_id)
+        .digest('hex');
+
+      if (generated_signature !== razorpay_signature) {
+        return sendError({ req, res, statusCode: 400, message: 'Payment verification failed. Invalid signature.' });
+      }
+    }
+
+    const receiptNumber = 'REC-' + Math.floor(10000000 + Math.random() * 90000000);
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment verified successfully.',
+      data: { 
+        paymentId: razorpay_payment_id, 
+        orderId: razorpay_order_id,
+        receiptNumber 
+      },
     });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });

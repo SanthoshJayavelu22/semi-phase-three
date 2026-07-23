@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Award, Search, Filter, Edit3, CheckCircle, AlertCircle } from 'lucide-react';
+import revaluationService from '../../../api/revaluation';
 
 export default function AcademyRevaluation() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -8,12 +9,38 @@ export default function AcademyRevaluation() {
   const [updatedMarks, setUpdatedMarks] = useState('');
   const [evaluatorNotes, setEvaluatorNotes] = useState('');
 
-  // Mock data for incoming revaluation requests
-  const [requests, setRequests] = useState([
-    { id: 1, reqId: 'REV-2023-001', studentName: 'Dr. Amit Kumar', enrollmentId: 'SEMI-2023-003', institute: 'Saraswathi Inst.', subject: 'Clinical Emergency Medicine', oldMarks: 45, status: 'Pending Review', date: '2023-12-20' },
-    { id: 2, reqId: 'REV-2023-002', studentName: 'Dr. Sneha Verma', enrollmentId: 'SEMI-2023-004', institute: 'Apollo Med.', subject: 'Traumatology', oldMarks: 48, status: 'Under Evaluation', date: '2023-12-21' },
-    { id: 3, reqId: 'REV-2023-003', studentName: 'Dr. Vikram Singh', enrollmentId: 'SEMI-2023-005', institute: 'Max Healthcare', subject: 'Pediatric Emergencies', oldMarks: 42, status: 'Completed', newMarks: 46, date: '2023-12-18' },
-  ]);
+  // Data for incoming revaluation requests
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        setIsLoading(true);
+        const res = await revaluationService.getAllRevaluationRequests();
+        const data = res.data?.data || res.data || [];
+        // Map to UI model
+        const mappedData = data.map(req => ({
+          id: req._id,
+          reqId: req.requestNumber || req._id.toString().substring(0, 8),
+          studentName: req.student?.firstName ? `${req.student.firstName} ${req.student.lastName}` : 'Unknown Student',
+          enrollmentId: req.student?.enrollmentId || 'Unknown ID',
+          institute: req.student?.institute?.orgName || 'Unknown Institute',
+          subject: req.subject?.name || req.subjectCode || 'Unknown Subject',
+          oldMarks: req.originalMarks || 0,
+          status: req.status === 'PENDING' ? 'Pending Review' : req.status === 'EVALUATED' ? 'Under Evaluation' : req.status === 'APPROVED' ? 'Completed' : 'Pending Review',
+          date: new Date(req.createdAt).toISOString().split('T')[0],
+          newMarks: req.revaluationMarks || null
+        }));
+        setRequests(mappedData);
+      } catch (err) {
+        console.error('Error fetching revaluation requests:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRequests();
+  }, []);
 
   const filteredRequests = requests.filter(req => 
     req.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -28,14 +55,23 @@ export default function AcademyRevaluation() {
     setShowUpdateModal(true);
   };
 
-  const handleUpdateMarks = () => {
-    setRequests(requests.map(req => 
-      req.id === selectedRequest.id 
-        ? { ...req, status: 'Completed', newMarks: parseInt(updatedMarks, 10) } 
-        : req
-    ));
-    setShowUpdateModal(false);
-    alert(`Results updated and republished for ${selectedRequest.studentName}`);
+  const handleUpdateMarks = async () => {
+    try {
+      await revaluationService.addRevaluationResult(selectedRequest.id, {
+        marks: parseInt(updatedMarks, 10),
+        evaluatorNotes
+      });
+      
+      setRequests(requests.map(req => 
+        req.id === selectedRequest.id 
+          ? { ...req, status: 'Completed', newMarks: parseInt(updatedMarks, 10) } 
+          : req
+      ));
+      setShowUpdateModal(false);
+      alert(`Results updated and republished for ${selectedRequest.studentName}`);
+    } catch (err) {
+      alert('Failed to update marks.');
+    }
   };
 
   return (

@@ -1,17 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   Search, 
-  User, 
-  GraduationCap, 
-  Building2, 
   BookOpen, 
   Eye, 
   ChevronDown,
-  ChevronUp,
   FileSpreadsheet,
   Download,
   Printer,
-  RefreshCw,
   Award,
   TrendingUp,
   TrendingDown,
@@ -20,15 +15,9 @@ import {
   Calendar,
   Filter,
   X,
-  BarChart3,
-  PieChart,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
-  Layers
+  BarChart3
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
-import ConfirmModal from '../../../Components/ConfirmModal';
 
 const AcademyStudentMarks = () => {
   // ─── State ──────────────────────────────────────────────────────────────────

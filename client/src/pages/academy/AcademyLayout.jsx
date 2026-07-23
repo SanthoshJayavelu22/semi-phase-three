@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 import instituteService from '../../api/institutes';
@@ -39,7 +39,7 @@ const extractData = (response) => {
  */
 export default function AcademyLayout() {
   const navigate = useNavigate();
-  const location = useLocation();
+
 
   // ─── Auth State ──────────────────────────────────────────────────────────────
   const [boardUser, setBoardUser] = useState(() => {
@@ -72,11 +72,6 @@ export default function AcademyLayout() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
-
-  // ─── Auth Guard ───────────────────────────────────────────────────────────────
-  if (!boardUser) {
-    return <Navigate to="/academy/login" replace />;
-  }
 
   // ─── Data Fetching ────────────────────────────────────────────────────────────
   const fetchBoardData = useCallback(async () => {
@@ -216,7 +211,7 @@ export default function AcademyLayout() {
 
   useEffect(() => {
     if (boardUser) {
-      fetchBoardData();
+      setTimeout(() => fetchBoardData(), 0);
     }
   }, [boardUser, fetchBoardData]);
 
@@ -320,7 +315,7 @@ export default function AcademyLayout() {
         try {
           await handleReviewApplication(selectedApp.id, 'approved');
           setSuccessMsg(`🎉 ${selectedApp.orgName} approved and activated.`);
-        } catch (_) {}
+        } catch { /* ignore */ }
       }
     });
   }, [selectedApp, handleReviewApplication]);
@@ -336,7 +331,7 @@ export default function AcademyLayout() {
       setShowRejectModal(false);
       setRejectionReason('');
       setSuccessMsg(`❌ Application Rejected. Reason: "${rejectionReason}"`);
-    } catch (_) {}
+    } catch { /* ignore */ }
   }, [rejectionReason, selectedApp, handleReviewApplication]);
 
   const handleTriggerInspection = useCallback(async () => {
@@ -438,6 +433,11 @@ export default function AcademyLayout() {
       AcademyPublishDetails,
       AcademyRevaluation,
   };
+
+  // ─── Auth Guard ───────────────────────────────────────────────────────────────
+  if (!boardUser) {
+    return <Navigate to="/academy/login" replace />;
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f8fafc] text-gray-800 font-sans">

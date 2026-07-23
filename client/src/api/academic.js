@@ -160,6 +160,10 @@ export const academicService = {
   deleteStudent: (studentId) => apiClient.delete(`/academic/students/${studentId}`),
 
   getStudentById: (studentId) => apiClient.get(`/academic/students/${studentId}`),
+
+  // ─── RAZORPAY PAYMENT ────────────────────────────────────────────────────────
+  createRazorpayOrder: (data) => apiClient.post('/academic/payment/create-order', data),
+  verifyRazorpayPayment: (data) => apiClient.post('/academic/payment/verify', data),
 };
 
 export default academicService;

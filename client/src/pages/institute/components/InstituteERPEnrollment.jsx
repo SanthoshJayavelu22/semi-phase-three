@@ -1,32 +1,22 @@
 import React, { useState } from 'react';
-import { Check, CheckCircle2, Trash2, User, BookOpen, Shield, Globe, GraduationCap, CreditCard, Award, FileText, ArrowRight, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, Trash2, Check, ArrowRight, ArrowLeft } from 'lucide-react';
+import { initiateRazorpayPayment } from '../../../utils/razorpay';
+import academicService from '../../../api/academic';
 
-const InstituteERPEnrollment = ({
-  enrollForm,
-  setEnrollForm,
-  enrollDocs,
-  setEnrollDocs,
-  enrollProgress,
-  courses = [],
-  batches = [],
-  user,
-  appForm,
-  handleEnrollmentSubmit,
-  handleEnrollDocUpload,
-  removeEnrollDoc
+const InstituteERPEnrollment = ({ 
+  enrollForm, 
+  setEnrollForm, 
+  enrollDocs, 
+  enrollProgress, 
+  courses = [], 
+  batches = [], 
+  user, 
+  appForm, 
+  handleEnrollmentSubmit, 
+  handleEnrollDocUpload, 
+  removeEnrollDoc 
 }) => {
-  const [wizardStep, setWizardStep] = useState(() => {
-    const saved = localStorage.getItem('semi_enrollment_step');
-    if (saved) {
-      const parsed = parseInt(saved, 10);
-      if (!isNaN(parsed) && parsed >= 1 && parsed <= 4) return parsed;
-    }
-    return 1;
-  });
-
-  React.useEffect(() => {
-    localStorage.setItem('semi_enrollment_step', wizardStep);
-  }, [wizardStep]);
+  const [wizardStep, setWizardStep] = useState(1);
   const [localError, setLocalError] = useState(null);
 
   // Local state to track "Is FMG Candidate?" matching screenshot dropdown
@@ -137,6 +127,7 @@ const InstituteERPEnrollment = ({
     if (step === 1) {
       if (!enrollForm.firstName?.trim()) return 'First Name is a mandatory field.';
       if (!enrollForm.lastName?.trim()) return 'Last Name is a mandatory field.';
+      if (!enrollForm.dateOfBirth) return 'Date of Birth is a mandatory field.';
       if (!enrollForm.homeAddress?.trim()) return 'Home Address is a mandatory field.';
       
       const phoneRegex = /^\d{10}$/;
@@ -176,11 +167,6 @@ const InstituteERPEnrollment = ({
       if (!enrollDocs.lifeMembershipCardDoc) return 'SEMI Membership Card/Form document must be uploaded.';
     }
     if (step === 4) {
-      if (!enrollForm.paymentMode) return 'Payment Mode selection is mandatory.';
-      if (!enrollForm.utrNumber?.trim()) return 'UTR Transaction Reference Number is mandatory.';
-      if (enrollForm.utrNumber.trim().length < 8) return 'UTR Transaction Reference Number must be at least 8 characters.';
-      if (!enrollForm.txnDate) return 'Transaction Date is mandatory.';
-      if (!enrollDocs.paymentReceiptDoc) return 'Enrollment Payment Receipt must be uploaded.';
       if (!enrollDocs.studentSignatureDoc) return 'Student Signature file must be uploaded.';
       if (!enrollDocs.hodSignatureDoc) return 'PG Degree Certificate / HOD confirmation document must be uploaded.';
       if (!enrollForm.declarationCheck) return 'You must check the candidate credentials declaration check.';
@@ -215,9 +201,53 @@ const InstituteERPEnrollment = ({
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    const success = await handleEnrollmentSubmit(e);
-    if (success) {
-      setWizardStep(1);
+    
+    try {
+      // 1. Create Razorpay order (Using 1 INR for testing to avoid test limit errors)
+      const orderRes = await academicService.createRazorpayOrder({ amount: 1, purpose: 'Student Enrollment' });
+      const orderData = orderRes.data || orderRes;
+      
+      // 2. Initiate Payment
+      const finalOrderId = orderData.data?.orderId || orderData.orderId || orderData.id || orderData.data?.id;
+      initiateRazorpayPayment({
+        orderId: finalOrderId,
+        amount: 1 * 100, // Razorpay takes amount in paise
+        prefill: {
+          name: `${enrollForm.firstName} ${enrollForm.lastName}`,
+          email: enrollForm.emailAddress,
+          contact: enrollForm.contactNumber
+        },
+        onSuccess: async (response) => {
+          try {
+            // Verify payment
+            await academicService.verifyRazorpayPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            
+            // Set payment data dynamically
+            enrollForm.paymentMode = 'Razorpay';
+            enrollForm.utrNumber = response.razorpay_payment_id;
+            enrollForm.txnDate = new Date().toISOString().split('T')[0];
+            
+            // Wait for enrollment form submission
+            const success = await handleEnrollmentSubmit(e);
+            if (success) {
+              setWizardStep(1);
+            }
+          } catch (err) {
+            console.error(err);
+            setLocalError('Payment verification failed.');
+          }
+        },
+        onDismiss: () => {
+          setLocalError('Payment was cancelled.');
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      setLocalError('Failed to initialize payment gateway.');
     }
   };
 
@@ -240,7 +270,7 @@ const InstituteERPEnrollment = ({
           <span className="text-[9px] text-blue-200 uppercase font-black tracking-widest block">App Fee Due</span>
           <span className="text-lg font-black tracking-tight">₹1,40,000</span>
         </div>
-      </div>
+      </div>``
 
       {/* Dynamic Wizard Steps Indicators */}
       <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
@@ -295,7 +325,7 @@ const InstituteERPEnrollment = ({
               Personal Profile & Contact
             </h3>
             
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">First Name *</label>
                 <input
@@ -326,6 +356,16 @@ const InstituteERPEnrollment = ({
                   value={enrollForm.lastName}
                   onChange={(e) => setEnrollForm({...enrollForm, lastName: e.target.value})}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Date of Birth *</label>
+                <input
+                  type="date"
+                  required
+                  value={enrollForm.dateOfBirth || ''}
+                  onChange={(e) => setEnrollForm({...enrollForm, dateOfBirth: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
                 />
               </div>
             </div>
@@ -665,49 +705,14 @@ const InstituteERPEnrollment = ({
                   </ul>
                 </div>
 
-                {/* Remittance Fields */}
-                <div className="lg:col-span-2 space-y-4 bg-slate-50/50 border border-slate-100 p-5 rounded-2xl">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Payment Remittance Mode *</label>
-                      <select
-                        value={enrollForm.paymentMode}
-                        onChange={(e) => setEnrollForm({...enrollForm, paymentMode: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
-                      >
-                        <option value="Online Transfer">Online Transfer</option>
-                        <option value="UTR Reference">UTR Reference</option>
-                        <option value="Demand Draft">Demand Draft</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">UTR / Bank Txn ID *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Transaction UTR Number"
-                        value={enrollForm.utrNumber}
-                        onChange={(e) => setEnrollForm({...enrollForm, utrNumber: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Transaction Date *</label>
-                      <input
-                        type="date"
-                        required
-                        value={enrollForm.txnDate}
-                        onChange={(e) => setEnrollForm({...enrollForm, txnDate: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Payment Receipt PDF *</label>
-                      {renderUploadCard("Choose Fee Receipt", 'paymentReceiptDoc')}
-                    </div>
+                {/* Remittance Info Removed */}
+                <div className="lg:col-span-2 space-y-4 bg-slate-50/50 border border-slate-100 p-5 rounded-2xl flex flex-col justify-center items-center text-center">
+                  <div className="text-slate-400 font-medium text-sm mb-4">
+                    Secure payment is processed through Razorpay. You will be prompted to complete the ₹1,40,000 fee when you submit the application.
+                  </div>
+                  <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Online Payment Integration
                   </div>
                 </div>
               </div>
@@ -781,7 +786,7 @@ const InstituteERPEnrollment = ({
                 type="submit"
                 className="px-10 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-md shadow-emerald-500/10 cursor-pointer"
               >
-                Submit Application
+                Submit Application & Pay
               </button>
             )}
           </div>

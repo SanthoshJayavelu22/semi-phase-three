@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Compass, Eye, Edit, Trash2 } from 'lucide-react';
+import { Search, Compass, Eye } from 'lucide-react';
 
 const AcademyStudents = ({ 
   filteredStudents, 

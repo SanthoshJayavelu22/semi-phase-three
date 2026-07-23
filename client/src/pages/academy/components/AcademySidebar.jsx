@@ -1,12 +1,9 @@
-import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Building2, 
   Users, 
-  ClipboardCheck, 
   UserCheck, 
-  LogOut, 
   ClipboardList,
   FileSpreadsheet ,
    BarChart3 ,
@@ -28,7 +25,7 @@ const NAV_ITEMS = [
   { id: 'revaluation',      path: '/academy/revaluation',      label: 'Revaluation Exam',          Icon: Award },
 ];
 
-const AcademySidebar = ({ boardUser, handleLogout }) => {
+const AcademySidebar = ({ boardUser }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 

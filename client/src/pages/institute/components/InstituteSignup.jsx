@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Mail, Lock, UserPlus, ArrowLeft, ShieldAlert, Building2, Eye, EyeOff } from 'lucide-react';
 
 const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrentStep }) => {

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Eye, FileCheck, RefreshCw, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { FileCheck, RefreshCw, Trash2 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 
 const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, setUploadProgress }) => {

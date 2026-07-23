@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Mail, ArrowLeft, Send, RefreshCw } from 'lucide-react';
 import authService from '../../../api/auth';
 

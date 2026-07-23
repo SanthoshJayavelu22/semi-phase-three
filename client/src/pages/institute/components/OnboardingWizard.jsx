@@ -1,4 +1,3 @@
-import React from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import OnboardingStepper from './OnboardingStepper';
 import Step1GeneralInfo from './Step1GeneralInfo';

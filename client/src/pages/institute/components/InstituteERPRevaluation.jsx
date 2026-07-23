@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Filter, AlertCircle, CheckCircle2, CreditCard } from 'lucide-react';
+import { useState } from 'react';
+import { Search, AlertCircle, CheckCircle2, CreditCard } from 'lucide-react';
 
 const InstituteERPRevaluation = () => {
   const [searchTerm, setSearchTerm] = useState('');

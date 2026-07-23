@@ -5,7 +5,7 @@ export const getBaseURL = () => {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
       return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5003/api';
     }
-  } catch (e) {}
+  } catch { /* ignore */ }
   return 'http://localhost:5003/api';
 };
 
@@ -68,7 +68,7 @@ apiClient.interceptors.request.use(
           config.headers.Authorization = `Bearer ${token}`;
         }
       }
-    } catch (e) {}
+    } catch { /* ignore */ }
     return config;
   },
   (error) => Promise.reject(error)
@@ -121,6 +121,13 @@ apiClient.interceptors.response.use(
           localStorage.setItem('token', newAccessToken);
           localStorage.setItem('semi_token', newAccessToken);
           
+          if (localStorage.getItem('semi_institute_token')) {
+            localStorage.setItem('semi_institute_token', newAccessToken);
+          }
+          if (localStorage.getItem('semi_board_token')) {
+            localStorage.setItem('semi_board_token', newAccessToken);
+          }
+          
           if (newRefreshToken) {
             localStorage.setItem('refreshToken', newRefreshToken);
             localStorage.setItem('semi_refreshToken', newRefreshToken);
@@ -141,6 +148,8 @@ apiClient.interceptors.response.use(
         // Clear tokens if refresh fails to force logout
         localStorage.removeItem('token');
         localStorage.removeItem('semi_token');
+        localStorage.removeItem('semi_institute_token');
+        localStorage.removeItem('semi_board_token');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('semi_refreshToken');
         localStorage.removeItem('semi_board_user');

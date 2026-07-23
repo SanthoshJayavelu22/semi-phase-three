@@ -1,4 +1,3 @@
-import React from 'react';
 
 const Step2DepartmentInfo = ({ appForm, setAppForm }) => {
   return (
