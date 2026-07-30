@@ -12,16 +12,14 @@ dotenv.config();
 const seedTestData = async () => {
   try {
     console.log('Clearing old test data...');
-    // Delete existing test user if any
-    const testEmail = 'hospital@swiflare.com';
+    const testEmail = 'jashwa46733@gmail.com';
     const oldUser = await User.findOne({ email: testEmail });
     if (oldUser) {
-      await Student.deleteMany({ institute: { $in: [oldUser._id] } }); // delete using query matches
       const oldInst = await Institute.findOne({ user: oldUser._id });
       if (oldInst) {
         await Student.deleteMany({ institute: oldInst._id });
-        await Course.deleteMany({ institute: oldInst._id });
         await Batch.deleteMany({ institute: oldInst._id });
+        await Course.deleteMany({ institute: oldInst._id });
         await Institute.deleteOne({ _id: oldInst._id });
       }
       await User.deleteOne({ _id: oldUser._id });
@@ -29,10 +27,10 @@ const seedTestData = async () => {
 
     console.log('Creating test institute user...');
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('Password123!', salt);
+    const hashedPassword = await bcrypt.hash('789456123', salt);
 
     const user = await User.create({
-      name: 'Swiflare General Hospital',
+      name: 'Jashwa Institute',
       email: testEmail,
       password: hashedPassword,
       role: 'institute',
@@ -42,7 +40,7 @@ const seedTestData = async () => {
     console.log('Creating approved Institute profile...');
     const institute = await Institute.create({
       user: user._id,
-      orgName: 'Swiflare General Hospital',
+      orgName: 'Jashwa Institute',
       constitutionType: 'Trust',
       instituteAddress: '123 Healthcare Boulevard, Sector 4, Mumbai',
       registeredOfficeAddress: '456 Swiflare Corporate Plaza, Mumbai',
@@ -79,74 +77,72 @@ const seedTestData = async () => {
     console.log('Creating test Course...');
     const course = await Course.create({
       name: 'Emergency Medicine',
-      description: 'Residency Training Program in Emergency Medicine',
+      description: 'Fellowship in Emergency Medicine (FEM)',
       institute: institute._id,
+      subjects: ['Emergency Medicine Core', 'Trauma Management', 'Critical Care'],
     });
 
     console.log('Creating test Batch...');
     const batch = await Batch.create({
       course: course._id,
       year: 2026,
+      name: 'FEM 2026 Batch',
       institute: institute._id,
     });
 
-    console.log('Creating 5 test Students with varying metrics...');
+    console.log('Creating 5 test Students with semester data...');
     const studentsData = [
       {
         enrollmentId: 'SEMI-2026-1001',
         firstName: 'Aarav',
         lastName: 'Sharma',
         email: 'aarav.sharma@example.com',
-        remittedToAcademy: true,
-        attendancePercentage: 85,
-        thesisApproved: true,
         utrNumber: 'UTR111111',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 85, thesisApproved: true }],
+        remittedToAcademy: true,
       },
       {
         enrollmentId: 'SEMI-2026-1002',
         firstName: 'Neha',
         lastName: 'Patel',
         email: 'neha.patel@example.com',
-        remittedToAcademy: true,
-        attendancePercentage: 68, // Fail (attendance < 75%)
-        thesisApproved: true,
         utrNumber: 'UTR222222',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 68, thesisApproved: true }],
+        remittedToAcademy: true,
       },
       {
         enrollmentId: 'SEMI-2026-1003',
         firstName: 'Rahul',
         lastName: 'Verma',
         email: 'rahul.verma@example.com',
-        remittedToAcademy: true,
-        attendancePercentage: 92,
-        thesisApproved: false, // Fail (thesis not approved)
         utrNumber: 'UTR333333',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 92, thesisApproved: false }],
+        remittedToAcademy: true,
       },
       {
         enrollmentId: 'SEMI-2026-1004',
         firstName: 'Priya',
         lastName: 'Nair',
         email: 'priya.nair@example.com',
-        remittedToAcademy: false, // Fail (fee pending)
-        attendancePercentage: 88,
-        thesisApproved: true,
         utrNumber: 'UTR444444',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 88, thesisApproved: true }],
+        remittedToAcademy: false,
       },
       {
         enrollmentId: 'SEMI-2026-1005',
         firstName: 'Karan',
         lastName: 'Malhotra',
         email: 'karan.malhotra@example.com',
-        remittedToAcademy: false, // Fail (multiple conditions)
-        attendancePercentage: 62, // Fail
-        thesisApproved: false, // Fail
         utrNumber: 'UTR555555',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 62, thesisApproved: false }],
+        remittedToAcademy: false,
       },
     ];
 
     for (const s of studentsData) {
+      const { remittedToAcademy, semesters, ...rest } = s;
       await Student.create({
-        ...s,
+        ...rest,
         homeAddress: '456 Residency Road, Mumbai',
         contactNumber: '9988776655',
         qualification: 'MBBS',
@@ -160,6 +156,8 @@ const seedTestData = async () => {
         batch: batch._id,
         institute: institute._id,
         courseDirector: 'Dr. Rajesh Khanna',
+        semesters,
+        remittedToAcademy,
         documents: {
           passportPhotoUrl: 'http://example.com/photo.jpg',
           mbbsCertificateUrl: 'http://example.com/mbbs.pdf',
@@ -170,9 +168,16 @@ const seedTestData = async () => {
       });
     }
 
-    console.log('Test data seeded successfully! 🎉');
-    console.log(`Login Email: ${testEmail}`);
-    console.log(`Login Password: Password123!`);
+    console.log('');
+    console.log('=== SEED SUMMARY ===');
+    console.log(`Login Email:    ${testEmail}`);
+    console.log(`Login Password: 789456123`);
+    console.log(`Institute:      ${institute.orgName} (Approved)`);
+    console.log(`Course:         ${course.name}`);
+    console.log(`Batch:          ${batch.year}`);
+    console.log(`Students:       5 created`);
+    console.log('');
+    console.log('Test data seeded successfully!');
   } catch (error: any) {
     console.error(`Error seeding test data: ${error.message}`);
   }

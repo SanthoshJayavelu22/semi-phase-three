@@ -27,7 +27,7 @@ const InstituteERPBatches = ({
     setEditingBatch(batch);
     setEditForm({
       name: batch.name || '',
-      startDate: batch.startDate || '',
+      startDate: batch.startDate ? batch.startDate.split('T')[0] : '',
       seats: batch.seats || '5'
     });
   };
@@ -210,7 +210,7 @@ const InstituteERPBatches = ({
                           Course: {courseDisplayName}
                         </span>
                       )}
-                      <span className="text-[10px] text-gray-500 font-semibold block mt-1">Commencement: {batch.startDate}</span>
+                      <span className="text-[10px] text-gray-500 font-semibold block mt-1">Commencement: {batch.startDate ? batch.startDate.split('T')[0] : 'N/A'}</span>
                     </div>
 
                     {/* Actions buttons */}

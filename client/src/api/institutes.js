@@ -110,6 +110,17 @@ export const instituteService = {
    */
   toggleInspection: (instituteId, inspectionTriggered) => 
     apiClient.patch(`/institutes/${instituteId}/inspection`, { inspectionTriggered }),
+
+  /**
+   * Get payment status for current institute
+   */
+  getPaymentStatus: () => apiClient.get('/institutes/payment/status'),
+
+  /**
+   * Verify order status (for recovery)
+   * @param {string} orderId
+   */
+  verifyOrderStatus: (orderId) => apiClient.get(`/institutes/payment/verify-order/${orderId}`),
 };
 
 export default instituteService;

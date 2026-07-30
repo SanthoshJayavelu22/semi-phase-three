@@ -5,10 +5,13 @@ export interface IFeeRecord extends Document {
   semesterNumber?: number;
   amount: number;
   paymentMode: string;
-  utrNumber: string;
-  paymentReceiptUrl: string;
+  utrNumber?: string;
+  paymentReceiptUrl?: string;
   paymentDate: Date;
   paymentPurpose: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
 }
 
 const feeRecordSchema: Schema = new Schema(
@@ -32,11 +35,10 @@ const feeRecordSchema: Schema = new Schema(
     },
     utrNumber: {
       type: String,
-      required: true,
     },
     paymentReceiptUrl: {
       type: String,
-      required: true,
+      default: 'Online Verification',
     },
     paymentDate: {
       type: Date,
@@ -45,6 +47,15 @@ const feeRecordSchema: Schema = new Schema(
     paymentPurpose: {
       type: String,
       required: true,
+    },
+    razorpayOrderId: {
+      type: String,
+    },
+    razorpayPaymentId: {
+      type: String,
+    },
+    razorpaySignature: {
+      type: String,
     },
   },
   {

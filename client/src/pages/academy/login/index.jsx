@@ -41,6 +41,7 @@ export default function AcademyLoginPage() {
       const response = await authService.login({
         email: loginForm.email,
         password: loginForm.password,
+        portal: 'academy',
       });
 
       const data = response.data || response;

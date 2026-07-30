@@ -1,7 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Eye, Send, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check } from 'lucide-react';
 import examService from '../../../api/exams';
 import academicService from '../../../api/academic';
+import Toast from '../../../Components/Toast';
+
+const STEPS = [
+  { num: 1, label: 'Select Course', icon: BookOpen },
+  { num: 2, label: 'Review Eligibility', icon: Users },
+  { num: 3, label: 'Submit Application', icon: CheckCircle2 },
+];
 
 const InstituteERPExams = ({
   courses = [],
@@ -9,14 +16,17 @@ const InstituteERPExams = ({
   examApplications = [],
   fetchERPData
 }) => {
+  const [step, setStep] = useState(1);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
-  
+
   const [viewingApp, setViewingApp] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(false);
   const [feeRecords, setFeeRecords] = useState([]);
+  const [toast, setToast] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchFeeRecords = async () => {
@@ -33,24 +43,19 @@ const InstituteERPExams = ({
     fetchFeeRecords();
   }, []);
 
-  // Pagination states for history table
   const [activePage, setActivePage] = useState(1);
   const itemsPerPage = 5;
   const totalPages = Math.ceil(examApplications.length / itemsPerPage) || 1;
 
-  // Initialize selected values
   useEffect(() => {
     if (courses.length > 0 && !selectedCourseId) {
-      setTimeout(() => setSelectedCourseId(courses[0].id || courses[0]._id), 0);
+      setSelectedCourseId(courses[0].id || courses[0]._id);
     }
   }, [courses, selectedCourseId]);
 
-
-
-  // Filter students by selected course and batch
   const filteredStudents = useMemo(() => {
     if (!selectedCourseId) return [];
-    return students.filter(s => 
+    return students.filter(s =>
       String(s.courseId) === String(selectedCourseId)
     );
   }, [students, selectedCourseId]);
@@ -62,18 +67,17 @@ const InstituteERPExams = ({
         s.semesters.forEach(sem => sems.add(sem.semesterNumber));
       }
     });
-    return Array.from(sems).sort((a,b) => a - b);
+    return Array.from(sems).sort((a, b) => a - b);
   }, [filteredStudents]);
 
   useEffect(() => {
     if (availableSemesters.length > 0 && !selectedSemester) {
-      setTimeout(() => setSelectedSemester(availableSemesters[0].toString()), 0);
+      setSelectedSemester(availableSemesters[0].toString());
     } else if (availableSemesters.length === 0) {
-      setTimeout(() => setSelectedSemester(''), 0);
+      setSelectedSemester('');
     }
   }, [availableSemesters, selectedSemester]);
 
-  // Calculate student eligibility details
   const studentEligibility = useMemo(() => {
     const map = {};
     if (!selectedSemester) return map;
@@ -84,71 +88,81 @@ const InstituteERPExams = ({
         return;
       }
       const isAttendanceOk = (sem.attendancePercentage || 0) >= 75;
-      const isThesisOk = !!sem.thesisDocumentUrl;
-      const isExamFeePaid = feeRecords.some(r => 
-        (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id || r.student === s.id) && 
+      const isThesisOk = !!sem.thesisApproved;
+      const isExamFeePaid = feeRecords.some(r =>
+        (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id || r.student === s.id) &&
         r.paymentPurpose === 'Examination fee' && r.semesterNumber?.toString() === selectedSemester.toString()
       );
-
       const isEligible = isAttendanceOk && isThesisOk && isExamFeePaid;
-      
       const reasons = [];
       if (!isAttendanceOk) reasons.push(`Attendance low (${sem.attendancePercentage || 0}%)`);
       if (!isThesisOk) reasons.push("Thesis not uploaded");
       if (!isExamFeePaid) reasons.push("Exam fee not paid");
-      
       map[s.id || s._id] = {
         isEligible,
         isAttendanceOk,
         isThesisOk,
         isExamFeePaid,
-        reasonsText: reasons.join(", ")
+        reasonsText: reasons.join(", "),
       };
     });
     return map;
   }, [filteredStudents, feeRecords, selectedSemester]);
 
-  // List of eligible student IDs
   const eligibleStudentIds = useMemo(() => {
     return filteredStudents
       .filter(s => studentEligibility[s.id || s._id]?.isEligible)
       .map(s => s.id || s._id);
   }, [filteredStudents, studentEligibility]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (eligibleStudentIds.length === 0) {
-      setErrorMsg('No eligible students found in the selected course. Ensure students have met attendance, thesis, and academy fee criteria.');
+  const canProceedFrom = (s) => {
+    if (s === 1) return !!selectedCourseId && !!selectedSemester;
+    if (s === 2) return eligibleStudentIds.length > 0;
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!canProceedFrom(step)) {
+      if (step === 1) {
+        setToast({ message: 'Please select a course and semester.', type: 'warning' });
+      } else if (step === 2) {
+        setToast({ message: 'No eligible students found. Cannot proceed to submit.', type: 'warning' });
+      }
       return;
     }
+    setStep(s => Math.min(s + 1, 3));
+  };
 
-    setLoading(true);
+  const handleBack = () => setStep(s => Math.max(s - 1, 1));
+
+  const handleSubmit = async () => {
+    if (eligibleStudentIds.length === 0) {
+      setToast({ message: 'No eligible students found.', type: 'warning' });
+      return;
+    }
+    setSubmitting(true);
     setErrorMsg(null);
     setSuccessMsg(null);
-
     try {
       const selectedCourse = courses.find(c => (c.id || c._id) === selectedCourseId);
       const courseSubjects = selectedCourse?.subjects || ['All'];
-
       const payload = {
         courseId: selectedCourseId,
         semesterNumber: parseInt(selectedSemester),
-        studentIds: eligibleStudentIds, // Automatically apply for all eligible students
+        studentIds: eligibleStudentIds,
         subjects: courseSubjects,
-        batchId: filteredStudents[0]?.batchId || filteredStudents[0]?.batch?._id || filteredStudents[0]?.batch 
+        batchId: filteredStudents[0]?.batchId || filteredStudents[0]?.batch?._id || filteredStudents[0]?.batch,
       };
-
       await examService.applyForExam(payload);
-      
-      // Reload applications and dashboard data
       if (fetchERPData) {
         await fetchERPData();
       }
-
-      setSuccessMsg('🎉 Exam Application submitted successfully to the Academic Board!');
+      setSuccessMsg('Exam Application submitted successfully to the Academic Board!');
+      setStep(1);
+      setSelectedCourseId('');
+      setSelectedSemester('');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
-      // Extract a safe string message — never pass an object to setErrorMsg (causes React crash)
       const apiErrors = err.response?.data?.errors;
       let errMsg = 'Failed to submit exam application.';
       if (typeof err.parsedMessage === 'string') {
@@ -164,19 +178,259 @@ const InstituteERPExams = ({
       }
       setErrorMsg(errMsg);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  // Get current page items
   const paginatedApplications = examApplications.slice(
     (activePage - 1) * itemsPerPage,
     activePage * itemsPerPage
   );
 
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center gap-0 mb-8">
+      {STEPS.map((s, idx) => {
+        const Icon = s.icon;
+        const isActive = step === s.num;
+        const isCompleted = step > s.num;
+        const isClickable = s.num < step;
+        return (
+          <div key={s.num} className="flex items-center">
+            {idx > 0 && (
+              <div className={`w-12 h-0.5 sm:w-20 ${isCompleted ? 'bg-blue-500' : 'bg-slate-200'}`} />
+            )}
+            <button
+              type="button"
+              onClick={() => isClickable && setStep(s.num)}
+              disabled={!isClickable}
+              className={`flex flex-col items-center gap-1.5 px-2 py-1 rounded-xl transition-all cursor-pointer ${
+                isActive ? 'scale-105' : ''
+              } ${!isClickable ? 'opacity-60 cursor-default' : 'hover:bg-slate-50'}`}
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all shadow-sm ${
+                isCompleted
+                  ? 'bg-blue-600 text-white shadow-blue-500/30'
+                  : isActive
+                    ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-100'
+                    : 'bg-slate-100 text-slate-400'
+              }`}>
+                {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+              </div>
+              <span className={`text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${
+                isActive || isCompleted ? 'text-blue-700' : 'text-slate-400'
+              }`}>
+                {s.label}
+              </span>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderStep1 = () => (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-blue-500" />
+          Select Course & Semester
+        </h3>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Choose the course and semester to prepare exam applications</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course *</label>
+          <select
+            value={selectedCourseId}
+            onChange={(e) => { setSelectedCourseId(e.target.value); setSelectedSemester(''); }}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+          >
+            {courses.map(c => <option key={c.id || c._id} value={c.id || c._id}>{c.courseName || c.name}</option>)}
+            {courses.length === 0 && <option value="">No courses available</option>}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Semester *</label>
+          <select
+            value={selectedSemester}
+            onChange={(e) => setSelectedSemester(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            required
+          >
+            <option value="">Select Semester</option>
+            {availableSemesters.map(sem => (
+              <option key={sem} value={sem}>Semester {sem}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {selectedCourseId && selectedSemester && (
+        <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 flex items-center gap-3">
+          <GraduationCap className="w-8 h-8 text-blue-400" />
+          <div>
+            <p className="text-sm font-extrabold text-slate-800">
+              {courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected Course'}
+            </p>
+            <p className="text-[10px] font-bold text-slate-400">
+              Semester {selectedSemester} · {filteredStudents.length} student(s) enrolled
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+          <Users className="w-5 h-5 text-blue-500" />
+          Review Eligibility
+        </h3>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Verify each student's eligibility criteria</p>
+      </div>
+      {selectedCourseId && selectedSemester && (
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 mb-2">
+          <p className="text-xs font-bold text-slate-600">
+            Course: <span className="text-slate-800">{courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected'}</span>
+            <span className="text-slate-300 mx-2">|</span>
+            Semester: <span className="text-slate-800">{selectedSemester}</span>
+          </p>
+        </div>
+      )}
+      <div className="overflow-x-auto border border-slate-100 rounded-2xl bg-white shadow-inner">
+        <table className="w-full text-left border-collapse text-xs text-slate-500 font-semibold">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px]">
+              <th className="px-4 py-3 font-black">Student</th>
+              <th className="px-4 py-3 font-black text-center">Attendance</th>
+              <th className="px-4 py-3 font-black text-center">Thesis</th>
+              <th className="px-4 py-3 font-black text-center">Fee Paid</th>
+              <th className="px-4 py-3 font-black text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-600">
+            {filteredStudents.map(s => {
+              const e = studentEligibility[s.id || s._id];
+              const sid = s.id || s._id;
+              return (
+                <tr key={sid} className="hover:bg-slate-50/30 transition-colors">
+                  <td className="px-4 py-3">
+                    <span className="font-extrabold text-slate-800 block">{s.fullName}</span>
+                    <span className="text-[10px] font-mono text-slate-400">{s.enrollmentNo || 'N/A'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      e.isAttendanceOk
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      e.isThesisOk
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      e.isExamFeePaid
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      e.isEligible ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] uppercase font-black">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Eligible
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[9px] uppercase font-black" title={e.reasonsText}>
+                          <XCircle className="w-3 h-3" />
+                          Ineligible
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-slate-300 text-[9px] uppercase font-black">N/A</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredStudents.length === 0 && (
+              <tr>
+                <td colSpan="5" className="px-6 py-12 text-center text-slate-400 font-medium">
+                  No students found for this course and semester.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center gap-4 pt-2">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
+          <CheckCircle2 className="w-4 h-4" />
+          Eligible: {eligibleStudentIds.length}
+        </div>
+        <div className="flex items-center gap-1.5 text-xs font-bold text-rose-600 bg-rose-50 px-4 py-2 rounded-xl border border-rose-100">
+          <XCircle className="w-4 h-4" />
+          Ineligible: {filteredStudents.length - eligibleStudentIds.length}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => {
+    const selectedCourse = courses.find(c => (c.id || c._id) === selectedCourseId);
+    return (
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-blue-500" />
+            Submit Application
+          </h3>
+          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Review and submit the exam application to the Academic Board</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Course</span>
+            <span className="text-sm font-extrabold text-slate-800">{selectedCourse?.courseName || 'Selected Course'}</span>
+          </div>
+          <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Semester</span>
+            <span className="text-sm font-extrabold text-slate-800">Semester {selectedSemester}</span>
+          </div>
+          <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Eligible Students</span>
+            <span className="text-sm font-extrabold text-emerald-700">{eligibleStudentIds.length}</span>
+          </div>
+          <div className="bg-slate-50/40 border border-slate-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Total Enrolled</span>
+            <span className="text-sm font-extrabold text-slate-700">{filteredStudents.length}</span>
+          </div>
+        </div>
+        <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-amber-800">Review before submitting</p>
+            <p className="text-[10px] text-amber-700 mt-0.5">This will create exam applications for all {eligibleStudentIds.length} eligible student(s). Ineligible students will be excluded.</p>
+          </div>
+        </div>
+        {submitting && (
+          <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-xs">
+            <span className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+            Submitting exam application...
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
-      {/* Page Title Header */}
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
@@ -203,157 +457,59 @@ const InstituteERPExams = ({
         </div>
       )}
 
-      {/* Grid Layout for Form and Table */}
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-        
-        {/* 1. EXAM APPLICATION SCREEN (3 cols width) */}
-        <div className="xl:col-span-3 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-5">
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-base font-black text-slate-800 tracking-tight">New Exam Application</h3>
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Select course and eligible students to apply</p>
-            </div>
+        <div className="xl:col-span-3 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6">
+          {renderStepIndicator()}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Course Selector */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course *</label>
-                <select
-                  value={selectedCourseId}
-                  onChange={(e) => {
-                    setSelectedCourseId(e.target.value);
-                    setSelectedSemester('');
-                  }}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer hover:bg-slate-100/55"
-                >
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.courseName}</option>)}
-                  {courses.length === 0 && <option value="">No courses available</option>}
-                </select>
-              </div>
+          <div className="min-h-[260px]">
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
+          </div>
 
-              {/* Semester Selector */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Semester *</label>
-                <select
-                  value={selectedSemester}
-                  onChange={(e) => setSelectedSemester(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer hover:bg-slate-100/55"
-                  required
-                >
-                  <option value="">Select Semester</option>
-                  {availableSemesters.map(sem => (
-                    <option key={sem} value={sem}>Semester {sem}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Students Summary Tabs / Cards */}
-            <div className="space-y-4 pt-2 border-t border-slate-50">
-              <h4 className="text-xs font-black text-slate-800 tracking-tight flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-500" />
-                Candidates Overview
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Eligible Candidates Card */}
-                <div className="border border-emerald-100 bg-emerald-50/30 rounded-2xl overflow-hidden flex flex-col shadow-sm transition-all hover:shadow-md">
-                  <div className="bg-emerald-500/10 px-4 py-3 border-b border-emerald-100 flex items-center justify-between">
-                    <h5 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Eligible Candidates
-                    </h5>
-                    <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-full">{eligibleStudentIds.length}</span>
-                  </div>
-                  <div className="p-4 flex-1 bg-white/50">
-                    {eligibleStudentIds.length === 0 ? (
-                      <div className="h-full flex items-center justify-center py-6">
-                        <p className="text-[10px] text-emerald-600/70 font-bold uppercase tracking-wider text-center">No eligible candidates</p>
-                      </div>
-                    ) : (
-                      <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {filteredStudents.filter(s => studentEligibility[s.id || s._id]?.isEligible).map(s => (
-                          <li key={s.id || s._id} className="flex items-center gap-3 bg-white border border-emerald-100 p-2.5 rounded-xl shadow-sm hover:border-emerald-300 transition-colors">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-700 flex items-center justify-center text-[11px] font-black flex-shrink-0 shadow-inner">
-                              {s.fullName.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-extrabold text-slate-700 truncate">{s.fullName}</p>
-                              <p className="text-[9px] font-mono font-bold text-slate-400">{s.enrollmentNo || `STUD00${s.id || s._id}`}</p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-
-                {/* Ineligible Candidates Card */}
-                <div className="border border-rose-100 bg-rose-50/30 rounded-2xl overflow-hidden flex flex-col shadow-sm transition-all hover:shadow-md">
-                  <div className="bg-rose-500/10 px-4 py-3 border-b border-rose-100 flex items-center justify-between">
-                    <h5 className="text-[10px] font-black text-rose-800 uppercase tracking-widest flex items-center gap-2">
-                      <XCircle className="w-4 h-4 text-rose-600" /> Ineligible Candidates
-                    </h5>
-                    <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-2 py-0.5 rounded-full">{filteredStudents.length - eligibleStudentIds.length}</span>
-                  </div>
-                  <div className="p-4 flex-1 bg-white/50">
-                    {filteredStudents.length - eligibleStudentIds.length === 0 ? (
-                      <div className="h-full flex items-center justify-center py-6">
-                        <p className="text-[10px] text-rose-600/70 font-bold uppercase tracking-wider text-center">No ineligible candidates</p>
-                      </div>
-                    ) : (
-                      <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {filteredStudents.filter(s => !studentEligibility[s.id || s._id]?.isEligible).map(s => (
-                          <li key={s.id || s._id} className="flex flex-col gap-2 bg-white border border-rose-100 p-3 rounded-xl shadow-sm hover:border-rose-300 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-rose-100 to-rose-200 text-rose-700 flex items-center justify-center text-[11px] font-black flex-shrink-0 shadow-inner">
-                                {s.fullName.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-extrabold text-slate-700 truncate">{s.fullName}</p>
-                                <p className="text-[9px] font-mono font-bold text-slate-400">{s.enrollmentNo || `STUD00${s.id || s._id}`}</p>
-                              </div>
-                            </div>
-                            <div className="bg-rose-50/80 p-2 rounded-lg border border-rose-100/50 flex items-start gap-1.5">
-                              <AlertTriangle className="w-3 h-3 text-rose-500 flex-shrink-0 mt-0.5" />
-                              <p className="text-[9.5px] font-bold text-rose-600 leading-tight">Missing: {studentEligibility[s.id || s._id]?.reasonsText}</p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-
-
-            <div className="pt-2">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={step === 1}
+              className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none rounded-xl text-xs font-bold text-slate-600 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
+            {step < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer"
+              >
+                Next
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading || eligibleStudentIds.length === 0}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all hover:scale-[1.01] flex items-center justify-center gap-2 shadow-md shadow-blue-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                disabled={submitting || eligibleStudentIds.length === 0}
+                className="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-md shadow-emerald-500/10 cursor-pointer"
               >
-                {loading ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                {submitting ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <Send className="w-3.5 h-3.5" />
+                  <CheckCircle2 className="w-4 h-4" />
                 )}
-                Submit Exam Application
+                {submitting ? 'Submitting...' : 'Submit Application'}
               </button>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* 2. EXAM APPLICATIONS HISTORY TABLE (2 cols width) */}
         <div className="xl:col-span-2 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6 flex flex-col justify-between">
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-black text-slate-800 tracking-tight">Applications Registry</h3>
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Historical registry of submitted exam registrations</p>
             </div>
-
             <div className="overflow-x-auto border border-slate-100 rounded-2xl bg-white shadow-inner">
               <table className="w-full text-left border-collapse text-xs text-slate-500 font-semibold">
                 <thead>
@@ -379,11 +535,11 @@ const InstituteERPExams = ({
                         <td className="px-4 py-4 text-center font-bold text-slate-700">{app.students?.length || 0}</td>
                         <td className="px-4 py-4 text-center">
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] uppercase font-black border ${
-                            app.status === 'Approved' 
+                            app.status === 'Approved'
                               ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
                               : app.status === 'SchedulePublished'
                                 ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
-                                : app.status === 'Rejected' 
+                                : app.status === 'Rejected'
                                   ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm'
                                   : 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm'
                           }`}>
@@ -414,14 +570,12 @@ const InstituteERPExams = ({
               </table>
             </div>
           </div>
-
-          {/* PAGINATION PANEL */}
           {examApplications.length > 0 && (
             <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-600 pt-4 border-t border-slate-50 mt-4">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 disabled={activePage === 1}
-                onClick={() => setActivePage(prev => Math.max(prev - 1, 1))} 
+                onClick={() => setActivePage(prev => Math.max(prev - 1, 1))}
                 className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -432,18 +586,18 @@ const InstituteERPExams = ({
                   type="button"
                   onClick={() => setActivePage(num)}
                   className={`w-8 h-8 rounded-lg border text-xs font-black transition-all cursor-pointer ${
-                    activePage === num 
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/10' 
+                    activePage === num
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/10'
                       : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
                   }`}
                 >
                   {num}
                 </button>
               ))}
-              <button 
-                type="button" 
+              <button
+                type="button"
                 disabled={activePage === totalPages}
-                onClick={() => setActivePage(prev => Math.min(prev + 1, totalPages))} 
+                onClick={() => setActivePage(prev => Math.min(prev + 1, totalPages))}
                 className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -451,14 +605,11 @@ const InstituteERPExams = ({
             </div>
           )}
         </div>
-
       </div>
 
-      {/* DETAIL VIEW MODAL */}
       {viewingApp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden flex flex-col scale-in-center text-left">
-            {/* Header */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
@@ -469,7 +620,7 @@ const InstituteERPExams = ({
                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Exam Application Record</p>
                 </div>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={() => setViewingApp(null)}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
@@ -477,8 +628,6 @@ const InstituteERPExams = ({
                 <X className="w-5 h-5" />
               </button>
             </div>
-
-            {/* Details */}
             <div className="p-6 space-y-5 text-xs text-slate-600">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -488,9 +637,9 @@ const InstituteERPExams = ({
                 <div>
                   <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0.5">Status</span>
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] uppercase font-black border ${
-                    viewingApp.status === 'Approved' 
+                    viewingApp.status === 'Approved'
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
-                      : viewingApp.status === 'Rejected' 
+                      : viewingApp.status === 'Rejected'
                         ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm'
                         : 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm'
                   }`}>
@@ -498,9 +647,7 @@ const InstituteERPExams = ({
                   </span>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-3">
-
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-slate-400" />
                   <div>
@@ -516,7 +663,6 @@ const InstituteERPExams = ({
                   </div>
                 </div>
               </div>
-
               {(viewingApp.status === 'Approved' || viewingApp.status === 'SchedulePublished') && viewingApp.scheduledDate && (
                 <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3.5 flex items-center gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
@@ -526,7 +672,6 @@ const InstituteERPExams = ({
                   </div>
                 </div>
               )}
-
               {viewingApp.status === 'SchedulePublished' && viewingApp.subjectSchedules && viewingApp.subjectSchedules.length > 0 && (
                 <div>
                   <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider mb-2">Subject Wise Schedule</span>
@@ -552,14 +697,12 @@ const InstituteERPExams = ({
                   </div>
                 </div>
               )}
-
               {viewingApp.remarks && (
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
                   <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider mb-1">Board Feedback / Remarks</span>
                   <p className="text-slate-700 font-semibold">{viewingApp.remarks}</p>
                 </div>
               )}
-
               <div>
                 <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider mb-2">Enrolled Candidates ({viewingApp.students?.length || 0})</span>
                 <div className="border border-slate-100 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
@@ -584,8 +727,6 @@ const InstituteERPExams = ({
                 </div>
               </div>
             </div>
-
-            {/* Footer */}
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
               <button
                 type="button"
@@ -598,6 +739,8 @@ const InstituteERPExams = ({
           </div>
         </div>
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };

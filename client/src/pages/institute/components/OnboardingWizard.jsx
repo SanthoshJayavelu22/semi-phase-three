@@ -15,9 +15,7 @@ const OnboardingWizard = ({
   uploadProgress,
   setUploadProgress,
   paymentComplete,
-  setPaymentComplete,
   paymentDetails,
-  setPaymentDetails,
   validateWizardStep,
   setErrorBanner,
   saveToLocalStorage,
@@ -26,8 +24,6 @@ const OnboardingWizard = ({
   handleWizardNext,
   handleWizardBack,
   handleApplicationSubmit,
-  handlePaymentInitiate,
-  paymentProcessing,
   applicationSubmitting
 }) => {
   return (
@@ -70,11 +66,7 @@ const OnboardingWizard = ({
           uploadProgress={uploadProgress} 
           setUploadProgress={setUploadProgress} 
           paymentComplete={paymentComplete} 
-          setPaymentComplete={setPaymentComplete} 
           paymentDetails={paymentDetails} 
-          setPaymentDetails={setPaymentDetails}
-          handlePaymentInitiate={handlePaymentInitiate}
-          paymentProcessing={paymentProcessing}
         />
       )}
 

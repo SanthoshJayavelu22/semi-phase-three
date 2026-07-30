@@ -18,6 +18,9 @@ const InstituteERPEnrollment = ({
 }) => {
   const [wizardStep, setWizardStep] = useState(1);
   const [localError, setLocalError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const today = new Date().toISOString().split('T')[0];
+  const currentYear = new Date().getFullYear();
 
   // Local state to track "Is FMG Candidate?" matching screenshot dropdown
   const [isFmgSelected, setIsFmgSelected] = useState(enrollForm.studentCategory === 'FMG' ? 'Yes' : 'No');
@@ -124,61 +127,80 @@ const InstituteERPEnrollment = ({
   };
 
   const validateStep = (step) => {
+    const errors = {};
     if (step === 1) {
-      if (!enrollForm.firstName?.trim()) return 'First Name is a mandatory field.';
-      if (!enrollForm.lastName?.trim()) return 'Last Name is a mandatory field.';
-      if (!enrollForm.dateOfBirth) return 'Date of Birth is a mandatory field.';
-      if (!enrollForm.homeAddress?.trim()) return 'Home Address is a mandatory field.';
+      if (!enrollForm.firstName?.trim()) errors.firstName = 'First Name is mandatory.';
+      if (!enrollForm.lastName?.trim()) errors.lastName = 'Last Name is mandatory.';
+      if (!enrollForm.dateOfBirth) {
+        errors.dateOfBirth = 'Date of Birth is mandatory.';
+      } else if (new Date(enrollForm.dateOfBirth) > new Date()) {
+        errors.dateOfBirth = 'Date of Birth cannot be in the future.';
+      }
+      if (!enrollForm.homeAddress?.trim()) errors.homeAddress = 'Home Address is mandatory.';
       
-      const phoneRegex = /^\d{10}$/;
-      if (!enrollForm.contactNumber?.trim()) return 'Contact Number is a mandatory field.';
-      if (enrollForm.contactNumber.includes('-')) return 'Contact Number cannot be negative.';
-      if (!phoneRegex.test(enrollForm.contactNumber.replace(/\D/g, ''))) return 'Contact Number must be a valid 10-digit number.';
-      
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!enrollForm.emailAddress?.trim()) return 'Email Address is a mandatory field.';
-      if (!emailRegex.test(enrollForm.emailAddress)) return 'Valid Email Address is required.';
-      if (!enrollDocs.photoDoc) return 'Candidate Passport photograph must be uploaded.';
-    }
-    if (step === 2) {
-      if (!enrollForm.qualification) return 'Postgraduate qualification selection is mandatory.';
-      
-      const year = parseInt(enrollForm.passingYear, 10);
-      if (!enrollForm.passingYear?.trim() || isNaN(year) || year < 1900 || year > new Date().getFullYear()) {
-        return 'Valid Passing Year is required (e.g. 2018).';
+      const phoneDigits = (enrollForm.contactNumber || '').replace(/\D/g, '');
+      const phoneRegex = /^\d{10,15}$/;
+      if (!enrollForm.contactNumber?.trim()) {
+        errors.contactNumber = 'Contact Number is mandatory.';
+      } else if (!phoneRegex.test(phoneDigits)) {
+        errors.contactNumber = 'Contact Number must be 10-15 digits.';
       }
       
-      if (!enrollForm.universityName?.trim()) return 'University Name is a mandatory field.';
-      if (!enrollDocs.marksCertificateDoc) return 'MBBS Degree Certificate must be uploaded.';
-      if (!enrollForm.medCouncilRegNo?.trim()) return 'Medical Council Registration Number is a mandatory field.';
-      if (!enrollForm.stateMedCouncil?.trim()) return 'State Medical Council is a mandatory field.';
-      if (!enrollDocs.medCouncilCertDoc) return 'Medical Council Registration Certificate must be uploaded.';
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!enrollForm.emailAddress?.trim()) {
+        errors.emailAddress = 'Email Address is mandatory.';
+      } else if (/\s/.test(enrollForm.emailAddress)) {
+        errors.emailAddress = 'Email Address cannot contain spaces.';
+      } else if (!emailRegex.test(enrollForm.emailAddress)) {
+        errors.emailAddress = 'Enter a valid email address (e.g. doctor@example.com).';
+      }
+      if (!enrollDocs.photoDoc) errors.photoDoc = 'Passport photograph must be uploaded.';
+    }
+    if (step === 2) {
+      if (!enrollForm.qualification) errors.qualification = 'Postgraduate qualification selection is mandatory.';
+      
+      const year = parseInt(enrollForm.passingYear, 10);
+      if (!enrollForm.passingYear?.trim() || isNaN(year)) {
+        errors.passingYear = 'Passing Year is required.';
+      } else if (year < 1900) {
+        errors.passingYear = 'Passing Year cannot be before 1900.';
+      } else if (year > currentYear) {
+        errors.passingYear = 'Passing Year cannot be in the future.';
+      }
+      
+      if (!enrollForm.universityName?.trim()) errors.universityName = 'University Name is mandatory.';
+      if (!enrollDocs.marksCertificateDoc) errors.marksCertificateDoc = 'MBBS Degree Certificate must be uploaded.';
+      if (!enrollForm.medCouncilRegNo?.trim()) errors.medCouncilRegNo = 'Medical Council Registration Number is mandatory.';
+      if (!enrollForm.stateMedCouncil?.trim()) errors.stateMedCouncil = 'State Medical Council is mandatory.';
+      if (!enrollDocs.medCouncilCertDoc) errors.medCouncilCertDoc = 'Medical Council Registration Certificate must be uploaded.';
       if (isFmgSelected === 'Yes' && !enrollDocs.fmgeCertDoc) {
-        return 'FMGE Screening Pass Result Certificate copy must be uploaded for Foreign Medical Graduates.';
+        errors.fmgeCertDoc = 'FMGE Screening Pass Result Certificate must be uploaded for Foreign Medical Graduates.';
       }
     }
     if (step === 3) {
-      if (!enrollForm.course) return 'Please select a program course.';
-      if (!enrollForm.batch) return 'Please select an academic batch.';
-      if (!enrollForm.courseDirector?.trim()) return 'Course Director is a mandatory field.';
-      if (!enrollForm.currentDesignation?.trim()) return 'Designation is a mandatory field.';
-      if (!enrollForm.lifeMembershipNo?.trim()) return 'Life Membership Number is a mandatory field.';
-      if (!enrollForm.mcQualifications?.trim()) return 'Medical Council Qualifications is a mandatory field.';
-      if (!enrollDocs.lifeMembershipCardDoc) return 'SEMI Membership Card/Form document must be uploaded.';
+      if (!enrollForm.course) errors.course = 'Please select a program course.';
+      if (!enrollForm.batch) errors.batch = 'Please select an academic batch.';
+      if (!enrollForm.courseDirector?.trim()) errors.courseDirector = 'Course Director is mandatory.';
+      if (!enrollForm.currentDesignation?.trim()) errors.currentDesignation = 'Designation is mandatory.';
+      if (!enrollForm.lifeMembershipNo?.trim()) errors.lifeMembershipNo = 'Life Membership Number is mandatory.';
+      if (!enrollForm.mcQualifications?.trim()) errors.mcQualifications = 'Medical Council Qualifications is mandatory.';
+      if (!enrollDocs.lifeMembershipCardDoc) errors.lifeMembershipCardDoc = 'SEMI Membership Card/Form must be uploaded.';
     }
     if (step === 4) {
-      if (!enrollDocs.studentSignatureDoc) return 'Student Signature file must be uploaded.';
-      if (!enrollDocs.hodSignatureDoc) return 'PG Degree Certificate / HOD confirmation document must be uploaded.';
-      if (!enrollForm.declarationCheck) return 'You must check the candidate credentials declaration check.';
+      if (!enrollDocs.studentSignatureDoc) errors.studentSignatureDoc = 'Student Signature file must be uploaded.';
+      if (!enrollDocs.hodSignatureDoc) errors.hodSignatureDoc = 'PG Degree Certificate / HOD confirmation must be uploaded.';
+      if (!enrollForm.declarationCheck) errors.declarationCheck = 'You must accept the declaration.';
     }
-    return null;
+    return errors;
   };
 
   const handleNext = () => {
     setLocalError(null);
-    const error = validateStep(wizardStep);
-    if (error) {
-      setLocalError(error);
+    const errors = validateStep(wizardStep);
+    setFieldErrors(errors);
+    const errorMessages = Object.values(errors);
+    if (errorMessages.length > 0) {
+      setLocalError(errorMessages[0]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -188,16 +210,27 @@ const InstituteERPEnrollment = ({
 
   const handleBack = () => {
     setLocalError(null);
+    setFieldErrors({});
     setWizardStep(prev => prev - 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const clearFieldError = (field) => {
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   };
 
   const handleSubmitIntercept = async (e) => {
     e.preventDefault();
     setLocalError(null);
-    const error = validateStep(4);
-    if (error) {
-      setLocalError(error);
+    const errors = validateStep(4);
+    setFieldErrors(errors);
+    const errorMessages = Object.values(errors);
+    if (errorMessages.length > 0) {
+      setLocalError(errorMessages[0]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -228,7 +261,9 @@ const InstituteERPEnrollment = ({
             
             // Set payment data dynamically
             enrollForm.paymentMode = 'Razorpay';
-            enrollForm.utrNumber = response.razorpay_payment_id;
+            enrollForm.razorpayOrderId = response.razorpay_order_id;
+            enrollForm.razorpayPaymentId = response.razorpay_payment_id;
+            enrollForm.razorpaySignature = response.razorpay_signature;
             enrollForm.txnDate = new Date().toISOString().split('T')[0];
             
             // Wait for enrollment form submission
@@ -333,9 +368,10 @@ const InstituteERPEnrollment = ({
                   required
                   placeholder="First Name"
                   value={enrollForm.firstName}
-                  onChange={(e) => setEnrollForm({...enrollForm, firstName: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  onChange={(e) => { setEnrollForm({...enrollForm, firstName: e.target.value}); clearFieldError('firstName'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.firstName ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {fieldErrors.firstName && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.firstName}</p>}
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Middle Name</label>
@@ -354,19 +390,22 @@ const InstituteERPEnrollment = ({
                   required
                   placeholder="Last Name"
                   value={enrollForm.lastName}
-                  onChange={(e) => setEnrollForm({...enrollForm, lastName: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  onChange={(e) => { setEnrollForm({...enrollForm, lastName: e.target.value}); clearFieldError('lastName'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.lastName ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {fieldErrors.lastName && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.lastName}</p>}
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Date of Birth *</label>
                 <input
                   type="date"
                   required
+                  max={today}
                   value={enrollForm.dateOfBirth || ''}
-                  onChange={(e) => setEnrollForm({...enrollForm, dateOfBirth: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  onChange={(e) => { setEnrollForm({...enrollForm, dateOfBirth: e.target.value}); clearFieldError('dateOfBirth'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.dateOfBirth ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {fieldErrors.dateOfBirth && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.dateOfBirth}</p>}
               </div>
             </div>
 
@@ -376,10 +415,11 @@ const InstituteERPEnrollment = ({
                 required
                 placeholder="Temporary Address / Residential Address"
                 value={enrollForm.homeAddress}
-                onChange={(e) => setEnrollForm({...enrollForm, homeAddress: e.target.value})}
+                onChange={(e) => { setEnrollForm({...enrollForm, homeAddress: e.target.value}); clearFieldError('homeAddress'); }}
                 rows={3}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.homeAddress ? 'border-red-400' : 'border-slate-200'}`}
               />
+              {fieldErrors.homeAddress && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.homeAddress}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -390,9 +430,10 @@ const InstituteERPEnrollment = ({
                   required
                   placeholder="+91 Contact Number"
                   value={enrollForm.contactNumber}
-                  onChange={(e) => setEnrollForm({...enrollForm, contactNumber: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  onChange={(e) => { setEnrollForm({...enrollForm, contactNumber: e.target.value}); clearFieldError('contactNumber'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.contactNumber ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {fieldErrors.contactNumber && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.contactNumber}</p>}
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Email Address *</label>
@@ -401,9 +442,10 @@ const InstituteERPEnrollment = ({
                   required
                   placeholder="doctor@example.com"
                   value={enrollForm.emailAddress}
-                  onChange={(e) => setEnrollForm({...enrollForm, emailAddress: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  onChange={(e) => { setEnrollForm({...enrollForm, emailAddress: e.target.value}); clearFieldError('emailAddress'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.emailAddress ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {fieldErrors.emailAddress && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.emailAddress}</p>}
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Passport Photo *</label>
@@ -443,12 +485,14 @@ const InstituteERPEnrollment = ({
                   <input
                     type="number"
                     min="1900"
+                    max={currentYear}
                     required
                     placeholder="2025"
                     value={enrollForm.passingYear}
-                    onChange={(e) => setEnrollForm({...enrollForm, passingYear: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                    onChange={(e) => { setEnrollForm({...enrollForm, passingYear: e.target.value}); clearFieldError('passingYear'); }}
+                    className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.passingYear ? 'border-red-400' : 'border-slate-200'}`}
                   />
+                  {fieldErrors.passingYear && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.passingYear}</p>}
                 </div>
 
                 <div>

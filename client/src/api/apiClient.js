@@ -176,7 +176,7 @@ apiClient.interceptors.response.use(
       "An unexpected error occurred. Please try again.";
     
     // Support structured validation error lists from backend (e.g. Zod validation arrays)
-    if (error.response?.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+    if (error.response?.data?.errors?.length > 0 && Array.isArray(error.response.data.errors)) {
       message = error.response.data.errors;
     }
     

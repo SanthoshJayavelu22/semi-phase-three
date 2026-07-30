@@ -131,7 +131,7 @@ const AcademyPortal = () => {
             emFacultyCount: app.emFacultyCount,
             teachingSpace: app.teachingSpace,
             paymentComplete: app.paymentStatus === 'Completed',
-            paymentDetails: app.paymentStatus === 'Completed' ? { transactionId: app.razorpayPaymentId || app.paymentTxnNo } : null,
+            paymentDetails: app.paymentStatus === 'Completed' ? { transactionId: app.razorpayPaymentId } : null,
             form: app,
             uploadedDocs: {
               equipmentList: app.documents?.equipmentListUrl ? { name: 'equipmentList.pdf', url: app.documents.equipmentListUrl } : null,
@@ -247,7 +247,8 @@ const AcademyPortal = () => {
     try {
       const response = await authService.login({
         email: loginForm.email,
-        password: loginForm.password
+        password: loginForm.password,
+        portal: 'academy',
       });
 
       const data = response.data || response;
@@ -275,7 +276,8 @@ const AcademyPortal = () => {
       fetchBoardData();
     } catch (err) {
       console.warn('Board login API failed:', err);
-      setErrorMsg('Invalid credentials. Email or password is not match.');
+      const serverMsg = err?.response?.data?.message || err?.parsedMessage || err?.message;
+      setErrorMsg(serverMsg || 'Invalid credentials. Email or password do not match.');
     }
   }, [loginForm.email, loginForm.password, setCurrentStep, fetchBoardData]);
 

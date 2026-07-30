@@ -1,4 +1,4 @@
-import { Eye, CheckCircle2, ShieldCheck, X, FileCheck, Building2, MapPin, Contact2, GraduationCap, Banknote, AlertCircle, FileText } from 'lucide-react';
+import { Eye, CheckCircle2, ShieldCheck, X, FileCheck, Building2, MapPin, Contact2, GraduationCap, AlertCircle, FileText } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const AcademyInspectorModal = ({
@@ -164,13 +164,6 @@ const AcademyInspectorModal = ({
               <DetailField label="Course Director EM Qualified" value={selectedApp.form?.courseDirectorEMQualified || 'Yes'} />
             </InfoCard>
             
-            <InfoCard icon={Banknote} title="5. Fee Remittance Registry">
-              <DetailField label="Payment Bank Name" value={selectedApp.form?.paymentBankName || 'N/A'} />
-              <DetailField label="Transaction ID / UTR" value={selectedApp.form?.paymentTxnNo || 'N/A'} />
-              <DetailField label="Transaction Date" value={selectedApp.form?.paymentTxnDate ? new Date(selectedApp.form.paymentTxnDate).toLocaleDateString() : 'N/A'} />
-              <DetailField label="Payment Status" value={selectedApp.form?.paymentStatus || 'Completed'} />
-            </InfoCard>
-
             {selectedApp.rejectionReason && (
               <div className="bg-gradient-to-r from-rose-50 to-white border border-rose-100 rounded-2xl p-5 shadow-sm mt-4 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
@@ -248,23 +241,25 @@ const AcademyInspectorModal = ({
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-[1.5rem] p-6 text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl transform translate-x-1/3 -translate-y-1/3"></div>
-              
-              <div className="flex items-center gap-3 mb-4 relative z-10">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20">
-                  <CheckCircle2 className="w-5 h-5 text-white" />
+            {selectedApp.paymentComplete && selectedApp.paymentDetails && (
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-[1.5rem] p-6 text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl transform translate-x-1/3 -translate-y-1/3"></div>
+                
+                <div className="flex items-center gap-3 mb-4 relative z-10">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20">
+                    <CheckCircle2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white tracking-wide">Payment Verified</h4>
+                    <p className="text-[10px] uppercase font-semibold text-emerald-100 tracking-wider mt-0.5">Fully Paid</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white tracking-wide">Simulated Transaction</h4>
-                  <p className="text-[10px] uppercase font-semibold text-emerald-100 tracking-wider mt-0.5">Fully Verified</p>
+                
+                <div className="bg-black/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 relative z-10 text-xs text-emerald-50 leading-relaxed font-medium">
+                  Inspection fee payment captured: transaction reference <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails.transactionId}</span> for amount <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails.amount}</span> completed on {selectedApp.paymentDetails.date}.
                 </div>
               </div>
-              
-              <div className="bg-black/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 relative z-10 text-xs text-emerald-50 leading-relaxed font-medium">
-                Simulation capture verified successfully: transaction reference <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails?.transactionId || 'TXN-IMPS-887642'}</span> for amount <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails?.amount || '₹15,000'}</span> was matched on {selectedApp.paymentDetails?.date || '18 May, 2026'}.
-              </div>
-            </div>
+            )}
             
           </div>
         </div>

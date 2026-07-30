@@ -178,18 +178,6 @@ Content-Disposition: form-data; name="nabhStatus"
 
 Yes
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="paymentBankName"
-
-HDFC Bank
-------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="paymentTxnNo"
-
-TXN987654321
-------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="paymentTxnDate"
-
-2026-06-01
-------WebKitFormBoundary7MA4YWxkTrZu0gW
 Content-Disposition: form-data; name="authorizedRepName"
 
 Dr. Rajesh Khanna

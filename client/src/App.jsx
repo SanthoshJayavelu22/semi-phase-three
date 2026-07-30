@@ -85,7 +85,6 @@ function App() {
         <Route path="/institute/exams"           element={<L><InstitutePortal /></L>} />
         <Route path="/institute/studentDetails"  element={<L><InstitutePortal /></L>} />
         <Route path="/institute/hallTicket"      element={<L><InstitutePortal /></L>} />
-        <Route path="/institute/notifications"   element={<L><InstitutePortal /></L>} />
         <Route path="/institute/results"         element={<L><InstitutePortal /></L>} />
         <Route path="/institute/revaluation"     element={<L><InstitutePortal /></L>} />
         <Route path="/institute/remittance"      element={<L><InstitutePortal /></L>} />

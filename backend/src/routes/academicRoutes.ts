@@ -27,6 +27,8 @@ import {
   deleteStudent,
   createRazorpayOrder,
   verifyRazorpayPayment,
+  getAcademicPaymentStatus,
+  verifyAcademicPayment,
 } from '../controllers/academicController';
 
 const router = express.Router();
@@ -36,6 +38,10 @@ const router = express.Router();
 // ==========================================
 router.post('/payment/create-order', protect, authorize('institute'), createRazorpayOrder);
 router.post('/payment/verify', protect, authorize('institute'), verifyRazorpayPayment);
+
+// Payment status & recovery endpoints
+router.get('/payment/status/:studentId', protect, authorize('institute'), getAcademicPaymentStatus);
+router.get('/payment/verify-order/:orderId', protect, authorize('institute'), verifyAcademicPayment);
 
 // ==========================================
 // COURSE CRUD Routes
@@ -68,7 +74,6 @@ router.post(
     { name: 'mbbsCertificate', maxCount: 1 },
     { name: 'medicalCouncilRegistrationCertificate', maxCount: 1 },
     { name: 'fmgeResultCopy', maxCount: 1 },
-    { name: 'paymentReceipt', maxCount: 1 },
     { name: 'semiMembershipForm', maxCount: 1 },
   ]),
   addStudent
@@ -87,7 +92,6 @@ router.post(
   '/students/:studentId/fees',
   protect,
   authorize('institute'),
-  upload.fields([{ name: 'paymentReceipt', maxCount: 1 }]),
   recordStudentFee
 );
 

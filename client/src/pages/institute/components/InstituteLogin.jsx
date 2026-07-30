@@ -1,7 +1,7 @@
 import React from 'react';
 import { Mail, Lock, LogIn, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
-const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrentStep }) => {
+const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrentStep, errorMsg }) => {
   const [showPassword, setShowPassword] = React.useState(false);
 
   return (
@@ -19,6 +19,13 @@ const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrent
         <h2 className="text-2xl font-extrabold text-gray-900 mt-2">Institutional Login Portal</h2>
         <p className="text-sm text-gray-500 mt-1">Authenticate credentials to access your dashboard</p>
       </div>
+
+      {errorMsg && (
+        <div className="mb-4 bg-red-100 border-2 border-red-400 p-4 rounded-2xl text-left text-sm font-bold text-red-700 shadow-md leading-relaxed">
+          <span className="uppercase tracking-wider text-[10px] block mb-1 text-red-500">Login Failed</span>
+          {errorMsg}
+        </div>
+      )}
 
       <form onSubmit={handleLoginSubmit} className="space-y-6">
         <div>

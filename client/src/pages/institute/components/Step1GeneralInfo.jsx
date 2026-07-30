@@ -30,9 +30,11 @@ const Step1GeneralInfo = ({ appForm, setAppForm }) => {
             <option value="" disabled>Select constitution type</option>
             <option value="Trust">Trust</option>
             <option value="Society">Society</option>
-            <option value="Company">Company</option>
-            <option value="Partnership">Partnership</option>
-            <option value="Government">Government / Public Body</option>
+            <option value="Society / Trust">Society / Trust</option>
+            <option value="University">University</option>
+            <option value="State Government">State Government</option>
+            <option value="Autonomous Body">Autonomous Body</option>
+            <option value="Union Territory">Union Territory</option>
           </select>
         </div>
       </div>

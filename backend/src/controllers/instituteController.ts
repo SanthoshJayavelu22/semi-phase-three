@@ -4,7 +4,7 @@ import { User } from '../models/userModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { z } from 'zod';
 import sendEmail from '../utils/sendEmail';
-import razorpayInstance, { isRazorpayConfigured, keyId } from '../config/razorpay'; 
+import razorpayInstance, { keyId } from '../config/razorpay';
 import crypto from 'crypto';
 import path from 'path'; 
 
@@ -39,9 +39,6 @@ const instituteSchema = z.object({
   emFacultyCount: z.coerce.number().min(1, 'Required'),
   teachingSpace: z.enum(['Yes', 'No']),
   nabhStatus: z.enum(['Yes', 'No']),
-  paymentBankName: z.string().optional().or(z.literal('')),
-  paymentTxnNo: z.string().optional().or(z.literal('')),
-  paymentTxnDate: z.string().optional().or(z.literal('')),
   authorizedRepName: z.string().optional().or(z.literal('')),
   authorizedRepDesignation: z.string().optional().or(z.literal('')),
   applicationDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
@@ -49,6 +46,10 @@ const instituteSchema = z.object({
   pincode: z.string().optional(),
   contactNumbers: z.string().optional(),
   emailId: z.string().optional().or(z.literal('')),
+  razorpayPaymentId: z.string().optional().or(z.literal('')),
+  razorpayOrderId: z.string().optional().or(z.literal('')),
+  razorpaySignature: z.string().optional().or(z.literal('')),
+  paymentStatus: z.enum(['Pending', 'Completed']).optional(),
 });
 
 export const applyInstitute = async (req: Request, res: Response) => {
@@ -93,7 +94,12 @@ export const applyInstitute = async (req: Request, res: Response) => {
         headOfInstitutionSignatureAndSealUrl: getSafeFileUrl('headOfInstitutionSignatureAndSeal'),
       },
       status: 'Pending Review',
-      paymentStatus: validatedData.paymentTxnNo ? 'Completed' : 'Pending',
+      paymentStatus: validatedData.paymentStatus || 'Pending',
+      razorpayOrderId: validatedData.razorpayOrderId || '',
+      razorpayPaymentId: validatedData.razorpayPaymentId || '',
+      razorpaySignature: validatedData.razorpaySignature || '',
+      paymentCompletedAt: validatedData.paymentStatus === 'Completed' ? new Date() : undefined,
+      paymentAmount: validatedData.paymentStatus === 'Completed' ? 5000 : undefined,
     });
 
     // Send Submission Confirmation email to the institute
@@ -165,6 +171,8 @@ export const applyInstitute = async (req: Request, res: Response) => {
 export const createRazorpayOrder = async (req: Request, res: Response) => {
   try {
     const institute = await Institute.findOne({ user: req.user._id });
+    console.log('🔍 Creating order for institute:', institute ? institute._id : 'Not found (Pay & Submit flow)');
+
     if (institute && institute.paymentStatus === 'Completed') {
       return sendError({ req, res, statusCode: 400, message: 'Payment has already been completed for this application.' });
     }
@@ -172,58 +180,38 @@ export const createRazorpayOrder = async (req: Request, res: Response) => {
     const AMOUNT_INR = 5000;
     const AMOUNT_PAISE = AMOUNT_INR * 100; // 500000 paise
 
-    if (isRazorpayConfigured && razorpayInstance) {
-      // Real Razorpay Order Creation
-      const options = {
-        amount: AMOUNT_PAISE,
-        currency: 'INR',
-        receipt: `receipt_inst_${(institute ? institute._id : req.user._id).toString().substring(0, 10)}_${Date.now()}`,
-      };
+    const options = {
+      amount: AMOUNT_PAISE,
+      currency: 'INR',
+      receipt: `receipt_inst_${(institute ? institute._id : req.user._id).toString().substring(0, 10)}_${Date.now()}`,
+    };
 
-      const order = await razorpayInstance.orders.create(options);
+    const order = await razorpayInstance.orders.create(options);
+    console.log('✅ Order created:', order.id);
 
-      // Save order id to institute if it exists
-      if (institute) {
-        institute.razorpayOrderId = order.id;
-        await institute.save();
-      }
-
-      return sendSuccess({
-        req,
-        res,
-        statusCode: 201,
-        message: 'Razorpay order created successfully',
-        data: {
-          orderId: order.id,
-          amount: order.amount,
-          currency: order.currency,
-          keyId: keyId,
-          isMock: false,
-        },
-      });
+    if (institute) {
+      institute.razorpayOrderId = order.id;
+      institute.paymentAmount = AMOUNT_INR;
+      await institute.save();
+      console.log('✅ Order ID saved to institute:', institute.razorpayOrderId);
     } else {
-      // Mock Mode order creation
-      const mockOrderId = `order_mock_${Math.random().toString(36).substring(2, 11)}`;
-      if (institute) {
-        institute.razorpayOrderId = mockOrderId;
-        await institute.save();
-      }
-
-      return sendSuccess({
-        req,
-        res,
-        statusCode: 201,
-        message: 'Razorpay order created successfully (Mock Mode)',
-        data: {
-          orderId: mockOrderId,
-          amount: AMOUNT_PAISE,
-          currency: 'INR',
-          keyId: 'mock_key_id_123',
-          isMock: true,
-        },
-      });
+      console.log('⚠️ No institute yet — orderId will be passed with payment verification');
     }
+
+    return sendSuccess({
+      req,
+      res,
+      statusCode: 201,
+      message: 'Razorpay order created successfully',
+      data: {
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: keyId,
+      },
+    });
   } catch (error: any) {
+    console.error('❌ Order creation error:', error);
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
@@ -231,108 +219,128 @@ export const createRazorpayOrder = async (req: Request, res: Response) => {
 export const verifyRazorpayPayment = async (req: Request, res: Response) => {
   try {
     const institute = await Institute.findOne({ user: req.user._id });
+    console.log('🔍 Verifying payment for institute:', institute ? institute._id : 'Not found');
+
     if (institute && institute.paymentStatus === 'Completed') {
-      return sendError({ req, res, statusCode: 400, message: 'Payment has already been completed for this application.' });
+      console.log('✅ Payment already completed for institute:', institute._id);
+      return sendSuccess({
+        req,
+        res,
+        message: 'Payment already completed',
+        data: {
+          paymentStatus: 'Completed',
+          institute
+        }
+      });
     }
 
     const { 
       razorpay_payment_id, 
       razorpay_order_id, 
       razorpay_signature,
-      paymentId // Backwards compatibility legacy field
+      paymentId
     } = req.body;
 
-    let orderIdToVerify = razorpay_order_id || (institute ? institute.razorpayOrderId : undefined);
-    let paymentIdToVerify = razorpay_payment_id || paymentId;
+    const orderIdToVerify = razorpay_order_id || (institute ? institute.razorpayOrderId : undefined);
+    const paymentIdToVerify = razorpay_payment_id || paymentId;
+
+    console.log('📦 Payment verification data:', { orderIdToVerify, paymentIdToVerify, hasSignature: !!razorpay_signature });
 
     if (!paymentIdToVerify) {
       return sendError({ req, res, statusCode: 400, message: 'Payment ID is required' });
     }
 
-    // Signature Verification if Razorpay is configured
-    if (isRazorpayConfigured && razorpayInstance) {
-      if (!razorpay_signature || !razorpay_order_id) {
-        return sendError({ 
-          req, 
-          res, 
-          statusCode: 400, 
-          message: 'Razorpay order ID, payment ID, and signature are mandatory for verification.' 
-        });
-      }
+    if (!razorpay_signature || !razorpay_order_id) {
+      return sendError({ 
+        req, 
+        res, 
+        statusCode: 400, 
+        message: 'Razorpay order ID, payment ID, and signature are mandatory for verification.' 
+      });
+    }
 
-      const text = `${razorpay_order_id}|${razorpay_payment_id}`;
-      const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
-        .update(text)
-        .digest('hex');
+    const text = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+      .update(text)
+      .digest('hex');
 
-      if (expectedSignature !== razorpay_signature) {
-        return sendError({ req, res, statusCode: 400, message: 'Payment verification failed. Invalid signature.' });
-      }
+    if (expectedSignature !== razorpay_signature) {
+      return sendError({ req, res, statusCode: 400, message: 'Payment verification failed. Invalid signature.' });
     }
 
     const receiptNumber = 'REC-' + Math.floor(10000000 + Math.random() * 90000000);
 
-    // Update payment details if application exists
     if (institute) {
       institute.paymentStatus = 'Completed';
-      institute.razorpayOrderId = orderIdToVerify;
+      institute.razorpayOrderId = razorpay_order_id;
       institute.razorpayPaymentId = paymentIdToVerify;
-      institute.razorpaySignature = razorpay_signature || 'mock_signature';
-      await institute.save();
-    }
-
-    // Send Payment Receipt Email to the institute
-    try {
-      await sendEmail({
-        email: req.user.email,
-        subject: 'Payment Receipt Confirmation - Semi Phase 3',
-        message: `Hello ${req.user.name},\n\nWe have successfully received your payment.\nReceipt Number: ${receiptNumber}\nPayment ID: ${paymentIdToVerify}\nOrder ID: ${orderIdToVerify}\nAmount: INR 5,000.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #2ecc71; text-align: center;">Payment Receipt Confirmation</h2>
-            <p>Hello <strong>${req.user.name}</strong>,</p>
-            <p>We are pleased to confirm that we have successfully processed your inspection fee payment. Your application is now ready for the Academic Board review.</p>
-            
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #2ecc71;">
-              <h3 style="margin-top: 0; color: #333;">Receipt Summary</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Receipt Number:</td>
-                  <td style="padding: 5px 0; color: #333; font-family: monospace;">${receiptNumber}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Order ID:</td>
-                  <td style="padding: 5px 0; color: #333; font-family: monospace;">${orderIdToVerify}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Transaction / Payment ID:</td>
-                  <td style="padding: 5px 0; color: #333; font-family: monospace;">${paymentIdToVerify}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Amount Paid:</td>
-                  <td style="padding: 5px 0; color: #333;">INR 5,000.00</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Status:</td>
-                  <td style="padding: 5px 0; color: #2ecc71; font-weight: bold;">Paid / Completed</td>
-                </tr>
-              </table>
-            </div>
-            
-            <p>The Academic Board will review your application details, uploaded documents, and schedule an inspection if required. We will keep you notified of any updates.</p>
-            
-            <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #999999; text-align: center;">This is an automated receipt email. Please keep this for your records.</p>
-          </div>
-        `
+      institute.razorpaySignature = razorpay_signature;
+      institute.paymentCompletedAt = new Date();
+      if (!institute.paymentAmount) {
+        institute.paymentAmount = 5000;
+      }
+      console.log('🔄 Updating institute payment data:', {
+        paymentStatus: institute.paymentStatus,
+        razorpayOrderId: institute.razorpayOrderId,
+        razorpayPaymentId: institute.razorpayPaymentId,
       });
-    } catch (emailErr: any) {
-      console.error('Payment receipt email sending failed:', emailErr.message);
+      await institute.save();
+      console.log('✅ Institute payment data saved successfully');
+    } else {
+      console.warn('⚠️ No institute found to update payment data. The apply step will create it with payment info.');
     }
 
-    // Notify the Academic Board
+    // Send email notifications only if institute exists
     if (institute) {
+      try {
+        await sendEmail({
+          email: req.user.email,
+          subject: 'Payment Receipt Confirmation - Semi Phase 3',
+          message: `Hello ${req.user.name},\n\nWe have successfully received your payment.\nReceipt Number: ${receiptNumber}\nPayment ID: ${paymentIdToVerify}\nOrder ID: ${orderIdToVerify}\nAmount: INR 5,000.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+              <h2 style="color: #2ecc71; text-align: center;">Payment Receipt Confirmation</h2>
+              <p>Hello <strong>${req.user.name}</strong>,</p>
+              <p>We are pleased to confirm that we have successfully processed your inspection fee payment. Your application is now ready for the Academic Board review.</p>
+              
+              <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #2ecc71;">
+                <h3 style="margin-top: 0; color: #333;">Receipt Summary</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Receipt Number:</td>
+                    <td style="padding: 5px 0; color: #333; font-family: monospace;">${receiptNumber}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Order ID:</td>
+                    <td style="padding: 5px 0; color: #333; font-family: monospace;">${orderIdToVerify}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Transaction / Payment ID:</td>
+                    <td style="padding: 5px 0; color: #333; font-family: monospace;">${paymentIdToVerify}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Amount Paid:</td>
+                    <td style="padding: 5px 0; color: #333;">INR 5,000.00</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Status:</td>
+                    <td style="padding: 5px 0; color: #2ecc71; font-weight: bold;">Paid / Completed</td>
+                  </tr>
+                </table>
+              </div>
+              
+              <p>The Academic Board will review your application details, uploaded documents, and schedule an inspection if required. We will keep you notified of any updates.</p>
+              
+              <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
+              <p style="font-size: 12px; color: #999999; text-align: center;">This is an automated receipt email. Please keep this for your records.</p>
+            </div>
+          `
+        });
+      } catch (emailErr: any) {
+        console.error('Payment receipt email sending failed:', emailErr.message);
+      }
+
       try {
         const boardEmail = process.env.BOARD_EMAIL || 'admin@semiphase3.com';
         await sendEmail({
@@ -383,9 +391,15 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
       req,
       res,
       message: 'Payment completed successfully. Application is now ready for board review.',
-      data: { paymentId: paymentIdToVerify, receiptNumber, institute },
+      data: {
+        paymentStatus: 'Completed',
+        paymentId: paymentIdToVerify,
+        receiptNumber,
+        institute
+      },
     });
   } catch (error: any) {
+    console.error('❌ Payment verification error:', error);
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
@@ -405,7 +419,7 @@ export const reviewApplication = async (req: Request, res: Response) => {
     }
 
     // Enforce Module 1 Rule: Inspection fee payment is mandatory before board review
-    if (institute.paymentStatus !== 'Completed' && !institute.paymentTxnNo) {
+    if (institute.paymentStatus !== 'Completed') {
       return sendError({
         req,
         res,
@@ -514,6 +528,179 @@ export const toggleInspection = async (req: Request, res: Response) => {
       res,
       message: 'Site inspection status updated successfully',
       data: institute,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const institute = await Institute.findOne({ user: req.user._id });
+    if (!institute) {
+      return sendSuccess({
+        req,
+        res,
+        message: 'No application found yet',
+        data: {
+          paymentStatus: 'Pending',
+          razorpayOrderId: null,
+          razorpayPaymentId: null,
+          paymentCompletedAt: null,
+        },
+      });
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment status retrieved successfully',
+      data: {
+        paymentStatus: institute.paymentStatus,
+        razorpayOrderId: institute.razorpayOrderId,
+        razorpayPaymentId: institute.razorpayPaymentId,
+        paymentCompletedAt: institute.paymentCompletedAt,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const checkPaymentAndUpdate = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    let institute = await Institute.findOne({ razorpayOrderId: orderId });
+
+    // Fallback: if not found by orderId, try by authenticated user
+    if (!institute) {
+      institute = await Institute.findOne({ user: req.user._id });
+    }
+
+    if (!institute) {
+      return sendSuccess({
+        req,
+        res,
+        message: 'No application found yet',
+        data: {
+          paymentStatus: 'Pending',
+          razorpayPaymentId: null,
+        },
+      });
+    }
+
+    if (institute.paymentStatus === 'Completed') {
+      return sendSuccess({
+        req,
+        res,
+        message: 'Payment already completed',
+        data: {
+          paymentStatus: institute.paymentStatus,
+          razorpayPaymentId: institute.razorpayPaymentId,
+        },
+      });
+    }
+
+    if (institute.razorpayPaymentId) {
+      try {
+        const payment = await razorpayInstance.payments.fetch(institute.razorpayPaymentId);
+        if (payment.status === 'captured') {
+          institute.paymentStatus = 'Completed';
+          institute.paymentCompletedAt = new Date();
+          institute.paymentAmount = payment.amount / 100;
+          await institute.save();
+
+          try {
+            await sendPaymentConfirmationEmail(institute, req.user);
+          } catch (emailErr: any) {
+            console.error('Payment confirmation email failed:', emailErr.message);
+          }
+
+          return sendSuccess({
+            req,
+            res,
+            message: 'Payment verified and completed',
+            data: {
+              paymentStatus: 'Completed',
+              razorpayPaymentId: institute.razorpayPaymentId,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching payment from Razorpay:', error);
+      }
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment pending verification',
+      data: {
+        paymentStatus: institute.paymentStatus,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+async function sendPaymentConfirmationEmail(institute: any, user: any) {
+  await sendEmail({
+    email: user.email,
+    subject: 'Payment Receipt Confirmation - Semi Phase 3',
+    message: `Hello ${user.name},\n\nWe have successfully received your payment.\nPayment ID: ${institute.razorpayPaymentId}\nOrder ID: ${institute.razorpayOrderId}\nAmount: INR 5,000.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <h2 style="color: #2ecc71; text-align: center;">Payment Receipt Confirmation</h2>
+        <p>Hello <strong>${user.name}</strong>,</p>
+        <p>We are pleased to confirm that we have successfully processed your inspection fee payment. Your application is now ready for the Academic Board review.</p>
+
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #2ecc71;">
+          <h3 style="margin-top: 0; color: #333;">Receipt Summary</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Payment ID:</td>
+              <td style="padding: 5px 0; color: #333; font-family: monospace;">${institute.razorpayPaymentId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #666; font-weight: bold;">Order ID:</td>
+              <td style="padding: 5px 0; color: #333; font-family: monospace;">${institute.razorpayOrderId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #666; font-weight: bold;">Amount Paid:</td>
+              <td style="padding: 5px 0; color: #333;">INR 5,000.00</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #666; font-weight: bold;">Status:</td>
+              <td style="padding: 5px 0; color: #2ecc71; font-weight: bold;">Paid / Completed</td>
+            </tr>
+          </table>
+        </div>
+
+        <p>The Academic Board will review your application details, uploaded documents, and schedule an inspection if required. We will keep you notified of any updates.</p>
+
+        <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #999999; text-align: center;">This is an automated receipt email. Please keep this for your records.</p>
+      </div>
+    `
+  });
+}
+
+export const debugPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const institute = await Institute.findOne({ user: req.user._id });
+    return sendSuccess({
+      req,
+      res,
+      message: 'Debug payment status',
+      data: {
+        institute: {
+          paymentStatus: institute?.paymentStatus || 'Not found',
+          razorpayPaymentId: institute?.razorpayPaymentId || 'Not set',
+          razorpayOrderId: institute?.razorpayOrderId || 'Not set',
+          razorpaySignature: institute?.razorpaySignature ? 'Set' : 'Not set'
+        }
+      }
     });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });

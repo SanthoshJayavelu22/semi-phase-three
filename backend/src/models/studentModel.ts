@@ -19,13 +19,14 @@ export interface IStudent extends Document {
   batch: mongoose.Types.ObjectId;
   institute: mongoose.Types.ObjectId;
   courseDirector: string;
-  utrNumber: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
   documents: {
     passportPhotoUrl: string;
     mbbsCertificateUrl: string;
     medicalCouncilRegistrationCertificateUrl: string;
     fmgeResultCopyUrl?: string;
-    paymentReceiptUrl: string;
     semiMembershipFormUrl: string;
   };
   remittedToAcademy: boolean;
@@ -120,16 +121,20 @@ const studentSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    utrNumber: {
+    razorpayOrderId: {
       type: String,
-      required: true,
+    },
+    razorpayPaymentId: {
+      type: String,
+    },
+    razorpaySignature: {
+      type: String,
     },
     documents: {
       passportPhotoUrl: { type: String, required: true },
       mbbsCertificateUrl: { type: String, required: true },
       medicalCouncilRegistrationCertificateUrl: { type: String, required: true },
       fmgeResultCopyUrl: { type: String },
-      paymentReceiptUrl: { type: String, required: true },
       semiMembershipFormUrl: { type: String, required: true },
     },
     remittedToAcademy: {

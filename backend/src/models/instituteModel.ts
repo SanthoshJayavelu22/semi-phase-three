@@ -22,9 +22,6 @@ export interface IInstitute extends Document {
   emFacultyCount: number;
   teachingSpace: 'Yes' | 'No';
   nabhStatus: 'Yes' | 'No';
-  paymentBankName?: string;
-  paymentTxnNo?: string;
-  paymentTxnDate?: string;
   authorizedRepName?: string;
   authorizedRepDesignation?: string;
   facultyCommitmentLetterUrl: string;
@@ -48,6 +45,8 @@ export interface IInstitute extends Document {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
+  paymentCompletedAt?: Date;
+  paymentAmount?: number;
 }
 
 const instituteSchema: Schema = new Schema(
@@ -82,9 +81,6 @@ const instituteSchema: Schema = new Schema(
     emFacultyCount: { type: Number, required: true },
     teachingSpace: { type: String, enum: ['Yes', 'No'], default: 'Yes' },
     nabhStatus: { type: String, enum: ['Yes', 'No'], default: 'Yes' },
-    paymentBankName: { type: String, default: '' },
-    paymentTxnNo: { type: String, default: '' },
-    paymentTxnDate: { type: String, default: '' },
     authorizedRepName: { type: String, default: '' },
     authorizedRepDesignation: { type: String, default: '' },
     facultyCommitmentLetterUrl: { type: String, required: true },
@@ -136,6 +132,12 @@ const instituteSchema: Schema = new Schema(
     razorpaySignature: {
       type: String,
       default: ''
+    },
+    paymentCompletedAt: {
+      type: Date,
+    },
+    paymentAmount: {
+      type: Number,
     }
   },
   {

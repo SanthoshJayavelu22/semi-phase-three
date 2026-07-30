@@ -24,6 +24,7 @@
     },
     {
       "key": "instituteId",
+      
       "value": ""
     },
     {
@@ -69,6 +70,10 @@
     {
       "key": "enrollmentId",
       "value": "SEMI-2025-0001"
+    },
+    {
+      "key": "semesterNumber",
+      "value": "1"
     }
   ],
   "item": [
@@ -611,21 +616,6 @@
                   "description": "Yes | No"
                 },
                 {
-                  "key": "paymentBankName",
-                  "value": "State Bank of India",
-                  "type": "text"
-                },
-                {
-                  "key": "paymentTxnNo",
-                  "value": "UTR123456789",
-                  "type": "text"
-                },
-                {
-                  "key": "paymentTxnDate",
-                  "value": "2026-06-01",
-                  "type": "text"
-                },
-                {
                   "key": "authorizedRepName",
                   "value": "Dr. Anita Sharma",
                   "type": "text"
@@ -945,6 +935,61 @@
     {
       "name": "📚 Academic",
       "item": [
+        {
+          "name": "💳 Academic Payment (Razorpay)",
+          "item": [
+            {
+              "name": "POST Create Razorpay Order",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/academic/payment/create-order",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "academic", "payment", "create-order"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 50000,\n  \"purpose\": \"Enrollment Fee\"\n}"
+                },
+                "description": "Institute creates Razorpay order for academic fees. Amount in paise."
+              },
+              "response": []
+            },
+            {
+              "name": "POST Verify Razorpay Payment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/academic/payment/verify",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "academic", "payment", "verify"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"razorpay_payment_id\": \"pay_MockId123\",\n  \"razorpay_order_id\": \"order_MockOrderId\",\n  \"razorpay_signature\": \"mock_sig\"\n}"
+                },
+                "description": "Verifies Razorpay payment for academic fees."
+              },
+              "response": []
+            }
+          ]
+        },
         {
           "name": "Courses",
           "item": [
@@ -1296,7 +1341,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/academic/students?courseId=&batchId=&search=&isEligible=",
+                  "raw": "{{base_url}}/api/academic/students?courseId=&batchId=&search=&isEligible=&semesterNumber=",
                   "host": [
                     "{{base_url}}"
                   ],
@@ -1322,6 +1367,11 @@
                       "key": "isEligible",
                       "value": "",
                       "description": "true | false | empty=all"
+                    },
+                    {
+                      "key": "semesterNumber",
+                      "value": "",
+                      "description": "Filter by semester number"
                     }
                   ]
                 },
@@ -1340,7 +1390,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/academic/students/{{studentId}}",
+                  "raw": "{{base_url}}/api/academic/students/{{studentId}}?semesterNumber=",
                   "host": [
                     "{{base_url}}"
                   ],
@@ -1349,6 +1399,13 @@
                     "academic",
                     "students",
                     "{{studentId}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "semesterNumber",
+                      "value": "",
+                      "description": "Optional — Returns isEligible flag for this semester"
+                    }
                   ]
                 }
               },
@@ -1600,6 +1657,12 @@
                   "mode": "formdata",
                   "formdata": [
                     {
+                      "key": "semesterNumber",
+                      "value": "{{semesterNumber}}",
+                      "type": "text",
+                      "description": "MANDATORY — Semester to update"
+                    },
+                    {
                       "key": "attendancePercentage",
                       "value": "85",
                       "type": "text",
@@ -1610,6 +1673,30 @@
                       "value": "true",
                       "type": "text",
                       "description": "true | false"
+                    },
+                    {
+                      "key": "clearThesis",
+                      "value": "",
+                      "type": "text",
+                      "description": "true — resets thesis approval"
+                    },
+                    {
+                      "key": "clearAttendance",
+                      "value": "",
+                      "type": "text",
+                      "description": "true — resets attendance to 0"
+                    },
+                    {
+                      "key": "eligibilityStatus",
+                      "value": "",
+                      "type": "text",
+                      "description": "Pending | Approved | Rejected"
+                    },
+                    {
+                      "key": "rejectionNotes",
+                      "value": "",
+                      "type": "text",
+                      "description": "Reason if eligibilityStatus=Rejected"
                     },
                     {
                       "key": "thesisDocument",
@@ -1647,7 +1734,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/academic/students/{{studentId}}/eligibility",
+                  "raw": "{{base_url}}/api/academic/students/{{studentId}}/eligibility?semesterNumber={{semesterNumber}}",
                   "host": [
                     "{{base_url}}"
                   ],
@@ -1657,9 +1744,16 @@
                     "students",
                     "{{studentId}}",
                     "eligibility"
+                  ],
+                  "query": [
+                    {
+                      "key": "semesterNumber",
+                      "value": "{{semesterNumber}}",
+                      "description": "MANDATORY — Semester number"
+                    }
                   ]
                 },
-                "description": "Returns: feeStatus, attendance>=75%, thesisApproved, isEligible, decision."
+                "description": "Returns: feeStatus, attendance>=75%, thesisApproved, isEligible, decision. Requires semesterNumber query param."
               },
               "response": []
             }
@@ -1732,39 +1826,45 @@
                 "body": {
                   "mode": "formdata",
                   "formdata": [
-                    {
-                      "key": "amount",
-                      "value": "25000",
-                      "type": "text"
-                    },
-                    {
-                      "key": "paymentMode",
-                      "value": "UPI",
-                      "type": "text",
-                      "description": "UPI | NEFT | RTGS | Cash"
-                    },
-                    {
-                      "key": "utrNumber",
-                      "value": "UTR20260617002",
-                      "type": "text"
-                    },
-                    {
-                      "key": "paymentDate",
-                      "value": "2026-06-17",
-                      "type": "text"
-                    },
-                    {
-                      "key": "paymentPurpose",
-                      "value": "Examination Fee",
-                      "type": "text",
-                      "description": "e.g. Examination Fee | Course Fee - Semester 1"
-                    },
-                    {
-                      "key": "paymentReceipt",
-                      "src": [],
-                      "type": "file",
-                      "description": "MANDATORY"
-                    }
+                {
+                  "key": "semesterNumber",
+                  "value": "{{semesterNumber}}",
+                  "type": "text",
+                  "description": "MANDATORY — Semester number"
+                },
+                {
+                  "key": "amount",
+                  "value": "25000",
+                  "type": "text"
+                },
+                {
+                  "key": "paymentMode",
+                  "value": "UPI",
+                  "type": "text",
+                  "description": "UPI | NEFT | RTGS | Cash | Razorpay Online"
+                },
+                {
+                  "key": "utrNumber",
+                  "value": "UTR20260617002",
+                  "type": "text"
+                },
+                {
+                  "key": "paymentDate",
+                  "value": "2026-06-17",
+                  "type": "text"
+                },
+                {
+                  "key": "paymentPurpose",
+                  "value": "Examination fee",
+                  "type": "text",
+                  "description": "e.g. Examination fee | Course Fee - Semester 1"
+                },
+                {
+                  "key": "paymentReceipt",
+                  "src": [],
+                  "type": "file",
+                  "description": "MANDATORY (unless Razorpay Online)"
+                }
                   ]
                 },
                 "url": {
@@ -1915,13 +2015,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam?status=&courseId=&batchId=",
+              "raw": "{{base_url}}/api/exams?status=&courseId=&batchId=",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam"
+                "exams"
               ],
               "query": [
                 {
@@ -1954,17 +2054,17 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}"
               ]
             },
-            "description": "Full details including subjects, schedule info, and populated students.\nInstitute can only access own applications."
+            "description": "Full details including subjects, schedule info, semester number, and populated students.\nInstitute can only access own applications."
           },
           "response": []
         },
@@ -1999,10 +2099,16 @@
                   "description": "MANDATORY"
                 },
                 {
+                  "key": "semesterNumber",
+                  "value": "{{semesterNumber}}",
+                  "type": "text",
+                  "description": "MANDATORY — Semester number (min 1)"
+                },
+                {
                   "key": "batchId",
                   "value": "{{batchId}}",
                   "type": "text",
-                  "description": "MANDATORY"
+                  "description": "OPTIONAL — Auto-resolved from students if empty"
                 },
                 {
                   "key": "studentIds",
@@ -2020,28 +2126,28 @@
                   "key": "utrNumber",
                   "value": "UTR-EXAM-2026001",
                   "type": "text",
-                  "description": "MANDATORY — Exam fee UTR"
+                  "description": "OPTIONAL — Exam fee UTR"
                 },
                 {
                   "key": "examFeeReceipt",
                   "src": [],
                   "type": "file",
-                  "description": "MANDATORY — Exam fee receipt PDF/image"
+                  "description": "OPTIONAL — Exam fee receipt PDF/image"
                 }
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/exam/apply",
+              "raw": "{{base_url}}/api/exams/apply",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "apply"
               ]
             },
-            "description": "Status → Pending\n\nPer-student eligibility: remittedToAcademy=true AND attendance>=75% AND thesisApproved=true\n\nAccess: institute only"
+            "description": "Status → Pending\n\nPer-student eligibility: Exam fee paid AND attendance>=75% AND thesisApproved=true (per semester)\n\nAccess: institute only"
           },
           "response": [
             {
@@ -2093,17 +2199,17 @@
               "raw": "{\n  \"subjects\": [\n    \"Anatomy\",\n    \"Physiology\",\n    \"Emergency Medicine\",\n    \"Pharmacology\"\n  ],\n  \"studentIds\": [\n    \"{{studentId}}\"\n  ]\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}"
               ]
             },
-            "description": "Updatable: subjects (array), studentIds (array — all must be eligible)\nRestriction: Only Pending applications.\nAccess: institute only"
+            "description": "Updatable: subjects (array), studentIds (array — all must be eligible)\nNote: semesterNumber cannot be changed after creation\nRestriction: Only Pending applications.\nAccess: institute only"
           },
           "response": [
             {
@@ -2133,13 +2239,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}"
               ]
             },
@@ -2181,13 +2287,13 @@
               "raw": "{\n  \"status\": \"Approved\",\n  \"scheduledDate\": \"2026-09-15\",\n  \"remarks\": \"All eligibility criteria verified.\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/review",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/review",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "review"
               ]
@@ -2244,13 +2350,13 @@
               "raw": "{\n  \"examVenue\": \"Examination Hall A, Mumbai Convention Centre\",\n  \"examCenter\": \"Mumbai Central Examination Hub\",\n  \"reportingTime\": \"08:30 AM\",\n  \"scheduledDate\": \"2026-09-15\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/publish-schedule",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/publish-schedule",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "publish-schedule"
               ]
@@ -2306,13 +2412,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/generate-hall-tickets",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/generate-hall-tickets",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "generate-hall-tickets"
               ]
@@ -2358,13 +2464,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/hall-tickets",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/hall-tickets",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "hall-tickets"
               ]
@@ -2399,13 +2505,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/hall-tickets/{{hallTicketId}}",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/hall-tickets/{{hallTicketId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "hall-tickets",
                 "{{hallTicketId}}"
@@ -2434,13 +2540,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/hall-tickets/{{hallTicketId}}/download",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/hall-tickets/{{hallTicketId}}/download",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "hall-tickets",
                 "{{hallTicketId}}",

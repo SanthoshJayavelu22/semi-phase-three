@@ -6,7 +6,10 @@ import {
   reviewApplication,
   getMyApplication,
   listApplications,
-  toggleInspection
+  toggleInspection,
+  getPaymentStatus,
+  checkPaymentAndUpdate,
+  debugPaymentStatus,
 } from '../controllers/instituteController';
 import { protect, authorize } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
@@ -44,6 +47,11 @@ router.post('/payment/verify', protect, authorize('institute'), verifyRazorpayPa
 
 // Legacy/backwards compatibility route for older clients or postman scripts
 router.post('/payment', protect, authorize('institute'), verifyRazorpayPayment);
+
+// Payment status & recovery endpoints
+router.get('/payment/status', protect, authorize('institute'), getPaymentStatus);
+router.get('/payment/verify-order/:orderId', protect, authorize('institute'), checkPaymentAndUpdate);
+router.get('/payment/debug', protect, authorize('institute'), debugPaymentStatus);
 
 // Board routes
 router.get('/applications', protect, authorize('board', 'admin', 'super_admin'), listApplications);

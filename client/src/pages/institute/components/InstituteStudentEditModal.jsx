@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Save, User, Mail, Phone, Book, Calendar, Shield, MapPin, Award, Building2, ExternalLink, CreditCard } from 'lucide-react';
+import { X, Save, User, Mail, Phone, Book, Calendar, Shield, MapPin, Award, Building2, ExternalLink } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, batches }) => {
@@ -26,7 +26,6 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
     isForeignGraduate: false,
     homeAddress: '',
     courseDirector: '',
-    utrNumber: '',
   });
 
   const [error, setError] = useState(null);
@@ -53,7 +52,6 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
         isForeignGraduate: !!student.isForeignGraduate,
         homeAddress: student.homeAddress || '',
         courseDirector: student.courseDirector || '',
-        utrNumber: student.utrNumber || '',
       });
       setError(null);
     }
@@ -379,22 +377,6 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     onChange={(e) => setFormData({ ...formData, courseDirector: e.target.value })}
                     placeholder="Dr. Director Name"
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
-                  />
-                </div>
-              </div>
-
-              {/* UTR Number */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">UTR / Txn Number *</label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    value={formData.utrNumber}
-                    onChange={(e) => setFormData({ ...formData, utrNumber: e.target.value })}
-                    placeholder="UTR123456789"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
                   />
                 </div>
               </div>

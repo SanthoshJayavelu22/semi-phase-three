@@ -8,6 +8,8 @@ import {
 
 import authService from '../../api/auth';
 import instituteService from '../../api/institutes';
+import { getPaymentState, clearPaymentState } from '../../utils/razorpay';
+import { PaymentStatusChecker } from '../../Components/PaymentStatusChecker';
 import academicService from '../../api/academic';
 import examService from '../../api/exams';
 import { initiateRazorpayPayment } from '../../utils/razorpay';
@@ -32,7 +34,6 @@ import InstituteERPStudentDetails from './components/InstituteERPStudentDetails'
 import InstituteERPResults from './components/InstituteERPResults';
 import InstituteERPRevaluation from './components/InstituteERPRevaluation';
 import InstituteERPRemittance from './components/InstituteERPRemittance';
-import InstituteERPNotifications from './components/InstituteERPNotifications';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import Toast from '../../Components/Toast';
@@ -52,7 +53,7 @@ const extractData = (response) => {
 const extractErrorMessage = (err, defaultMessage) => {
   if (!err) return defaultMessage;
   let errorMessage = err.parsedMessage || err.message || defaultMessage;
-  if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+  if (err.response?.data?.errors?.length > 0 && Array.isArray(err.response.data.errors)) {
     const validationErrors = err.response.data.errors.map(e => {
       if (e.message) return e.message;
       if (e.field) return `${e.field}: ${e.message || 'Invalid value'}`;
@@ -185,9 +186,6 @@ const InstitutePortal = () => {
       emFacultyCount: '',
       teachingSpace: '',
       nabhStatus: '',
-      paymentBankName: '',
-      paymentTxnNo: '',
-      paymentTxnDate: '',
       authorizedRepName: '',
       authorizedRepDesignation: '',
       certificationAgreement: false
@@ -214,6 +212,8 @@ const InstitutePortal = () => {
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentVerificationData, setPaymentVerificationData] = useState(null);
+  const [showPaymentChecker, setShowPaymentChecker] = useState(false);
 
   // Overall application record (status: draft, pending_review, approved, rejected)
   const [applicationRecord, setApplicationRecord] = useState({
@@ -240,7 +240,6 @@ const InstitutePortal = () => {
     if (pathname === '/institute/exams') return 'exams';
     if (pathname === '/institute/studentDetails') return 'studentDetails';
     if (pathname === '/institute/hallTicket') return 'hallTicket';
-    if (pathname === '/institute/notifications') return 'notifications';
     if (pathname === '/institute/results') return 'results';
     if (pathname === '/institute/revaluation') return 'revaluation';
     if (pathname === '/institute/remittance') return 'remittance';
@@ -258,7 +257,6 @@ const InstitutePortal = () => {
       exams: '/institute/exams',
       studentDetails: '/institute/studentDetails',
       hallTicket: '/institute/hallTicket',
-      notifications: '/institute/notifications',
       results: '/institute/results',
       revaluation: '/institute/revaluation',
       remittance: '/institute/remittance'
@@ -289,45 +287,34 @@ const InstitutePortal = () => {
 
   const [examApplications, setExamApplications] = useState([]);
 
-  const [enrollForm, setEnrollForm] = useState(() => {
-    const saved = localStorage.getItem('semi_enrollment_form');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Failed to parse saved enrollment form', e);
-      }
-    }
-    return {
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      homeAddress: '',
-      contactNumber: '',
-      emailAddress: '',
-      qualification: '',
-      passingYear: '',
-      universityName: '',
-      medCouncilRegNo: '',
-      stateMedCouncil: '',
-      studentCategory: '',
-      serialBatch: '',
-      course: '',
-      batch: '',
-      courseDirector: '',
-      paymentMode: '',
-      utrNumber: '',
-      txnDate: new Date().toISOString().split('T')[0],
-      currentDesignation: '',
-      lifeMembershipNo: '',
-      mcQualifications: '',
-      declarationCheck: false
-    };
+  const [enrollForm, setEnrollForm] = useState({
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    dateOfBirth: '',
+    homeAddress: '',
+    contactNumber: '',
+    emailAddress: '',
+    qualification: 'MD Emergency Medicine',
+    passingYear: '',
+    universityName: '',
+    medCouncilRegNo: '',
+    stateMedCouncil: '',
+    studentCategory: '',
+    serialBatch: '',
+    course: '',
+    batch: '',
+    courseDirector: '',
+    paymentMode: '',
+    razorpayOrderId: '',
+    razorpayPaymentId: '',
+    razorpaySignature: '',
+    txnDate: new Date().toISOString().split('T')[0],
+    currentDesignation: '',
+    lifeMembershipNo: '',
+    mcQualifications: '',
+    declarationCheck: false
   });
-
-  React.useEffect(() => {
-    localStorage.setItem('semi_enrollment_form', JSON.stringify(enrollForm));
-  }, [enrollForm]);
 
   const [enrollDocs, setEnrollDocs] = useState({
     photoDoc: null,
@@ -371,11 +358,7 @@ const InstitutePortal = () => {
           batchesCount: c.batchesCount ?? 0,
           status: c.status || 'Active'
         }));
-        const formattedStr = JSON.stringify(formatted);
-        setCourses(prev => JSON.stringify(prev) === formattedStr ? prev : formatted);
-        if (localStorage.getItem('semi_courses') !== formattedStr) {
-          localStorage.setItem('semi_courses', formattedStr);
-        }
+        setCourses(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
       console.warn('Failed to fetch courses from API:', err);
@@ -389,18 +372,14 @@ const InstitutePortal = () => {
           id: b._id,
           _id: b._id,
           name: b.name || `Batch ${b.year || new Date().getFullYear()}-A`,
-          startDate: b.startDate || `${b.year || new Date().getFullYear()}-01-10`,
+          startDate: b.startDate ? b.startDate.split('T')[0] : `${b.year || new Date().getFullYear()}-01-10`,
           seats: b.seats || '5',
           activeFellows: b.activeFellows || 0,
           year: b.year,
           course: b.course,
           courseName: b.course?.name || b.course?.courseName || b.courseName || ''
         }));
-        const formattedStr = JSON.stringify(formatted);
-        setBatches(prev => JSON.stringify(prev) === formattedStr ? prev : formatted);
-        if (localStorage.getItem('semi_batches') !== formattedStr) {
-          localStorage.setItem('semi_batches', formattedStr);
-        }
+        setBatches(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
       console.warn('Failed to fetch batches from API:', err);
@@ -430,7 +409,9 @@ const InstitutePortal = () => {
           homeAddress: s.homeAddress,
           contactNumber: s.contactNumber,
           courseDirector: s.courseDirector,
-          utrNumber: s.utrNumber,
+          razorpayOrderId: s.razorpayOrderId,
+          razorpayPaymentId: s.razorpayPaymentId,
+          razorpaySignature: s.razorpaySignature,
           medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
           universityName: s.universityName,
           mbbsQualification: s.mbbsQualification,
@@ -439,11 +420,7 @@ const InstitutePortal = () => {
           documents: s.documents || {},
           semesters: s.semesters || [],
         }));
-        const formattedStr = JSON.stringify(formatted);
-        setStudents(prev => JSON.stringify(prev) === formattedStr ? prev : formatted);
-        if (localStorage.getItem('semi_students') !== formattedStr) {
-          localStorage.setItem('semi_students', formattedStr);
-        }
+        setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
       console.warn('Failed to fetch students from API:', err);
@@ -453,11 +430,7 @@ const InstitutePortal = () => {
       const examsRes = await examService.listExamApplications();
       const examsData = extractData(examsRes) || [];
       if (Array.isArray(examsData)) {
-        const examsStr = JSON.stringify(examsData);
-        setExamApplications(prev => JSON.stringify(prev) === examsStr ? prev : examsData);
-        if (localStorage.getItem('semi_exam_applications') !== examsStr) {
-          localStorage.setItem('semi_exam_applications', examsStr);
-        }
+        setExamApplications(prev => JSON.stringify(prev) === JSON.stringify(examsData) ? prev : examsData);
       }
     } catch (err) {
       console.warn('Failed to fetch exam applications from API:', err);
@@ -490,9 +463,6 @@ const InstitutePortal = () => {
           emFacultyCount: app.emFacultyCount?.toString() || '',
           teachingSpace: app.teachingSpace || 'Yes',
           nabhStatus: app.nabhStatus || 'Yes',
-          paymentBankName: app.paymentBankName || '',
-          paymentTxnNo: app.paymentTxnNo || '',
-          paymentTxnDate: app.paymentTxnDate ? app.paymentTxnDate.split('T')[0] : '',
           authorizedRepName: app.authorizedRepName || '',
           authorizedRepDesignation: app.authorizedRepDesignation || 'Course Director',
           certificationAgreement: false
@@ -554,7 +524,7 @@ const InstitutePortal = () => {
           form: freshForm,
           uploadedDocs: freshDocs,
           paymentComplete: app.paymentStatus === 'Completed',
-          paymentDetails: app.paymentStatus === 'Completed' ? { transactionId: app.paymentTxnNo } : null,
+          paymentDetails: app.paymentStatus === 'Completed' ? { transactionId: app.razorpayPaymentId } : null,
           record: freshRecord,
           activeWizardStep: 4
         });
@@ -570,47 +540,6 @@ const InstitutePortal = () => {
   const loadApplicationFromStorage = useCallback(() => {
     const storedUser = localStorage.getItem('semi_user');
     const storedAppData = localStorage.getItem('semi_institute_data');
-    const storedCourses = localStorage.getItem('semi_courses');
-    const storedBatches = localStorage.getItem('semi_batches');
-    const storedStudents = localStorage.getItem('semi_students');
-
-    // Seed default data if nothing exists
-    if (!storedCourses) {
-      const initialCourses = [
-        { id: '1', courseName: 'MBBS', courseCode: 'MBBS-001', courseType: 'Undergraduate', programCategory: 'General Medicine', courseDuration: '5', durationType: 'Years', totalSubjects: '24', courseFee: '12,0,000', registrationFee: '50,000', examinationFee: '20,000', certificationFee: '10,000', studentsCount: 0, batchesCount: 1, status: 'Active' },
-        { id: '2', courseName: 'MD - Emergency Medicine', courseCode: 'MD-EM-01', courseType: 'Postgraduate', programCategory: 'Emergency Medicine', courseDuration: '3', durationType: 'Years', totalSubjects: '12', courseFee: '15,0,000', registrationFee: '60,000', examinationFee: '25,000', certificationFee: '15,000', studentsCount: 0, batchesCount: 1, status: 'Active' }
-      ];
-      localStorage.setItem('semi_courses', JSON.stringify(initialCourses));
-      setCourses(initialCourses);
-    } else {
-      setCourses(JSON.parse(storedCourses));
-    }
-
-    if (!storedBatches) {
-      const initialBatches = [
-        { id: '1', name: 'Batch 2026-A', startDate: '2026-01-10', seats: '5', activeFellows: 0, courseName: 'MBBS' },
-        { id: '2', name: 'Batch 2026-B', startDate: '2026-07-01', seats: '5', activeFellows: 0, courseName: 'MD - Emergency Medicine' }
-      ];
-      localStorage.setItem('semi_batches', JSON.stringify(initialBatches));
-      setBatches(initialBatches);
-    } else {
-      setBatches(JSON.parse(storedBatches));
-    }
-
-    if (!storedStudents) {
-      setStudents([]);
-      localStorage.setItem('semi_students', JSON.stringify([]));
-    } else {
-      setStudents(JSON.parse(storedStudents));
-    }
-
-    // Set default exam apps and fee transactions if not present
-    if (!localStorage.getItem('semi_exam_applications')) {
-      localStorage.setItem('semi_exam_applications', JSON.stringify([]));
-      setExamApplications([]);
-    } else {
-      setExamApplications(JSON.parse(localStorage.getItem('semi_exam_applications')));
-    }
 
 
 
@@ -644,6 +573,7 @@ const InstitutePortal = () => {
       setUploadedDocs(prev => ({ ...prev, ...parsedData.uploadedDocs }));
       setPaymentComplete(parsedData.paymentComplete || false);
       setPaymentDetails(parsedData.paymentDetails || null);
+      setPaymentVerificationData(parsedData.paymentVerificationData || null);
       setApplicationRecord(parsedData.record || DEFAULT_RECORD);
       if (parsedData.activeWizardStep) {
         setActiveWizardStep(parsedData.activeWizardStep);
@@ -905,6 +835,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
     if (step === 1) {
       if (!appForm.orgName) return 'Health Care Organization Name is required.';
+      if (!appForm.constitutionType) return 'Registered Constitution Type is required.';
       if (!appForm.instituteAddress) return 'Institution Address is required.';
       if (!appForm.registeredOfficeAddress) return 'Registered Office Address is required.';
       
@@ -923,7 +854,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       if (!appForm.officePhone) return 'Registered Office Phone Number is required.';
       if (!phoneRegex.test(appForm.officePhone.replace(/\D/g, ''))) return 'Registered Office Phone Number must be a valid 6 to 12-digit phone/landline number.';
       
-      const urlRegex = new RegExp('^(https?://)?([\\\\da-z.-]+)\\\\.([a-z.]{2,6})[/\\\\w .-]*/?$', 'i');
+      const urlRegex = new RegExp('^(https?://)?([\\w.-]+)\\.([a-z.]{2,6})[/\\w .-]*/?$', 'i');
       if (!appForm.website) return 'Institutional Website Address is required.';
       if (!urlRegex.test(appForm.website)) return 'Valid Institutional Website Address URL is required.';
       
@@ -942,12 +873,14 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       if (!appForm.physicianExperience || parseInt(appForm.physicianExperience, 10) < 24) {
         return 'Emergency Physician Experience must be a minimum of 24 months.';
       }
+      if (appForm.courseDirectorEMQualified !== 'Yes') return 'Course Director must be EM Qualified.';
       if (!appForm.emFacultyCount || parseInt(appForm.emFacultyCount, 10) < 1) {
         return 'EM Qualified Faculty Count must be a minimum of 1.';
       }
       if (appForm.teachingSpace !== 'Yes' && appForm.teachingSpace !== 'Yes (Mandatory)') {
         return 'Teaching Space Availability is mandatory (must be Yes).';
       }
+      if (appForm.nabhStatus !== 'Yes') return 'NABH Accreditation Status is required.';
     }
 
     if (step === 3) {
@@ -964,13 +897,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     }
 
     if (step === 4) {
-      if (!paymentComplete) return 'Please complete the simulated inspection fee payment.';
-      if (!appForm.paymentBankName) return 'Payment Bank Name is required.';
-      if (!appForm.paymentTxnNo) return 'Payment Transaction / Ref Number is required.';
-      if (!appForm.paymentTxnDate) return 'Payment Transaction Date is required.';
       if (!appForm.authorizedRepName) return 'Authorized Representative Name is required.';
       if (!uploadedDocs.signatureDoc) return 'Please upload the digital signature file.';
-      if (!appForm.certificationAgreement) return 'You must accept the Certification & Declarations agreement to proceed.';
     }
 
     return null;
@@ -1057,9 +985,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         emFacultyCount: '',
         teachingSpace: 'Yes',
         nabhStatus: 'Yes',
-        paymentBankName: '',
-        paymentTxnNo: '',
-        paymentTxnDate: '',
         authorizedRepName: '',
         authorizedRepDesignation: 'Course Director',
         certificationAgreement: false
@@ -1119,7 +1044,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     try {
       const response = await authService.login({
         email: loginForm.email,
-        password: loginForm.password
+        password: loginForm.password,
+        portal: 'institute',
       });
 
       const data = response.data || response;
@@ -1155,8 +1081,75 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     }
   };
 
+  const checkPaymentStatus = useCallback(async () => {
+    try {
+      console.log('🔍 Checking payment status...');
+      const response = await instituteService.getPaymentStatus();
+      const data = response.data?.data || response.data;
+      console.log('📊 Payment status response:', data);
+      if (data && data.paymentStatus === 'Completed') {
+        setPaymentComplete(true);
+        setPaymentDetails({
+          transactionId: data.razorpayPaymentId || 'pay_verified',
+          amount: '₹2,50,000.00',
+          date: new Date().toLocaleString(),
+          status: 'Success'
+        });
+        const storedData = localStorage.getItem('semi_institute_data');
+        if (storedData) {
+          const parsed = JSON.parse(storedData);
+          parsed.paymentComplete = true;
+          parsed.paymentDetails = {
+            transactionId: data.razorpayPaymentId,
+            amount: '₹2,50,000.00',
+            date: new Date().toLocaleString(),
+            status: 'Success'
+          };
+          localStorage.setItem('semi_institute_data', JSON.stringify(parsed));
+        }
+        setSuccessBanner('✅ Payment verified successfully! Your application is now with the board.');
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('Failed to check payment status:', err);
+      return false;
+    }
+  }, []);
 
-  // ─── PAYMENT HANDLER ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    const recoverPayment = async () => {
+      const pendingState = getPaymentState();
+      if (pendingState) {
+        if (pendingState.paymentType === 'institute') {
+          try {
+            const response = await instituteService.getPaymentStatus();
+            const data = response.data?.data || response.data;
+            if (data?.paymentStatus === 'Completed') {
+              setPaymentComplete(true);
+              clearPaymentState();
+              setSuccessBanner('Payment recovered successfully! Your application is ready.');
+            } else if (data?.razorpayOrderId && data.razorpayOrderId === pendingState.orderId) {
+              const completed = await checkPaymentStatus();
+              if (completed) {
+                clearPaymentState();
+                setSuccessBanner('Payment recovered successfully! Your application is ready.');
+              } else {
+                setShowPaymentChecker(true);
+              }
+            } else {
+              clearPaymentState();
+            }
+          } catch {
+            clearPaymentState();
+          }
+        }
+      }
+    };
+    recoverPayment();
+  }, [checkPaymentStatus]);
+
+// ─── PAYMENT HANDLER ──────────────────────────────────────────────────────────
   const handlePaymentInitiate = async () => {
     setPaymentProcessing(true);
     setErrorBanner(null);
@@ -1182,227 +1175,95 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         keyId: orderData.keyId,
         name: 'Semi Phase 3 Institute Onboarding',
         description: 'Inspection & Onboarding Fee',
+        paymentType: 'institute',
         prefill: {
           name: appForm.hodName,
           email: user?.email || '',
         },
         onSuccess: async (response) => {
           try {
+            setPaymentProcessing(true);
+            console.log('✅ Payment success, verifying with backend...', response);
+
             const verifyRes = await instituteService.verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             });
             const verifyData = extractData(verifyRes);
+            console.log('✅ Verification response:', verifyData);
 
-            const feeDetails = {
-              receiptNumber: verifyData.receiptNumber,
-              transactionId: verifyData.paymentId,
-              amount: '₹2,50,000.00',
-              date: new Date().toLocaleString(),
-              status: 'Success'
-            };
+            if (verifyData && verifyData.paymentStatus === 'Completed') {
+              setPaymentVerificationData({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              });
 
-            setPaymentComplete(true);
-            setPaymentDetails(feeDetails);
-            setPaymentProcessing(false);
-            
-            setAppForm(prev => ({
-              ...prev,
-              paymentBankName: 'Razorpay Online',
-              paymentTxnNo: verifyData.paymentId,
-              paymentTxnDate: new Date().toISOString().split('T')[0]
-            }));
-            
-            setUploadedDocs(prev => ({ 
-              ...prev, 
-              paymentReceiptDoc: { name: `${verifyData.receiptNumber}-receipt.pdf`, size: 'Online', uploadedAt: new Date().toLocaleTimeString() }
-            }));
+              const feeDetails = {
+                receiptNumber: verifyData.receiptNumber || 'REC-' + Date.now(),
+                transactionId: verifyData.paymentId || response.razorpay_payment_id,
+                amount: '₹2,50,000.00',
+                date: new Date().toLocaleString(),
+                status: 'Success'
+              };
 
-            setSuccessBanner('Payment verified successfully!');
+              setPaymentComplete(true);
+              setPaymentDetails(feeDetails);
+              setPaymentProcessing(false);
+              setShowPaymentChecker(false);
+
+              setUploadedDocs(prev => ({ 
+                ...prev, 
+                paymentReceiptDoc: { name: `${feeDetails.receiptNumber}-receipt.pdf`, size: 'Online', uploadedAt: new Date().toLocaleTimeString() }
+              }));
+
+              clearPaymentState();
+              setSuccessBanner('✅ Payment verified successfully! You can now submit your application.');
+
+              await fetchApplication();
+            } else {
+              console.warn('⚠️ Verification did not complete:', verifyData);
+              const checkResult = await checkPaymentStatus();
+              if (!checkResult) {
+                setErrorBanner('Payment was processed but verification is pending. Please wait or contact support.');
+                setShowPaymentChecker(true);
+              }
+            }
           } catch (verifyErr) {
-            console.error('Verification failed', verifyErr);
+            console.error('❌ Verification failed:', verifyErr);
+            const checkResult = await checkPaymentStatus();
+            if (checkResult) {
+              setPaymentProcessing(false);
+              setShowPaymentChecker(false);
+              setSuccessBanner('✅ Payment verified successfully after check!');
+              return;
+            }
             setErrorBanner('Payment was processed but verification failed. Please contact support.');
+            setPaymentProcessing(false);
+            setShowPaymentChecker(true);
+          } finally {
             setPaymentProcessing(false);
           }
         },
         onDismiss: () => {
           setPaymentProcessing(false);
-          setErrorBanner('Payment window was closed.');
-        }
-      });
-    } catch (err) {
-      console.error('Payment initiation/verification failed:', err);
-      setPaymentProcessing(false);
-      setErrorBanner(err.parsedMessage || err.message || 'Payment processing failed. Please try again.');
-    }
-  };
-
-/*
-    setErrorBanner(null);
-
-    if (!appForm.orgName || !appForm.instituteAddress || !appForm.headName || !appForm.hodName) {
-      setErrorBanner('Please fill out all mandatory fields in Section 1 (General Info) before paying.');
-      setPaymentProcessing(false);
-      return;
-    }
-
-    try {
-            try {
-          try {
-      const orderRes = await instituteService.createPaymentOrder();
-      const orderData = extractData(orderRes);
-
-      if (!orderData || !orderData.orderId) {
-        throw new Error('Failed to create payment order from server.');
-      }
-
-      await initiateRazorpayPayment({
-        orderId: orderData.orderId,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        keyId: orderData.keyId,
-        name: 'Semi Phase 3 Institute Onboarding',
-        description: 'Inspection & Onboarding Fee',
-        prefill: {
-          name: appForm.hodName,
-          email: user?.email || '',
+          setShowPaymentChecker(true);
+          setErrorBanner('Payment window was closed. We are checking your payment status.');
         },
-        onSuccess: async (response) => {
-          try {
-            const verifyRes = await instituteService.verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            });
-            const verifyData = extractData(verifyRes);
-
-            const feeDetails = {
-              receiptNumber: verifyData.receiptNumber,
-              transactionId: verifyData.paymentId,
-              amount: '₹2,50,000.00',
-              date: new Date().toLocaleString(),
-              status: 'Success'
-            };
-
-            setPaymentComplete(true);
-            setPaymentDetails(feeDetails);
-            setPaymentProcessing(false);
-            
-            setAppForm(prev => ({
-              ...prev,
-              paymentBankName: 'Razorpay Online',
-              paymentTxnNo: verifyData.paymentId,
-              paymentTxnDate: new Date().toISOString().split('T')[0]
-            }));
-            
-            setUploadedDocs(prev => ({ 
-              ...prev, 
-              paymentReceiptDoc: { name: `${verifyData.receiptNumber}-receipt.pdf`, size: 'Online', uploadedAt: new Date().toLocaleTimeString() }
-            }));
-
-            setSuccessBanner('Payment verified successfully!');
-          } catch (verifyErr) {
-            console.error('Verification failed', verifyErr);
-            setErrorBanner('Payment was processed but verification failed. Please contact support.');
-            setPaymentProcessing(false);
-          }
-        },
-        onDismiss: () => {
+        onFailure: (error) => {
           setPaymentProcessing(false);
-          setErrorBanner('Payment window was closed.');
-        }
+          setShowPaymentChecker(true);
+          setErrorBanner(`Payment failed: ${error?.description || 'Transaction unsuccessful.'}`);
+        },
       });
     } catch (err) {
-      console.error('Payment initiation/verification failed:', err);
-      setPaymentProcessing(false);
-      setErrorBanner(err.parsedMessage || err.message || 'Payment processing failed. Please try again.');
-    }
-  };
-      const orderData = extractData(orderRes);
-
-      if (!orderData || !orderData.orderId) {
-        throw new Error('Failed to create payment order from server.');
-      }
-
-      await initiateRazorpayPayment({
-        orderId: orderData.orderId,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        keyId: orderData.keyId,
-        name: 'Semi Phase 3 Institute Onboarding',
-        description: 'Inspection & Onboarding Fee',
-        prefill: {
-          name: appForm.hodName,
-          email: user?.email || '',
-        },
-        onSuccess: async (response) => {
-          try {
-            const verifyRes = await instituteService.verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            });
-            const verifyData = extractData(verifyRes);
-
-            const feeDetails = {
-              receiptNumber: verifyData.receiptNumber,
-              transactionId: verifyData.paymentId,
-              amount: '₹2,50,000.00',
-              date: new Date().toLocaleString(),
-              status: 'Success'
-            };
-
-            setPaymentComplete(true);
-            setPaymentDetails(feeDetails);
-            setPaymentProcessing(false);
-            
-            setAppForm(prev => ({
-              ...prev,
-              paymentBankName: 'Razorpay Online',
-              paymentTxnNo: verifyData.paymentId,
-              paymentTxnDate: new Date().toISOString().split('T')[0]
-            }));
-            
-            setUploadedDocs(prev => ({ 
-              ...prev, 
-              paymentReceiptDoc: { name: `${verifyData.receiptNumber}-receipt.pdf`, size: 'Online', uploadedAt: new Date().toLocaleTimeString() }
-            }));
-
-            setSuccessBanner('Payment verified successfully!');
-          } catch (verifyErr) {
-            console.error('Verification failed', verifyErr);
-            setErrorBanner('Payment was processed but verification failed. Please contact support.');
-            setPaymentProcessing(false);
-          }
-        },
-        onDismiss: () => {
-          setPaymentProcessing(false);
-          setErrorBanner('Payment window was closed.');
-        }
-      });
-    } catch (err) {
-      console.error('Payment initiation/verification failed:', err);
-      setPaymentProcessing(false);
-      setErrorBanner(err.parsedMessage || err.message || 'Payment processing failed. Please try again.');
-    }
-  };
-        paymentTxnDate: new Date().toISOString().split('T')[0]
-      }));
-
-      setUploadedDocs(prev => ({ 
-        ...prev, 
-        paymentReceiptDoc: { name: `${verifyData.receiptNumber || receiptNo}-receipt.pdf`, size: '142.5 KB', uploadedAt: new Date().toLocaleTimeString() }
-      }));
-      setSuccessBanner('Inspection Fee Payment processed and verified successfully!');
-    } catch (err) {
-      console.error('Payment initiation/verification failed:', err);
+      console.error('Payment initiation failed:', err);
       setPaymentProcessing(false);
       setErrorBanner(err.parsedMessage || err.message || 'Payment processing failed. Please try again.');
     }
   };
 
-  */
   // ─── WIZARD NAVIGATION ────────────────────────────────────────────────────────
   const handleWizardNext = () => {
     setErrorBanner(null);
@@ -1435,18 +1296,79 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     saveToLocalStorage(user, appForm, uploadedDocs, paymentComplete, applicationRecord, newStep);
   };
 
-  // ─── APPLICATION SUBMIT ──────────────────────────────────────────────────────
+  // ─── APPLICATION SUBMIT (validates → pays → submits) ─────────────────────────
+  const submitApplicationInternal = async (overridePaymentData) => {
+    const formData = new FormData();
+
+    const cleaned = { ...appForm };
+    cleaned.phoneNumber = (appForm.phoneNumber || '').replace(/\D/g, '');
+    cleaned.officePhone = (appForm.officePhone || '').replace(/\D/g, '');
+
+    Object.keys(cleaned).forEach(key => {
+      const val = cleaned[key];
+      if (val !== '' && val !== false && val !== null && val !== undefined) {
+        formData.append(key, val);
+      }
+    });
+
+    const appendDocFile = (backendKey, stateKey) => {
+      const fileState = uploadedDocs[stateKey];
+      if (fileState) {
+        if (fileState instanceof File) {
+          formData.append(backendKey, fileState);
+        } else {
+          const mockBlob = new Blob(['Simulated document content for ' + backendKey], { type: 'application/pdf' });
+          formData.append(backendKey, mockBlob, fileState.name || `${backendKey}.pdf`);
+        }
+      }
+    };
+
+    appendDocFile('equipmentList', 'equipmentList');
+    appendDocFile('facultyList', 'facultyList');
+    appendDocFile('emergencyOPDStatistics', 'opdStats');
+    appendDocFile('libraryBookList', 'libraryList');
+    appendDocFile('trainingMannequinList', 'mannequinList');
+    appendDocFile('diagnosticEquipmentList', 'diagnosticList');
+    appendDocFile('declarationLetter', 'declarationLetter');
+    appendDocFile('facultyCommitmentLetter', 'signatureDoc');
+    appendDocFile('inspectionPaymentReceipt', 'paymentReceiptDoc');
+
+    const effectivePaymentData = overridePaymentData || paymentVerificationData;
+    if (effectivePaymentData) {
+      formData.append('razorpayPaymentId', effectivePaymentData.razorpayPaymentId);
+      formData.append('razorpayOrderId', effectivePaymentData.razorpayOrderId);
+      formData.append('razorpaySignature', effectivePaymentData.razorpaySignature);
+      formData.append('paymentStatus', 'Completed');
+    }
+
+    const response = await instituteService.apply(formData);
+    const data = extractData(response) || {};
+
+    const newRecord = {
+      status: data.status ? data.status.toLowerCase().replace(' ', '_') : 'pending_review',
+      submittedAt: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
+      inspectedAt: data.inspectionTriggered ? new Date().toLocaleDateString() : null,
+      rejectionReason: data.remarks || null,
+      ...data
+    };
+
+    setApplicationRecord(newRecord);
+    saveToLocalStorage(user, appForm, uploadedDocs, true, newRecord);
+
+    setSuccessBanner('Application submitted successfully! Moving to Academic Board for Review.');
+    setApplicationSubmitting(false);
+    setCurrentStep('pending_review');
+  };
+
   const handleApplicationSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (applicationSubmitting) return;
     setErrorBanner(null);
-    setApplicationSubmitting(true);
 
     const beds = parseInt(appForm.bedCount, 10);
     if (isNaN(beds) || beds < 10) {
       setErrorBanner('🚨 Compliance Violation: Emergency Department Bed Count is less than 10 beds.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
@@ -1454,14 +1376,12 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (isNaN(experience) || experience < 24) {
       setErrorBanner('🚨 Compliance Violation: Emergency Physician Experience is less than 24 months.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
     if (appForm.physicianAvailability !== 'Yes' && appForm.physicianAvailability !== 'Yes (Mandatory)') {
       setErrorBanner('🚨 Compliance Violation: Emergency Physician Availability is mandatory.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
@@ -1469,21 +1389,18 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (isNaN(facCount) || facCount < 1) {
       setErrorBanner('🚨 Compliance Violation: EM Qualified Faculty count must be at least 1.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
     if (appForm.teachingSpace !== 'Yes' && appForm.teachingSpace !== 'Yes (Mandatory)') {
       setErrorBanner('🚨 Compliance Violation: Teaching Space Availability is mandatory.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
     if (!appForm.authorizedRepName || !uploadedDocs.signatureDoc) {
       setErrorBanner('🚨 Compliance Violation: Representative Name and Digital Signature upload are mandatory.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
@@ -1495,80 +1412,169 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (!uploadedDocs.mannequinList) missingDocs.push('Training Mannequin List');
     if (!uploadedDocs.diagnosticList) missingDocs.push('Diagnostic Equipment List');
     if (!uploadedDocs.declarationLetter) missingDocs.push('Declaration Letter');
-    if (!uploadedDocs.paymentReceiptDoc) missingDocs.push('Inspection Payment Receipt');
 
     if (missingDocs.length > 0) {
       setErrorBanner(`Missing Mandatory Documents: ${missingDocs.join(', ')}.`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
-      return;
-    }
-
-    if (!paymentComplete || !appForm.paymentBankName || !appForm.paymentTxnNo || !appForm.paymentTxnDate) {
-      setErrorBanner('Inspection Fee Payment and transaction reference fields must be successfully completed.');
-      setApplicationSubmitting(false);
       return;
     }
 
     if (!appForm.certificationAgreement) {
       setErrorBanner('You must accept the Certification & Declarations agreement to proceed.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
+    // If payment already complete, submit directly
+    if (paymentComplete) {
+      setApplicationSubmitting(true);
+      try {
+        await submitApplicationInternal();
+      } catch (err) {
+        console.error('Application submission failed:', err);
+        setErrorBanner(extractErrorMessage(err, 'Failed to submit application.'));
+        setApplicationSubmitting(false);
+      }
+      return;
+    }
+
+    // Payment not done yet — initiate Razorpay, then auto-submit on success
+    setApplicationSubmitting(true);
     try {
-      const formData = new FormData();
-      Object.keys(appForm).forEach(key => {
-        if (appForm[key]) {
-          formData.append(key, appForm[key]);
-        }
-      });
+      const orderRes = await instituteService.createPaymentOrder();
+      const orderData = extractData(orderRes);
 
-      const appendDocFile = (backendKey, stateKey) => {
-        const fileState = uploadedDocs[stateKey];
-        if (fileState) {
-          if (fileState instanceof File) {
-            formData.append(backendKey, fileState);
-          } else {
-            const mockBlob = new Blob(['Simulated document content for ' + backendKey], { type: 'application/pdf' });
-            formData.append(backendKey, mockBlob, fileState.name || `${backendKey}.pdf`);
+      if (!orderData || !orderData.orderId) {
+        throw new Error('Failed to create payment order from server.');
+      }
+
+      await initiateRazorpayPayment({
+        orderId: orderData.orderId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        keyId: orderData.keyId,
+        name: 'Semi Phase 3 Institute Onboarding',
+        description: 'Inspection & Onboarding Fee',
+        paymentType: 'institute',
+        prefill: {
+          name: appForm.hodName,
+          email: user?.email || '',
+        },
+        onSuccess: async (response) => {
+          try {
+            setApplicationSubmitting(true);
+            console.log('✅ Payment success, verifying with backend...', response);
+
+            const verifyRes = await instituteService.verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            const verifyData = extractData(verifyRes);
+            console.log('✅ Verification response:', verifyData);
+
+            if (verifyData && verifyData.paymentStatus === 'Completed') {
+              const newPaymentData = {
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              };
+              setPaymentVerificationData(newPaymentData);
+
+              const feeDetails = {
+                receiptNumber: verifyData.receiptNumber || 'REC-' + Date.now(),
+                transactionId: verifyData.paymentId || response.razorpay_payment_id,
+                amount: '₹2,50,000.00',
+                date: new Date().toLocaleString(),
+                status: 'Success'
+              };
+
+              setPaymentComplete(true);
+              setPaymentDetails(feeDetails);
+              setShowPaymentChecker(false);
+
+              setUploadedDocs(prev => ({
+                ...prev,
+                paymentReceiptDoc: { name: `${feeDetails.receiptNumber}-receipt.pdf`, size: 'Online', uploadedAt: new Date().toLocaleTimeString() }
+              }));
+
+              clearPaymentState();
+
+              // Auto-submit after successful payment
+              // Pass newPaymentData directly to avoid closure stale-state bug
+              try {
+                await submitApplicationInternal(newPaymentData);
+              } catch (submitErr) {
+                console.error('Application submission failed after payment', submitErr);
+                setErrorBanner('Payment succeeded but application submission failed: ' + extractErrorMessage(submitErr, 'Please try submitting again.'));
+                setApplicationSubmitting(false);
+              }
+            } else {
+              console.warn('⚠️ Verification did not complete:', verifyData);
+              const checkResult = await checkPaymentStatus();
+              if (checkResult) {
+                setApplicationSubmitting(false);
+                setShowPaymentChecker(false);
+                const recoveryPaymentData = {
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature,
+                };
+                setPaymentVerificationData(recoveryPaymentData);
+                try {
+                  await submitApplicationInternal(recoveryPaymentData);
+                } catch (submitErr) {
+                  console.error('Application submission failed after payment recovery', submitErr);
+                  setErrorBanner('Payment recovered but application submission failed: ' + extractErrorMessage(submitErr, 'Please try submitting again.'));
+                  setApplicationSubmitting(false);
+                }
+              } else {
+                setErrorBanner('Payment was processed but verification is pending. Please wait or contact support.');
+                setApplicationSubmitting(false);
+                setShowPaymentChecker(true);
+              }
+            }
+          } catch (verifyErr) {
+            console.error('❌ Verification failed', verifyErr);
+            const checkResult = await checkPaymentStatus();
+            if (checkResult) {
+              setApplicationSubmitting(false);
+              setShowPaymentChecker(false);
+              const recoveryPaymentData = {
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              };
+              setPaymentVerificationData(recoveryPaymentData);
+              try {
+                await submitApplicationInternal(recoveryPaymentData);
+              } catch (submitErr) {
+                console.error('Application submission failed after payment recovery', submitErr);
+                setErrorBanner('Payment recovered but application submission failed: ' + extractErrorMessage(submitErr, 'Please try submitting again.'));
+                setApplicationSubmitting(false);
+              }
+              return;
+            }
+            setErrorBanner('Payment was processed but verification failed. Please contact support.');
+            setApplicationSubmitting(false);
+          } finally {
+            setApplicationSubmitting(false);
           }
-        }
-      };
-
-      appendDocFile('equipmentList', 'equipmentList');
-      appendDocFile('facultyList', 'facultyList');
-      appendDocFile('emergencyOPDStatistics', 'opdStats');
-      appendDocFile('libraryBookList', 'libraryList');
-      appendDocFile('trainingMannequinList', 'mannequinList');
-      appendDocFile('diagnosticEquipmentList', 'diagnosticList');
-      appendDocFile('declarationLetter', 'declarationLetter');
-      appendDocFile('facultyCommitmentLetter', 'signatureDoc');
-      appendDocFile('inspectionPaymentReceipt', 'paymentReceiptDoc');
-
-      const response = await instituteService.apply(formData);
-      const data = extractData(response) || {};
-
-      const newRecord = {
-        status: data.status ? data.status.toLowerCase().replace(' ', '_') : 'pending_review',
-        submittedAt: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
-        inspectedAt: data.inspectionTriggered ? new Date().toLocaleDateString() : null,
-        rejectionReason: data.remarks || null,
-        ...data
-      };
-
-      // Persist to state AND localStorage BEFORE navigating so the Auth Guard
-      // and fetchApplication can immediately see pending_review status.
-      setApplicationRecord(newRecord);
-      saveToLocalStorage(user, appForm, uploadedDocs, true, newRecord);
-
-      setSuccessBanner('Application submitted successfully! Moving to Academic Board for Review.');
-      setApplicationSubmitting(false);
-      setCurrentStep('pending_review');
+        },
+        onDismiss: () => {
+          setApplicationSubmitting(false);
+          setShowPaymentChecker(true);
+          setErrorBanner('Payment window was closed. We are checking your payment status.');
+        },
+        onFailure: (error) => {
+          setApplicationSubmitting(false);
+          setShowPaymentChecker(true);
+          setErrorBanner(`Payment failed: ${error?.description || 'Transaction unsuccessful.'}`);
+        },
+      });
     } catch (err) {
-      console.error('Application submission failed:', err);
-      setErrorBanner(extractErrorMessage(err, 'Failed to submit application.'));
+      console.error('Payment initiation failed:', err);
+      setErrorBanner(err.parsedMessage || err.message || 'Payment processing failed. Please try again.');
       setApplicationSubmitting(false);
     }
   };
@@ -1731,6 +1737,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       studentFormData.append('homeAddress', enrollForm.homeAddress);
       studentFormData.append('contactNumber', enrollForm.contactNumber.replace(/\D/g, ''));
       studentFormData.append('email', enrollForm.emailAddress);
+      studentFormData.append('dateOfBirth', enrollForm.dateOfBirth);
       studentFormData.append('qualification', enrollForm.qualification);
       studentFormData.append('mbbsQualification', enrollForm.mcQualifications || 'MBBS');
       studentFormData.append('yearOfPassing', enrollForm.passingYear);
@@ -1750,7 +1757,11 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       studentFormData.append('courseId', courseIdVal);
       studentFormData.append('batchId', batchIdVal);
       studentFormData.append('courseDirector', enrollForm.courseDirector || 'Dr. Ananya Sen');
-      studentFormData.append('utrNumber', enrollForm.utrNumber || 'UTR-' + Date.now());
+      studentFormData.append('razorpayOrderId', enrollForm.razorpayOrderId || '');
+      studentFormData.append('razorpayPaymentId', enrollForm.razorpayPaymentId || '');
+      studentFormData.append('razorpaySignature', enrollForm.razorpaySignature || '');
+      studentFormData.append('paymentMode', enrollForm.paymentMode || 'Razorpay');
+      studentFormData.append('paymentDate', enrollForm.txnDate || new Date().toISOString().split('T')[0]);
 
       const appendEnrollFile = (backendKey, fileState) => {
         if (fileState) {
@@ -1767,9 +1778,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       appendEnrollFile('passportPhoto', enrollDocs.photoDoc);
       appendEnrollFile('mbbsCertificate', enrollDocs.marksCertificateDoc);
       appendEnrollFile('medicalCouncilRegistrationCertificate', enrollDocs.medCouncilCertDoc);
-      const receiptDoc = enrollDocs.paymentReceiptDoc || 
-        (enrollForm.paymentMode === 'Razorpay' ? { name: `receipt-${enrollForm.utrNumber || 'razorpay'}.pdf` } : null);
-      appendEnrollFile('paymentReceipt', receiptDoc);
       appendEnrollFile('semiMembershipForm', enrollDocs.studentSignatureDoc || enrollDocs.lifeMembershipCardDoc);
       if (enrollDocs.fmgeCertDoc) {
         appendEnrollFile('fmgeResultCopy', enrollDocs.fmgeCertDoc);
@@ -1795,13 +1803,14 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         homeAddress: enrollForm.homeAddress,
         contactNumber: enrollForm.contactNumber,
         courseDirector: enrollForm.courseDirector,
-        utrNumber: enrollForm.utrNumber,
+        razorpayOrderId: enrollForm.razorpayOrderId,
+        razorpayPaymentId: enrollForm.razorpayPaymentId,
+        razorpaySignature: enrollForm.razorpaySignature,
         ...data
       };
 
       const updatedStudents = [studentRecord, ...students];
       setStudents(updatedStudents);
-      localStorage.setItem('semi_students', JSON.stringify(updatedStudents));
 
       await fetchERPData();
 
@@ -1811,6 +1820,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         firstName: '',
         middleName: '',
         lastName: '',
+        dateOfBirth: '',
         homeAddress: '',
         contactNumber: '',
         emailAddress: '',
@@ -1824,8 +1834,10 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         course: courses[0]?.courseName || 'MBBS',
         batch: 'Batch 2026-A',
         courseDirector: 'Dr. T.V. Ramakrishnan',
-        paymentMode: 'Online Transfer',
-        utrNumber: '',
+        paymentMode: 'Razorpay',
+        razorpayOrderId: '',
+        razorpayPaymentId: '',
+        razorpaySignature: '',
         txnDate: new Date().toISOString().split('T')[0],
         currentDesignation: 'Resident',
         lifeMembershipNo: '',
@@ -1928,7 +1940,9 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         isForeignGraduate: updatedStudent.isForeignGraduate,
         homeAddress: updatedStudent.homeAddress,
         courseDirector: updatedStudent.courseDirector,
-        utrNumber: updatedStudent.utrNumber,
+        razorpayOrderId: updatedStudent.razorpayOrderId,
+        razorpayPaymentId: updatedStudent.razorpayPaymentId,
+        razorpaySignature: updatedStudent.razorpaySignature,
       };
 
       await academicService.updateStudent(updatedStudent._id || updatedStudent.id, payload);
@@ -1963,7 +1977,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         setConfirmConfig(null);
         const updated = courses.filter(c => c.id !== id);
         setCourses(updated);
-        localStorage.setItem('semi_courses', JSON.stringify(updated));
         setSuccessBanner('Course deleted successfully.');
       }
     });
@@ -2010,6 +2023,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       uploadedDocs: updatedDocs || uploadedDocs,
       paymentComplete: updatedPayment !== undefined ? updatedPayment : paymentComplete,
       paymentDetails: updatedPayment ? paymentDetails : null,
+      paymentVerificationData: paymentVerificationData,
       record: updatedRecord || applicationRecord,
       activeWizardStep: wizardStep !== undefined ? wizardStep : activeWizardStep
     };
@@ -2151,12 +2165,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             <InstituteERPRemittance />
           </div>
         );
-      case 'notifications':
-        return (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <InstituteERPNotifications />
-          </div>
-        );
       default:
         return null;
     }
@@ -2223,6 +2231,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             setLoginForm={setLoginForm} 
             handleLoginSubmit={handleLoginSubmit} 
             setCurrentStep={setCurrentStep} 
+            errorMsg={errorBanner}
           />
         )}
 
@@ -2274,9 +2283,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
               uploadProgress={uploadProgress}
               setUploadProgress={setUploadProgress}
               paymentComplete={paymentComplete}
-              setPaymentComplete={setPaymentComplete}
               paymentDetails={paymentDetails}
-              setPaymentDetails={setPaymentDetails}
               validateWizardStep={validateWizardStep}
               setErrorBanner={setErrorBanner}
               saveToLocalStorage={saveToLocalStorage}
@@ -2285,8 +2292,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
               handleWizardNext={handleWizardNext}
               handleWizardBack={handleWizardBack}
               handleApplicationSubmit={handleApplicationSubmit}
-              handlePaymentInitiate={handlePaymentInitiate}
-              paymentProcessing={paymentProcessing}
               applicationSubmitting={applicationSubmitting}
             />
           </div>
@@ -2340,6 +2345,21 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             cancelText={confirmConfig.cancelText}
             onConfirm={confirmConfig.onConfirm}
             onCancel={confirmConfig.onCancel || (() => setConfirmConfig(null))}
+          />
+        )}
+        {showPaymentChecker && (
+          <PaymentStatusChecker
+            isOpen={showPaymentChecker}
+            paymentType="institute"
+            onComplete={() => {
+              setShowPaymentChecker(false);
+              checkPaymentStatus();
+            }}
+            onRetry={handlePaymentInitiate}
+            onCancel={() => {
+              setShowPaymentChecker(false);
+              setPaymentProcessing(false);
+            }}
           />
         )}
       </div>

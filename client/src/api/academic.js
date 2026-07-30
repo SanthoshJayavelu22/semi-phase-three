@@ -48,28 +48,7 @@ export const academicService = {
   },
 
   payStudentFees: (studentId, feeData) => {
-    let payload = feeData;
-    let headers = {};
-
-    if (!(feeData instanceof FormData)) {
-      payload = new FormData();
-      Object.keys(feeData).forEach(key => {
-        const val = feeData[key];
-        if (val !== null && val !== undefined) {
-          if (val instanceof File || val instanceof Blob) {
-            payload.append(key, val);
-          } else if (val instanceof Date) {
-            payload.append(key, val.toISOString());
-          } else {
-            payload.append(key, String(val));
-          }
-        }
-      });
-    }
-
-    // Axios sets multipart/form-data with the correct boundary automatically
-    headers['Content-Type'] = undefined;
-    return apiClient.post(`/academic/students/${studentId}/fees`, payload, { headers });
+    return apiClient.post(`/academic/students/${studentId}/fees`, feeData);
   },
 
   getFeeRecords: () => apiClient.get('/academic/fees'),
@@ -164,6 +143,23 @@ export const academicService = {
   // ─── RAZORPAY PAYMENT ────────────────────────────────────────────────────────
   createRazorpayOrder: (data) => apiClient.post('/academic/payment/create-order', data),
   verifyRazorpayPayment: (data) => apiClient.post('/academic/payment/verify', data),
+
+  /**
+   * Get payment status for a student
+   * @param {string} studentId
+   * @param {string} purpose - payment purpose
+   */
+  getPaymentStatus: (studentId, purpose) =>
+    apiClient.get(`/academic/payment/status/${studentId}`, { params: { paymentPurpose: purpose } }),
+
+  /**
+   * Verify academic order status (for recovery)
+   * @param {string} orderId
+   * @param {string} studentId
+   * @param {string} purpose
+   */
+  verifyOrderStatus: (orderId, studentId, purpose) =>
+    apiClient.get(`/academic/payment/verify-order/${orderId}`, { params: { studentId, purpose } }),
 };
 
 export default academicService;

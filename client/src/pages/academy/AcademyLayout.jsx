@@ -100,7 +100,17 @@ export default function AcademyLayout() {
             paymentComplete: app.paymentStatus === 'Completed',
             paymentDetails:
               app.paymentStatus === 'Completed'
-                ? { transactionId: app.razorpayPaymentId || app.paymentTxnNo }
+                ? {
+                    transactionId: app.razorpayPaymentId,
+                    amount: app.paymentAmount != null
+                      ? `₹${app.paymentAmount.toLocaleString('en-IN')}.00`
+                      : '₹5,000.00',
+                    date: app.paymentCompletedAt
+                      ? new Date(app.paymentCompletedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                      : app.updatedAt
+                        ? new Date(app.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                        : undefined,
+                  }
                 : null,
             form: app,
             uploadedDocs: {

@@ -376,8 +376,8 @@ const InstituteERPStudents = ({
                       <span className="text-slate-800 font-bold">{selectedStudentForView.courseDirector || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">UTR Transaction No</span>
-                      <span className="text-indigo-600 font-mono font-black">{selectedStudentForView.utrNumber || 'N/A'}</span>
+                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Razorpay Payment ID</span>
+                      <span className="text-indigo-600 font-mono font-black">{selectedStudentForView.razorpayPaymentId || 'N/A'}</span>
                     </div>
                     <div>
                       <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Foreign Graduate Status</span>

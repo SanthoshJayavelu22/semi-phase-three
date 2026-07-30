@@ -27,7 +27,8 @@ const AcademyLogin = ({ loginForm, setLoginForm, errorMsg, handleLogin }) => {
         <p className="text-xs text-gray-500 mt-1.5 font-semibold">Authorized governance portal entry</p>
 
         {errorMsg && (
-          <div className="my-5 bg-rose-50 border border-rose-200 p-4 rounded-xl text-left text-xs font-semibold text-rose-600 shadow-sm leading-relaxed animate-shake">
+          <div className="my-5 bg-red-100 border-2 border-red-400 p-4 rounded-xl text-left text-sm font-bold text-red-700 shadow-md leading-relaxed">
+            <span className="uppercase tracking-wider text-[10px] block mb-1 text-red-500">Login Failed</span>
             {errorMsg}
           </div>
         )}

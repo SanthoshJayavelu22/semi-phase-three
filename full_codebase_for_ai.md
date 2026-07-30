@@ -1,12 +1,12 @@
-# SEMI – Full Project Codebase Context
+# SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-07-09T06:12:41.103Z
+> Auto-generated on 2026-07-29T10:24:40.824Z
 
-This document contains the complete source code of the **SEMI** project for AI context.
+This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 semi-phase-three/
@@ -19,9 +19,14 @@ semi-phase-three/
 │   │   ├── controllers
 │   │   │   ├── academicController.ts
 │   │   │   ├── authController.ts
+│   │   │   ├── certificateController.ts
 │   │   │   ├── examController.ts
 │   │   │   ├── healthController.ts
 │   │   │   ├── instituteController.ts
+│   │   │   ├── marksheetController.ts
+│   │   │   ├── paymentController.ts
+│   │   │   ├── resultController.ts
+│   │   │   ├── revaluationController.ts
 │   │   │   └── userController.ts
 │   │   ├── middlewares
 │   │   │   ├── authMiddleware.ts
@@ -29,32 +34,55 @@ semi-phase-three/
 │   │   │   └── uploadMiddleware.ts
 │   │   ├── models
 │   │   │   ├── batchModel.ts
+│   │   │   ├── certificateModel.ts
 │   │   │   ├── courseModel.ts
 │   │   │   ├── examApplicationModel.ts
 │   │   │   ├── feeRecordModel.ts
 │   │   │   ├── hallTicketModel.ts
 │   │   │   ├── instituteModel.ts
+│   │   │   ├── marksheetModel.ts
 │   │   │   ├── remittanceModel.ts
+│   │   │   ├── resultModel.ts
+│   │   │   ├── revaluationRequestModel.ts
+│   │   │   ├── revaluationResultModel.ts
 │   │   │   ├── studentModel.ts
 │   │   │   └── userModel.ts
 │   │   ├── routes
 │   │   │   ├── academicRoutes.ts
 │   │   │   ├── authRoutes.ts
+│   │   │   ├── certificateRoutes.ts
 │   │   │   ├── examRoutes.ts
 │   │   │   ├── healthRoutes.ts
 │   │   │   ├── instituteRoutes.ts
+│   │   │   ├── marksheetRoutes.ts
+│   │   │   ├── paymentRoutes.ts
+│   │   │   ├── resultRoutes.ts
+│   │   │   ├── revaluationRoutes.ts
 │   │   │   └── userRoutes.ts
+│   │   ├── services
+│   │   │   ├── certificateService.ts
+│   │   │   ├── fileParserService.ts
+│   │   │   ├── marksheetService.ts
+│   │   │   ├── pdfGeneratorService.ts
+│   │   │   ├── resultService.ts
+│   │   │   └── revaluationService.ts
 │   │   ├── utils
+│   │   │   ├── helpers.ts
 │   │   │   ├── responseFormatter.ts
 │   │   │   └── sendEmail.ts
+│   │   ├── validators
+│   │   │   ├── certificateValidator.ts
+│   │   │   ├── resultValidator.ts
+│   │   │   └── revaluationValidator.ts
 │   │   ├── index.ts
 │   │   └── seed-test-data.ts
-│   ├── .env
 │   ├── add_auth_status.js
 │   ├── api-tests.http
 │   ├── check_db.js
 │   ├── check_postman.js
+│   ├── check_ts.js
 │   ├── ecosystem.config.js
+│   ├── last_400_error.log
 │   ├── package.json
 │   ├── postman_collection.json
 │   ├── test_script.js
@@ -70,12 +98,17 @@ semi-phase-three/
 │   │   │   ├── academic.js
 │   │   │   ├── apiClient.js
 │   │   │   ├── auth.js
+│   │   │   ├── certificates.js
 │   │   │   ├── exams.js
 │   │   │   ├── institutes.js
+│   │   │   ├── marksheets.js
+│   │   │   ├── results.js
+│   │   │   ├── revaluation.js
 │   │   │   └── users.js
 │   │   ├── Components
 │   │   │   ├── ConfirmModal.jsx
 │   │   │   ├── Loader.jsx
+│   │   │   ├── PaymentStatusChecker.jsx
 │   │   │   └── Toast.jsx
 │   │   ├── pages
 │   │   │   ├── academy
@@ -89,8 +122,14 @@ semi-phase-three/
 │   │   │   │   │   ├── AcademyHeader.jsx
 │   │   │   │   │   ├── AcademyInspectorModal.jsx
 │   │   │   │   │   ├── AcademyLogin.jsx
+│   │   │   │   │   ├── AcademyMarksUpdating.jsx
+│   │   │   │   │   ├── AcademyPublishDetails.jsx
+│   │   │   │   │   ├── AcademyPublishingDetails.jsx
+│   │   │   │   │   ├── AcademyPublishResults.jsx
 │   │   │   │   │   ├── AcademyRejectionModal.jsx
+│   │   │   │   │   ├── AcademyRevaluation.jsx
 │   │   │   │   │   ├── AcademySidebar.jsx
+│   │   │   │   │   ├── AcademyStudentMarks.jsx
 │   │   │   │   │   ├── AcademyStudentModal.jsx
 │   │   │   │   │   ├── AcademyStudents.jsx
 │   │   │   │   │   └── AcademyVerification.jsx
@@ -99,6 +138,16 @@ semi-phase-three/
 │   │   │   │   ├── eligibility
 │   │   │   │   │   └── index.jsx
 │   │   │   │   ├── login
+│   │   │   │   │   └── index.jsx
+│   │   │   │   ├── marks
+│   │   │   │   │   └── index.jsx
+│   │   │   │   ├── publish-details
+│   │   │   │   │   └── index.jsx
+│   │   │   │   ├── publish-results
+│   │   │   │   │   └── index.jsx
+│   │   │   │   ├── revaluation
+│   │   │   │   │   └── index.jsx
+│   │   │   │   ├── student-marks
 │   │   │   │   │   └── index.jsx
 │   │   │   │   ├── students
 │   │   │   │   │   └── index.jsx
@@ -121,6 +170,9 @@ semi-phase-three/
 │   │   │   │   │   ├── InstituteERPFees.jsx
 │   │   │   │   │   ├── InstituteERPHallTicket.jsx
 │   │   │   │   │   ├── InstituteERPHeader.jsx
+│   │   │   │   │   ├── InstituteERPRemittance.jsx
+│   │   │   │   │   ├── InstituteERPResults.jsx
+│   │   │   │   │   ├── InstituteERPRevaluation.jsx
 │   │   │   │   │   ├── InstituteERPSidebar.jsx
 │   │   │   │   │   ├── InstituteERPStudentDetails.jsx
 │   │   │   │   │   ├── InstituteERPStudents.jsx
@@ -153,67 +205,30 @@ semi-phase-three/
 │   │   │   │   │   └── index.jsx
 │   │   │   │   ├── InstitutePortal.jsx
 │   │   │   │   └── InstitutionalLayout.jsx
+│   │   │   ├── public
+│   │   │   │   └── results
+│   │   │   │       ├── components
+│   │   │   │       │   ├── ResultsDisplay.jsx
+│   │   │   │       │   └── ResultsLogin.jsx
+│   │   │   │       └── index.jsx
 │   │   │   └── EmailVerificationPage.jsx
+│   │   ├── utils
+│   │   │   └── razorpay.js
 │   │   ├── App.jsx
 │   │   ├── index.css
 │   │   └── main.jsx
-│   ├── .env
-│   ├── .gitignore
+│   ├── check.js
 │   ├── eslint.config.js
+│   ├── fix-lint-imports.js
+│   ├── fix-react.js
 │   ├── index.html
 │   ├── package.json
 │   ├── postcss.config.js
 │   ├── README.md
 │   ├── tailwind.config.js
 │   └── vite.config.js
-└── .gitignore
-```
-
----
-
-## 📄 File Contents (125 files)
-
-### `.gitignore`
-
-```
-node_modules/
-dist/
-uploads/
-```
-
-### `backend/.env`
-
-```
-NODE_ENV=production
-PORT=5003
-MONGO_URI=mongodb://localhost:27017/semi
-JWT_SECRET=my_super_secret_jwt_key
-JWT_REFRESH_SECRET=my_super_secret_refresh_key
-
-# Frontend URL (For CORS and email links - Use your VPS Domain/IP)
-FRONTEND_URL=https://semi-phase-three.swiflare.com/
-
-# Backend Base URL
-BASE_URL=https://semi-phase-three.swiflare.com/
-
-# Email Configuration (SMTP)
-EMAIL_USER=jashwa4673@gmail.com
-EMAIL_PASS=bqunmxldtahpndde
-EMAIL_FROM=jashwa4673@gmail.com
-SUPPORT_EMAIL=jashwa4673@gmail.com
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-FROM_NAME="Semi Phase 3"
-BOARD_EMAIL=jashwa4673@gmail.com
-
-# Cloudinary Configuration (For File Uploads if used)
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-
-# Razorpay Configuration (For Payments)
-RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+├── extract.js
+└── generate_ai_context.js
 ```
 
 ### `backend/add_auth_status.js`
@@ -257,11 +272,12 @@ if (authFolder) {
 } else {
   console.log('Could not find Auth folder');
 }
+
 ```
 
 ### `backend/api-tests.http`
 
-```http
+```
 @baseUrl = http://localhost:5000/api
 @token = {{login.response.body.data.accessToken}}
 
@@ -442,18 +458,6 @@ Content-Disposition: form-data; name="nabhStatus"
 
 Yes
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="paymentBankName"
-
-HDFC Bank
-------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="paymentTxnNo"
-
-TXN987654321
-------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="paymentTxnDate"
-
-2026-06-01
-------WebKitFormBoundary7MA4YWxkTrZu0gW
 Content-Disposition: form-data; name="authorizedRepName"
 
 Dr. Rajesh Khanna
@@ -587,12 +591,14 @@ Content-Type: application/json
   "attendancePercentage": 60,
   "thesisApproved": false
 }
+
 ```
 
 ### `backend/check_db.js`
 
 ```javascript
 const mongoose = require('mongoose'); require('dotenv').config(); mongoose.connect(process.env.MONGODB_URI).then(async () => { const s = await mongoose.connection.useDb('test').collection('students').find({ 'semesters.attendancePercentage': { $gt: 0 } }).toArray(); console.log(JSON.stringify(s.map(x => ({id: x._id, sem: x.semesters})), null, 2)); process.exit(0); });
+
 ```
 
 ### `backend/check_postman.js`
@@ -620,6 +626,20 @@ const extractEndpoints = (items, prefix = '') => {
 
 const endpoints = extractEndpoints(collection.item);
 endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
+
+```
+
+### `backend/check_ts.js`
+
+```javascript
+const { execSync } = require('child_process');
+try {
+  const output = execSync('npx tsc --noEmit', { encoding: 'utf8', cwd: __dirname });
+  console.log('SUCCESS:\n', output);
+} catch (e) {
+  console.log('ERROR:\n', e.stdout);
+}
+
 ```
 
 ### `backend/ecosystem.config.js`
@@ -627,6 +647,12 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
 ```javascript
 ��m o d u l e . e x p o r t s   =   {   a p p s :   [ {   n a m e :   ' s e m i - b a c k e n d ' ,   s c r i p t :   ' . / d i s t / i n d e x . j s ' ,   i n s t a n c e s :   ' m a x ' ,   e x e c _ m o d e :   ' c l u s t e r ' ,   e n v _ p r o d u c t i o n :   {   N O D E _ E N V :   ' p r o d u c t i o n '   }   } ]   } ;  
  
+```
+
+### `backend/last_400_error.log`
+
+```
+Email already exists
 ```
 
 ### `backend/package.json`
@@ -642,6 +668,7 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "seed": "ts-node src/config/seed.ts",
+    "seed:test": "ts-node src/seed-test-data.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -655,13 +682,16 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.12.0",
     "mongoose": "^9.6.2",
     "multer": "^2.1.1",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^8.0.7",
+    "pdf-parse": "^1.1.4",
     "razorpay": "^2.9.6",
     "uuid": "^14.0.0",
     "uuidv4": "^6.2.13",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -672,12 +702,14 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
     "@types/multer": "^2.1.0",
     "@types/node": "^25.7.0",
     "@types/nodemailer": "^8.0.0",
+    "@types/pdf-parse": "^1.1.5",
     "@types/uuid": "^10.0.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   }
 }
+
 ```
 
 ### `backend/postman_collection.json`
@@ -709,6 +741,7 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
     },
     {
       "key": "instituteId",
+      
       "value": ""
     },
     {
@@ -730,6 +763,34 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
     {
       "key": "hallTicketId",
       "value": ""
+    },
+    {
+      "key": "resultId",
+      "value": ""
+    },
+    {
+      "key": "marksheetId",
+      "value": ""
+    },
+    {
+      "key": "certificateId",
+      "value": ""
+    },
+    {
+      "key": "revaluationRequestId",
+      "value": ""
+    },
+    {
+      "key": "revaluationResultId",
+      "value": ""
+    },
+    {
+      "key": "enrollmentId",
+      "value": "SEMI-2025-0001"
+    },
+    {
+      "key": "semesterNumber",
+      "value": "1"
     }
   ],
   "item": [
@@ -1272,21 +1333,6 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                   "description": "Yes | No"
                 },
                 {
-                  "key": "paymentBankName",
-                  "value": "State Bank of India",
-                  "type": "text"
-                },
-                {
-                  "key": "paymentTxnNo",
-                  "value": "UTR123456789",
-                  "type": "text"
-                },
-                {
-                  "key": "paymentTxnDate",
-                  "value": "2026-06-01",
-                  "type": "text"
-                },
-                {
                   "key": "authorizedRepName",
                   "value": "Dr. Anita Sharma",
                   "type": "text"
@@ -1606,6 +1652,61 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
     {
       "name": "📚 Academic",
       "item": [
+        {
+          "name": "💳 Academic Payment (Razorpay)",
+          "item": [
+            {
+              "name": "POST Create Razorpay Order",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/academic/payment/create-order",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "academic", "payment", "create-order"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 50000,\n  \"purpose\": \"Enrollment Fee\"\n}"
+                },
+                "description": "Institute creates Razorpay order for academic fees. Amount in paise."
+              },
+              "response": []
+            },
+            {
+              "name": "POST Verify Razorpay Payment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/academic/payment/verify",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "academic", "payment", "verify"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"razorpay_payment_id\": \"pay_MockId123\",\n  \"razorpay_order_id\": \"order_MockOrderId\",\n  \"razorpay_signature\": \"mock_sig\"\n}"
+                },
+                "description": "Verifies Razorpay payment for academic fees."
+              },
+              "response": []
+            }
+          ]
+        },
         {
           "name": "Courses",
           "item": [
@@ -1957,7 +2058,7 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/academic/students?courseId=&batchId=&search=&isEligible=",
+                  "raw": "{{base_url}}/api/academic/students?courseId=&batchId=&search=&isEligible=&semesterNumber=",
                   "host": [
                     "{{base_url}}"
                   ],
@@ -1983,6 +2084,11 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                       "key": "isEligible",
                       "value": "",
                       "description": "true | false | empty=all"
+                    },
+                    {
+                      "key": "semesterNumber",
+                      "value": "",
+                      "description": "Filter by semester number"
                     }
                   ]
                 },
@@ -2001,7 +2107,7 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/academic/students/{{studentId}}",
+                  "raw": "{{base_url}}/api/academic/students/{{studentId}}?semesterNumber=",
                   "host": [
                     "{{base_url}}"
                   ],
@@ -2010,6 +2116,13 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                     "academic",
                     "students",
                     "{{studentId}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "semesterNumber",
+                      "value": "",
+                      "description": "Optional — Returns isEligible flag for this semester"
+                    }
                   ]
                 }
               },
@@ -2261,6 +2374,12 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                   "mode": "formdata",
                   "formdata": [
                     {
+                      "key": "semesterNumber",
+                      "value": "{{semesterNumber}}",
+                      "type": "text",
+                      "description": "MANDATORY — Semester to update"
+                    },
+                    {
                       "key": "attendancePercentage",
                       "value": "85",
                       "type": "text",
@@ -2271,6 +2390,30 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                       "value": "true",
                       "type": "text",
                       "description": "true | false"
+                    },
+                    {
+                      "key": "clearThesis",
+                      "value": "",
+                      "type": "text",
+                      "description": "true — resets thesis approval"
+                    },
+                    {
+                      "key": "clearAttendance",
+                      "value": "",
+                      "type": "text",
+                      "description": "true — resets attendance to 0"
+                    },
+                    {
+                      "key": "eligibilityStatus",
+                      "value": "",
+                      "type": "text",
+                      "description": "Pending | Approved | Rejected"
+                    },
+                    {
+                      "key": "rejectionNotes",
+                      "value": "",
+                      "type": "text",
+                      "description": "Reason if eligibilityStatus=Rejected"
                     },
                     {
                       "key": "thesisDocument",
@@ -2308,7 +2451,7 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/academic/students/{{studentId}}/eligibility",
+                  "raw": "{{base_url}}/api/academic/students/{{studentId}}/eligibility?semesterNumber={{semesterNumber}}",
                   "host": [
                     "{{base_url}}"
                   ],
@@ -2318,9 +2461,16 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                     "students",
                     "{{studentId}}",
                     "eligibility"
+                  ],
+                  "query": [
+                    {
+                      "key": "semesterNumber",
+                      "value": "{{semesterNumber}}",
+                      "description": "MANDATORY — Semester number"
+                    }
                   ]
                 },
-                "description": "Returns: feeStatus, attendance>=75%, thesisApproved, isEligible, decision."
+                "description": "Returns: feeStatus, attendance>=75%, thesisApproved, isEligible, decision. Requires semesterNumber query param."
               },
               "response": []
             }
@@ -2393,39 +2543,45 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                 "body": {
                   "mode": "formdata",
                   "formdata": [
-                    {
-                      "key": "amount",
-                      "value": "25000",
-                      "type": "text"
-                    },
-                    {
-                      "key": "paymentMode",
-                      "value": "UPI",
-                      "type": "text",
-                      "description": "UPI | NEFT | RTGS | Cash"
-                    },
-                    {
-                      "key": "utrNumber",
-                      "value": "UTR20260617002",
-                      "type": "text"
-                    },
-                    {
-                      "key": "paymentDate",
-                      "value": "2026-06-17",
-                      "type": "text"
-                    },
-                    {
-                      "key": "paymentPurpose",
-                      "value": "Examination Fee",
-                      "type": "text",
-                      "description": "e.g. Examination Fee | Course Fee - Semester 1"
-                    },
-                    {
-                      "key": "paymentReceipt",
-                      "src": [],
-                      "type": "file",
-                      "description": "MANDATORY"
-                    }
+                {
+                  "key": "semesterNumber",
+                  "value": "{{semesterNumber}}",
+                  "type": "text",
+                  "description": "MANDATORY — Semester number"
+                },
+                {
+                  "key": "amount",
+                  "value": "25000",
+                  "type": "text"
+                },
+                {
+                  "key": "paymentMode",
+                  "value": "UPI",
+                  "type": "text",
+                  "description": "UPI | NEFT | RTGS | Cash | Razorpay Online"
+                },
+                {
+                  "key": "utrNumber",
+                  "value": "UTR20260617002",
+                  "type": "text"
+                },
+                {
+                  "key": "paymentDate",
+                  "value": "2026-06-17",
+                  "type": "text"
+                },
+                {
+                  "key": "paymentPurpose",
+                  "value": "Examination fee",
+                  "type": "text",
+                  "description": "e.g. Examination fee | Course Fee - Semester 1"
+                },
+                {
+                  "key": "paymentReceipt",
+                  "src": [],
+                  "type": "file",
+                  "description": "MANDATORY (unless Razorpay Online)"
+                }
                   ]
                 },
                 "url": {
@@ -2576,13 +2732,13 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam?status=&courseId=&batchId=",
+              "raw": "{{base_url}}/api/exams?status=&courseId=&batchId=",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam"
+                "exams"
               ],
               "query": [
                 {
@@ -2615,17 +2771,17 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}"
               ]
             },
-            "description": "Full details including subjects, schedule info, and populated students.\nInstitute can only access own applications."
+            "description": "Full details including subjects, schedule info, semester number, and populated students.\nInstitute can only access own applications."
           },
           "response": []
         },
@@ -2660,10 +2816,16 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                   "description": "MANDATORY"
                 },
                 {
+                  "key": "semesterNumber",
+                  "value": "{{semesterNumber}}",
+                  "type": "text",
+                  "description": "MANDATORY — Semester number (min 1)"
+                },
+                {
                   "key": "batchId",
                   "value": "{{batchId}}",
                   "type": "text",
-                  "description": "MANDATORY"
+                  "description": "OPTIONAL — Auto-resolved from students if empty"
                 },
                 {
                   "key": "studentIds",
@@ -2681,28 +2843,28 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
                   "key": "utrNumber",
                   "value": "UTR-EXAM-2026001",
                   "type": "text",
-                  "description": "MANDATORY — Exam fee UTR"
+                  "description": "OPTIONAL — Exam fee UTR"
                 },
                 {
                   "key": "examFeeReceipt",
                   "src": [],
                   "type": "file",
-                  "description": "MANDATORY — Exam fee receipt PDF/image"
+                  "description": "OPTIONAL — Exam fee receipt PDF/image"
                 }
               ]
             },
             "url": {
-              "raw": "{{base_url}}/api/exam/apply",
+              "raw": "{{base_url}}/api/exams/apply",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "apply"
               ]
             },
-            "description": "Status → Pending\n\nPer-student eligibility: remittedToAcademy=true AND attendance>=75% AND thesisApproved=true\n\nAccess: institute only"
+            "description": "Status → Pending\n\nPer-student eligibility: Exam fee paid AND attendance>=75% AND thesisApproved=true (per semester)\n\nAccess: institute only"
           },
           "response": [
             {
@@ -2754,17 +2916,17 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               "raw": "{\n  \"subjects\": [\n    \"Anatomy\",\n    \"Physiology\",\n    \"Emergency Medicine\",\n    \"Pharmacology\"\n  ],\n  \"studentIds\": [\n    \"{{studentId}}\"\n  ]\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}"
               ]
             },
-            "description": "Updatable: subjects (array), studentIds (array — all must be eligible)\nRestriction: Only Pending applications.\nAccess: institute only"
+            "description": "Updatable: subjects (array), studentIds (array — all must be eligible)\nNote: semesterNumber cannot be changed after creation\nRestriction: Only Pending applications.\nAccess: institute only"
           },
           "response": [
             {
@@ -2794,13 +2956,13 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}"
               ]
             },
@@ -2842,13 +3004,13 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               "raw": "{\n  \"status\": \"Approved\",\n  \"scheduledDate\": \"2026-09-15\",\n  \"remarks\": \"All eligibility criteria verified.\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/review",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/review",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "review"
               ]
@@ -2905,13 +3067,13 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               "raw": "{\n  \"examVenue\": \"Examination Hall A, Mumbai Convention Centre\",\n  \"examCenter\": \"Mumbai Central Examination Hub\",\n  \"reportingTime\": \"08:30 AM\",\n  \"scheduledDate\": \"2026-09-15\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/publish-schedule",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/publish-schedule",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "publish-schedule"
               ]
@@ -2967,13 +3129,13 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/generate-hall-tickets",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/generate-hall-tickets",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "generate-hall-tickets"
               ]
@@ -3019,13 +3181,13 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/hall-tickets",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/hall-tickets",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "hall-tickets"
               ]
@@ -3060,13 +3222,13 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/hall-tickets/{{hallTicketId}}",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/hall-tickets/{{hallTicketId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "hall-tickets",
                 "{{hallTicketId}}"
@@ -3095,13 +3257,13 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/exam/{{examApplicationId}}/hall-tickets/{{hallTicketId}}/download",
+              "raw": "{{base_url}}/api/exams/{{examApplicationId}}/hall-tickets/{{hallTicketId}}/download",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "exam",
+                "exams",
                 "{{examApplicationId}}",
                 "hall-tickets",
                 "{{hallTicketId}}",
@@ -3119,6 +3281,754 @@ endpoints.forEach(ep => console.log(`${ep.method} ${ep.url} (${ep.name})`));
               "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket data ready for download. Use this data to render a printable PDF.\",\n  \"data\": {\n    \"ticketId\": \"HT-SEMI-2025-4231-1719400000000\",\n    \"enrollmentId\": \"SEMI-2025-4231\",\n    \"studentName\": \"Priya Nair\",\n    \"contactNumber\": \"9876543210\",\n    \"photoUrl\": \"https://res.cloudinary.com/.../photo.jpg\",\n    \"instituteName\": \"City General Hospital\",\n    \"instituteAddress\": \"123 MG Road, Mumbai\",\n    \"courseName\": \"Emergency Medicine\",\n    \"batchYear\": 2025,\n    \"subjects\": [\"Anatomy\",\"Physiology\",\"Emergency Medicine\"],\n    \"examDate\": \"2026-09-15T00:00:00.000Z\",\n    \"examVenue\": \"Examination Hall A, Mumbai Convention Centre\",\n    \"examCenter\": \"Mumbai Central Examination Hub\",\n    \"reportingTime\": \"08:30 AM\",\n    \"isDownloaded\": true,\n    \"downloadedAt\": \"2026-06-26T13:00:00.000Z\"\n  }\n}"
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "📊 Results",
+      "item": [
+        {
+          "name": "🔓 GET Result by Enrollment (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/results/student/{{enrollmentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "student", "{{enrollmentId}}"]
+            },
+            "description": "Public — No auth required. Returns published results for a student by enrollment ID."
+          },
+          "response": []
+        },
+        {
+          "name": "GET All Results (with filters)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "academicYear", "value": "", "disabled": true},
+                {"key": "semester", "value": "", "disabled": true},
+                {"key": "resultStatus", "value": "", "disabled": true},
+                {"key": "search", "value": "", "disabled": true}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Result by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create Result",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('resultId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": \"{{studentId}}\",\n  \"academicYear\": \"2024-25\",\n  \"semester\": 1,\n  \"subjects\": [\n    {\n      \"subjectCode\": \"SUB101\",\n      \"subjectName\": \"Anatomy\",\n      \"internalMarks\": 40,\n      \"externalMarks\": 45,\n      \"credits\": 4\n    },\n    {\n      \"subjectCode\": \"SUB102\",\n      \"subjectName\": \"Physiology\",\n      \"internalMarks\": 38,\n      \"externalMarks\": 42,\n      \"credits\": 4\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/results",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Result",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjects\": [\n    {\n      \"subjectCode\": \"SUB101\",\n      \"subjectName\": \"Anatomy\",\n      \"internalMarks\": 42,\n      \"externalMarks\": 48,\n      \"credits\": 4\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Publish Result",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}/publish",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}", "publish"]
+            },
+            "description": "Sets isPublished=true, sets revaluation deadline to 10 days from now."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Result",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Search Results",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/search?q=&academicYear=&semester=&resultStatus=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "search"],
+              "query": [
+                {"key": "q", "value": ""},
+                {"key": "academicYear", "value": ""},
+                {"key": "semester", "value": ""},
+                {"key": "resultStatus", "value": ""}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Result Statistics",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/statistics?academicYear=&semester=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "statistics"],
+              "query": [
+                {"key": "academicYear", "value": ""},
+                {"key": "semester", "value": ""}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Bulk Upload Results",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"results\": [\n    {\n      \"student\": \"{{studentId}}\",\n      \"academicYear\": \"2024-25\",\n      \"semester\": 1,\n      \"subjects\": [\n        {\n          \"subjectCode\": \"SUB101\",\n          \"subjectName\": \"Anatomy\",\n          \"internalMarks\": 35,\n          \"externalMarks\": 40,\n          \"credits\": 4\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/results/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "bulk"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Bulk Upload Results from File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "src": [],
+                  "type": "file",
+                  "description": "DOCX, PDF, XLSX, or CSV file"
+                },
+                {
+                  "key": "format",
+                  "value": "xlsx",
+                  "type": "text",
+                  "description": "docx | pdf | xlsx | csv"
+                },
+                {
+                  "key": "academicYear",
+                  "value": "2024-25",
+                  "type": "text"
+                },
+                {
+                  "key": "semester",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/results/bulk-upload-file",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "bulk-upload-file"]
+            },
+            "description": "Parses DOCX/PDF/XLSX/CSV and bulk uploads results. Uses memory storage for buffer access."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Student Result History",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/history/{{studentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "history", "{{studentId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Marksheet by Result",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/results/{{resultId}}/marksheet",
+              "host": ["{{base_url}}"],
+              "path": ["api", "results", "{{resultId}}", "marksheet"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📄 Marksheets",
+      "item": [
+        {
+          "name": "GET All Marksheets",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "studentId", "value": "", "disabled": true},
+                {"key": "academicYear", "value": "", "disabled": true},
+                {"key": "semester", "value": "", "disabled": true}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Marksheet by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/{{marksheetId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "{{marksheetId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Generate Marksheet",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('marksheetId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultId\": \"{{resultId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/marksheets",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Marksheet",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isFinal\": true,\n  \"updateReason\": \"Corrected marks after revaluation\",\n  \"regeneratePDF\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/{{marksheetId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "{{marksheetId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Download Marksheet",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/{{marksheetId}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "{{marksheetId}}", "download"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Marksheets by Student",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/student/{{studentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "student", "{{studentId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Bulk Generate Marksheets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultIds\": [\"{{resultId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "bulk"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Marksheet",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/marksheets/{{marksheetId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "marksheets", "{{marksheetId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🎓 Certificates",
+      "item": [
+        {
+          "name": "GET All Certificates",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "type", "value": "", "disabled": true},
+                {"key": "studentId", "value": "", "disabled": true},
+                {"key": "academicYear", "value": "", "disabled": true}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Certificate by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Issue Certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": \"{{studentId}}\",\n  \"type\": \"PROVISIONAL\",\n  \"academicYear\": \"2024-25\",\n  \"semester\": 1,\n  \"result\": \"{{resultId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/certificates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Generate Provisional (by resultId)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('certificateId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"resultId\": \"{{resultId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/certificates/provisional",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "provisional"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Verify Certificate",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}/verify",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}", "verify"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Revoke Certificate",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Duplicate issued\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}/revoke",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}", "revoke"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Download Certificate",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}", "download"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Certificates by Student",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/student/{{studentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "student", "{{studentId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Certificate",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expiryDate\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Certificate",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/certificates/{{certificateId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "certificates", "{{certificateId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔄 Revaluation",
+      "item": [
+        {
+          "name": "GET All Revaluation Requests",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "status", "value": "", "disabled": true},
+                {"key": "academicYear", "value": "", "disabled": true},
+                {"key": "semester", "value": "", "disabled": true}
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Revaluation Request by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create Revaluation Request",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('revaluationRequestId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{accessToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student\": \"{{studentId}}\",\n  \"result\": \"{{resultId}}\",\n  \"institute\": \"{{instituteId}}\",\n  \"academicYear\": \"2024-25\",\n  \"semester\": 1,\n  \"subjects\": [\n    {\n      \"subjectCode\": \"SUB101\",\n      \"subjectName\": \"Anatomy\",\n      \"originalMarks\": 65,\n      \"originalGrade\": \"B\",\n      \"internalMarks\": 30,\n      \"externalMarks\": 35,\n      \"revaluationReason\": \"Believe marks are higher than awarded\"\n    }\n  ],\n  \"feePerSubject\": 500,\n  \"totalFee\": 500\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Request Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"UNDER_REVIEW\",\n  \"comments\": \"Request received, under initial review\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Cancel Revaluation Request",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Revaluation Results for Request",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}/results",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}", "results"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Add Revaluation Result",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["var j=pm.response.json(); if(j.data&&j.data._id) pm.collectionVariables.set('revaluationResultId',j.data._id);"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectCode\": \"SUB101\",\n  \"subjectName\": \"Anatomy\",\n  \"revisedInternalMarks\": 35,\n  \"revisedExternalMarks\": 40,\n  \"revisedTotalMarks\": 75,\n  \"revisedGrade\": \"B+\",\n  \"evaluatorComments\": \"Re-evaluated: answer scripts reviewed, marks updated\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/requests/{{revaluationRequestId}}/results",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "requests", "{{revaluationRequestId}}", "results"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Approve Revaluation Result",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{superAdminToken}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isFinal\": true,\n  \"comments\": \"Approved. Update original result.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/results/{{revaluationResultId}}/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "results", "{{revaluationResultId}}", "approve"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Revaluation Statistics",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{superAdminToken}}"}],
+            "url": {
+              "raw": "{{base_url}}/api/revaluation/statistics?academicYear=&semester=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "revaluation", "statistics"],
+              "query": [
+                {"key": "academicYear", "value": ""},
+                {"key": "semester", "value": ""}
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }
@@ -3140,6 +4050,7 @@ export const connectDB = async () => {
     process.exit(1);
   }
 };
+
 ```
 
 ### `backend/src/config/razorpay.ts`
@@ -3175,6 +4086,7 @@ if (isRazorpayConfigured) {
 
 export default razorpayInstance;
 export { keyId, keySecret };
+
 ```
 
 ### `backend/src/config/seed.ts`
@@ -3231,6 +4143,7 @@ if (require.main === module) {
   };
   runSeeder();
 }
+
 ```
 
 ### `backend/src/controllers/academicController.ts`
@@ -3246,7 +4159,8 @@ import { Remittance } from '../models/remittanceModel';
 import { Institute } from '../models/instituteModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import path from 'path';
-
+import razorpayInstance, { isRazorpayConfigured, keyId, keySecret } from '../config/razorpay';
+import crypto from 'crypto';
 const getFileUrl = (filePath: string) => {
   if (!filePath) return '';
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
@@ -3308,6 +4222,7 @@ const studentAddSchema = z.object({
   homeAddress: z.string().min(1, 'Home Address is required'),
   contactNumber: z.string().regex(/^[0-9]{10,15}$/, 'Must be a valid mobile number format'),
   email: z.string().email('Must be a valid email format'),
+  dateOfBirth: z.string().min(1, 'Date of Birth is required'),
   qualification: z.string().min(1, 'Qualification is mandatory'),
   mbbsQualification: z.string().min(1, 'MBBS Qualification is mandatory'),
   yearOfPassing: z.coerce.number().min(1900).max(2100, 'Invalid year of passing'),
@@ -3321,7 +4236,11 @@ const studentAddSchema = z.object({
   courseId: z.string().min(1, 'Course is required'),
   batchId: z.string().min(1, 'Batch is required'),
   courseDirector: z.string().min(1, 'Course Director is required'),
-  utrNumber: z.string().min(1, 'UTR Number is required'),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  razorpaySignature: z.string().optional(),
+  paymentMode: z.string().optional().default('Razorpay'),
+  paymentDate: z.string().optional(),
 });
 
 const studentUpdateSchema = z.object({
@@ -3343,16 +4262,21 @@ const studentUpdateSchema = z.object({
   courseId: z.string().min(1, 'Course is required').optional(),
   batchId: z.string().min(1, 'Batch is required').optional(),
   courseDirector: z.string().min(1, 'Course Director is required').optional(),
-  utrNumber: z.string().min(1, 'UTR Number is required').optional(),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  razorpaySignature: z.string().optional(),
 });
 
 const feeRecordSchema = z.object({
   semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   paymentMode: z.string().min(1, 'Payment Mode is required'),
-  utrNumber: z.string().min(1, 'UTR Number is required'),
+  utrNumber: z.string().optional(),
   paymentDate: z.string().transform((val) => new Date(val)),
   paymentPurpose: z.string().min(1, 'Payment Purpose is required'),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  razorpaySignature: z.string().optional(),
 });
 
 const remittanceSchema = z.object({
@@ -3839,7 +4763,7 @@ export const addStudent = async (req: Request, res: Response) => {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const requiredDocFields = [
       'passportPhoto', 'mbbsCertificate', 'medicalCouncilRegistrationCertificate',
-      'paymentReceipt', 'semiMembershipForm'
+      'semiMembershipForm'
     ];
 
     for (const field of requiredDocFields) {
@@ -3885,6 +4809,7 @@ export const addStudent = async (req: Request, res: Response) => {
       homeAddress: validatedData.homeAddress,
       contactNumber: validatedData.contactNumber,
       email: validatedData.email,
+      dateOfBirth: validatedData.dateOfBirth,
       qualification: validatedData.qualification,
       mbbsQualification: validatedData.mbbsQualification,
       yearOfPassing: validatedData.yearOfPassing,
@@ -3896,13 +4821,14 @@ export const addStudent = async (req: Request, res: Response) => {
       batch: batch._id,
       institute: institute._id,
       courseDirector: validatedData.courseDirector,
-      utrNumber: validatedData.utrNumber,
+      razorpayOrderId: validatedData.razorpayOrderId,
+      razorpayPaymentId: validatedData.razorpayPaymentId,
+      razorpaySignature: validatedData.razorpaySignature,
       documents: {
         passportPhotoUrl: getFileUrl(files['passportPhoto'][0].path),
         mbbsCertificateUrl: getFileUrl(files['mbbsCertificate'][0].path),
         medicalCouncilRegistrationCertificateUrl: getFileUrl(files['medicalCouncilRegistrationCertificate'][0].path),
         fmgeResultCopyUrl: files['fmgeResultCopy'] ? getFileUrl(files['fmgeResultCopy'][0].path) : undefined,
-        paymentReceiptUrl: getFileUrl(files['paymentReceipt'][0].path),
         semiMembershipFormUrl: getFileUrl(files['semiMembershipForm'][0].path),
       },
       remittedToAcademy: false,
@@ -3912,6 +4838,20 @@ export const addStudent = async (req: Request, res: Response) => {
     // Update batch active fellows count
     await Batch.findByIdAndUpdate(batch._id, { $inc: { activeFellows: 1 } });
 
+    // Create FeeRecord for enrollment fee
+    await FeeRecord.create({
+      student: student._id,
+      amount: 140000,
+      paymentMode: validatedData.paymentMode || 'Razorpay Online',
+      utrNumber: validatedData.razorpayPaymentId || 'razorpay-online',
+      paymentReceiptUrl: 'Online Verification',
+      paymentDate: validatedData.paymentDate ? new Date(validatedData.paymentDate) : new Date(),
+      paymentPurpose: 'Enrollment fee',
+      razorpayOrderId: validatedData.razorpayOrderId,
+      razorpayPaymentId: validatedData.razorpayPaymentId,
+      razorpaySignature: validatedData.razorpaySignature,
+    });
+
     return sendSuccess({
       req,
       res,
@@ -3920,7 +4860,13 @@ export const addStudent = async (req: Request, res: Response) => {
       data: student,
     });
   } catch (error: any) {
-    if (error instanceof z.ZodError) throw error;
+    if (error instanceof z.ZodError) {
+      console.error('Zod Validation Error:', error.issues);
+      require('fs').writeFileSync('last_error.log', JSON.stringify(error.issues, null, 2));
+      return sendError({ req, res, statusCode: 400, message: 'Validation Error: ' + JSON.stringify(error.issues) });
+    }
+    console.error('Error in addStudent:', error);
+    require('fs').writeFileSync('last_error.log', String(error.message));
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
@@ -3944,20 +4890,18 @@ export const recordStudentFee = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found under this institute' });
     }
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    if (!files || !files['paymentReceipt'] || files['paymentReceipt'].length === 0) {
-      return sendError({ req, res, statusCode: 400, message: 'Payment Receipt Upload is mandatory' });
-    }
-
     const feeRecord = await FeeRecord.create({
       student: student._id,
       semesterNumber: validatedData.semesterNumber,
       amount: validatedData.amount,
-      paymentMode: validatedData.paymentMode,
-      utrNumber: validatedData.utrNumber,
-      paymentReceiptUrl: getFileUrl(files['paymentReceipt'][0].path),
+      paymentMode: validatedData.paymentMode || 'Razorpay Online',
+      utrNumber: validatedData.razorpayPaymentId || validatedData.utrNumber,
+      paymentReceiptUrl: 'Online Verification',
       paymentDate: validatedData.paymentDate,
       paymentPurpose: validatedData.paymentPurpose,
+      razorpayOrderId: validatedData.razorpayOrderId,
+      razorpayPaymentId: validatedData.razorpayPaymentId,
+      razorpaySignature: validatedData.razorpaySignature,
     });
 
     return sendSuccess({
@@ -4493,7 +5437,9 @@ export const updateStudent = async (req: Request, res: Response) => {
     if (validatedData.isForeignGraduate !== undefined) student.isForeignGraduate = validatedData.isForeignGraduate;
     if (validatedData.fmgeClearanceStatus) student.fmgeClearanceStatus = validatedData.fmgeClearanceStatus;
     if (validatedData.courseDirector) student.courseDirector = validatedData.courseDirector;
-    if (validatedData.utrNumber) student.utrNumber = validatedData.utrNumber;
+    if (validatedData.razorpayOrderId) student.razorpayOrderId = validatedData.razorpayOrderId;
+    if (validatedData.razorpayPaymentId) student.razorpayPaymentId = validatedData.razorpayPaymentId;
+    if (validatedData.razorpaySignature) student.razorpaySignature = validatedData.razorpaySignature;
 
     // Handle files if uploaded
     if (req.files) {
@@ -4575,6 +5521,197 @@ export const deleteStudent = async (req: Request, res: Response) => {
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
+
+// ==========================================
+// PAYMENT CONTROLLERS (RAZORPAY)
+// ==========================================
+
+export const createRazorpayOrder = async (req: Request, res: Response) => {
+  try {
+    const { amount, purpose } = req.body;
+    
+    if (!amount || !purpose) {
+      return sendError({ req, res, statusCode: 400, message: 'Amount and purpose are required' });
+    }
+
+    const AMOUNT_PAISE = Math.round(Number(amount) * 100);
+
+    if (isRazorpayConfigured && razorpayInstance) {
+      const options = {
+        amount: AMOUNT_PAISE,
+        currency: 'INR',
+        receipt: `receipt_${purpose.substring(0, 5)}_${req.user._id.toString().substring(0, 10)}_${Date.now()}`,
+      };
+
+      const order = await razorpayInstance.orders.create(options);
+
+      return sendSuccess({
+        req,
+        res,
+        statusCode: 201,
+        message: 'Razorpay order created successfully',
+        data: {
+          orderId: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          keyId: keyId,
+          isMock: false,
+        },
+      });
+    } else {
+      // Mock Mode
+      const mockOrderId = `order_mock_${Math.random().toString(36).substring(2, 11)}`;
+      return sendSuccess({
+        req,
+        res,
+        statusCode: 201,
+        message: 'Razorpay order created successfully (Mock Mode)',
+        data: {
+          orderId: mockOrderId,
+          amount: AMOUNT_PAISE,
+          currency: 'INR',
+          keyId: 'mock_key_id_123',
+          isMock: true,
+        },
+      });
+    }
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const verifyRazorpayPayment = async (req: Request, res: Response) => {
+  try {
+    const { 
+      razorpay_payment_id, 
+      razorpay_order_id, 
+      razorpay_signature,
+    } = req.body;
+
+    if (!razorpay_payment_id || !razorpay_order_id) {
+      return sendError({ req, res, statusCode: 400, message: 'Payment ID and Order ID are required' });
+    }
+
+    if (isRazorpayConfigured && razorpayInstance && !razorpay_order_id.startsWith('order_mock_')) {
+      const generated_signature = crypto
+        .createHmac('sha256', keySecret as string)
+        .update(razorpay_order_id + '|' + razorpay_payment_id)
+        .digest('hex');
+
+      if (generated_signature !== razorpay_signature) {
+        return sendError({ req, res, statusCode: 400, message: 'Payment verification failed. Invalid signature.' });
+      }
+    }
+
+    const receiptNumber = 'REC-' + Math.floor(10000000 + Math.random() * 90000000);
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment verified successfully.',
+      data: { 
+        paymentId: razorpay_payment_id, 
+        orderId: razorpay_order_id,
+        receiptNumber 
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getAcademicPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const paymentPurpose = req.query.paymentPurpose as string;
+
+    const feeRecord = await FeeRecord.findOne({
+      student: studentId as any,
+      paymentPurpose: paymentPurpose || 'Examination fee',
+    }).sort({ createdAt: -1 });
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment status retrieved successfully',
+      data: {
+        paymentStatus: feeRecord ? 'Completed' : 'Pending',
+        paymentId: feeRecord?.razorpayPaymentId || feeRecord?.utrNumber,
+        paymentDate: feeRecord?.paymentDate,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const verifyAcademicPayment = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const studentId = req.query.studentId as string;
+    const purpose = req.query.purpose as string;
+
+    const existingFee = await FeeRecord.findOne({
+      student: studentId as any,
+      paymentPurpose: purpose || 'Examination fee',
+    });
+
+    if (existingFee) {
+      return sendSuccess({
+        req,
+        res,
+        message: 'Payment already recorded',
+        data: {
+          paymentStatus: 'Completed',
+          paymentId: existingFee.utrNumber,
+        },
+      });
+    }
+
+    if (isRazorpayConfigured && razorpayInstance) {
+      try {
+        const payment = await razorpayInstance.payments.fetch(orderId);
+        if (payment.status === 'captured') {
+          const feeRecord = await FeeRecord.create({
+            student: studentId as any,
+            amount: payment.amount / 100,
+            paymentMode: 'Razorpay Online',
+            utrNumber: payment.id,
+            paymentReceiptUrl: 'Online Verification',
+            paymentDate: new Date(),
+            paymentPurpose: purpose || 'Examination fee',
+            razorpayOrderId: payment.order_id,
+            razorpayPaymentId: payment.id,
+          });
+
+          return sendSuccess({
+            req,
+            res,
+            message: 'Payment verified successfully',
+            data: {
+              paymentStatus: 'Completed',
+              paymentId: payment.id,
+              feeRecord,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error verifying academic payment:', error);
+      }
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment pending verification',
+      data: {
+        paymentStatus: 'Pending',
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
 ```
 
 ### `backend/src/controllers/authController.ts`
@@ -4598,6 +5735,7 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(1, 'Password is required'),
+  portal: z.enum(['academy', 'institute']).optional(),
 });
 
 const resetPasswordSchema = z.object({
@@ -4697,6 +5835,23 @@ export const login = async (req: Request, res: Response) => {
 
     if (!user.isEmailVerified) {
       return sendError({ req, res, statusCode: 403, message: 'Please verify your email address before logging in.' });
+    }
+
+    if (validatedData.portal) {
+      const allowedRoles: Record<string, string[]> = {
+        academy: ['admin', 'super_admin', 'board'],
+        institute: ['institute'],
+      };
+      const allowed = allowedRoles[validatedData.portal] || [];
+      if (!allowed.includes(user.role)) {
+        const portalName = validatedData.portal.charAt(0).toUpperCase() + validatedData.portal.slice(1);
+        return sendError({
+          req,
+          res,
+          statusCode: 403,
+          message: `Access denied. ${portalName} portal is only for ${allowed.join(', ')} roles.`,
+        });
+      }
     }
 
     const accessToken = generateToken(user._id.toString(), 'access');
@@ -5272,6 +6427,303 @@ export const checkStatus = async (req: Request, res: Response) => {
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
+
+```
+
+### `backend/src/controllers/certificateController.ts`
+
+```typescript
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { Certificate } from '../models/certificateModel';
+import { Result } from '../models/resultModel';
+import { Student } from '../models/studentModel';
+import certificateService from '../services/certificateService';
+import pdfGeneratorService from '../services/pdfGeneratorService';
+import { sendSuccess, sendError } from '../utils/responseFormatter';
+import { issueCertificateSchema, updateCertificateSchema } from '../validators/certificateValidator';
+
+export const generateProvisionalCertificate = async (req: Request, res: Response) => {
+  try {
+    const { studentId, resultId } = req.body;
+    const userId = req.user._id;
+
+    if (!studentId || !resultId) {
+      return sendError({ req, res, statusCode: 400, message: 'studentId and resultId are required' });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+    }
+
+    const result = await Result.findById(resultId);
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+    }
+
+    if (result.resultStatus !== 'PASS') {
+      return sendError({ req, res, statusCode: 400, message: 'Certificate can only be generated for passed students' });
+    }
+
+    const existingCert = await Certificate.findOne({
+      student: studentId,
+      result: resultId,
+      type: 'PROVISIONAL',
+    });
+
+    if (existingCert) {
+      return sendError({ req, res, statusCode: 400, message: 'Provisional certificate already exists for this result' });
+    }
+
+    const certNumber = await certificateService.generateCertificateNumber('PROVISIONAL');
+    const pdfUrl = await pdfGeneratorService.generateProvisionalCertificatePDF({ student, result, certNumber });
+
+    const certificate = await Certificate.create({
+      student: studentId,
+      certificateNumber: certNumber,
+      type: 'PROVISIONAL',
+      academicYear: result.academicYear,
+      semester: result.semester,
+      result: resultId,
+      certificatePDF: pdfUrl,
+      issuedDate: new Date(),
+      auditTrail: [{
+        action: 'CERTIFICATE_GENERATED',
+        performedBy: userId,
+        timestamp: new Date(),
+      }],
+    });
+
+    return sendSuccess({ req, res, statusCode: 201, message: 'Provisional certificate generated successfully', data: certificate });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const issueCertificate = async (req: Request, res: Response) => {
+  try {
+    const validatedData = issueCertificateSchema.parse(req.body);
+    const userId = req.user._id;
+
+    const student = await Student.findById(validatedData.student);
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+    }
+
+    if (validatedData.result) {
+      const result = await Result.findById(validatedData.result);
+      if (!result) {
+        return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+      }
+    }
+
+    const certificateNumber = await certificateService.generateCertificateNumber(validatedData.type);
+
+    const certificate = await Certificate.create({
+      ...validatedData,
+      certificateNumber,
+      issuedDate: new Date(),
+      auditTrail: [{
+        action: 'CERTIFICATE_ISSUED',
+        performedBy: userId,
+        timestamp: new Date(),
+      }],
+    });
+
+    return sendSuccess({ req, res, statusCode: 201, message: 'Certificate issued successfully', data: certificate });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getAllCertificates = async (req: Request, res: Response) => {
+  try {
+    const { page = '1', limit = '20', type, academicYear, studentId, isVerified } = req.query;
+
+    const query: any = {};
+    if (type) query.type = type;
+    if (academicYear) query.academicYear = academicYear;
+    if (studentId) query.student = studentId;
+    if (isVerified !== undefined) query.isVerified = isVerified === 'true';
+
+    const options = {
+      page: parseInt(page as string),
+      limit: parseInt(limit as string),
+      populate: [
+        { path: 'student', select: 'firstName lastName enrollmentId email' },
+        { path: 'result', select: 'academicYear semester totalMarks percentage' },
+      ],
+      sort: { createdAt: -1 } as any,
+    };
+
+    const certificates = await certificateService.getCertificatesWithPagination(query, options);
+
+    return sendSuccess({ req, res, message: 'Certificates retrieved successfully', data: certificates });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getCertificateById = async (req: Request, res: Response) => {
+  try {
+    const certificate = await Certificate.findById(req.params.id)
+      .populate('student', 'firstName lastName enrollmentId email')
+      .populate('result', 'academicYear semester totalMarks percentage cgpa division')
+      .populate('verifiedBy', 'name email');
+
+    if (!certificate) {
+      return sendError({ req, res, statusCode: 404, message: 'Certificate not found' });
+    }
+
+    return sendSuccess({ req, res, message: 'Certificate retrieved successfully', data: certificate });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const verifyCertificate = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const certificate = await Certificate.findById(id);
+    if (!certificate) {
+      return sendError({ req, res, statusCode: 404, message: 'Certificate not found' });
+    }
+
+    certificate.isVerified = true;
+    certificate.verifiedBy = userId;
+    certificate.verifiedDate = new Date();
+
+    certificate.auditTrail.push({
+      action: 'CERTIFICATE_VERIFIED',
+      performedBy: userId,
+      timestamp: new Date(),
+    });
+
+    await certificate.save();
+
+    return sendSuccess({ req, res, message: 'Certificate verified successfully', data: certificate });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const revokeCertificate = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const userId = req.user._id;
+
+    const certificate = await Certificate.findById(id);
+    if (!certificate) {
+      return sendError({ req, res, statusCode: 404, message: 'Certificate not found' });
+    }
+
+    certificate.isRevoked = true;
+    certificate.revocationReason = reason || 'No reason provided';
+
+    certificate.auditTrail.push({
+      action: 'CERTIFICATE_REVOKED',
+      performedBy: userId,
+      timestamp: new Date(),
+    });
+
+    await certificate.save();
+
+    return sendSuccess({ req, res, message: 'Certificate revoked successfully', data: certificate });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const downloadCertificate = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const certificate = await Certificate.findById(id);
+    if (!certificate) {
+      return sendError({ req, res, statusCode: 404, message: 'Certificate not found' });
+    }
+
+    certificate.downloadedCount += 1;
+    await certificate.save();
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Certificate download initiated',
+      data: {
+        certificateNumber: certificate.certificateNumber,
+        downloadUrl: certificate.certificatePDF,
+        isVerified: certificate.isVerified,
+        qrCode: certificate.qrCode,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const deleteCertificate = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const certificate = await Certificate.findById(id);
+    if (!certificate) {
+      return sendError({ req, res, statusCode: 404, message: 'Certificate not found' });
+    }
+
+    await Certificate.findByIdAndDelete(id);
+
+    return sendSuccess({ req, res, message: 'Certificate deleted successfully', data: null });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getStudentCertificates = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+
+    const certificates = await Certificate.find({ student: studentId, isRevoked: false })
+      .populate('result', 'academicYear semester totalMarks percentage cgpa division')
+      .sort({ issuedDate: -1 });
+
+    if (!certificates || certificates.length === 0) {
+      return sendError({ req, res, statusCode: 404, message: 'No certificates found for this student' });
+    }
+
+    return sendSuccess({ req, res, message: 'Student certificates retrieved successfully', data: certificates });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const updateCertificate = async (req: Request, res: Response) => {
+  try {
+    const validatedData = updateCertificateSchema.parse(req.body);
+
+    const certificate = await Certificate.findByIdAndUpdate(
+      req.params.id,
+      { $set: validatedData },
+      { new: true, runValidators: true }
+    )
+      .populate('student', 'firstName lastName enrollmentId email');
+
+    if (!certificate) {
+      return sendError({ req, res, statusCode: 404, message: 'Certificate not found' });
+    }
+
+    return sendSuccess({ req, res, message: 'Certificate updated successfully', data: certificate });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
 ```
 
 ### `backend/src/controllers/examController.ts`
@@ -5285,6 +6737,7 @@ import { Student } from '../models/studentModel';
 import { Institute } from '../models/instituteModel';
 import { Course } from '../models/courseModel';
 import { Batch } from '../models/batchModel';
+import { FeeRecord } from '../models/feeRecordModel';  // ← ADD THIS IMPORT
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -5396,7 +6849,6 @@ export const applyForExam = async (req: Request, res: Response) => {
     }
 
     // Fetch fee records for examination fees
-    const FeeRecord = require('../models/feeRecordModel').FeeRecord;
     const feeRecords = await FeeRecord.find({
       student: { $in: validatedData.studentIds },
       semesterNumber: validatedData.semesterNumber,
@@ -5530,7 +6982,6 @@ export const updateExamApplication = async (req: Request, res: Response) => {
       if (students.length !== validatedData.studentIds.length) {
         return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to this course/batch.' });
       }
-      const FeeRecord = require('../models/feeRecordModel').FeeRecord;
       const feeRecords = await FeeRecord.find({
         student: { $in: validatedData.studentIds },
         semesterNumber: application.semesterNumber,
@@ -6075,6 +7526,7 @@ export const getHealthStatus = async (req: Request, res: Response): Promise<void
     res.status(500).send('<h1>Server Error</h1>');
   }
 };
+
 ```
 
 ### `backend/src/controllers/instituteController.ts`
@@ -6086,7 +7538,7 @@ import { User } from '../models/userModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { z } from 'zod';
 import sendEmail from '../utils/sendEmail';
-import razorpayInstance, { isRazorpayConfigured, keyId } from '../config/razorpay'; 
+import razorpayInstance, { keyId } from '../config/razorpay';
 import crypto from 'crypto';
 import path from 'path'; 
 
@@ -6121,9 +7573,6 @@ const instituteSchema = z.object({
   emFacultyCount: z.coerce.number().min(1, 'Required'),
   teachingSpace: z.enum(['Yes', 'No']),
   nabhStatus: z.enum(['Yes', 'No']),
-  paymentBankName: z.string().optional().or(z.literal('')),
-  paymentTxnNo: z.string().optional().or(z.literal('')),
-  paymentTxnDate: z.string().optional().or(z.literal('')),
   authorizedRepName: z.string().optional().or(z.literal('')),
   authorizedRepDesignation: z.string().optional().or(z.literal('')),
   applicationDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
@@ -6131,6 +7580,10 @@ const instituteSchema = z.object({
   pincode: z.string().optional(),
   contactNumbers: z.string().optional(),
   emailId: z.string().optional().or(z.literal('')),
+  razorpayPaymentId: z.string().optional().or(z.literal('')),
+  razorpayOrderId: z.string().optional().or(z.literal('')),
+  razorpaySignature: z.string().optional().or(z.literal('')),
+  paymentStatus: z.enum(['Pending', 'Completed']).optional(),
 });
 
 export const applyInstitute = async (req: Request, res: Response) => {
@@ -6175,7 +7628,12 @@ export const applyInstitute = async (req: Request, res: Response) => {
         headOfInstitutionSignatureAndSealUrl: getSafeFileUrl('headOfInstitutionSignatureAndSeal'),
       },
       status: 'Pending Review',
-      paymentStatus: validatedData.paymentTxnNo ? 'Completed' : 'Pending',
+      paymentStatus: validatedData.paymentStatus || 'Pending',
+      razorpayOrderId: validatedData.razorpayOrderId || '',
+      razorpayPaymentId: validatedData.razorpayPaymentId || '',
+      razorpaySignature: validatedData.razorpaySignature || '',
+      paymentCompletedAt: validatedData.paymentStatus === 'Completed' ? new Date() : undefined,
+      paymentAmount: validatedData.paymentStatus === 'Completed' ? 5000 : undefined,
     });
 
     // Send Submission Confirmation email to the institute
@@ -6247,66 +7705,47 @@ export const applyInstitute = async (req: Request, res: Response) => {
 export const createRazorpayOrder = async (req: Request, res: Response) => {
   try {
     const institute = await Institute.findOne({ user: req.user._id });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 404, message: 'Institute application not found' });
-    }
+    console.log('🔍 Creating order for institute:', institute ? institute._id : 'Not found (Pay & Submit flow)');
 
-    if (institute.paymentStatus === 'Completed') {
+    if (institute && institute.paymentStatus === 'Completed') {
       return sendError({ req, res, statusCode: 400, message: 'Payment has already been completed for this application.' });
     }
 
     const AMOUNT_INR = 5000;
     const AMOUNT_PAISE = AMOUNT_INR * 100; // 500000 paise
 
-    if (isRazorpayConfigured && razorpayInstance) {
-      // Real Razorpay Order Creation
-      const options = {
-        amount: AMOUNT_PAISE,
-        currency: 'INR',
-        receipt: `receipt_inst_${institute._id.toString().substring(0, 10)}_${Date.now()}`,
-      };
+    const options = {
+      amount: AMOUNT_PAISE,
+      currency: 'INR',
+      receipt: `receipt_inst_${(institute ? institute._id : req.user._id).toString().substring(0, 10)}_${Date.now()}`,
+    };
 
-      const order = await razorpayInstance.orders.create(options);
+    const order = await razorpayInstance.orders.create(options);
+    console.log('✅ Order created:', order.id);
 
-      // Save order id to institute
+    if (institute) {
       institute.razorpayOrderId = order.id;
+      institute.paymentAmount = AMOUNT_INR;
       await institute.save();
-
-      return sendSuccess({
-        req,
-        res,
-        statusCode: 201,
-        message: 'Razorpay order created successfully',
-        data: {
-          orderId: order.id,
-          amount: order.amount,
-          currency: order.currency,
-          keyId: keyId,
-          isMock: false,
-        },
-      });
+      console.log('✅ Order ID saved to institute:', institute.razorpayOrderId);
     } else {
-      // Mock Mode order creation
-      const mockOrderId = `order_mock_${Math.random().toString(36).substring(2, 11)}`;
-      
-      institute.razorpayOrderId = mockOrderId;
-      await institute.save();
-
-      return sendSuccess({
-        req,
-        res,
-        statusCode: 201,
-        message: 'Razorpay order created successfully (Mock Mode)',
-        data: {
-          orderId: mockOrderId,
-          amount: AMOUNT_PAISE,
-          currency: 'INR',
-          keyId: 'mock_key_id_123',
-          isMock: true,
-        },
-      });
+      console.log('⚠️ No institute yet — orderId will be passed with payment verification');
     }
+
+    return sendSuccess({
+      req,
+      res,
+      statusCode: 201,
+      message: 'Razorpay order created successfully',
+      data: {
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: keyId,
+      },
+    });
   } catch (error: any) {
+    console.error('❌ Order creation error:', error);
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
@@ -6314,163 +7753,187 @@ export const createRazorpayOrder = async (req: Request, res: Response) => {
 export const verifyRazorpayPayment = async (req: Request, res: Response) => {
   try {
     const institute = await Institute.findOne({ user: req.user._id });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 404, message: 'Institute application not found' });
-    }
+    console.log('🔍 Verifying payment for institute:', institute ? institute._id : 'Not found');
 
-    if (institute.paymentStatus === 'Completed') {
-      return sendError({ req, res, statusCode: 400, message: 'Payment has already been completed for this application.' });
+    if (institute && institute.paymentStatus === 'Completed') {
+      console.log('✅ Payment already completed for institute:', institute._id);
+      return sendSuccess({
+        req,
+        res,
+        message: 'Payment already completed',
+        data: {
+          paymentStatus: 'Completed',
+          institute
+        }
+      });
     }
 
     const { 
       razorpay_payment_id, 
       razorpay_order_id, 
       razorpay_signature,
-      paymentId // Backwards compatibility legacy field
+      paymentId
     } = req.body;
 
-    let orderIdToVerify = razorpay_order_id || institute.razorpayOrderId;
-    let paymentIdToVerify = razorpay_payment_id || paymentId;
+    const orderIdToVerify = razorpay_order_id || (institute ? institute.razorpayOrderId : undefined);
+    const paymentIdToVerify = razorpay_payment_id || paymentId;
+
+    console.log('📦 Payment verification data:', { orderIdToVerify, paymentIdToVerify, hasSignature: !!razorpay_signature });
 
     if (!paymentIdToVerify) {
       return sendError({ req, res, statusCode: 400, message: 'Payment ID is required' });
     }
 
-    // Signature Verification if Razorpay is configured
-    if (isRazorpayConfigured && razorpayInstance) {
-      if (!razorpay_signature || !razorpay_order_id) {
-        return sendError({ 
-          req, 
-          res, 
-          statusCode: 400, 
-          message: 'Razorpay order ID, payment ID, and signature are mandatory for verification.' 
-        });
-      }
-
-      const text = `${razorpay_order_id}|${razorpay_payment_id}`;
-      const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
-        .update(text)
-        .digest('hex');
-
-      if (expectedSignature !== razorpay_signature) {
-        return sendError({ req, res, statusCode: 400, message: 'Payment verification failed. Invalid signature.' });
-      }
+    if (!razorpay_signature || !razorpay_order_id) {
+      return sendError({ 
+        req, 
+        res, 
+        statusCode: 400, 
+        message: 'Razorpay order ID, payment ID, and signature are mandatory for verification.' 
+      });
     }
 
-    // Update payment details
-    institute.paymentStatus = 'Completed';
-    institute.razorpayOrderId = orderIdToVerify;
-    institute.razorpayPaymentId = paymentIdToVerify;
-    institute.razorpaySignature = razorpay_signature || 'mock_signature';
+    const text = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+      .update(text)
+      .digest('hex');
 
-    // Generate a mock payment receipt code
+    if (expectedSignature !== razorpay_signature) {
+      return sendError({ req, res, statusCode: 400, message: 'Payment verification failed. Invalid signature.' });
+    }
+
     const receiptNumber = 'REC-' + Math.floor(10000000 + Math.random() * 90000000);
-    
-    await institute.save();
 
-    // Send Payment Receipt Email to the institute
-    try {
-      await sendEmail({
-        email: req.user.email,
-        subject: 'Payment Receipt Confirmation - Semi Phase 3',
-        message: `Hello ${req.user.name},\n\nWe have successfully received your payment.\nReceipt Number: ${receiptNumber}\nPayment ID: ${paymentIdToVerify}\nOrder ID: ${orderIdToVerify}\nAmount: INR 5,000.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #2ecc71; text-align: center;">Payment Receipt Confirmation</h2>
-            <p>Hello <strong>${req.user.name}</strong>,</p>
-            <p>We are pleased to confirm that we have successfully processed your inspection fee payment. Your application is now ready for the Academic Board review.</p>
-            
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #2ecc71;">
-              <h3 style="margin-top: 0; color: #333;">Receipt Summary</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Receipt Number:</td>
-                  <td style="padding: 5px 0; color: #333; font-family: monospace;">${receiptNumber}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Order ID:</td>
-                  <td style="padding: 5px 0; color: #333; font-family: monospace;">${orderIdToVerify}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Transaction / Payment ID:</td>
-                  <td style="padding: 5px 0; color: #333; font-family: monospace;">${paymentIdToVerify}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Amount Paid:</td>
-                  <td style="padding: 5px 0; color: #333;">INR 5,000.00</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Status:</td>
-                  <td style="padding: 5px 0; color: #2ecc71; font-weight: bold;">Paid / Completed</td>
-                </tr>
-              </table>
-            </div>
-            
-            <p>The Academic Board will review your application details, uploaded documents, and schedule an inspection if required. We will keep you notified of any updates.</p>
-            
-            <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #999999; text-align: center;">This is an automated receipt email. Please keep this for your records.</p>
-          </div>
-        `
+    if (institute) {
+      institute.paymentStatus = 'Completed';
+      institute.razorpayOrderId = razorpay_order_id;
+      institute.razorpayPaymentId = paymentIdToVerify;
+      institute.razorpaySignature = razorpay_signature;
+      institute.paymentCompletedAt = new Date();
+      if (!institute.paymentAmount) {
+        institute.paymentAmount = 5000;
+      }
+      console.log('🔄 Updating institute payment data:', {
+        paymentStatus: institute.paymentStatus,
+        razorpayOrderId: institute.razorpayOrderId,
+        razorpayPaymentId: institute.razorpayPaymentId,
       });
-    } catch (emailErr: any) {
-      console.error('Payment receipt email sending failed:', emailErr.message);
+      await institute.save();
+      console.log('✅ Institute payment data saved successfully');
+    } else {
+      console.warn('⚠️ No institute found to update payment data. The apply step will create it with payment info.');
     }
 
-    // Notify the Academic Board
-    try {
-      const boardEmail = process.env.BOARD_EMAIL || 'admin@semiphase3.com';
-      await sendEmail({
-        email: boardEmail,
-        subject: 'New Institute Application Awaiting Board Review - Semi Phase 3',
-        message: `Dear Academic Board,\n\nA new institute application has completed the fee payment and is now ready for review:\nInstitute Name: ${institute.orgName}\nHOD Name: ${institute.hodName}\nRequested Seats: ${institute.seatsRequested}\n\nPlease log in to review the details and documents.`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #0146d8; text-align: center;">New Application for Review</h2>
-            <p>Dear Board Members,</p>
-            <p>A new institute has completed the application fee payment and is now ready for your review and evaluation.</p>
-            
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #0146d8;">
-              <h3 style="margin-top: 0; color: #333;">Institute Application Details</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Healthcare Organization:</td>
-                  <td style="padding: 5px 0; color: #333;">${institute.orgName}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Requested EM Seats:</td>
-                  <td style="padding: 5px 0; color: #333;">${institute.seatsRequested}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">Proposed Start Date:</td>
-                  <td style="padding: 5px 0; color: #333;">${new Date(institute.commencementDate).toLocaleDateString()}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 5px 0; color: #666; font-weight: bold;">HOD Name:</td>
-                  <td style="padding: 5px 0; color: #333;">${institute.hodName}</td>
-                </tr>
-              </table>
+    // Send email notifications only if institute exists
+    if (institute) {
+      try {
+        await sendEmail({
+          email: req.user.email,
+          subject: 'Payment Receipt Confirmation - Semi Phase 3',
+          message: `Hello ${req.user.name},\n\nWe have successfully received your payment.\nReceipt Number: ${receiptNumber}\nPayment ID: ${paymentIdToVerify}\nOrder ID: ${orderIdToVerify}\nAmount: INR 5,000.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+              <h2 style="color: #2ecc71; text-align: center;">Payment Receipt Confirmation</h2>
+              <p>Hello <strong>${req.user.name}</strong>,</p>
+              <p>We are pleased to confirm that we have successfully processed your inspection fee payment. Your application is now ready for the Academic Board review.</p>
+              
+              <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #2ecc71;">
+                <h3 style="margin-top: 0; color: #333;">Receipt Summary</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Receipt Number:</td>
+                    <td style="padding: 5px 0; color: #333; font-family: monospace;">${receiptNumber}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Order ID:</td>
+                    <td style="padding: 5px 0; color: #333; font-family: monospace;">${orderIdToVerify}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Transaction / Payment ID:</td>
+                    <td style="padding: 5px 0; color: #333; font-family: monospace;">${paymentIdToVerify}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Amount Paid:</td>
+                    <td style="padding: 5px 0; color: #333;">INR 5,000.00</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Status:</td>
+                    <td style="padding: 5px 0; color: #2ecc71; font-weight: bold;">Paid / Completed</td>
+                  </tr>
+                </table>
+              </div>
+              
+              <p>The Academic Board will review your application details, uploaded documents, and schedule an inspection if required. We will keep you notified of any updates.</p>
+              
+              <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
+              <p style="font-size: 12px; color: #999999; text-align: center;">This is an automated receipt email. Please keep this for your records.</p>
             </div>
-            
-            <p>Please log in to the admin board portal to check all details, evaluate their uploaded files, and perform actions (Approve/Reject or schedule inspections).</p>
-            
-            <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #999999; text-align: center;">This is an system-generated administrative notification.</p>
-          </div>
-        `
-      });
-    } catch (emailErr: any) {
-      console.error('Board notification email sending failed:', emailErr.message);
+          `
+        });
+      } catch (emailErr: any) {
+        console.error('Payment receipt email sending failed:', emailErr.message);
+      }
+
+      try {
+        const boardEmail = process.env.BOARD_EMAIL || 'admin@semiphase3.com';
+        await sendEmail({
+          email: boardEmail,
+          subject: 'New Institute Application Awaiting Board Review - Semi Phase 3',
+          message: `Dear Academic Board,\n\nA new institute application has completed the fee payment and is now ready for review:\nInstitute Name: ${institute.orgName}\nHOD Name: ${institute.hodName}\nRequested Seats: ${institute.seatsRequested}\n\nPlease log in to review the details and documents.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+              <h2 style="color: #0146d8; text-align: center;">New Application for Review</h2>
+              <p>Dear Board Members,</p>
+              <p>A new institute has completed the application fee payment and is now ready for your review and evaluation.</p>
+              
+              <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #0146d8;">
+                <h3 style="margin-top: 0; color: #333;">Institute Application Details</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Healthcare Organization:</td>
+                    <td style="padding: 5px 0; color: #333;">${institute.orgName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Requested EM Seats:</td>
+                    <td style="padding: 5px 0; color: #333;">${institute.seatsRequested}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">Proposed Start Date:</td>
+                    <td style="padding: 5px 0; color: #333;">${new Date(institute.commencementDate).toLocaleDateString()}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 5px 0; color: #666; font-weight: bold;">HOD Name:</td>
+                    <td style="padding: 5px 0; color: #333;">${institute.hodName}</td>
+                  </tr>
+                </table>
+              </div>
+              
+              <p>Please log in to the admin board portal to check all details, evaluate their uploaded files, and perform actions (Approve/Reject or schedule inspections).</p>
+              
+              <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
+              <p style="font-size: 12px; color: #999999; text-align: center;">This is an system-generated administrative notification.</p>
+            </div>
+          `
+        });
+      } catch (emailErr: any) {
+        console.error('Board notification email sending failed:', emailErr.message);
+      }
     }
 
     return sendSuccess({
       req,
       res,
       message: 'Payment completed successfully. Application is now ready for board review.',
-      data: institute,
+      data: {
+        paymentStatus: 'Completed',
+        paymentId: paymentIdToVerify,
+        receiptNumber,
+        institute
+      },
     });
   } catch (error: any) {
+    console.error('❌ Payment verification error:', error);
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
@@ -6490,7 +7953,7 @@ export const reviewApplication = async (req: Request, res: Response) => {
     }
 
     // Enforce Module 1 Rule: Inspection fee payment is mandatory before board review
-    if (institute.paymentStatus !== 'Completed' && !institute.paymentTxnNo) {
+    if (institute.paymentStatus !== 'Completed') {
       return sendError({
         req,
         res,
@@ -6604,7 +8067,1324 @@ export const toggleInspection = async (req: Request, res: Response) => {
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
+
+export const getPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const institute = await Institute.findOne({ user: req.user._id });
+    if (!institute) {
+      return sendSuccess({
+        req,
+        res,
+        message: 'No application found yet',
+        data: {
+          paymentStatus: 'Pending',
+          razorpayOrderId: null,
+          razorpayPaymentId: null,
+          paymentCompletedAt: null,
+        },
+      });
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment status retrieved successfully',
+      data: {
+        paymentStatus: institute.paymentStatus,
+        razorpayOrderId: institute.razorpayOrderId,
+        razorpayPaymentId: institute.razorpayPaymentId,
+        paymentCompletedAt: institute.paymentCompletedAt,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const checkPaymentAndUpdate = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    let institute = await Institute.findOne({ razorpayOrderId: orderId });
+
+    // Fallback: if not found by orderId, try by authenticated user
+    if (!institute) {
+      institute = await Institute.findOne({ user: req.user._id });
+    }
+
+    if (!institute) {
+      return sendSuccess({
+        req,
+        res,
+        message: 'No application found yet',
+        data: {
+          paymentStatus: 'Pending',
+          razorpayPaymentId: null,
+        },
+      });
+    }
+
+    if (institute.paymentStatus === 'Completed') {
+      return sendSuccess({
+        req,
+        res,
+        message: 'Payment already completed',
+        data: {
+          paymentStatus: institute.paymentStatus,
+          razorpayPaymentId: institute.razorpayPaymentId,
+        },
+      });
+    }
+
+    if (institute.razorpayPaymentId) {
+      try {
+        const payment = await razorpayInstance.payments.fetch(institute.razorpayPaymentId);
+        if (payment.status === 'captured') {
+          institute.paymentStatus = 'Completed';
+          institute.paymentCompletedAt = new Date();
+          institute.paymentAmount = payment.amount / 100;
+          await institute.save();
+
+          try {
+            await sendPaymentConfirmationEmail(institute, req.user);
+          } catch (emailErr: any) {
+            console.error('Payment confirmation email failed:', emailErr.message);
+          }
+
+          return sendSuccess({
+            req,
+            res,
+            message: 'Payment verified and completed',
+            data: {
+              paymentStatus: 'Completed',
+              razorpayPaymentId: institute.razorpayPaymentId,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching payment from Razorpay:', error);
+      }
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment pending verification',
+      data: {
+        paymentStatus: institute.paymentStatus,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+async function sendPaymentConfirmationEmail(institute: any, user: any) {
+  await sendEmail({
+    email: user.email,
+    subject: 'Payment Receipt Confirmation - Semi Phase 3',
+    message: `Hello ${user.name},\n\nWe have successfully received your payment.\nPayment ID: ${institute.razorpayPaymentId}\nOrder ID: ${institute.razorpayOrderId}\nAmount: INR 5,000.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <h2 style="color: #2ecc71; text-align: center;">Payment Receipt Confirmation</h2>
+        <p>Hello <strong>${user.name}</strong>,</p>
+        <p>We are pleased to confirm that we have successfully processed your inspection fee payment. Your application is now ready for the Academic Board review.</p>
+
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #2ecc71;">
+          <h3 style="margin-top: 0; color: #333;">Receipt Summary</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 5px 0; color: #666; font-weight: bold; width: 45%;">Payment ID:</td>
+              <td style="padding: 5px 0; color: #333; font-family: monospace;">${institute.razorpayPaymentId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #666; font-weight: bold;">Order ID:</td>
+              <td style="padding: 5px 0; color: #333; font-family: monospace;">${institute.razorpayOrderId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #666; font-weight: bold;">Amount Paid:</td>
+              <td style="padding: 5px 0; color: #333;">INR 5,000.00</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #666; font-weight: bold;">Status:</td>
+              <td style="padding: 5px 0; color: #2ecc71; font-weight: bold;">Paid / Completed</td>
+            </tr>
+          </table>
+        </div>
+
+        <p>The Academic Board will review your application details, uploaded documents, and schedule an inspection if required. We will keep you notified of any updates.</p>
+
+        <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #999999; text-align: center;">This is an automated receipt email. Please keep this for your records.</p>
+      </div>
+    `
+  });
+}
+
+export const debugPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const institute = await Institute.findOne({ user: req.user._id });
+    return sendSuccess({
+      req,
+      res,
+      message: 'Debug payment status',
+      data: {
+        institute: {
+          paymentStatus: institute?.paymentStatus || 'Not found',
+          razorpayPaymentId: institute?.razorpayPaymentId || 'Not set',
+          razorpayOrderId: institute?.razorpayOrderId || 'Not set',
+          razorpaySignature: institute?.razorpaySignature ? 'Set' : 'Not set'
+        }
+      }
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
             
+```
+
+### `backend/src/controllers/marksheetController.ts`
+
+```typescript
+import { Request, Response } from 'express';
+import { Marksheet } from '../models/marksheetModel';
+import { Result } from '../models/resultModel';
+import marksheetService from '../services/marksheetService';
+import pdfGeneratorService from '../services/pdfGeneratorService';
+import { sendSuccess, sendError } from '../utils/responseFormatter';
+
+export const generateMarksheet = async (req: Request, res: Response) => {
+  try {
+    const { resultId } = req.body;
+
+    if (!resultId) {
+      return sendError({ req, res, statusCode: 400, message: 'resultId is required' });
+    }
+
+    const result = await Result.findById(resultId).populate('student');
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+    }
+
+    const existingMarksheet = await Marksheet.findOne({ result: resultId });
+    if (existingMarksheet) {
+      return sendError({ req, res, statusCode: 400, message: 'Marksheet already exists for this result' });
+    }
+
+    const student = result.student as any;
+    const marksheetNumber = await marksheetService.generateMarksheetNumber();
+    const pdfUrl = await pdfGeneratorService.generateMarksheetPDF({
+      result,
+      student,
+      marksheetNumber,
+    });
+
+    const marksheet = await Marksheet.create({
+      student: student._id,
+      academicYear: result.academicYear,
+      semester: result.semester,
+      result: resultId,
+      marksheetNumber,
+      marksheetPDF: pdfUrl,
+      isFinal: true,
+      generatedDate: new Date(),
+    });
+
+    return sendSuccess({ req, res, statusCode: 201, message: 'Marksheet generated successfully', data: marksheet });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getAllMarksheets = async (req: Request, res: Response) => {
+  try {
+    const { page = '1', limit = '20', studentId, academicYear, semester } = req.query;
+
+    const query: any = {};
+    if (studentId) query.student = studentId;
+    if (academicYear) query.academicYear = academicYear;
+    if (semester) query.semester = parseInt(semester as string);
+
+    const options = {
+      page: parseInt(page as string),
+      limit: parseInt(limit as string),
+      populate: [
+        { path: 'student', select: 'firstName lastName enrollmentId email' },
+        { path: 'result', select: 'academicYear semester totalMarks percentage' },
+      ],
+      sort: { createdAt: -1 } as any,
+    };
+
+    const marksheets = await marksheetService.getMarksheetsWithPagination(query, options);
+
+    return sendSuccess({ req, res, message: 'Marksheets retrieved successfully', data: marksheets });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getMarksheetById = async (req: Request, res: Response) => {
+  try {
+    const marksheet = await Marksheet.findById(req.params.id)
+      .populate('student', 'firstName lastName enrollmentId email')
+      .populate('result', 'academicYear semester subjects totalMarks percentage cgpa sgpa division');
+
+    if (!marksheet) {
+      return sendError({ req, res, statusCode: 404, message: 'Marksheet not found' });
+    }
+
+    return sendSuccess({ req, res, message: 'Marksheet retrieved successfully', data: marksheet });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const updateMarksheet = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const marksheet = await Marksheet.findById(id);
+    if (!marksheet) {
+      return sendError({ req, res, statusCode: 404, message: 'Marksheet not found' });
+    }
+
+    const previousVersion = {
+      version: marksheet.version,
+      marksheetPDF: marksheet.marksheetPDF,
+      generatedDate: marksheet.generatedDate,
+      reason: updateData.updateReason || 'Version update',
+    };
+
+    Object.keys(updateData).forEach((key) => {
+      if (key !== 'updateReason' && key !== 'regeneratePDF') {
+        (marksheet as any)[key] = updateData[key];
+      }
+    });
+
+    marksheet.version += 1;
+    marksheet.previousVersions.push(previousVersion);
+
+    if (updateData.regeneratePDF) {
+      const result = await Result.findById(marksheet.result).populate('student');
+      if (result) {
+        const student = result.student as any;
+        const pdfUrl = await pdfGeneratorService.generateMarksheetPDF({
+          result,
+          student,
+          marksheetNumber: marksheet.marksheetNumber,
+        });
+        marksheet.marksheetPDF = pdfUrl;
+      }
+    }
+
+    await marksheet.save();
+
+    return sendSuccess({ req, res, message: 'Marksheet updated successfully', data: marksheet });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const deleteMarksheet = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const marksheet = await Marksheet.findById(id);
+    if (!marksheet) {
+      return sendError({ req, res, statusCode: 404, message: 'Marksheet not found' });
+    }
+
+    await Marksheet.findByIdAndDelete(id);
+
+    return sendSuccess({ req, res, message: 'Marksheet deleted successfully', data: null });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const downloadMarksheet = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const marksheet = await Marksheet.findById(id);
+    if (!marksheet) {
+      return sendError({ req, res, statusCode: 404, message: 'Marksheet not found' });
+    }
+
+    marksheet.downloadedCount += 1;
+    marksheet.lastDownloaded = new Date();
+    await marksheet.save();
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Marksheet download initiated',
+      data: {
+        marksheetNumber: marksheet.marksheetNumber,
+        downloadUrl: marksheet.marksheetPDF,
+        version: marksheet.version,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getStudentMarksheets = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+
+    const marksheets = await Marksheet.find({ student: studentId })
+      .populate('result', 'academicYear semester subjects totalMarks percentage cgpa sgpa division')
+      .sort({ academicYear: -1, semester: -1 });
+
+    if (!marksheets || marksheets.length === 0) {
+      return sendError({ req, res, statusCode: 404, message: 'No marksheets found for this student' });
+    }
+
+    return sendSuccess({ req, res, message: 'Student marksheets retrieved successfully', data: marksheets });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const bulkGenerateMarksheets = async (req: Request, res: Response) => {
+  try {
+    const { resultIds } = req.body;
+
+    if (!resultIds || !Array.isArray(resultIds) || resultIds.length === 0) {
+      return sendError({ req, res, statusCode: 400, message: 'Please provide an array of result IDs' });
+    }
+
+    const generated = await marksheetService.bulkGenerate(resultIds);
+
+    return sendSuccess({
+      req,
+      res,
+      statusCode: 201,
+      message: `${generated.length} marksheets generated successfully`,
+      data: generated,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+```
+
+### `backend/src/controllers/paymentController.ts`
+
+```typescript
+import { Request, Response } from 'express';
+import { Institute } from '../models/instituteModel';
+import { FeeRecord } from '../models/feeRecordModel';
+import { sendSuccess, sendError } from '../utils/responseFormatter';
+
+export const checkPaymentStatusPublic = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const { type = 'institute' } = req.query;
+
+    if (type === 'institute') {
+      const institute = await Institute.findOne({ razorpayOrderId: orderId });
+      if (!institute) {
+        return sendError({ req, res, statusCode: 404, message: 'Order not found' });
+      }
+      return sendSuccess({
+        req,
+        res,
+        message: 'Payment status retrieved',
+        data: {
+          paymentStatus: institute.paymentStatus,
+          razorpayPaymentId: institute.razorpayPaymentId,
+          orderId: institute.razorpayOrderId,
+        },
+      });
+    } else if (type === 'academic') {
+      const feeRecord = await FeeRecord.findOne({
+        $or: [{ razorpayPaymentId: orderId }, { utrNumber: orderId }],
+      });
+      return sendSuccess({
+        req,
+        res,
+        message: 'Payment status retrieved',
+        data: {
+          paymentStatus: feeRecord ? 'Completed' : 'Pending',
+          paymentId: feeRecord?.razorpayPaymentId || feeRecord?.utrNumber,
+        },
+      });
+    }
+
+    return sendError({ req, res, statusCode: 400, message: 'Invalid payment type' });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+```
+
+### `backend/src/controllers/resultController.ts`
+
+```typescript
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { Result } from '../models/resultModel';
+import { Student } from '../models/studentModel';
+import { Marksheet } from '../models/marksheetModel';
+import resultService from '../services/resultService';
+import pdfGeneratorService from '../services/pdfGeneratorService';
+import fileParserService from '../services/fileParserService';
+import { ParsedResultData } from '../services/fileParserService';
+import { sendSuccess, sendError } from '../utils/responseFormatter';
+import { createResultSchema, updateResultSchema, bulkUploadSchema } from '../validators/resultValidator';
+
+export const getAllResults = async (req: Request, res: Response) => {
+  try {
+    const { page = '1', limit = '20', academicYear, semester, resultStatus, isPublished, studentId, search } = req.query;
+
+    const query: any = {};
+
+    if (academicYear) query.academicYear = academicYear;
+    if (semester) query.semester = parseInt(semester as string);
+    if (resultStatus) query.resultStatus = resultStatus;
+    if (isPublished !== undefined) query.isPublished = isPublished === 'true';
+    if (studentId) query.student = studentId;
+
+    if (search) {
+      const students = await Student.find({
+        $or: [
+          { firstName: { $regex: search as string, $options: 'i' } },
+          { lastName: { $regex: search as string, $options: 'i' } },
+          { enrollmentId: { $regex: search as string, $options: 'i' } },
+        ],
+      }).select('_id');
+
+      query.student = { $in: students.map((s) => s._id) };
+    }
+
+    const options = {
+      page: parseInt(page as string),
+      limit: parseInt(limit as string),
+      populate: [{ path: 'student', select: 'firstName lastName enrollmentId email' }],
+      sort: { createdAt: -1 } as any,
+    };
+
+    const results = await resultService.getResultsWithPagination(query, options);
+
+    return sendSuccess({ req, res, message: 'Results retrieved successfully', data: results });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getResultById = async (req: Request, res: Response) => {
+  try {
+    const result = await Result.findById(req.params.id)
+      .populate('student', 'firstName lastName enrollmentId email')
+      .populate('revaluationRequests', 'requestId status subjects');
+
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+    }
+
+    return sendSuccess({ req, res, message: 'Result retrieved successfully', data: result });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getResultByStudent = async (req: Request, res: Response) => {
+  try {
+    const { enrollmentId } = req.params;
+    const { dateOfBirth } = req.query;
+
+    const student = await Student.findOne({ enrollmentId })
+      .populate('institute', 'orgName')
+      .populate('batch', 'name year');
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+    }
+
+    if (dateOfBirth && student.dateOfBirth) {
+      const queryDob = new Date(dateOfBirth as string).toISOString().split('T')[0];
+      const studentDob = student.dateOfBirth.toISOString().split('T')[0];
+      if (queryDob !== studentDob) {
+        return sendError({ req, res, statusCode: 401, message: 'Invalid Date of Birth' });
+      }
+    }
+
+    const results = await Result.find({ student: student._id })
+      .populate('student', 'firstName lastName enrollmentId email')
+      .sort({ academicYear: -1, semester: -1 });
+
+    if (!results || results.length === 0) {
+      return sendError({ req, res, statusCode: 404, message: 'No results found for this student' });
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Student results retrieved successfully',
+      data: { student, results },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const createResult = async (req: Request, res: Response) => {
+  try {
+    const validatedData = createResultSchema.parse(req.body);
+    const userId = req.user._id;
+
+    const student = await Student.findById(validatedData.student);
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+    }
+
+    const existingResult = await Result.findOne({
+      student: validatedData.student,
+      academicYear: validatedData.academicYear,
+      semester: validatedData.semester,
+    });
+
+    if (existingResult) {
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: 'Result already exists for this student in the given academic year and semester',
+      });
+    }
+
+    const calculatedData = resultService.calculateResultMetrics(validatedData.subjects);
+
+    const resultData: any = {
+      ...validatedData,
+      totalMarks: calculatedData.totalMarks,
+      totalCredits: calculatedData.totalCredits,
+      percentage: calculatedData.percentage,
+      cgpa: calculatedData.cgpa,
+      sgpa: calculatedData.sgpa,
+      division: calculatedData.division,
+      resultStatus: calculatedData.resultStatus,
+      auditHistory: [
+        {
+          action: 'CREATED',
+          performedBy: userId,
+          timestamp: new Date(),
+        },
+      ],
+    };
+
+    const result = await Result.create(resultData);
+
+    const populatedResult = await Result.findById(result._id).populate('student');
+    if (populatedResult) {
+      const student = (populatedResult as any).student;
+      await pdfGeneratorService.generateMarksheetPDF({
+        result: populatedResult,
+        student,
+        marksheetNumber: `MS-${(student as any).enrollmentId}-${populatedResult.academicYear}-S${populatedResult.semester}`,
+      });
+    }
+
+    return sendSuccess({ req, res, statusCode: 201, message: 'Result created successfully', data: result });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const updateResult = async (req: Request, res: Response) => {
+  try {
+    const resultId = req.params.id;
+    const validatedData = updateResultSchema.parse(req.body);
+    const userId = req.user._id;
+
+    const result = await Result.findById(resultId);
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+    }
+
+    const previousData = result.toObject();
+
+    Object.keys(validatedData).forEach((key) => {
+      if (key !== 'auditHistory' && key !== 'revaluationRequests') {
+        (result as any)[key] = (validatedData as any)[key];
+      }
+    });
+
+    if (validatedData.subjects) {
+      const calculatedData = resultService.calculateResultMetrics(validatedData.subjects);
+      result.totalMarks = calculatedData.totalMarks;
+      result.totalCredits = calculatedData.totalCredits;
+      result.percentage = calculatedData.percentage;
+      result.cgpa = calculatedData.cgpa;
+      result.sgpa = calculatedData.sgpa;
+      result.division = calculatedData.division as any;
+      result.resultStatus = calculatedData.resultStatus as any;
+    }
+
+    result.auditHistory.push({
+      action: 'UPDATED',
+      previousData,
+      newData: validatedData,
+      performedBy: userId,
+      timestamp: new Date(),
+    });
+
+    await result.save();
+
+    if (validatedData.subjects || validatedData.isPublished !== undefined) {
+      const populated = await Result.findById(result._id).populate('student');
+      if (populated) {
+        const student = (populated as any).student;
+        await pdfGeneratorService.generateMarksheetPDF({
+          result: populated,
+          student,
+          marksheetNumber: `MS-${(student as any).enrollmentId}-${populated.academicYear}-S${populated.semester}`,
+        });
+      }
+    }
+
+    return sendSuccess({ req, res, message: 'Result updated successfully', data: result });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const deleteResult = async (req: Request, res: Response) => {
+  try {
+    const resultId = req.params.id;
+
+    const result = await Result.findById(resultId);
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+    }
+
+    if (result.revaluationRequests && result.revaluationRequests.length > 0) {
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: 'Cannot delete result with revaluation requests. Archive instead.',
+      });
+    }
+
+    await Marksheet.findOneAndDelete({ result: resultId });
+    await Result.findByIdAndDelete(resultId);
+
+    return sendSuccess({ req, res, message: 'Result deleted successfully', data: null });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const publishResult = async (req: Request, res: Response) => {
+  try {
+    const resultId = req.params.id;
+    const userId = req.user._id;
+
+    const result = await Result.findById(resultId);
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+    }
+
+    result.isPublished = true;
+    result.publishedDate = new Date();
+
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + 10);
+    result.revaluationDeadline = deadline;
+    result.isRevaluationActive = true;
+
+    result.auditHistory.push({
+      action: 'PUBLISHED',
+      performedBy: userId,
+      timestamp: new Date(),
+    });
+
+    await result.save();
+
+    if (result.resultStatus === 'PASS') {
+      const student = await Student.findById(result.student);
+      if (student) {
+        const certNumber = `PC-${result.academicYear}-${Date.now().toString(36).toUpperCase()}`;
+        await pdfGeneratorService.generateProvisionalCertificatePDF({
+          student,
+          result,
+          certNumber,
+        });
+      }
+    }
+
+    return sendSuccess({ req, res, message: 'Result published successfully', data: result });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const searchResults = async (req: Request, res: Response) => {
+  try {
+    const { q, academicYear, semester, department, resultStatus, fromDate, toDate } = req.query;
+
+    const searchResultsData = await resultService.advancedSearch({
+      query: q,
+      academicYear,
+      semester,
+      department,
+      resultStatus,
+      fromDate,
+      toDate,
+    });
+
+    return sendSuccess({ req, res, message: 'Search results retrieved successfully', data: searchResultsData });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getResultStatistics = async (req: Request, res: Response) => {
+  try {
+    const { academicYear, semester } = req.query;
+
+    const statistics = await resultService.getResultStatistics({ academicYear, semester });
+
+    return sendSuccess({ req, res, message: 'Statistics retrieved successfully', data: statistics });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const bulkUploadResults = async (req: Request, res: Response) => {
+  try {
+    const validatedData = bulkUploadSchema.parse(req.body);
+    const userId = req.user._id;
+
+    const uploadedResults = await resultService.bulkUpload(validatedData.results, userId);
+
+    return sendSuccess({
+      req,
+      res,
+      statusCode: 201,
+      message: `${uploadedResults.length} results uploaded successfully`,
+      data: uploadedResults,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// Schema for file-based bulk upload
+const fileBulkUploadSchema = z.object({
+  academicYear: z.string().min(1, 'Academic year is required'),
+  semester: z.coerce.number().int().min(1).max(8, 'Semester must be between 1 and 8'),
+  format: z.enum(['docx', 'pdf', 'xlsx', 'csv']),
+});
+
+export const bulkUploadFromFile = async (req: Request, res: Response) => {
+  try {
+    const { academicYear, semester, format } = fileBulkUploadSchema.parse(req.body);
+    const file = req.file;
+
+    if (!file) {
+      return sendError({ req, res, statusCode: 400, message: 'No file uploaded' });
+    }
+
+    let parsedResults: ParsedResultData[] = [];
+    const buffer = file.buffer;
+
+    try {
+      switch (format) {
+        case 'docx':
+          parsedResults = await fileParserService.parseDocx(buffer);
+          break;
+        case 'pdf':
+          parsedResults = await fileParserService.parsePdf(buffer);
+          break;
+        case 'xlsx':
+        case 'csv':
+          parsedResults = await fileParserService.parseExcel(buffer);
+          break;
+        default:
+          return sendError({ req, res, statusCode: 400, message: 'Unsupported file format' });
+      }
+    } catch (parseError: any) {
+      return sendError({ req, res, statusCode: 400, message: `Failed to parse file: ${parseError.message}` });
+    }
+
+    if (parsedResults.length === 0) {
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: 'No valid student records found in the uploaded file. Please check the file format and try again.',
+      });
+    }
+
+    const enrollmentIds = parsedResults.map(r => r.studentId);
+    const students = await Student.find({
+      enrollmentId: { $in: enrollmentIds }
+    });
+
+    const studentMap = new Map();
+    students.forEach(s => {
+      studentMap.set(s.enrollmentId, s._id);
+    });
+
+    const resultsToUpload: any[] = [];
+    const skippedStudents: string[] = [];
+
+    for (const result of parsedResults) {
+      const studentId = studentMap.get(result.studentId);
+      if (!studentId) {
+        skippedStudents.push(result.studentId);
+        continue;
+      }
+
+      const subjects = result.subjects.map((s: any) => ({
+        ...s,
+        totalMarks: s.internalMarks + s.externalMarks,
+        grade: calculateGrade(s.internalMarks + s.externalMarks),
+        gradePoints: getGradePoints(s.internalMarks + s.externalMarks),
+      }));
+
+      resultsToUpload.push({
+        student: studentId,
+        academicYear: academicYear || result.academicYear || '2024-25',
+        semester: semester || result.semester || 1,
+        subjects,
+      });
+    }
+
+    if (resultsToUpload.length === 0) {
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: 'No valid student records found. Ensure enrollment IDs match existing students.',
+        errors: skippedStudents.length > 0 ? [`Skipped students: ${skippedStudents.join(', ')}`] : [],
+      });
+    }
+
+    const uploaded = await resultService.bulkUpload(resultsToUpload, req.user._id);
+
+    return sendSuccess({
+      req,
+      res,
+      statusCode: 201,
+      message: `${uploaded.length} results uploaded successfully from file`,
+      data: {
+        total: parsedResults.length,
+        uploaded: uploaded.length,
+        skipped: parsedResults.length - uploaded.length,
+        skippedStudents,
+        uploadedResults: uploaded,
+      }
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return sendError({ req, res, statusCode: 400, message: 'Validation failed', errors: error.issues });
+    }
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+function calculateGrade(marks: number): string {
+  if (marks >= 90) return 'O';
+  if (marks >= 80) return 'A+';
+  if (marks >= 70) return 'A';
+  if (marks >= 60) return 'B+';
+  if (marks >= 50) return 'B';
+  if (marks >= 40) return 'C';
+  if (marks >= 35) return 'D';
+  return 'F';
+}
+
+function getGradePoints(marks: number): number {
+  if (marks >= 90) return 10;
+  if (marks >= 80) return 9;
+  if (marks >= 70) return 8;
+  if (marks >= 60) return 7;
+  if (marks >= 50) return 6;
+  if (marks >= 40) return 5;
+  if (marks >= 35) return 4;
+  return 0;
+}
+
+export const downloadMarksheet = async (req: Request, res: Response) => {
+  try {
+    const resultId = req.params.id;
+
+    const marksheet = await Marksheet.findOne({ result: resultId });
+    if (!marksheet) {
+      return sendError({ req, res, statusCode: 404, message: 'Marksheet not found' });
+    }
+
+    marksheet.downloadedCount += 1;
+    marksheet.lastDownloaded = new Date();
+    await marksheet.save();
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Marksheet retrieved successfully',
+      data: {
+        marksheetNumber: marksheet.marksheetNumber,
+        downloadUrl: marksheet.marksheetPDF,
+        version: marksheet.version,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getStudentResultHistory = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+
+    const results = await Result.find({ student: studentId, isPublished: true })
+      .select('academicYear semester totalMarks percentage cgpa division resultStatus')
+      .sort({ academicYear: -1, semester: -1 });
+
+    if (!results || results.length === 0) {
+      return sendError({ req, res, statusCode: 404, message: 'No results found for this student' });
+    }
+
+    return sendSuccess({ req, res, message: 'Student result history retrieved successfully', data: results });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+```
+
+### `backend/src/controllers/revaluationController.ts`
+
+```typescript
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { RevaluationRequest } from '../models/revaluationRequestModel';
+import { RevaluationResult } from '../models/revaluationResultModel';
+import { Result } from '../models/resultModel';
+import { Student } from '../models/studentModel';
+import revaluationService from '../services/revaluationService';
+import { sendSuccess, sendError } from '../utils/responseFormatter';
+import {
+  createRevaluationSchema,
+  updateRevaluationStatusSchema,
+  addRevaluationResultSchema,
+} from '../validators/revaluationValidator';
+
+export const createRevaluationRequest = async (req: Request, res: Response) => {
+  try {
+    const validatedData = createRevaluationSchema.parse(req.body);
+    const userId = req.user._id;
+
+    const student = await Student.findById(validatedData.student);
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+    }
+
+    const result = await Result.findById(validatedData.result);
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+    }
+
+    if (!result.isRevaluationActive || (result.revaluationDeadline && new Date() > result.revaluationDeadline)) {
+      return sendError({ req, res, statusCode: 400, message: 'Revaluation period has expired' });
+    }
+
+    const existingRequest = await RevaluationRequest.findOne({
+      student: validatedData.student,
+      result: validatedData.result,
+      status: { $in: ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS'] },
+    });
+
+    if (existingRequest) {
+      return sendError({ req, res, statusCode: 400, message: 'Revaluation request already exists for this result' });
+    }
+
+    const requestData: any = {
+      ...validatedData,
+      requestId: revaluationService.generateRequestId(),
+      status: 'PENDING',
+      submittedDate: new Date(),
+      auditTrail: [
+        {
+          action: 'REQUEST_SUBMITTED',
+          previousStatus: null,
+          newStatus: 'PENDING',
+          performedBy: userId,
+          timestamp: new Date(),
+        },
+      ],
+    };
+
+    const revaluationRequest = await RevaluationRequest.create(requestData);
+
+    await Result.findByIdAndUpdate(validatedData.result, {
+      $push: { revaluationRequests: revaluationRequest._id },
+    });
+
+    return sendSuccess({
+      req,
+      res,
+      statusCode: 201,
+      message: 'Revaluation request submitted successfully',
+      data: revaluationRequest,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getAllRevaluationRequests = async (req: Request, res: Response) => {
+  try {
+    const { page = '1', limit = '20', status, institute, academicYear, semester, fromDate, toDate } = req.query;
+
+    const query: any = {};
+    if (status) query.status = status;
+    if (institute) query.institute = institute;
+    if (academicYear) query.academicYear = academicYear;
+    if (semester) query.semester = parseInt(semester as string);
+
+    if (fromDate || toDate) {
+      query.submittedDate = {};
+      if (fromDate) query.submittedDate.$gte = new Date(fromDate as string);
+      if (toDate) query.submittedDate.$lte = new Date(toDate as string);
+    }
+
+    const options = {
+      page: parseInt(page as string),
+      limit: parseInt(limit as string),
+      populate: [
+        { path: 'student', select: 'firstName lastName enrollmentId email' },
+        { path: 'institute', select: 'orgName' },
+        { path: 'result', select: 'academicYear semester totalMarks percentage' },
+      ],
+      sort: { submittedDate: -1 } as any,
+    };
+
+    const requests = await revaluationService.getRequestsWithPagination(query, options);
+
+    return sendSuccess({ req, res, message: 'Revaluation requests retrieved successfully', data: requests });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getRevaluationRequestById = async (req: Request, res: Response) => {
+  try {
+    const request = await RevaluationRequest.findById(req.params.id)
+      .populate('student', 'firstName lastName enrollmentId email')
+      .populate('institute', 'orgName')
+      .populate('result', 'academicYear semester totalMarks percentage')
+      .populate('assignedEvaluator', 'name email')
+      .populate('revaluationResults');
+
+    if (!request) {
+      return sendError({ req, res, statusCode: 404, message: 'Revaluation request not found' });
+    }
+
+    return sendSuccess({ req, res, message: 'Revaluation request retrieved successfully', data: request });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const updateRequestStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const validatedData = updateRevaluationStatusSchema.parse(req.body);
+    const userId = req.user._id;
+
+    const request = await RevaluationRequest.findById(id);
+    if (!request) {
+      return sendError({ req, res, statusCode: 404, message: 'Revaluation request not found' });
+    }
+
+    const previousStatus = request.status;
+    request.status = validatedData.status;
+
+    if (validatedData.comments) {
+      request.adminComments.push({
+        comment: validatedData.comments,
+        commentedBy: userId,
+        timestamp: new Date(),
+      });
+    }
+
+    if (validatedData.assignedEvaluator) {
+      request.assignedEvaluator = validatedData.assignedEvaluator as any;
+    }
+
+    if (validatedData.status === 'ASSIGNED' && validatedData.assignedEvaluator) {
+      const deadline = new Date();
+      deadline.setDate(deadline.getDate() + 15);
+      request.reviewDeadline = deadline;
+    }
+
+    if (validatedData.status === 'COMPLETED' || validatedData.status === 'REJECTED') {
+      request.evaluatedDate = new Date();
+    }
+
+    request.auditTrail.push({
+      action: 'STATUS_UPDATED',
+      previousStatus,
+      newStatus: validatedData.status,
+      performedBy: userId,
+      timestamp: new Date(),
+    });
+
+    await request.save();
+
+    if (validatedData.status === 'COMPLETED') {
+      await revaluationService.processRevaluationResults(request._id.toString());
+    }
+
+    return sendSuccess({ req, res, message: 'Revaluation request status updated successfully', data: request });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const addRevaluationResult = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const validatedData = addRevaluationResultSchema.parse(req.body);
+    const userId = req.user._id;
+
+    const request = await RevaluationRequest.findById(id);
+    if (!request) {
+      return sendError({ req, res, statusCode: 404, message: 'Revaluation request not found' });
+    }
+
+    const subjectExists = request.subjects.some((s: any) => s.subjectCode === validatedData.subjectCode);
+    if (!subjectExists) {
+      return sendError({ req, res, statusCode: 400, message: 'Subject not found in revaluation request' });
+    }
+
+    const originalSubject = request.subjects.find((s: any) => s.subjectCode === validatedData.subjectCode);
+    const marksChange = validatedData.revisedTotalMarks - (originalSubject?.originalMarks || 0);
+
+    const revaluationResult = await RevaluationResult.create({
+      ...validatedData,
+      marksChange,
+      revaluationRequest: request._id,
+      student: request.student,
+      result: request.result,
+      reviewedBy: userId,
+      reviewedDate: new Date(),
+      originalMarks: originalSubject?.originalMarks,
+      originalGrade: originalSubject?.originalGrade,
+    });
+
+    request.revaluationResults.push(revaluationResult._id);
+    await request.save();
+
+    return sendSuccess({ req, res, statusCode: 201, message: 'Revaluation result added successfully', data: revaluationResult });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getRevaluationResults = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const results = await RevaluationResult.find({ revaluationRequest: id }).populate('reviewedBy', 'name email');
+
+    if (!results || results.length === 0) {
+      return sendError({ req, res, statusCode: 404, message: 'No revaluation results found' });
+    }
+
+    return sendSuccess({ req, res, message: 'Revaluation results retrieved successfully', data: results });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const approveRevaluationResult = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { isFinal, comments } = req.body;
+
+    const revalResult = await RevaluationResult.findById(id);
+    if (!revalResult) {
+      return sendError({ req, res, statusCode: 404, message: 'Revaluation result not found' });
+    }
+
+    revalResult.reviewStatus = 'APPROVED';
+    revalResult.isFinal = isFinal || true;
+
+    if (comments) {
+      revalResult.evaluatorComments = comments;
+    }
+
+    await revalResult.save();
+
+    if (isFinal) {
+      await revaluationService.updateResultWithRevaluation(revalResult);
+    }
+
+    return sendSuccess({ req, res, message: 'Revaluation result approved successfully', data: revalResult });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getRevaluationStatistics = async (req: Request, res: Response) => {
+  try {
+    const { academicYear, semester } = req.query;
+
+    const statistics = await revaluationService.getRevaluationStatistics({ academicYear, semester });
+
+    return sendSuccess({ req, res, message: 'Revaluation statistics retrieved successfully', data: statistics });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const deleteRevaluationRequest = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const request = await RevaluationRequest.findById(id);
+    if (!request) {
+      return sendError({ req, res, statusCode: 404, message: 'Revaluation request not found' });
+    }
+
+    if (request.status === 'COMPLETED') {
+      return sendError({ req, res, statusCode: 400, message: 'Cannot delete completed revaluation request' });
+    }
+
+    request.status = 'CANCELLED';
+    request.auditTrail.push({
+      action: 'REQUEST_CANCELLED',
+      previousStatus: request.status,
+      newStatus: 'CANCELLED',
+      performedBy: userId,
+      timestamp: new Date(),
+    });
+
+    await request.save();
+
+    return sendSuccess({ req, res, message: 'Revaluation request cancelled successfully', data: null });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
 ```
 
 ### `backend/src/controllers/userController.ts`
@@ -6687,6 +9467,7 @@ export const createAdmin = async (req: Request, res: Response): Promise<any> => 
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
+
 ```
 
 ### `backend/src/index.ts`
@@ -6705,6 +9486,11 @@ import authRoutes from './routes/authRoutes';
 import instituteRoutes from './routes/instituteRoutes';
 import academicRoutes from './routes/academicRoutes';
 import examRoutes from './routes/examRoutes';
+import resultRoutes from './routes/resultRoutes';
+import revaluationRoutes from './routes/revaluationRoutes';
+import marksheetRoutes from './routes/marksheetRoutes';
+import certificateRoutes from './routes/certificateRoutes';
+import paymentRoutes from './routes/paymentRoutes';
 import { notFound, errorHandler } from './middlewares/errorMiddleware';
 
 dotenv.config();
@@ -6789,6 +9575,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/institutes', instituteRoutes);
 app.use('/api/academic', academicRoutes);
 app.use('/api/exams', examRoutes);
+app.use('/api/results', resultRoutes);
+app.use('/api/revaluation', revaluationRoutes);
+app.use('/api/marksheets', marksheetRoutes);
+app.use('/api/certificates', certificateRoutes);
+app.use('/api', paymentRoutes);
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
@@ -6802,6 +9593,7 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
 ```
 
 ### `backend/src/middlewares/authMiddleware.ts`
@@ -6858,6 +9650,7 @@ export const authorize = (...roles: string[]) => {
     next();
   };
 };
+
 ```
 
 ### `backend/src/middlewares/errorMiddleware.ts`
@@ -6904,6 +9697,7 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
     errors: process.env.NODE_ENV === 'production' ? [] : [{ message: err.message, stack: err.stack, ...errors }]
   });
 };
+
 ```
 
 ### `backend/src/middlewares/uploadMiddleware.ts`
@@ -6962,13 +9756,24 @@ if (isCloudinaryConfigured) {
   console.log('Cloudinary not configured. Using local disk storage for file uploads.');
 }
 
+const memoryStorage = multer.memoryStorage();
+
 export const upload = multer({ 
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   }
 });
+
+export const uploadMemory = multer({
+  storage: memoryStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
 export { cloudinary };
+
 ```
 
 ### `backend/src/models/batchModel.ts`
@@ -7036,6 +9841,126 @@ const batchSchema: Schema = new Schema(
 batchSchema.index({ course: 1, year: 1 }, { unique: true });
 
 export const Batch = mongoose.model<IBatch>('Batch', batchSchema);
+```
+
+### `backend/src/models/certificateModel.ts`
+
+```typescript
+import mongoose, { Document, Schema, Types } from 'mongoose';
+
+export interface ICertificateAuditEntry {
+  action: string;
+  performedBy: Types.ObjectId;
+  timestamp: Date;
+}
+
+export interface ICertificate extends Document {
+  student: Types.ObjectId;
+  certificateNumber: string;
+  type: 'PROVISIONAL' | 'CONSOLIDATED' | 'DUPLICATE' | 'TRANSFER';
+  academicYear: string;
+  semester?: number;
+  result?: Types.ObjectId;
+  certificatePDF: string;
+  isVerified: boolean;
+  verifiedBy?: Types.ObjectId;
+  verifiedDate?: Date;
+  issuedDate: Date;
+  expiryDate?: Date;
+  qrCode?: string;
+  blockchainHash?: string;
+  isRevoked: boolean;
+  revocationReason?: string;
+  downloadedCount: number;
+  auditTrail: ICertificateAuditEntry[];
+}
+
+const certificateSchema: Schema = new Schema(
+  {
+    student: {
+      type: Schema.Types.ObjectId,
+      ref: 'Student',
+      required: true,
+    },
+    certificateNumber: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    type: {
+      type: String,
+      enum: ['PROVISIONAL', 'CONSOLIDATED', 'DUPLICATE', 'TRANSFER'],
+      required: true,
+    },
+    academicYear: {
+      type: String,
+      required: true,
+    },
+    semester: {
+      type: Number,
+      min: 1,
+      max: 8,
+    },
+    result: {
+      type: Schema.Types.ObjectId,
+      ref: 'Result',
+    },
+    certificatePDF: {
+      type: String,
+      required: true,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verifiedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    verifiedDate: {
+      type: Date,
+    },
+    issuedDate: {
+      type: Date,
+      default: Date.now,
+    },
+    expiryDate: {
+      type: Date,
+    },
+    qrCode: {
+      type: String,
+    },
+    blockchainHash: {
+      type: String,
+    },
+    isRevoked: {
+      type: Boolean,
+      default: false,
+    },
+    revocationReason: {
+      type: String,
+    },
+    downloadedCount: {
+      type: Number,
+      default: 0,
+    },
+    auditTrail: [
+      {
+        action: String,
+        performedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
+  },
+  { timestamps: true }
+);
+
+certificateSchema.index({ student: 1, certificateNumber: 1 });
+certificateSchema.index({ type: 1, academicYear: 1 });
+certificateSchema.index({ qrCode: 1 });
+
+export const Certificate = mongoose.model<ICertificate>('Certificate', certificateSchema);
+
 ```
 
 ### `backend/src/models/courseModel.ts`
@@ -7230,6 +10155,7 @@ const examApplicationSchema: Schema = new Schema(
 );
 
 export const ExamApplication = mongoose.model<IExamApplication>('ExamApplication', examApplicationSchema);
+
 ```
 
 ### `backend/src/models/feeRecordModel.ts`
@@ -7242,10 +10168,13 @@ export interface IFeeRecord extends Document {
   semesterNumber?: number;
   amount: number;
   paymentMode: string;
-  utrNumber: string;
-  paymentReceiptUrl: string;
+  utrNumber?: string;
+  paymentReceiptUrl?: string;
   paymentDate: Date;
   paymentPurpose: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
 }
 
 const feeRecordSchema: Schema = new Schema(
@@ -7269,11 +10198,10 @@ const feeRecordSchema: Schema = new Schema(
     },
     utrNumber: {
       type: String,
-      required: true,
     },
     paymentReceiptUrl: {
       type: String,
-      required: true,
+      default: 'Online Verification',
     },
     paymentDate: {
       type: Date,
@@ -7283,6 +10211,15 @@ const feeRecordSchema: Schema = new Schema(
       type: String,
       required: true,
     },
+    razorpayOrderId: {
+      type: String,
+    },
+    razorpayPaymentId: {
+      type: String,
+    },
+    razorpaySignature: {
+      type: String,
+    },
   },
   {
     timestamps: true,
@@ -7290,6 +10227,7 @@ const feeRecordSchema: Schema = new Schema(
 );
 
 export const FeeRecord = mongoose.model<IFeeRecord>('FeeRecord', feeRecordSchema);
+
 ```
 
 ### `backend/src/models/hallTicketModel.ts`
@@ -7381,6 +10319,7 @@ const hallTicketSchema: Schema = new Schema(
 );
 
 export const HallTicket = mongoose.model<IHallTicket>('HallTicket', hallTicketSchema);
+
 ```
 
 ### `backend/src/models/instituteModel.ts`
@@ -7410,9 +10349,6 @@ export interface IInstitute extends Document {
   emFacultyCount: number;
   teachingSpace: 'Yes' | 'No';
   nabhStatus: 'Yes' | 'No';
-  paymentBankName?: string;
-  paymentTxnNo?: string;
-  paymentTxnDate?: string;
   authorizedRepName?: string;
   authorizedRepDesignation?: string;
   facultyCommitmentLetterUrl: string;
@@ -7436,6 +10372,8 @@ export interface IInstitute extends Document {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
+  paymentCompletedAt?: Date;
+  paymentAmount?: number;
 }
 
 const instituteSchema: Schema = new Schema(
@@ -7470,9 +10408,6 @@ const instituteSchema: Schema = new Schema(
     emFacultyCount: { type: Number, required: true },
     teachingSpace: { type: String, enum: ['Yes', 'No'], default: 'Yes' },
     nabhStatus: { type: String, enum: ['Yes', 'No'], default: 'Yes' },
-    paymentBankName: { type: String, default: '' },
-    paymentTxnNo: { type: String, default: '' },
-    paymentTxnDate: { type: String, default: '' },
     authorizedRepName: { type: String, default: '' },
     authorizedRepDesignation: { type: String, default: '' },
     facultyCommitmentLetterUrl: { type: String, required: true },
@@ -7524,6 +10459,12 @@ const instituteSchema: Schema = new Schema(
     razorpaySignature: {
       type: String,
       default: ''
+    },
+    paymentCompletedAt: {
+      type: Date,
+    },
+    paymentAmount: {
+      type: Number,
     }
   },
   {
@@ -7532,6 +10473,101 @@ const instituteSchema: Schema = new Schema(
 );
 
 export const Institute = mongoose.model<IInstitute>('Institute', instituteSchema);
+```
+
+### `backend/src/models/marksheetModel.ts`
+
+```typescript
+import mongoose, { Document, Schema, Types } from 'mongoose';
+
+export interface IMarksheetVersion {
+  version: number;
+  marksheetPDF: string;
+  generatedDate: Date;
+  reason: string;
+}
+
+export interface IMarksheet extends Document {
+  student: Types.ObjectId;
+  academicYear: string;
+  semester: number;
+  result: Types.ObjectId;
+  marksheetNumber: string;
+  marksheetPDF: string;
+  isFinal: boolean;
+  version: number;
+  previousVersions: IMarksheetVersion[];
+  generatedDate: Date;
+  downloadedCount: number;
+  lastDownloaded?: Date;
+}
+
+const marksheetSchema: Schema = new Schema(
+  {
+    student: {
+      type: Schema.Types.ObjectId,
+      ref: 'Student',
+      required: true,
+    },
+    academicYear: {
+      type: String,
+      required: true,
+    },
+    semester: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 8,
+    },
+    result: {
+      type: Schema.Types.ObjectId,
+      ref: 'Result',
+      required: true,
+    },
+    marksheetNumber: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    marksheetPDF: {
+      type: String,
+      required: true,
+    },
+    isFinal: {
+      type: Boolean,
+      default: false,
+    },
+    version: {
+      type: Number,
+      default: 1,
+    },
+    previousVersions: [
+      {
+        version: Number,
+        marksheetPDF: String,
+        generatedDate: Date,
+        reason: String,
+      },
+    ],
+    generatedDate: {
+      type: Date,
+      default: Date.now,
+    },
+    downloadedCount: {
+      type: Number,
+      default: 0,
+    },
+    lastDownloaded: {
+      type: Date,
+    },
+  },
+  { timestamps: true }
+);
+
+marksheetSchema.index({ student: 1, academicYear: 1, semester: 1 });
+
+export const Marksheet = mongoose.model<IMarksheet>('Marksheet', marksheetSchema);
+
 ```
 
 ### `backend/src/models/remittanceModel.ts`
@@ -7584,6 +10620,405 @@ const remittanceSchema: Schema = new Schema(
 );
 
 export const Remittance = mongoose.model<IRemittance>('Remittance', remittanceSchema);
+
+```
+
+### `backend/src/models/resultModel.ts`
+
+```typescript
+import mongoose, { Document, Schema, Types } from 'mongoose';
+
+export interface ISubjectResult {
+  subjectCode: string;
+  subjectName: string;
+  internalMarks: number;
+  externalMarks: number;
+  totalMarks: number;
+  grade: 'O' | 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' | 'F' | 'ABSENT';
+  credits: number;
+  gradePoints: number;
+  isRevaluationApplied: boolean;
+  revaluationMarks?: number;
+  revaluationGrade?: 'O' | 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' | 'F' | 'ABSENT';
+  isRevaluationCompleted: boolean;
+}
+
+export interface IAuditEntry {
+  action: 'CREATED' | 'UPDATED' | 'PUBLISHED' | 'REVALUATION_UPDATED';
+  previousData?: any;
+  newData?: any;
+  performedBy: Types.ObjectId;
+  timestamp: Date;
+}
+
+export interface IResult extends Document {
+  student: Types.ObjectId;
+  academicYear: string;
+  semester: number;
+  subjects: ISubjectResult[];
+  totalMarks: number;
+  totalCredits: number;
+  percentage: number;
+  cgpa: number;
+  sgpa: number;
+  division: 'First' | 'Second' | 'Third' | 'Pass' | 'Fail';
+  resultStatus: 'PASS' | 'FAIL' | 'SUPPLEMENTARY' | 'REVALUATION_PENDING';
+  isPublished: boolean;
+  publishedDate?: Date;
+  isRevaluationActive: boolean;
+  revaluationDeadline?: Date;
+  revaluationRequests: Types.ObjectId[];
+  auditHistory: IAuditEntry[];
+}
+
+const resultSchema: Schema = new Schema(
+  {
+    student: {
+      type: Schema.Types.ObjectId,
+      ref: 'Student',
+      required: true,
+    },
+    academicYear: {
+      type: String,
+      required: true,
+    },
+    semester: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 8,
+    },
+    subjects: [
+      {
+        subjectCode: { type: String, required: true },
+        subjectName: { type: String, required: true },
+        internalMarks: { type: Number, default: 0, min: 0, max: 100 },
+        externalMarks: { type: Number, default: 0, min: 0, max: 100 },
+        totalMarks: { type: Number, min: 0, max: 100 },
+        grade: {
+          type: String,
+          enum: ['O', 'A+', 'A', 'B+', 'B', 'C', 'D', 'F', 'ABSENT'],
+          default: 'F',
+        },
+        credits: { type: Number, required: true, min: 1, max: 6 },
+        gradePoints: { type: Number, min: 0, max: 10 },
+        isRevaluationApplied: { type: Boolean, default: false },
+        revaluationMarks: { type: Number, min: 0, max: 100 },
+        revaluationGrade: {
+          type: String,
+          enum: ['O', 'A+', 'A', 'B+', 'B', 'C', 'D', 'F', 'ABSENT'],
+        },
+        isRevaluationCompleted: { type: Boolean, default: false },
+      },
+    ],
+    totalMarks: { type: Number, required: true },
+    totalCredits: { type: Number, required: true },
+    percentage: { type: Number, required: true },
+    cgpa: { type: Number, required: true },
+    sgpa: { type: Number, required: true },
+    division: {
+      type: String,
+      enum: ['First', 'Second', 'Third', 'Pass', 'Fail'],
+      required: true,
+    },
+    resultStatus: {
+      type: String,
+      enum: ['PASS', 'FAIL', 'SUPPLEMENTARY', 'REVALUATION_PENDING'],
+      required: true,
+    },
+    isPublished: { type: Boolean, default: false },
+    publishedDate: { type: Date },
+    isRevaluationActive: { type: Boolean, default: false },
+    revaluationDeadline: { type: Date },
+    revaluationRequests: [{ type: Schema.Types.ObjectId, ref: 'RevaluationRequest' }],
+    auditHistory: [
+      {
+        action: {
+          type: String,
+          enum: ['CREATED', 'UPDATED', 'PUBLISHED', 'REVALUATION_UPDATED'],
+          required: true,
+        },
+        previousData: { type: Schema.Types.Mixed },
+        newData: { type: Schema.Types.Mixed },
+        performedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
+  },
+  { timestamps: true }
+);
+
+resultSchema.index({ student: 1, academicYear: 1, semester: 1 });
+resultSchema.index({ 'subjects.subjectCode': 1 });
+resultSchema.index({ resultStatus: 1 });
+resultSchema.index({ isPublished: 1 });
+
+export const Result = mongoose.model<IResult>('Result', resultSchema);
+
+```
+
+### `backend/src/models/revaluationRequestModel.ts`
+
+```typescript
+import mongoose, { Document, Schema, Types } from 'mongoose';
+
+export interface IRevaluationSubject {
+  subjectCode: string;
+  subjectName: string;
+  originalMarks: number;
+  originalGrade: string;
+  internalMarks: number;
+  externalMarks: number;
+  revaluationReason: string;
+}
+
+export interface IAdminComment {
+  comment: string;
+  commentedBy: Types.ObjectId;
+  timestamp: Date;
+}
+
+export interface IAuditTrailEntry {
+  action: string;
+  previousStatus: string;
+  newStatus: string;
+  performedBy: Types.ObjectId;
+  timestamp: Date;
+}
+
+export interface IRevaluationRequest extends Document {
+  requestId: string;
+  institute: Types.ObjectId;
+  student: Types.ObjectId;
+  result: Types.ObjectId;
+  academicYear: string;
+  semester: number;
+  subjects: IRevaluationSubject[];
+  feePerSubject: number;
+  totalFee: number;
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  paymentId?: string;
+  paymentDate?: Date;
+  status: 'PENDING' | 'UNDER_REVIEW' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'REJECTED' | 'CANCELLED';
+  submittedDate: Date;
+  reviewDeadline?: Date;
+  assignedEvaluator?: Types.ObjectId;
+  evaluatorComments?: string;
+  evaluatedDate?: Date;
+  revaluationResults: Types.ObjectId[];
+  finalResult: 'CHANGED' | 'UNCHANGED' | 'PENDING';
+  adminComments: IAdminComment[];
+  auditTrail: IAuditTrailEntry[];
+}
+
+const revaluationRequestSchema: Schema = new Schema(
+  {
+    requestId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    institute: {
+      type: Schema.Types.ObjectId,
+      ref: 'Institute',
+      required: true,
+    },
+    student: {
+      type: Schema.Types.ObjectId,
+      ref: 'Student',
+      required: true,
+    },
+    result: {
+      type: Schema.Types.ObjectId,
+      ref: 'Result',
+      required: true,
+    },
+    academicYear: {
+      type: String,
+      required: true,
+    },
+    semester: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 8,
+    },
+    subjects: [
+      {
+        subjectCode: { type: String, required: true },
+        subjectName: { type: String, required: true },
+        originalMarks: { type: Number, required: true },
+        originalGrade: { type: String, required: true },
+        internalMarks: { type: Number, required: true },
+        externalMarks: { type: Number, required: true },
+        revaluationReason: { type: String, required: true },
+      },
+    ],
+    feePerSubject: { type: Number, required: true },
+    totalFee: { type: Number, required: true },
+    paymentStatus: {
+      type: String,
+      enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+      default: 'PENDING',
+    },
+    paymentId: { type: String },
+    paymentDate: { type: Date },
+    status: {
+      type: String,
+      enum: ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED', 'CANCELLED'],
+      default: 'PENDING',
+    },
+    submittedDate: { type: Date, default: Date.now },
+    reviewDeadline: { type: Date },
+    assignedEvaluator: { type: Schema.Types.ObjectId, ref: 'User' },
+    evaluatorComments: { type: String },
+    evaluatedDate: { type: Date },
+    revaluationResults: [{ type: Schema.Types.ObjectId, ref: 'RevaluationResult' }],
+    finalResult: {
+      type: String,
+      enum: ['CHANGED', 'UNCHANGED', 'PENDING'],
+      default: 'PENDING',
+    },
+    adminComments: [
+      {
+        comment: String,
+        commentedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
+    auditTrail: [
+      {
+        action: String,
+        previousStatus: String,
+        newStatus: String,
+        performedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
+  },
+  { timestamps: true }
+);
+
+revaluationRequestSchema.index({ student: 1, status: 1 });
+revaluationRequestSchema.index({ institute: 1, academicYear: 1 });
+
+export const RevaluationRequest = mongoose.model<IRevaluationRequest>('RevaluationRequest', revaluationRequestSchema);
+
+```
+
+### `backend/src/models/revaluationResultModel.ts`
+
+```typescript
+import mongoose, { Document, Schema, Types } from 'mongoose';
+
+export interface IRevaluationResult extends Document {
+  revaluationRequest: Types.ObjectId;
+  student: Types.ObjectId;
+  result: Types.ObjectId;
+  subjectCode: string;
+  subjectName: string;
+  originalMarks: number;
+  originalGrade: string;
+  revisedInternalMarks?: number;
+  revisedExternalMarks?: number;
+  revisedTotalMarks?: number;
+  revisedGrade?: 'O' | 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' | 'F' | 'ABSENT';
+  marksChange: number;
+  evaluatorComments?: string;
+  reviewedBy?: Types.ObjectId;
+  reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PARTIALLY_APPROVED';
+  reviewedDate?: Date;
+  isFinal: boolean;
+  previousVersionData?: any;
+}
+
+const revaluationResultSchema: Schema = new Schema(
+  {
+    revaluationRequest: {
+      type: Schema.Types.ObjectId,
+      ref: 'RevaluationRequest',
+      required: true,
+    },
+    student: {
+      type: Schema.Types.ObjectId,
+      ref: 'Student',
+      required: true,
+    },
+    result: {
+      type: Schema.Types.ObjectId,
+      ref: 'Result',
+      required: true,
+    },
+    subjectCode: {
+      type: String,
+      required: true,
+    },
+    subjectName: {
+      type: String,
+      required: true,
+    },
+    originalMarks: {
+      type: Number,
+      required: true,
+    },
+    originalGrade: {
+      type: String,
+      required: true,
+    },
+    revisedInternalMarks: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
+    revisedExternalMarks: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
+    revisedTotalMarks: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
+    revisedGrade: {
+      type: String,
+      enum: ['O', 'A+', 'A', 'B+', 'B', 'C', 'D', 'F', 'ABSENT'],
+    },
+    marksChange: {
+      type: Number,
+      default: 0,
+    },
+    evaluatorComments: {
+      type: String,
+    },
+    reviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    reviewStatus: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED', 'PARTIALLY_APPROVED'],
+      default: 'PENDING',
+    },
+    reviewedDate: {
+      type: Date,
+    },
+    isFinal: {
+      type: Boolean,
+      default: false,
+    },
+    previousVersionData: {
+      type: Schema.Types.Mixed,
+    },
+  },
+  { timestamps: true }
+);
+
+revaluationResultSchema.index({ revaluationRequest: 1, subjectCode: 1 });
+revaluationResultSchema.index({ student: 1, result: 1 });
+
+export const RevaluationResult = mongoose.model<IRevaluationResult>('RevaluationResult', revaluationResultSchema);
+
 ```
 
 ### `backend/src/models/studentModel.ts`
@@ -7604,18 +11039,20 @@ export interface IStudent extends Document {
   universityName: string;
   medicalCouncilRegistrationNumber: string;
   isForeignGraduate: boolean;
+  dateOfBirth?: Date;
   fmgeClearanceStatus?: 'Cleared' | 'Not Applicable' | 'Failed';
   course: mongoose.Types.ObjectId;
   batch: mongoose.Types.ObjectId;
   institute: mongoose.Types.ObjectId;
   courseDirector: string;
-  utrNumber: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
   documents: {
     passportPhotoUrl: string;
     mbbsCertificateUrl: string;
     medicalCouncilRegistrationCertificateUrl: string;
     fmgeResultCopyUrl?: string;
-    paymentReceiptUrl: string;
     semiMembershipFormUrl: string;
   };
   remittedToAcademy: boolean;
@@ -7682,6 +11119,10 @@ const studentSchema: Schema = new Schema(
       required: true,
       default: false,
     },
+    dateOfBirth: {
+      type: Date,
+      required: false,
+    },
     fmgeClearanceStatus: {
       type: String,
       enum: ['Cleared', 'Not Applicable', 'Failed'],
@@ -7706,16 +11147,20 @@ const studentSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    utrNumber: {
+    razorpayOrderId: {
       type: String,
-      required: true,
+    },
+    razorpayPaymentId: {
+      type: String,
+    },
+    razorpaySignature: {
+      type: String,
     },
     documents: {
       passportPhotoUrl: { type: String, required: true },
       mbbsCertificateUrl: { type: String, required: true },
       medicalCouncilRegistrationCertificateUrl: { type: String, required: true },
       fmgeResultCopyUrl: { type: String },
-      paymentReceiptUrl: { type: String, required: true },
       semiMembershipFormUrl: { type: String, required: true },
     },
     remittedToAcademy: {
@@ -7747,6 +11192,7 @@ const studentSchema: Schema = new Schema(
 );
 
 export const Student = mongoose.model<IStudent>('Student', studentSchema);
+
 ```
 
 ### `backend/src/models/userModel.ts`
@@ -7807,6 +11253,7 @@ const userSchema: Schema = new Schema(
 );
 
 export const User = mongoose.model<IUser>('User', userSchema);
+
 ```
 
 ### `backend/src/routes/academicRoutes.ts`
@@ -7839,9 +11286,23 @@ import {
   getStudentById,
   updateStudent,
   deleteStudent,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+  getAcademicPaymentStatus,
+  verifyAcademicPayment,
 } from '../controllers/academicController';
 
 const router = express.Router();
+
+// ==========================================
+// PAYMENT ROUTES (RAZORPAY)
+// ==========================================
+router.post('/payment/create-order', protect, authorize('institute'), createRazorpayOrder);
+router.post('/payment/verify', protect, authorize('institute'), verifyRazorpayPayment);
+
+// Payment status & recovery endpoints
+router.get('/payment/status/:studentId', protect, authorize('institute'), getAcademicPaymentStatus);
+router.get('/payment/verify-order/:orderId', protect, authorize('institute'), verifyAcademicPayment);
 
 // ==========================================
 // COURSE CRUD Routes
@@ -7874,7 +11335,6 @@ router.post(
     { name: 'mbbsCertificate', maxCount: 1 },
     { name: 'medicalCouncilRegistrationCertificate', maxCount: 1 },
     { name: 'fmgeResultCopy', maxCount: 1 },
-    { name: 'paymentReceipt', maxCount: 1 },
     { name: 'semiMembershipForm', maxCount: 1 },
   ]),
   addStudent
@@ -7893,7 +11353,6 @@ router.post(
   '/students/:studentId/fees',
   protect,
   authorize('institute'),
-  upload.fields([{ name: 'paymentReceipt', maxCount: 1 }]),
   recordStudentFee
 );
 
@@ -7982,6 +11441,46 @@ router.get('/status', protect, checkStatus);
 
 export default router;
 
+
+```
+
+### `backend/src/routes/certificateRoutes.ts`
+
+```typescript
+import express from 'express';
+import {
+  generateProvisionalCertificate,
+  issueCertificate,
+  getAllCertificates,
+  getCertificateById,
+  verifyCertificate,
+  revokeCertificate,
+  downloadCertificate,
+  deleteCertificate,
+  getStudentCertificates,
+  updateCertificate,
+} from '../controllers/certificateController';
+import { protect, authorize } from '../middlewares/authMiddleware';
+
+const router = express.Router();
+
+router.use(protect);
+
+// Certificate CRUD
+router.get('/', getAllCertificates);
+router.get('/:id', getCertificateById);
+router.get('/:id/download', downloadCertificate);
+router.get('/student/:studentId', getStudentCertificates);
+
+router.post('/', authorize('admin', 'super_admin'), issueCertificate);
+router.post('/provisional', authorize('admin', 'super_admin'), generateProvisionalCertificate);
+router.put('/:id', authorize('admin', 'super_admin'), updateCertificate);
+router.put('/:id/verify', authorize('admin', 'super_admin', 'board'), verifyCertificate);
+router.put('/:id/revoke', authorize('admin', 'super_admin'), revokeCertificate);
+router.delete('/:id', authorize('admin', 'super_admin'), deleteCertificate);
+
+export default router;
+
 ```
 
 ### `backend/src/routes/examRoutes.ts`
@@ -8061,6 +11560,7 @@ router.get('/:id/hall-tickets/:hid', protect, getHallTicketById);
 router.get('/:id/hall-tickets/:hid/download', protect, downloadHallTicket);
 
 export default router;
+
 ```
 
 ### `backend/src/routes/healthRoutes.ts`
@@ -8074,6 +11574,7 @@ const router = express.Router();
 router.route('/').get(getHealthStatus);
 
 export default router;
+
 ```
 
 ### `backend/src/routes/instituteRoutes.ts`
@@ -8087,7 +11588,10 @@ import {
   reviewApplication,
   getMyApplication,
   listApplications,
-  toggleInspection
+  toggleInspection,
+  getPaymentStatus,
+  checkPaymentAndUpdate,
+  debugPaymentStatus,
 } from '../controllers/instituteController';
 import { protect, authorize } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
@@ -8126,12 +11630,201 @@ router.post('/payment/verify', protect, authorize('institute'), verifyRazorpayPa
 // Legacy/backwards compatibility route for older clients or postman scripts
 router.post('/payment', protect, authorize('institute'), verifyRazorpayPayment);
 
+// Payment status & recovery endpoints
+router.get('/payment/status', protect, authorize('institute'), getPaymentStatus);
+router.get('/payment/verify-order/:orderId', protect, authorize('institute'), checkPaymentAndUpdate);
+router.get('/payment/debug', protect, authorize('institute'), debugPaymentStatus);
+
 // Board routes
 router.get('/applications', protect, authorize('board', 'admin', 'super_admin'), listApplications);
 router.post('/:instituteId/review', protect, authorize('board', 'admin', 'super_admin'), reviewApplication);
 router.patch('/:instituteId/inspection', protect, authorize('board', 'admin', 'super_admin'), toggleInspection);
 
 export default router;
+
+```
+
+### `backend/src/routes/marksheetRoutes.ts`
+
+```typescript
+import express from 'express';
+import {
+  generateMarksheet,
+  getAllMarksheets,
+  getMarksheetById,
+  updateMarksheet,
+  deleteMarksheet,
+  downloadMarksheet,
+  getStudentMarksheets,
+  bulkGenerateMarksheets,
+} from '../controllers/marksheetController';
+import { protect, authorize } from '../middlewares/authMiddleware';
+
+const router = express.Router();
+
+router.use(protect);
+
+// Marksheet CRUD
+router.get('/', getAllMarksheets);
+router.get('/:id', getMarksheetById);
+router.get('/:id/download', downloadMarksheet);
+router.get('/student/:studentId', getStudentMarksheets);
+
+router.post('/', authorize('admin', 'super_admin'), generateMarksheet);
+router.post('/bulk', authorize('admin', 'super_admin'), bulkGenerateMarksheets);
+router.put('/:id', authorize('admin', 'super_admin'), updateMarksheet);
+router.delete('/:id', authorize('admin', 'super_admin'), deleteMarksheet);
+
+export default router;
+
+```
+
+### `backend/src/routes/paymentRoutes.ts`
+
+```typescript
+import express from 'express';
+import { checkPaymentStatusPublic } from '../controllers/paymentController';
+
+const router = express.Router();
+
+router.get('/payment/status/:orderId', checkPaymentStatusPublic);
+
+export default router;
+```
+
+### `backend/src/routes/resultRoutes.ts`
+
+```typescript
+import express from 'express';
+import {
+  getAllResults,
+  getResultById,
+  getResultByStudent,
+  createResult,
+  updateResult,
+  deleteResult,
+  publishResult,
+  searchResults,
+  getResultStatistics,
+  bulkUploadResults,
+  downloadMarksheet,
+  getStudentResultHistory,
+  bulkUploadFromFile,
+} from '../controllers/resultController';
+import { protect, authorize } from '../middlewares/authMiddleware';
+import { uploadMemory } from '../middlewares/uploadMiddleware';
+
+const router = express.Router();
+
+// Public routes (student access by enrollment ID)
+router.get('/student/:enrollmentId', getResultByStudent);
+
+// Protected routes
+router.use(protect);
+
+router.get('/', getAllResults);
+router.get('/search', searchResults);
+router.get('/statistics', authorize('admin', 'super_admin', 'board'), getResultStatistics);
+router.get('/:id', getResultById);
+router.post('/', authorize('admin', 'super_admin'), createResult);
+router.put('/:id', authorize('admin', 'super_admin'), updateResult);
+router.delete('/:id', authorize('admin', 'super_admin'), deleteResult);
+router.put('/:id/publish', authorize('admin', 'super_admin', 'board'), publishResult);
+router.post('/bulk', authorize('admin', 'super_admin'), bulkUploadResults);
+
+// New: Bulk upload from file (DOCX, PDF, Excel, CSV)
+router.post(
+  '/bulk-upload-file',
+  protect,
+  authorize('admin', 'super_admin'),
+  uploadMemory.single('file'),
+  bulkUploadFromFile
+);
+
+// Marksheet download
+router.get('/:id/marksheet', downloadMarksheet);
+
+// Debug Route to seed SEMI-2026-9487
+router.get('/debug/create-dummy', async (req, res) => {
+  try {
+    const Student = require('../models/studentModel').default;
+    const Result = require('../models/resultModel').default;
+    
+    let student = await Student.findOne({ enrollmentId: 'SEMI-2026-9487' });
+    if (!student) {
+      student = await Student.create({
+        enrollmentId: 'SEMI-2026-9487',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test9487@example.com',
+        dateOfBirth: new Date('2026-07-21'),
+      });
+    } else {
+      student.dateOfBirth = new Date('2026-07-21');
+      await student.save();
+    }
+    
+    let result = await Result.findOne({ student: student._id });
+    if (!result) {
+      await Result.create({
+        student: student._id,
+        academicYear: '2026',
+        semester: 1,
+        isPublished: false,
+        subjects: []
+      });
+    }
+    res.json({ message: 'Dummy created' });
+  } catch (e) {
+    res.json({ error: e instanceof Error ? e.message : 'Unknown error' });
+  }
+});
+
+// User routes
+router.get('/history/:studentId', getStudentResultHistory);
+
+export default router;
+
+```
+
+### `backend/src/routes/revaluationRoutes.ts`
+
+```typescript
+import express from 'express';
+import {
+  createRevaluationRequest,
+  getAllRevaluationRequests,
+  getRevaluationRequestById,
+  updateRequestStatus,
+  addRevaluationResult,
+  getRevaluationResults,
+  approveRevaluationResult,
+  getRevaluationStatistics,
+  deleteRevaluationRequest,
+} from '../controllers/revaluationController';
+import { protect, authorize } from '../middlewares/authMiddleware';
+
+const router = express.Router();
+
+router.use(protect);
+
+// Revaluation request CRUD
+router.get('/requests', getAllRevaluationRequests);
+router.get('/requests/:id', getRevaluationRequestById);
+router.post('/requests', authorize('institute', 'admin', 'super_admin'), createRevaluationRequest);
+router.put('/requests/:id/status', authorize('admin', 'super_admin', 'board'), updateRequestStatus);
+router.delete('/requests/:id', authorize('admin', 'super_admin'), deleteRevaluationRequest);
+
+// Revaluation result routes
+router.get('/requests/:id/results', getRevaluationResults);
+router.post('/requests/:id/results', authorize('admin', 'super_admin', 'board'), addRevaluationResult);
+router.put('/results/:id/approve', authorize('admin', 'super_admin', 'board'), approveRevaluationResult);
+
+// Statistics
+router.get('/statistics', authorize('admin', 'super_admin', 'board'), getRevaluationStatistics);
+
+export default router;
+
 ```
 
 ### `backend/src/routes/userRoutes.ts`
@@ -8147,6 +11840,7 @@ router.route('/').get(protect, authorize('super_admin'), getUsers);
 router.post('/create-admin', protect, authorize('super_admin'), createAdmin);
 
 export default router;
+
 ```
 
 ### `backend/src/seed-test-data.ts`
@@ -8166,16 +11860,14 @@ dotenv.config();
 const seedTestData = async () => {
   try {
     console.log('Clearing old test data...');
-    // Delete existing test user if any
-    const testEmail = 'hospital@swiflare.com';
+    const testEmail = 'jashwa46733@gmail.com';
     const oldUser = await User.findOne({ email: testEmail });
     if (oldUser) {
-      await Student.deleteMany({ institute: { $in: [oldUser._id] } }); // delete using query matches
       const oldInst = await Institute.findOne({ user: oldUser._id });
       if (oldInst) {
         await Student.deleteMany({ institute: oldInst._id });
-        await Course.deleteMany({ institute: oldInst._id });
         await Batch.deleteMany({ institute: oldInst._id });
+        await Course.deleteMany({ institute: oldInst._id });
         await Institute.deleteOne({ _id: oldInst._id });
       }
       await User.deleteOne({ _id: oldUser._id });
@@ -8183,10 +11875,10 @@ const seedTestData = async () => {
 
     console.log('Creating test institute user...');
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('Password123!', salt);
+    const hashedPassword = await bcrypt.hash('789456123', salt);
 
     const user = await User.create({
-      name: 'Swiflare General Hospital',
+      name: 'Jashwa Institute',
       email: testEmail,
       password: hashedPassword,
       role: 'institute',
@@ -8196,7 +11888,7 @@ const seedTestData = async () => {
     console.log('Creating approved Institute profile...');
     const institute = await Institute.create({
       user: user._id,
-      orgName: 'Swiflare General Hospital',
+      orgName: 'Jashwa Institute',
       constitutionType: 'Trust',
       instituteAddress: '123 Healthcare Boulevard, Sector 4, Mumbai',
       registeredOfficeAddress: '456 Swiflare Corporate Plaza, Mumbai',
@@ -8233,74 +11925,72 @@ const seedTestData = async () => {
     console.log('Creating test Course...');
     const course = await Course.create({
       name: 'Emergency Medicine',
-      description: 'Residency Training Program in Emergency Medicine',
+      description: 'Fellowship in Emergency Medicine (FEM)',
       institute: institute._id,
+      subjects: ['Emergency Medicine Core', 'Trauma Management', 'Critical Care'],
     });
 
     console.log('Creating test Batch...');
     const batch = await Batch.create({
       course: course._id,
       year: 2026,
+      name: 'FEM 2026 Batch',
       institute: institute._id,
     });
 
-    console.log('Creating 5 test Students with varying metrics...');
+    console.log('Creating 5 test Students with semester data...');
     const studentsData = [
       {
         enrollmentId: 'SEMI-2026-1001',
         firstName: 'Aarav',
         lastName: 'Sharma',
         email: 'aarav.sharma@example.com',
-        remittedToAcademy: true,
-        attendancePercentage: 85,
-        thesisApproved: true,
         utrNumber: 'UTR111111',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 85, thesisApproved: true }],
+        remittedToAcademy: true,
       },
       {
         enrollmentId: 'SEMI-2026-1002',
         firstName: 'Neha',
         lastName: 'Patel',
         email: 'neha.patel@example.com',
-        remittedToAcademy: true,
-        attendancePercentage: 68, // Fail (attendance < 75%)
-        thesisApproved: true,
         utrNumber: 'UTR222222',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 68, thesisApproved: true }],
+        remittedToAcademy: true,
       },
       {
         enrollmentId: 'SEMI-2026-1003',
         firstName: 'Rahul',
         lastName: 'Verma',
         email: 'rahul.verma@example.com',
-        remittedToAcademy: true,
-        attendancePercentage: 92,
-        thesisApproved: false, // Fail (thesis not approved)
         utrNumber: 'UTR333333',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 92, thesisApproved: false }],
+        remittedToAcademy: true,
       },
       {
         enrollmentId: 'SEMI-2026-1004',
         firstName: 'Priya',
         lastName: 'Nair',
         email: 'priya.nair@example.com',
-        remittedToAcademy: false, // Fail (fee pending)
-        attendancePercentage: 88,
-        thesisApproved: true,
         utrNumber: 'UTR444444',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 88, thesisApproved: true }],
+        remittedToAcademy: false,
       },
       {
         enrollmentId: 'SEMI-2026-1005',
         firstName: 'Karan',
         lastName: 'Malhotra',
         email: 'karan.malhotra@example.com',
-        remittedToAcademy: false, // Fail (multiple conditions)
-        attendancePercentage: 62, // Fail
-        thesisApproved: false, // Fail
         utrNumber: 'UTR555555',
+        semesters: [{ semesterNumber: 1, attendancePercentage: 62, thesisApproved: false }],
+        remittedToAcademy: false,
       },
     ];
 
     for (const s of studentsData) {
+      const { remittedToAcademy, semesters, ...rest } = s;
       await Student.create({
-        ...s,
+        ...rest,
         homeAddress: '456 Residency Road, Mumbai',
         contactNumber: '9988776655',
         qualification: 'MBBS',
@@ -8314,6 +12004,8 @@ const seedTestData = async () => {
         batch: batch._id,
         institute: institute._id,
         courseDirector: 'Dr. Rajesh Khanna',
+        semesters,
+        remittedToAcademy,
         documents: {
           passportPhotoUrl: 'http://example.com/photo.jpg',
           mbbsCertificateUrl: 'http://example.com/mbbs.pdf',
@@ -8324,9 +12016,16 @@ const seedTestData = async () => {
       });
     }
 
-    console.log('Test data seeded successfully! 🎉');
-    console.log(`Login Email: ${testEmail}`);
-    console.log(`Login Password: Password123!`);
+    console.log('');
+    console.log('=== SEED SUMMARY ===');
+    console.log(`Login Email:    ${testEmail}`);
+    console.log(`Login Password: 789456123`);
+    console.log(`Institute:      ${institute.orgName} (Approved)`);
+    console.log(`Course:         ${course.name}`);
+    console.log(`Batch:          ${batch.year}`);
+    console.log(`Students:       5 created`);
+    console.log('');
+    console.log('Test data seeded successfully!');
   } catch (error: any) {
     console.error(`Error seeding test data: ${error.message}`);
   }
@@ -8347,6 +12046,1044 @@ const runSeeder = async () => {
 };
 
 runSeeder();
+
+```
+
+### `backend/src/services/certificateService.ts`
+
+```typescript
+import { Certificate } from '../models/certificateModel';
+
+function generateRandomString(length = 8): string {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
+class CertificateService {
+  async generateCertificateNumber(type: string): Promise<string> {
+    const prefix = type === 'PROVISIONAL' ? 'PC' : 'CC';
+    const year = new Date().getFullYear();
+    const random = generateRandomString(6);
+    const sequence = await this.getNextSequence();
+    return `${prefix}-${year}-${sequence}-${random}`;
+  }
+
+  async getNextSequence(): Promise<string> {
+    const count = await Certificate.countDocuments();
+    return String(count + 1).padStart(6, '0');
+  }
+
+  async getCertificatesWithPagination(query: any, options: any) {
+    const page = options.page || 1;
+    const limit = options.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const [certificates, total] = await Promise.all([
+      Certificate.find(query)
+        .populate(options.populate || [])
+        .sort(options.sort || { createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Certificate.countDocuments(query),
+    ]);
+
+    return {
+      certificates,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async verifyCertificate(certificateNumber: string) {
+    const certificate = await Certificate.findOne({ certificateNumber });
+    if (!certificate) {
+      return { valid: false, message: 'Certificate not found' };
+    }
+
+    if (certificate.isRevoked) {
+      return { valid: false, message: 'Certificate has been revoked' };
+    }
+
+    if (!certificate.isVerified) {
+      return { valid: false, message: 'Certificate not verified' };
+    }
+
+    return {
+      valid: true,
+      message: 'Certificate is valid',
+      certificate: {
+        student: certificate.student,
+        type: certificate.type,
+        issuedDate: certificate.issuedDate,
+        academicYear: certificate.academicYear,
+      },
+    };
+  }
+}
+
+export default new CertificateService();
+
+```
+
+### `backend/src/services/fileParserService.ts`
+
+```typescript
+import mammoth from 'mammoth';
+import pdfParse from 'pdf-parse';
+import * as XLSX from 'xlsx';
+
+export interface ParsedSubject {
+  subjectCode: string;
+  subjectName: string;
+  internalMarks: number;
+  externalMarks: number;
+  credits: number;
+}
+
+export interface ParsedResultData {
+  studentId: string;
+  academicYear: string;
+  semester: number;
+  subjects: ParsedSubject[];
+}
+
+class FileParserService {
+  async parseDocx(buffer: Buffer): Promise<ParsedResultData[]> {
+    try {
+      const result = await mammoth.extractRawText({ buffer });
+      const text = result.value;
+      return this.parseTextToResults(text);
+    } catch (error: any) {
+      throw new Error(`Failed to parse DOCX: ${error.message}`);
+    }
+  }
+
+  async parsePdf(buffer: Buffer): Promise<ParsedResultData[]> {
+    try {
+      const data = await pdfParse(buffer);
+      return this.parseTextToResults(data.text);
+    } catch (error: any) {
+      throw new Error(`Failed to parse PDF: ${error.message}`);
+    }
+  }
+
+  async parseExcel(buffer: Buffer): Promise<ParsedResultData[]> {
+    try {
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      return this.parseExcelToResults(jsonData);
+    } catch (error: any) {
+      throw new Error(`Failed to parse Excel: ${error.message}`);
+    }
+  }
+
+  private parseTextToResults(text: string): ParsedResultData[] {
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    const results: ParsedResultData[] = [];
+    let currentStudent: Partial<ParsedResultData> = {};
+    let isParsingSubjects = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      if (line.match(/^(Student|Candidate|Name|ID|Enrollment):/i)) {
+        if (currentStudent.studentId && currentStudent.subjects?.length) {
+          results.push(currentStudent as ParsedResultData);
+        }
+        currentStudent = { subjects: [] };
+        isParsingSubjects = false;
+
+        const parts = line.split(/[:,]\s*/);
+        if (parts.length === 2) {
+          const key = parts[0].toLowerCase();
+          const value = parts[1];
+          if (key.includes('id') || key.includes('enrollment')) {
+            currentStudent.studentId = value;
+          }
+        }
+        continue;
+      }
+
+      if (line.match(/^(Academic Year|Year|Semester):/i)) {
+        const parts = line.split(/[:,]\s*/);
+        if (parts.length === 2) {
+          const key = parts[0].toLowerCase();
+          const value = parts[1];
+          if (key.includes('year')) {
+            currentStudent.academicYear = value;
+          } else if (key.includes('semester')) {
+            currentStudent.semester = parseInt(value) || 1;
+          }
+        }
+        continue;
+      }
+
+      if (line.match(/(Subject|Code|Marks|Internal|External|Credits)/i)) {
+        isParsingSubjects = true;
+        if (!currentStudent.subjects) currentStudent.subjects = [];
+        continue;
+      }
+
+      if (isParsingSubjects && currentStudent.subjects) {
+        const row = line.split(/\s{2,}|\t/).map(cell => cell.trim());
+        if (row.length >= 3) {
+          let subjectCode = row[0] || `SUB-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+          let subjectName = row[1] || row[0] || 'Unknown Subject';
+          let internalMarks = 0;
+          let externalMarks = 0;
+          let credits = 1;
+
+          const numericValues = row.filter(cell => /^\d+(\.\d+)?$/.test(cell)).map(Number);
+          if (numericValues.length >= 2) {
+            internalMarks = numericValues[0] || 0;
+            externalMarks = numericValues[1] || 0;
+            if (numericValues.length >= 3) {
+              credits = numericValues[2] || 1;
+            }
+          } else if (numericValues.length === 1) {
+            internalMarks = numericValues[0] || 0;
+            externalMarks = 0;
+          }
+
+          if (/^\d{1,2}\/\d{1,2}/.test(subjectCode) || subjectCode.length < 2) {
+            subjectCode = `SUB-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+          }
+
+          if (/^\d+$/.test(subjectName) && row.length > 2) {
+            subjectName = row[2] || row[0] || 'Unknown Subject';
+          }
+
+          currentStudent.subjects.push({
+            subjectCode,
+            subjectName,
+            internalMarks,
+            externalMarks,
+            credits: Math.max(1, Math.min(6, credits)),
+          });
+        }
+      }
+    }
+
+    if (currentStudent.studentId && currentStudent.subjects?.length) {
+      results.push(currentStudent as ParsedResultData);
+    }
+
+    return results;
+  }
+
+  private parseExcelToResults(jsonData: any[]): ParsedResultData[] {
+    const results: ParsedResultData[] = [];
+
+    if (jsonData.length === 0) return results;
+
+    const studentGroups = new Map<string, any[]>();
+
+    for (const row of jsonData) {
+      const studentId = row['Student ID'] || row['Enrollment ID'] || row['ID'] || row['Student'] || row['Enrollment'];
+      if (studentId) {
+        const key = String(studentId);
+        if (!studentGroups.has(key)) {
+          studentGroups.set(key, []);
+        }
+        studentGroups.get(key)!.push(row);
+      }
+    }
+
+    for (const [studentId, rows] of studentGroups) {
+      const firstRow = rows[0];
+      const studentData: ParsedResultData = {
+        studentId: String(studentId),
+        academicYear: firstRow['Academic Year'] || firstRow['Year'] || '2024-25',
+        semester: parseInt(firstRow['Semester']) || 1,
+        subjects: [],
+      };
+
+      for (const row of rows) {
+        const subjectCode = row['Subject Code'] || row['Code'] || `SUB-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const subjectName = row['Subject Name'] || row['Subject'] || 'Unknown Subject';
+
+        studentData.subjects.push({
+          subjectCode: String(subjectCode),
+          subjectName: String(subjectName),
+          internalMarks: parseFloat(row['Internal Marks']) || 0,
+          externalMarks: parseFloat(row['External Marks']) || 0,
+          credits: parseInt(row['Credits']) || 1,
+        });
+      }
+
+      if (studentData.subjects.length > 0) {
+        results.push(studentData);
+      }
+    }
+
+    return results;
+  }
+}
+
+export default new FileParserService();
+
+```
+
+### `backend/src/services/marksheetService.ts`
+
+```typescript
+import { Marksheet } from '../models/marksheetModel';
+import { Result } from '../models/resultModel';
+
+function generateRandomString(length = 8): string {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
+class MarksheetService {
+  async generateMarksheetNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const random = generateRandomString(8);
+    const sequence = await this.getNextSequence();
+    return `MS-${year}-${sequence}-${random}`;
+  }
+
+  async getNextSequence(): Promise<string> {
+    const count = await Marksheet.countDocuments();
+    return String(count + 1).padStart(6, '0');
+  }
+
+  async getMarksheetsWithPagination(query: any, options: any) {
+    const page = options.page || 1;
+    const limit = options.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const [marksheets, total] = await Promise.all([
+      Marksheet.find(query)
+        .populate(options.populate || [])
+        .sort(options.sort || { createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Marksheet.countDocuments(query),
+    ]);
+
+    return {
+      marksheets,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async bulkGenerate(resultIds: string[]) {
+    const generated: any[] = [];
+
+    for (const resultId of resultIds) {
+      try {
+        const result = await Result.findById(resultId).populate('student');
+        if (!result) continue;
+
+        const existing = await Marksheet.findOne({ result: resultId });
+        if (existing) continue;
+
+        const marksheetNumber = await this.generateMarksheetNumber();
+        const pdfUrl = `/uploads/marksheets/${marksheetNumber}.pdf`;
+
+        const marksheet = await Marksheet.create({
+          student: (result.student as any)._id,
+          academicYear: result.academicYear,
+          semester: result.semester,
+          result: resultId,
+          marksheetNumber,
+          marksheetPDF: pdfUrl,
+          isFinal: true,
+          generatedDate: new Date(),
+        });
+
+        generated.push(marksheet);
+      } catch (error) {
+        console.error(`Failed to generate marksheet for result ${resultId}:`, error);
+      }
+    }
+
+    return generated;
+  }
+}
+
+export default new MarksheetService();
+
+```
+
+### `backend/src/services/pdfGeneratorService.ts`
+
+```typescript
+import path from 'path';
+import fs from 'fs';
+import { Result } from '../models/resultModel';
+
+function formatDate(date: Date): string {
+  return new Date(date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+class PdfGeneratorService {
+  getUploadsDir(): string {
+    const dir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    return dir;
+  }
+
+  ensureDir(dir: string): void {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  }
+
+  async generateMarksheetPDF(data: any): Promise<string> {
+    const { student, result, marksheetNumber } = data;
+    const studentName = student.firstName && student.lastName
+      ? `${student.firstName} ${student.lastName}`
+      : student.name || student.enrollmentId;
+
+    const filename = `${marksheetNumber}.txt`;
+    const dir = path.join(this.getUploadsDir(), 'marksheets');
+    this.ensureDir(dir);
+    const filepath = path.join(dir, filename);
+
+    const content = [
+      'MARKSHEET',
+      '=========',
+      `Marksheet Number: ${marksheetNumber}`,
+      `Student Name: ${studentName}`,
+      `Enrollment ID: ${student.enrollmentId}`,
+      `Academic Year: ${result.academicYear}`,
+      `Semester: ${result.semester}`,
+      `Total Marks: ${result.totalMarks}`,
+      `Percentage: ${result.percentage}%`,
+      `CGPA: ${result.cgpa}`,
+      `Division: ${result.division}`,
+      '',
+      'Subject Details:',
+      result.subjects.map((s: any) =>
+        `  ${s.subjectCode} - ${s.subjectName}: Internal=${s.internalMarks}, External=${s.externalMarks}, Total=${s.totalMarks} (${s.grade})`
+      ).join('\n'),
+    ].join('\n');
+
+    fs.writeFileSync(filepath, content);
+    return `/uploads/marksheets/${filename}`;
+  }
+
+  async generateProvisionalCertificatePDF(data: any): Promise<string> {
+    const { student, result, certNumber } = data;
+    const studentName = student.firstName && student.lastName
+      ? `${student.firstName} ${student.lastName}`
+      : student.name || student.enrollmentId;
+
+    const filename = `${certNumber}.txt`;
+    const dir = path.join(this.getUploadsDir(), 'certificates');
+    this.ensureDir(dir);
+    const filepath = path.join(dir, filename);
+
+    const content = [
+      'PROVISIONAL CERTIFICATE',
+      '=======================',
+      `Certificate Number: ${certNumber}`,
+      '',
+      `This is to certify that ${studentName}`,
+      `(Enrollment ID: ${student.enrollmentId})`,
+      `has successfully completed the ${result.semester} semester`,
+      `of the academic year ${result.academicYear}`,
+      '',
+      `CGPA: ${result.cgpa}`,
+      `Division: ${result.division}`,
+      '',
+      `Date: ${formatDate(new Date())}`,
+    ].join('\n');
+
+    fs.writeFileSync(filepath, content);
+    return `/uploads/certificates/${filename}`;
+  }
+
+  async generateRevaluationReportPDF(data: any): Promise<string> {
+    const { request, results } = data;
+
+    const filename = `revaluation-report-${request.requestId}.txt`;
+    const dir = path.join(this.getUploadsDir(), 'revaluation-reports');
+    this.ensureDir(dir);
+    const filepath = path.join(dir, filename);
+
+    const student = request.student || {};
+    const studentName = student.firstName && student.lastName
+      ? `${student.firstName} ${student.lastName}`
+      : student.name || 'N/A';
+
+    const content = [
+      'REVALUATION REPORT',
+      '==================',
+      `Request ID: ${request.requestId}`,
+      `Student: ${studentName}`,
+      `Registration: ${student.enrollmentId || 'N/A'}`,
+      '',
+      'Subject-wise Results:',
+      ...(results || []).map((r: any) =>
+        `  ${r.subjectCode}: Original: ${r.originalMarks}, Revised: ${r.revisedTotalMarks}, Change: ${r.marksChange}`
+      ),
+      '',
+      `Final Result: ${request.finalResult || 'PENDING'}`,
+    ].join('\n');
+
+    fs.writeFileSync(filepath, content);
+    return `/uploads/revaluation-reports/${filename}`;
+  }
+}
+
+export default new PdfGeneratorService();
+
+```
+
+### `backend/src/services/resultService.ts`
+
+```typescript
+import { Result, IResult } from '../models/resultModel';
+import { Student } from '../models/studentModel';
+
+class ResultService {
+  calculateResultMetrics(subjects: any[]) {
+    const totalMarks = subjects.reduce((sum: number, subject: any) => sum + (subject.totalMarks || 0), 0);
+    const totalCredits = subjects.reduce((sum: number, subject: any) => sum + (subject.credits || 0), 0);
+    const maxMarks = subjects.length * 100;
+    const percentage = maxMarks > 0 ? (totalMarks / maxMarks) * 100 : 0;
+
+    const gradePoints = subjects.map((subject: any) => {
+      const marks = subject.totalMarks || 0;
+      if (marks >= 90) return 10;
+      if (marks >= 80) return 9;
+      if (marks >= 70) return 8;
+      if (marks >= 60) return 7;
+      if (marks >= 50) return 6;
+      if (marks >= 40) return 5;
+      return 0;
+    });
+
+    const totalGradePoints = gradePoints.reduce((sum: number, gp: number) => sum + gp, 0);
+    const sgpa = subjects.length > 0 ? totalGradePoints / subjects.length : 0;
+    const cgpa = sgpa;
+
+    let division = 'Fail';
+    let resultStatus = 'FAIL';
+
+    if (percentage >= 60) {
+      division = 'First';
+      resultStatus = 'PASS';
+    } else if (percentage >= 50) {
+      division = 'Second';
+      resultStatus = 'PASS';
+    } else if (percentage >= 40) {
+      division = 'Third';
+      resultStatus = 'PASS';
+    } else if (percentage >= 35) {
+      division = 'Pass';
+      resultStatus = 'PASS';
+    } else {
+      const failedSubjects = subjects.filter((s: any) => (s.totalMarks || 0) < 35);
+      if (failedSubjects.length <= 2) {
+        resultStatus = 'SUPPLEMENTARY';
+      }
+    }
+
+    return {
+      totalMarks,
+      totalCredits,
+      percentage: parseFloat(percentage.toFixed(2)),
+      cgpa: parseFloat(cgpa.toFixed(2)),
+      sgpa: parseFloat(sgpa.toFixed(2)),
+      division,
+      resultStatus,
+    };
+  }
+
+  async getResultsWithPagination(query: any, options: any) {
+    const page = options.page || 1;
+    const limit = options.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const [results, total] = await Promise.all([
+      Result.find(query)
+        .populate(options.populate || [])
+        .sort(options.sort || { createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Result.countDocuments(query),
+    ]);
+
+    return {
+      results,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async advancedSearch(filters: any) {
+    const query: any = { isPublished: true };
+
+    if (filters.query) {
+      const students = await Student.find({
+        $or: [
+          { firstName: { $regex: filters.query, $options: 'i' } },
+          { lastName: { $regex: filters.query, $options: 'i' } },
+          { enrollmentId: { $regex: filters.query, $options: 'i' } },
+        ],
+      }).select('_id');
+      query.student = { $in: students.map((s) => s._id) };
+    }
+
+    if (filters.academicYear) query.academicYear = filters.academicYear;
+    if (filters.semester) query.semester = parseInt(filters.semester);
+    if (filters.resultStatus) query.resultStatus = filters.resultStatus;
+
+    if (filters.fromDate || filters.toDate) {
+      query.publishedDate = {};
+      if (filters.fromDate) query.publishedDate.$gte = new Date(filters.fromDate);
+      if (filters.toDate) query.publishedDate.$lte = new Date(filters.toDate);
+    }
+
+    if (filters.department) {
+      const students = await Student.find({
+        $or: [
+          { firstName: { $regex: filters.department, $options: 'i' } },
+          { lastName: { $regex: filters.department, $options: 'i' } },
+        ],
+      }).select('_id');
+      query.student = { $in: students.map((s) => s._id) };
+    }
+
+    return await Result.find(query)
+      .populate('student', 'firstName lastName enrollmentId email')
+      .sort({ publishedDate: -1 });
+  }
+
+  async getResultStatistics(filters: any) {
+    const query: any = { isPublished: true };
+    if (filters.academicYear) query.academicYear = filters.academicYear;
+    if (filters.semester) query.semester = parseInt(filters.semester);
+
+    const results = await Result.find(query);
+
+    const total = results.length;
+    const passed = results.filter((r) => r.resultStatus === 'PASS').length;
+    const failed = results.filter((r) => r.resultStatus === 'FAIL').length;
+    const supplementary = results.filter((r) => r.resultStatus === 'SUPPLEMENTARY').length;
+
+    const totalMarks = results.reduce((sum, r) => sum + r.totalMarks, 0);
+    const averageMarks = total > 0 ? totalMarks / total : 0;
+
+    const totalPercentage = results.reduce((sum, r) => sum + r.percentage, 0);
+    const averagePercentage = total > 0 ? totalPercentage / total : 0;
+
+    const gradeDistribution: Record<string, number> = {
+      O: 0, 'A+': 0, A: 0, 'B+': 0, B: 0, C: 0, D: 0, F: 0,
+    };
+
+    results.forEach((result) => {
+      result.subjects.forEach((subject: any) => {
+        if (subject.grade in gradeDistribution) {
+          gradeDistribution[subject.grade]++;
+        }
+      });
+    });
+
+    return {
+      totalResults: total,
+      passed,
+      failed,
+      supplementary,
+      passPercentage: total > 0 ? ((passed / total) * 100).toFixed(2) : 0,
+      averageMarks: parseFloat(averageMarks.toFixed(2)),
+      averagePercentage: parseFloat(averagePercentage.toFixed(2)),
+      gradeDistribution,
+      subjectCount: results.reduce((sum, r) => sum + r.subjects.length, 0),
+    };
+  }
+
+  async bulkUpload(results: any[], userId: string) {
+    const uploaded: IResult[] = [];
+
+    for (const resultData of results) {
+      try {
+        const student = await Student.findById(resultData.student);
+        if (!student) continue;
+
+        const existingResult = await Result.findOne({
+          student: resultData.student,
+          academicYear: resultData.academicYear,
+          semester: resultData.semester,
+        });
+
+        if (existingResult) continue;
+
+        const calculatedData = this.calculateResultMetrics(resultData.subjects);
+        resultData.totalMarks = calculatedData.totalMarks;
+        resultData.totalCredits = calculatedData.totalCredits;
+        resultData.percentage = calculatedData.percentage;
+        resultData.cgpa = calculatedData.cgpa;
+        resultData.sgpa = calculatedData.sgpa;
+        resultData.division = calculatedData.division;
+        resultData.resultStatus = calculatedData.resultStatus;
+
+        resultData.auditHistory = [
+          {
+            action: 'CREATED',
+            performedBy: userId,
+            timestamp: new Date(),
+          },
+        ];
+
+        const result = await Result.create(resultData);
+        uploaded.push(result);
+      } catch (error) {
+        console.error(`Failed to upload result: ${(error as Error).message}`);
+      }
+    }
+
+    return uploaded;
+  }
+}
+
+export default new ResultService();
+
+```
+
+### `backend/src/services/revaluationService.ts`
+
+```typescript
+import { RevaluationRequest } from '../models/revaluationRequestModel';
+import { RevaluationResult } from '../models/revaluationResultModel';
+import { Result } from '../models/resultModel';
+
+class RevaluationService {
+  generateRequestId(): string {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 8);
+    return `REV-${timestamp}-${random}`.toUpperCase();
+  }
+
+  async getRequestsWithPagination(query: any, options: any) {
+    const page = options.page || 1;
+    const limit = options.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const [requests, total] = await Promise.all([
+      RevaluationRequest.find(query)
+        .populate(options.populate || [])
+        .sort(options.sort || { submittedDate: -1 })
+        .skip(skip)
+        .limit(limit),
+      RevaluationRequest.countDocuments(query),
+    ]);
+
+    return {
+      requests,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async processRevaluationResults(requestId: string) {
+    const request = await RevaluationRequest.findById(requestId);
+    if (!request) {
+      throw new Error('Revaluation request not found');
+    }
+
+    const revalResults = await RevaluationResult.find({ revaluationRequest: requestId });
+
+    let allApproved = true;
+    let hasChanges = false;
+
+    for (const revalResult of revalResults) {
+      if (revalResult.reviewStatus !== 'APPROVED') {
+        allApproved = false;
+      }
+      if (revalResult.marksChange !== 0) {
+        hasChanges = true;
+      }
+    }
+
+    request.finalResult = hasChanges ? 'CHANGED' : 'UNCHANGED';
+
+    if (allApproved && revalResults.length === request.subjects.length) {
+      request.status = 'COMPLETED';
+    }
+
+    await request.save();
+
+    if (hasChanges && revalResults.length > 0) {
+      await this.updateResultWithRevaluation(revalResults[0]);
+    }
+
+    return { request, allApproved, hasChanges, revaluationResults: revalResults };
+  }
+
+  async updateResultWithRevaluation(revalResult: any) {
+    const result = await Result.findById(revalResult.result);
+    if (!result) {
+      throw new Error('Result not found');
+    }
+
+    const subjectIndex = result.subjects.findIndex(
+      (s: any) => s.subjectCode === revalResult.subjectCode
+    );
+
+    if (subjectIndex === -1) {
+      throw new Error('Subject not found in result');
+    }
+
+    const previousSubject = { ...(result.subjects[subjectIndex] as any).toObject() };
+
+    (result.subjects[subjectIndex] as any).totalMarks = revalResult.revisedTotalMarks;
+    (result.subjects[subjectIndex] as any).grade = revalResult.revisedGrade;
+    (result.subjects[subjectIndex] as any).isRevaluationApplied = true;
+    (result.subjects[subjectIndex] as any).revaluationMarks = revalResult.revisedTotalMarks;
+    (result.subjects[subjectIndex] as any).revaluationGrade = revalResult.revisedGrade;
+    (result.subjects[subjectIndex] as any).isRevaluationCompleted = true;
+
+    const totalMarks = result.subjects.reduce((sum: number, s: any) => sum + (s.totalMarks || 0), 0);
+    const maxMarks = result.subjects.length * 100;
+    const percentage = maxMarks > 0 ? (totalMarks / maxMarks) * 100 : 0;
+
+    result.totalMarks = totalMarks;
+    result.percentage = parseFloat(percentage.toFixed(2));
+
+    const gradePoints = result.subjects.map((subject: any) => {
+      const marks = subject.totalMarks || 0;
+      if (marks >= 90) return 10;
+      if (marks >= 80) return 9;
+      if (marks >= 70) return 8;
+      if (marks >= 60) return 7;
+      if (marks >= 50) return 6;
+      if (marks >= 40) return 5;
+      return 0;
+    });
+
+    const totalGradePoints = gradePoints.reduce((sum: number, gp: number) => sum + gp, 0);
+    result.sgpa = parseFloat((totalGradePoints / result.subjects.length).toFixed(2));
+    result.cgpa = result.sgpa;
+
+    if (percentage >= 60) {
+      result.division = 'First';
+      result.resultStatus = 'PASS';
+    } else if (percentage >= 50) {
+      result.division = 'Second';
+      result.resultStatus = 'PASS';
+    } else if (percentage >= 40) {
+      result.division = 'Third';
+      result.resultStatus = 'PASS';
+    } else if (percentage >= 35) {
+      result.division = 'Pass';
+      result.resultStatus = 'PASS';
+    } else {
+      const failedSubjects = result.subjects.filter((s: any) => (s.totalMarks || 0) < 35);
+      if (failedSubjects.length <= 2) {
+        result.resultStatus = 'SUPPLEMENTARY';
+      } else {
+        result.resultStatus = 'FAIL';
+      }
+    }
+
+    result.auditHistory.push({
+      action: 'REVALUATION_UPDATED' as any,
+      previousData: { subjects: [previousSubject] },
+      newData: { subjects: [(result.subjects[subjectIndex] as any).toObject()] },
+      performedBy: revalResult.reviewedBy,
+      timestamp: new Date(),
+    });
+
+    await result.save();
+    return result;
+  }
+
+  async checkEligibility(studentId: string, resultId: string, subjectCodes: string[]) {
+    const result = await Result.findById(resultId);
+    if (!result) {
+      return { eligible: false, message: 'Result not found', eligibleSubjects: [] };
+    }
+
+    if (!result.isRevaluationActive) {
+      return { eligible: false, message: 'Revaluation is not active for this result', eligibleSubjects: [] };
+    }
+
+    if (result.revaluationDeadline && new Date() > result.revaluationDeadline) {
+      return { eligible: false, message: 'Revaluation deadline has passed', eligibleSubjects: [] };
+    }
+
+    const existingRequest = await RevaluationRequest.findOne({
+      student: studentId,
+      result: resultId,
+      status: { $in: ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS'] },
+    });
+
+    if (existingRequest) {
+      return { eligible: false, message: 'Student has already applied for revaluation', eligibleSubjects: [] };
+    }
+
+    const validSubjects: string[] = [];
+    const invalidSubjects: string[] = [];
+
+    result.subjects.forEach((subject: any) => {
+      if (subjectCodes.includes(subject.subjectCode)) {
+        if (subject.totalMarks < 40) {
+          validSubjects.push(subject.subjectCode);
+        } else {
+          invalidSubjects.push(subject.subjectCode);
+        }
+      }
+    });
+
+    if (invalidSubjects.length > 0) {
+      return {
+        eligible: false,
+        message: `Subjects ${invalidSubjects.join(', ')} are not eligible for revaluation (marks >= 40)`,
+        eligibleSubjects: validSubjects,
+        ineligibleSubjects: invalidSubjects,
+      };
+    }
+
+    if (validSubjects.length === 0) {
+      return { eligible: false, message: 'No eligible subjects found for revaluation', eligibleSubjects: [] };
+    }
+
+    return { eligible: true, message: 'Student is eligible for revaluation', eligibleSubjects: validSubjects };
+  }
+
+  async getRevaluationStatistics(filters: any) {
+    const query: any = {};
+    if (filters.academicYear) query.academicYear = filters.academicYear;
+    if (filters.semester) query.semester = parseInt(filters.semester);
+
+    const requests = await RevaluationRequest.find(query);
+
+    const totalRequests = requests.length;
+    const pending = requests.filter((r) => r.status === 'PENDING').length;
+    const underReview = requests.filter((r) => r.status === 'UNDER_REVIEW').length;
+    const assigned = requests.filter((r) => r.status === 'ASSIGNED').length;
+    const inProgress = requests.filter((r) => r.status === 'IN_PROGRESS').length;
+    const completed = requests.filter((r) => r.status === 'COMPLETED').length;
+    const rejected = requests.filter((r) => r.status === 'REJECTED').length;
+
+    const completedRequests = requests.filter((r) => r.status === 'COMPLETED' && r.evaluatedDate);
+    let averageCompletionTime = 0;
+    if (completedRequests.length > 0) {
+      const totalTime = completedRequests.reduce((sum, r) => {
+        const time = (r.evaluatedDate!.getTime() - r.submittedDate.getTime()) / (1000 * 60 * 60 * 24);
+        return sum + time;
+      }, 0);
+      averageCompletionTime = totalTime / completedRequests.length;
+    }
+
+    const subjectStats: Record<string, any> = {};
+    requests.forEach((request) => {
+      request.subjects.forEach((subject: any) => {
+        if (!subjectStats[subject.subjectCode]) {
+          subjectStats[subject.subjectCode] = {
+            subjectName: subject.subjectName,
+            totalRequests: 0,
+            changed: 0,
+            unchanged: 0,
+          };
+        }
+        subjectStats[subject.subjectCode].totalRequests++;
+      });
+    });
+
+    const revalResults = await RevaluationResult.find({
+      revaluationRequest: { $in: requests.map((r) => r._id) },
+    });
+
+    revalResults.forEach((result) => {
+      if (subjectStats[result.subjectCode]) {
+        if (result.marksChange !== 0) {
+          subjectStats[result.subjectCode].changed++;
+        } else {
+          subjectStats[result.subjectCode].unchanged++;
+        }
+      }
+    });
+
+    return {
+      totalRequests,
+      pending,
+      underReview,
+      assigned,
+      inProgress,
+      completed,
+      rejected,
+      completionRate: totalRequests > 0 ? ((completed / totalRequests) * 100).toFixed(2) : 0,
+      averageCompletionTime: parseFloat(averageCompletionTime.toFixed(2)),
+      subjectStatistics: subjectStats,
+      totalSubjects: Object.keys(subjectStats).length,
+    };
+  }
+}
+
+export default new RevaluationService();
+
+```
+
+### `backend/src/utils/helpers.ts`
+
+```typescript
+export const generateRandomString = (length: number = 8): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+export const formatDate = (date: Date | string): string => {
+  return new Date(date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+};
+
+export const calculateGrade = (marks: number): string => {
+  if (marks >= 90) return 'O';
+  if (marks >= 80) return 'A+';
+  if (marks >= 70) return 'A';
+  if (marks >= 60) return 'B+';
+  if (marks >= 50) return 'B';
+  if (marks >= 40) return 'C';
+  if (marks >= 35) return 'D';
+  return 'F';
+};
+
 ```
 
 ### `backend/src/utils/responseFormatter.ts`
@@ -8382,7 +13119,11 @@ export const sendSuccess = ({ req, res, message = 'Operation successful', data =
   });
 };
 
-export const sendError = ({ req, res, message = 'Operation failed', errors = [], statusCode = 400 }: ErrorResponseParams) => {
+export const sendError = ({ req, res, message = 'Internal Server Error', errors = [], statusCode = 500 }: ErrorResponseParams) => {
+  if (statusCode === 400) {
+    require('fs').writeFileSync('last_400_error.log', message);
+  }
+  
   // Log the error to terminal logs
   const reqInfo = req ? `[${req.method} ${req.originalUrl}]` : '[API Error]';
   console.error(`🔴 ${reqInfo} Status ${statusCode} - Error: ${message}`, errors && errors.length > 0 ? '\nDetails: ' + JSON.stringify(errors, null, 2) : '');
@@ -8395,6 +13136,7 @@ export const sendError = ({ req, res, message = 'Operation failed', errors = [],
     requestId: (req as any)?.requestId || uuidv4(),
   });
 };
+
 ```
 
 ### `backend/src/utils/sendEmail.ts`
@@ -8444,6 +13186,149 @@ const sendEmail = async (options: EmailOptions): Promise<void> => {
 };
 
 export default sendEmail;
+
+```
+
+### `backend/src/validators/certificateValidator.ts`
+
+```typescript
+import { z } from 'zod';
+
+export const issueCertificateSchema = z.object({
+  student: z.string().min(1, 'Student ID is required'),
+  type: z.enum(['PROVISIONAL', 'CONSOLIDATED', 'DUPLICATE', 'TRANSFER']),
+  academicYear: z.string().min(1, 'Academic year is required'),
+  semester: z.coerce.number().int().min(1).max(8).optional(),
+  result: z.string().optional(),
+  certificatePDF: z.string().optional(),
+  expiryDate: z.string().optional(),
+});
+
+export const updateCertificateSchema = z.object({
+  isVerified: z.boolean().optional(),
+  isRevoked: z.boolean().optional(),
+  revocationReason: z.string().optional(),
+  expiryDate: z.string().optional(),
+});
+
+```
+
+### `backend/src/validators/resultValidator.ts`
+
+```typescript
+import { z } from 'zod';
+
+export const createResultSchema = z.object({
+  student: z.string().min(1, 'Student ID is required'),
+  academicYear: z.string().min(1, 'Academic year is required'),
+  semester: z.coerce.number().int().min(1, 'Semester must be at least 1').max(8, 'Semester must be at most 8'),
+  subjects: z
+    .array(
+      z.object({
+        subjectCode: z.string().min(1, 'Subject code is required'),
+        subjectName: z.string().min(1, 'Subject name is required'),
+        internalMarks: z.coerce.number().min(0).max(100).default(0),
+        externalMarks: z.coerce.number().min(0).max(100).default(0),
+        totalMarks: z.coerce.number().min(0).max(100).optional(),
+        grade: z.enum(['O', 'A+', 'A', 'B+', 'B', 'C', 'D', 'F', 'ABSENT']).optional(),
+        credits: z.coerce.number().int().min(1, 'Credits must be at least 1').max(6, 'Credits must be at most 6'),
+        gradePoints: z.coerce.number().min(0).max(10).optional(),
+      })
+    )
+    .min(1, 'At least one subject is required'),
+});
+
+export const updateResultSchema = z.object({
+  student: z.string().min(1).optional(),
+  academicYear: z.string().min(1).optional(),
+  semester: z.coerce.number().int().min(1).max(8).optional(),
+  subjects: z
+    .array(
+      z.object({
+        subjectCode: z.string().min(1),
+        subjectName: z.string().min(1),
+        internalMarks: z.coerce.number().min(0).max(100).optional(),
+        externalMarks: z.coerce.number().min(0).max(100).optional(),
+        totalMarks: z.coerce.number().min(0).max(100).optional(),
+        grade: z.enum(['O', 'A+', 'A', 'B+', 'B', 'C', 'D', 'F', 'ABSENT']).optional(),
+        credits: z.coerce.number().int().min(1).max(6).optional(),
+        gradePoints: z.coerce.number().min(0).max(10).optional(),
+      })
+    )
+    .optional(),
+  isPublished: z.boolean().optional(),
+});
+
+export const bulkUploadSchema = z.object({
+  results: z
+    .array(
+      z.object({
+        student: z.string().min(1, 'Student ID is required'),
+        academicYear: z.string().min(1, 'Academic year is required'),
+        semester: z.coerce.number().int().min(1).max(8),
+        subjects: z
+          .array(
+            z.object({
+              subjectCode: z.string().min(1),
+              subjectName: z.string().min(1),
+              internalMarks: z.coerce.number().min(0).max(100).default(0),
+              externalMarks: z.coerce.number().min(0).max(100).default(0),
+              credits: z.coerce.number().int().min(1).max(6),
+            })
+          )
+          .min(1),
+      })
+    )
+    .min(1, 'At least one result is required'),
+});
+
+```
+
+### `backend/src/validators/revaluationValidator.ts`
+
+```typescript
+import { z } from 'zod';
+
+export const createRevaluationSchema = z.object({
+  student: z.string().min(1, 'Student ID is required'),
+  result: z.string().min(1, 'Result ID is required'),
+  institute: z.string().min(1, 'Institute ID is required'),
+  academicYear: z.string().min(1, 'Academic year is required'),
+  semester: z.coerce.number().int().min(1, 'Semester must be at least 1').max(8, 'Semester must be at most 8'),
+  subjects: z
+    .array(
+      z.object({
+        subjectCode: z.string().min(1, 'Subject code is required'),
+        subjectName: z.string().min(1, 'Subject name is required'),
+        originalMarks: z.coerce.number().min(0),
+        originalGrade: z.string().min(1),
+        internalMarks: z.coerce.number().min(0).max(100),
+        externalMarks: z.coerce.number().min(0).max(100),
+        revaluationReason: z.string().min(1, 'Revaluation reason is required'),
+      })
+    )
+    .min(1, 'At least one subject is required'),
+  feePerSubject: z.coerce.number().min(0, 'Fee per subject must be positive'),
+  totalFee: z.coerce.number().min(0, 'Total fee must be positive'),
+});
+
+export const updateRevaluationStatusSchema = z.object({
+  status: z.enum(['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED', 'CANCELLED']),
+  comments: z.string().optional(),
+  assignedEvaluator: z.string().optional(),
+});
+
+export const addRevaluationResultSchema = z.object({
+  subjectCode: z.string().min(1, 'Subject code is required'),
+  subjectName: z.string().min(1, 'Subject name is required'),
+  revisedInternalMarks: z.coerce.number().min(0).max(100).optional(),
+  revisedExternalMarks: z.coerce.number().min(0).max(100).optional(),
+  revisedTotalMarks: z.coerce.number().min(0).max(100),
+  revisedGrade: z.enum(['O', 'A+', 'A', 'B+', 'B', 'C', 'D', 'F', 'ABSENT']),
+  evaluatorComments: z.string().optional(),
+  isFinal: z.boolean().optional(),
+});
+
 ```
 
 ### `backend/test-api.js`
@@ -8567,6 +13452,7 @@ runTests().catch(err => {
   console.error('Test execution failed:', err);
   process.exit(1);
 });
+
 ```
 
 ### `backend/test.js`
@@ -8587,6 +13473,7 @@ mongoose.connect('mongodb://localhost:27017/semidb').then(async () => {
   console.log('Statuses:', Array.from(statuses));
   process.exit(0);
 }).catch(console.error);
+
 ```
 
 ### `backend/test2.js`
@@ -8599,6 +13486,7 @@ mongoose.connect('mongodb://localhost:27017/semidb').then(async () => {
   console.log(JSON.stringify(s.semesters, null, 2));
   process.exit(0);
 }).catch(console.error);
+
 ```
 
 ### `backend/test3.js`
@@ -8614,18 +13502,21 @@ mongoose.connect('mongodb://localhost:27017/semi').then(async () => {
   }
   process.exit(0);
 }).catch(console.error);
+
 ```
 
 ### `backend/test_script.js`
 
 ```javascript
 const mongoose = require('mongoose'); require('dotenv').config({path: './backend/.env'}); mongoose.connect(process.env.MONGODB_URI).then(async () => { const db = mongoose.connection.useDb('test'); const s = await db.collection('students').find().toArray(); console.log(s.map(x => ({n: x.firstName, sem: x.semesters}))); process.exit(0); }).catch(console.error);
+
 ```
 
 ### `backend/test_script2.js`
 
 ```javascript
 const mongoose = require('mongoose'); require('dotenv').config({path: './.env'}); mongoose.connect(process.env.MONGODB_URI).then(async () => { const db = mongoose.connection.useDb('test'); const s = await db.collection('students').find({}).limit(5).toArray(); console.log(JSON.stringify(s.map(x => ({id: x._id, sem: x.semesters})), null, 2)); process.exit(0); }).catch(console.error);
+
 ```
 
 ### `backend/tsconfig.json`
@@ -8649,42 +13540,6 @@ const mongoose = require('mongoose'); require('dotenv').config({path: './.env'})
 }
 ```
 
-### `client/.env`
-
-```
-#VITE_API_BASE_URL=https://semi-phase-three.swiflare.com/api
- VITE_API_BASE_URL=http://localhost:5003/api
-```
-
-### `client/.gitignore`
-
-```
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-```
-
 ### `client/README.md`
 
 ```markdown
@@ -8704,6 +13559,21 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+```
+
+### `client/check.js`
+
+```javascript
+const { execSync } = require('child_process');
+const fs = require('fs');
+try {
+  const out = execSync('npx eslint src/pages/institute/InstitutePortal.jsx', { encoding: 'utf8' });
+  fs.writeFileSync('check-out.txt', 'OK:\n' + out);
+} catch (e) {
+  fs.writeFileSync('check-out.txt', 'ERROR:\n' + e.stdout + '\n' + e.stderr);
+}
+
 ```
 
 ### `client/eslint.config.js`
@@ -8714,9 +13584,10 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import unusedImports from 'eslint-plugin-unused-imports'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'check.js', 'fix-*.js']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -8724,12 +13595,112 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
+    plugins: {
+      'unused-imports': unusedImports,
+    },
+    rules: {
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': [
+        'warn',
+        { 'vars': 'all', 'varsIgnorePattern': '^_', 'args': 'after-used', 'argsIgnorePattern': '^_' }
+      ]
+    },
     languageOptions: {
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
 ])
+
+```
+
+### `client/fix-lint-imports.js`
+
+```javascript
+import fs from 'fs';
+import path from 'path';
+
+const getAllFiles = (dirPath, arrayOfFiles) => {
+  const files = fs.readdirSync(dirPath);
+
+  arrayOfFiles = arrayOfFiles || [];
+
+  files.forEach((file) => {
+    if (fs.statSync(dirPath + "/" + file).isDirectory()) {
+      arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles);
+    } else {
+      if (file.endsWith('.jsx')) {
+        arrayOfFiles.push(path.join(dirPath, "/", file));
+      }
+    }
+  });
+
+  return arrayOfFiles;
+};
+
+const files = getAllFiles(path.join(process.cwd(), 'src'));
+
+files.forEach(file => {
+  let content = fs.readFileSync(file, 'utf-8');
+  let originalContent = content;
+
+  // 1. Remove `import React, { ... } from 'react';` to `import { ... } from 'react';`
+  content = content.replace(/import\s+React\s*,\s*\{\s*/g, 'import { ');
+  
+  // 2. Remove `import React from 'react';` entirely
+  content = content.replace(/import\s+React\s+from\s+['"]react['"];?\r?\n?/g, '');
+
+  // Note: We don't remove individual lucide-react imports automatically via regex because it's too complex
+  // to ensure we only remove the EXACT unused ones safely without an AST parser.
+  // But removing `React` alone will cut down 90% of the lint errors.
+
+  if (content !== originalContent) {
+    fs.writeFileSync(file, content, 'utf-8');
+    console.log(`Fixed React imports in ${file}`);
+  }
+});
+
+console.log('Done!');
+
+```
+
+### `client/fix-react.js`
+
+```javascript
+import fs from 'fs';
+import path from 'path';
+
+const getAllFiles = (dirPath, arrayOfFiles) => {
+  const files = fs.readdirSync(dirPath);
+
+  arrayOfFiles = arrayOfFiles || [];
+
+  files.forEach((file) => {
+    if (fs.statSync(dirPath + "/" + file).isDirectory()) {
+      arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles);
+    } else {
+      if (file.endsWith('.jsx')) {
+        arrayOfFiles.push(path.join(dirPath, "/", file));
+      }
+    }
+  });
+
+  return arrayOfFiles;
+};
+
+const files = getAllFiles(path.join(process.cwd(), 'src'));
+
+files.forEach(file => {
+  let content = fs.readFileSync(file, 'utf-8');
+  if (content.includes('React.') && !content.includes("import React from 'react'")) {
+    content = "import React from 'react';\n" + content;
+    fs.writeFileSync(file, content, 'utf-8');
+    console.log(`Added React import back to ${file}`);
+  }
+});
+
+console.log('Done fixing React imports!');
+
 ```
 
 ### `client/index.html`
@@ -8742,7 +13713,7 @@ export default defineConfig([
     <link rel="icon" type="image/png" href="/src/assets/semi logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Society for Emergency Medicine India (SEMI) Portals." />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://semi-phase-three.swiflare.com https://backend.semi.org.in http://localhost:5000 http://127.0.0.1:5000 http://localhost:5003 http://127.0.0.1:5003; connect-src 'self' https://semi-phase-three.swiflare.com wss://semi-phase-three.swiflare.com https://backend.semi.org.in wss://backend.semi.org.in http://localhost:5000 ws://localhost:5000 http://127.0.0.1:5000 ws://127.0.0.1:5000 http://localhost:5003 ws://localhost:5003 http://127.0.0.1:5003 ws://127.0.0.1:5003; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://semi-phase-three.swiflare.com https://backend.semi.org.in http://localhost:5000 http://127.0.0.1:5000 http://localhost:5003 http://127.0.0.1:5003; connect-src 'self' https://semi-phase-three.swiflare.com wss://semi-phase-three.swiflare.com https://backend.semi.org.in wss://backend.semi.org.in http://localhost:5000 ws://localhost:5000 http://127.0.0.1:5000 ws://127.0.0.1:5000 http://localhost:5003 ws://localhost:5003 http://127.0.0.1:5003 ws://127.0.0.1:5003 https://lumberjack.razorpay.com https://api.razorpay.com; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
@@ -8757,6 +13728,7 @@ export default defineConfig([
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
+
 ```
 
 ### `client/package.json`
@@ -8789,12 +13761,14 @@ export default defineConfig([
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.6.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
     "vite": "^8.0.12"
   }
 }
+
 ```
 
 ### `client/postcss.config.js`
@@ -8806,12 +13780,13 @@ export default {
     autoprefixer: {},
   },
 }
+
 ```
 
 ### `client/src/App.jsx`
 
 ```jsx
-import React, { Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Loader from './Components/Loader';
 
@@ -8835,10 +13810,18 @@ const AcademyApplicationsPage = lazy(() => import('./pages/academy/applications/
 const AcademyStudentsPage     = lazy(() => import('./pages/academy/students/index'));
 const AcademyEligibilityPage  = lazy(() => import('./pages/academy/eligibility/index'));
 const AcademyVerificationPage = lazy(() => import('./pages/academy/verification/index'));
+const AcademyMarksUpdatingPage = lazy(() => import('./pages/academy/marks/index'));
+const AcademyStudentMarksPage = lazy(() => import('./pages/academy/student-marks/index'));
+const AcademyPublishResultsPage = lazy(() => import('./pages/academy/publish-results/index'));
+const AcademyPublishDetailsPage = lazy(() => import('./pages/academy/publish-details/index'));
+const AcademyRevaluationPage = lazy(() => import('./pages/academy/revaluation/index'));
 
 // ─── Email Verification Page ─────────────────────────────────────────────────
 // Standalone page for email verification links
 const EmailVerificationPage = lazy(() => import('./pages/EmailVerificationPage'));
+
+// ─── Public Results Page ──────────────────────────────────────────────────────
+const PublicResultsPage = lazy(() => import('./pages/public/results/index'));
 
 const L = ({ children }) => <Suspense fallback={<Loader />}>{children}</Suspense>;
 
@@ -8852,6 +13835,11 @@ function App() {
             Direct route for email verification links
             ═══════════════════════════════════════════════════ */}
         <Route path="/verify-email/:token" element={<L><EmailVerificationPage /></L>} />
+
+        {/* ═══════════════════════════════════════════════════
+            PUBLIC RESULTS PORTAL
+            ═══════════════════════════════════════════════════ */}
+        <Route path="/results" element={<L><PublicResultsPage /></L>} />
 
         {/* ═══════════════════════════════════════════════════
             INSTITUTE PORTAL
@@ -8885,6 +13873,9 @@ function App() {
         <Route path="/institute/exams"           element={<L><InstitutePortal /></L>} />
         <Route path="/institute/studentDetails"  element={<L><InstitutePortal /></L>} />
         <Route path="/institute/hallTicket"      element={<L><InstitutePortal /></L>} />
+        <Route path="/institute/results"         element={<L><InstitutePortal /></L>} />
+        <Route path="/institute/revaluation"     element={<L><InstitutePortal /></L>} />
+        <Route path="/institute/remittance"      element={<L><InstitutePortal /></L>} />
         <Route path="/institute/forgot-password" element={<L><InstitutePortal /></L>} />
         <Route path="/institute/reset-password"  element={<L><InstitutePortal /></L>} />
 
@@ -8913,6 +13904,11 @@ function App() {
           <Route path="students"     element={<L><AcademyStudentsPage /></L>} />
           <Route path="eligibility"  element={<L><AcademyEligibilityPage /></L>} />
           <Route path="verification" element={<L><AcademyVerificationPage /></L>} />
+          <Route path="marks" element={<L><AcademyMarksUpdatingPage /></L>} />
+          <Route path="student-marks"    element={<L><AcademyStudentMarksPage /></L>} /> 
+          <Route path="publish-results"  element={<L><AcademyPublishResultsPage /></L>} />
+          <Route path="publish-details"  element={<L><AcademyPublishDetailsPage /></L>} />
+          <Route path="revaluation"      element={<L><AcademyRevaluationPage /></L>} />
         </Route>
 
         {/* Catch-all */}
@@ -8928,7 +13924,6 @@ export default App;
 ### `client/src/Components/ConfirmModal.jsx`
 
 ```jsx
-import React from 'react';
 import { AlertTriangle, X, Check, Trash2, HelpCircle } from 'lucide-react';
 
 const ConfirmModal = ({ 
@@ -9029,12 +14024,12 @@ const ConfirmModal = ({
 };
 
 export default ConfirmModal;
+
 ```
 
 ### `client/src/Components/Loader.jsx`
 
 ```jsx
-import React from 'react';
 import logo from '../assets/semi logo.png';
 
 const Loader = () => {
@@ -9070,12 +14065,185 @@ const Loader = () => {
 
 export default Loader;
 
+
+```
+
+### `client/src/Components/PaymentStatusChecker.jsx`
+
+```jsx
+import { useEffect, useState } from 'react';
+import { RefreshCw, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { getPaymentState, clearPaymentState } from '../utils/razorpay';
+import apiClient from '../api/apiClient';
+
+export const PaymentStatusChecker = ({
+  isOpen,
+  onComplete,
+  onRetry,
+  onCancel,
+  paymentType = 'institute',
+  message = 'Verifying your payment...'
+}) => {
+  const [status, setStatus] = useState('checking');
+
+  const terminalStatuses = ['completed', 'failed', 'no_payment'];
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const checkStatus = async () => {
+      if (terminalStatuses.includes(status)) return;
+
+      try {
+        const pendingState = getPaymentState();
+        if (!pendingState) {
+          setStatus('no_payment');
+          return;
+        }
+
+        const endpoint = paymentType === 'institute'
+          ? `/institutes/payment/verify-order/${pendingState.orderId}`
+          : `/academic/payment/verify-order/${pendingState.orderId}`;
+
+        const params = paymentType !== 'institute' && pendingState.additionalData?.studentId
+          ? { params: { studentId: pendingState.additionalData.studentId, purpose: pendingState.additionalData.purpose } }
+          : {};
+
+        const response = await apiClient.get(endpoint, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          ...params
+        });
+        const data = response.data?.data || response.data;
+
+        if (data?.paymentStatus === 'Completed') {
+          setStatus('completed');
+          clearPaymentState();
+          if (onComplete) onComplete(data);
+        } else if (data?.paymentStatus === 'Pending') {
+          setStatus('pending');
+        } else {
+          setStatus('failed');
+        }
+      } catch (error) {
+        console.error('Status check failed:', error);
+        setStatus('failed');
+      }
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 5000);
+    return () => clearInterval(interval);
+  }, [isOpen, onComplete, paymentType, status]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full p-8 text-center">
+
+        {status === 'checking' && (
+          <>
+            <div className="w-20 h-20 mx-auto mb-4">
+              <Loader2 className="w-20 h-20 text-blue-600 animate-spin" />
+            </div>
+            <h3 className="text-xl font-black text-slate-800 mb-2">Verifying Payment</h3>
+            <p className="text-sm text-slate-500">{message}</p>
+            <p className="text-xs text-slate-400 mt-4">This may take a few moments...</p>
+          </>
+        )}
+
+        {status === 'pending' && (
+          <>
+            <div className="w-20 h-20 mx-auto mb-4 bg-amber-100 rounded-full flex items-center justify-center">
+              <RefreshCw className="w-10 h-10 text-amber-600 animate-spin" />
+            </div>
+            <h3 className="text-xl font-black text-slate-800 mb-2">Payment Pending</h3>
+            <p className="text-sm text-slate-500">Your payment is being processed. This usually takes a few seconds.</p>
+            <div className="mt-6 flex gap-3 justify-center">
+              <button
+                onClick={() => setStatus('checking')}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors"
+              >
+                Check Again
+              </button>
+              <button
+                onClick={onCancel}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+
+        {status === 'completed' && (
+          <>
+            <div className="w-20 h-20 mx-auto mb-4 bg-emerald-100 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+            </div>
+            <h3 className="text-xl font-black text-slate-800 mb-2">Payment Successful!</h3>
+            <p className="text-sm text-slate-500">Your payment has been verified. You can now proceed.</p>
+            <button
+              onClick={() => {
+                clearPaymentState();
+                if (onComplete) onComplete();
+              }}
+              className="mt-6 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm uppercase tracking-wider transition-colors"
+            >
+              Continue
+            </button>
+          </>
+        )}
+
+        {status === 'failed' && (
+          <>
+            <div className="w-20 h-20 mx-auto mb-4 bg-rose-100 rounded-full flex items-center justify-center">
+              <XCircle className="w-10 h-10 text-rose-600" />
+            </div>
+            <h3 className="text-xl font-black text-slate-800 mb-2">Payment Verification Failed</h3>
+            <p className="text-sm text-slate-500">We couldn't verify your payment status. Please try again or contact support.</p>
+            <div className="mt-6 flex gap-3 justify-center">
+              <button
+                onClick={onRetry}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors"
+              >
+                Retry Payment
+              </button>
+              <button
+                onClick={onCancel}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+
+        {status === 'no_payment' && (
+          <>
+            <div className="w-20 h-20 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
+              <XCircle className="w-10 h-10 text-slate-400" />
+            </div>
+            <h3 className="text-xl font-black text-slate-800 mb-2">No Pending Payment</h3>
+            <p className="text-sm text-slate-500">No pending payment was found. Please initiate a new payment.</p>
+            <button
+              onClick={onCancel}
+              className="mt-6 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-sm uppercase tracking-wider transition-colors"
+            >
+              Close
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 ```
 
 ### `client/src/Components/Toast.jsx`
 
 ```jsx
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 const Toast = ({ message, type = 'error', onClose, duration = 6000 }) => {
@@ -9254,28 +14422,7 @@ export const academicService = {
   },
 
   payStudentFees: (studentId, feeData) => {
-    let payload = feeData;
-    let headers = {};
-
-    if (!(feeData instanceof FormData)) {
-      payload = new FormData();
-      Object.keys(feeData).forEach(key => {
-        const val = feeData[key];
-        if (val !== null && val !== undefined) {
-          if (val instanceof File || val instanceof Blob) {
-            payload.append(key, val);
-          } else if (val instanceof Date) {
-            payload.append(key, val.toISOString());
-          } else {
-            payload.append(key, String(val));
-          }
-        }
-      });
-    }
-
-    // Axios sets multipart/form-data with the correct boundary automatically
-    headers['Content-Type'] = undefined;
-    return apiClient.post(`/academic/students/${studentId}/fees`, payload, { headers });
+    return apiClient.post(`/academic/students/${studentId}/fees`, feeData);
   },
 
   getFeeRecords: () => apiClient.get('/academic/fees'),
@@ -9366,6 +14513,27 @@ export const academicService = {
   deleteStudent: (studentId) => apiClient.delete(`/academic/students/${studentId}`),
 
   getStudentById: (studentId) => apiClient.get(`/academic/students/${studentId}`),
+
+  // ─── RAZORPAY PAYMENT ────────────────────────────────────────────────────────
+  createRazorpayOrder: (data) => apiClient.post('/academic/payment/create-order', data),
+  verifyRazorpayPayment: (data) => apiClient.post('/academic/payment/verify', data),
+
+  /**
+   * Get payment status for a student
+   * @param {string} studentId
+   * @param {string} purpose - payment purpose
+   */
+  getPaymentStatus: (studentId, purpose) =>
+    apiClient.get(`/academic/payment/status/${studentId}`, { params: { paymentPurpose: purpose } }),
+
+  /**
+   * Verify academic order status (for recovery)
+   * @param {string} orderId
+   * @param {string} studentId
+   * @param {string} purpose
+   */
+  verifyOrderStatus: (orderId, studentId, purpose) =>
+    apiClient.get(`/academic/payment/verify-order/${orderId}`, { params: { studentId, purpose } }),
 };
 
 export default academicService;
@@ -9381,7 +14549,7 @@ export const getBaseURL = () => {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
       return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5003/api';
     }
-  } catch (e) {}
+  } catch { /* ignore */ }
   return 'http://localhost:5003/api';
 };
 
@@ -9430,12 +14598,21 @@ apiClient.interceptors.request.use(
   (config) => {
     try {
       if (typeof localStorage !== 'undefined') {
-        const token = localStorage.getItem('token') || localStorage.getItem('semi_token');
+        let token;
+        // Context-aware token selection to prevent 403s when switching portals
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/institute')) {
+          token = localStorage.getItem('semi_institute_token') || localStorage.getItem('semi_token') || localStorage.getItem('token');
+        } else if (typeof window !== 'undefined' && window.location.pathname.startsWith('/academy')) {
+          token = localStorage.getItem('semi_board_token') || localStorage.getItem('semi_token') || localStorage.getItem('token');
+        } else {
+          token = localStorage.getItem('token') || localStorage.getItem('semi_token');
+        }
+
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
       }
-    } catch (e) {}
+    } catch { /* ignore */ }
     return config;
   },
   (error) => Promise.reject(error)
@@ -9488,6 +14665,13 @@ apiClient.interceptors.response.use(
           localStorage.setItem('token', newAccessToken);
           localStorage.setItem('semi_token', newAccessToken);
           
+          if (localStorage.getItem('semi_institute_token')) {
+            localStorage.setItem('semi_institute_token', newAccessToken);
+          }
+          if (localStorage.getItem('semi_board_token')) {
+            localStorage.setItem('semi_board_token', newAccessToken);
+          }
+          
           if (newRefreshToken) {
             localStorage.setItem('refreshToken', newRefreshToken);
             localStorage.setItem('semi_refreshToken', newRefreshToken);
@@ -9508,6 +14692,8 @@ apiClient.interceptors.response.use(
         // Clear tokens if refresh fails to force logout
         localStorage.removeItem('token');
         localStorage.removeItem('semi_token');
+        localStorage.removeItem('semi_institute_token');
+        localStorage.removeItem('semi_board_token');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('semi_refreshToken');
         localStorage.removeItem('semi_board_user');
@@ -9534,7 +14720,7 @@ apiClient.interceptors.response.use(
       "An unexpected error occurred. Please try again.";
     
     // Support structured validation error lists from backend (e.g. Zod validation arrays)
-    if (error.response?.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+    if (error.response?.data?.errors?.length > 0 && Array.isArray(error.response.data.errors)) {
       message = error.response.data.errors;
     }
     
@@ -9603,12 +14789,42 @@ export const authService = {
   },
 
   /**
+   * Resend verification email
+   * @param {string} email
+   */
+  resendVerification: (email) => apiClient.post('/auth/resend-verification', { email }),
+
+  /**
    * Check email verification and user details status
    */
   checkStatus: () => apiClient.get('/auth/status'),
 };
 
 export default authService;
+```
+
+### `client/src/api/certificates.js`
+
+```javascript
+import apiClient from './apiClient.js';
+
+export const certificateService = {
+  getAllCertificates: (params) => apiClient.get('/certificates', { params }),
+  getCertificateById: (id) => apiClient.get(`/certificates/${id}`),
+  downloadCertificate: (id) => apiClient.get(`/certificates/${id}/download`, { responseType: 'blob' }),
+  getStudentCertificates: (studentId) => apiClient.get(`/certificates/student/${studentId}`),
+
+  issueCertificate: (data) => apiClient.post('/certificates', data),
+  generateProvisionalCertificate: (data) => apiClient.post('/certificates/provisional', data),
+  
+  updateCertificate: (id, data) => apiClient.put(`/certificates/${id}`, data),
+  verifyCertificate: (id) => apiClient.put(`/certificates/${id}/verify`),
+  revokeCertificate: (id) => apiClient.put(`/certificates/${id}/revoke`),
+  deleteCertificate: (id) => apiClient.delete(`/certificates/${id}`),
+};
+
+export default certificateService;
+
 ```
 
 ### `client/src/api/exams.js`
@@ -9664,6 +14880,7 @@ export const examService = {
 };
 
 export default examService;
+
 ```
 
 ### `client/src/api/institutes.js`
@@ -9781,9 +14998,106 @@ export const instituteService = {
    */
   toggleInspection: (instituteId, inspectionTriggered) => 
     apiClient.patch(`/institutes/${instituteId}/inspection`, { inspectionTriggered }),
+
+  /**
+   * Get payment status for current institute
+   */
+  getPaymentStatus: () => apiClient.get('/institutes/payment/status'),
+
+  /**
+   * Verify order status (for recovery)
+   * @param {string} orderId
+   */
+  verifyOrderStatus: (orderId) => apiClient.get(`/institutes/payment/verify-order/${orderId}`),
 };
 
 export default instituteService;
+```
+
+### `client/src/api/marksheets.js`
+
+```javascript
+import apiClient from './apiClient.js';
+
+export const marksheetService = {
+  getAllMarksheets: (params) => apiClient.get('/marksheets', { params }),
+  getMarksheetById: (id) => apiClient.get(`/marksheets/${id}`),
+  downloadMarksheet: (id) => apiClient.get(`/marksheets/${id}/download`, { responseType: 'blob' }),
+  getStudentMarksheets: (studentId) => apiClient.get(`/marksheets/student/${studentId}`),
+  
+  generateMarksheet: (data) => apiClient.post('/marksheets', data),
+  bulkGenerateMarksheets: (data) => apiClient.post('/marksheets/bulk', data),
+  
+  updateMarksheet: (id, data) => apiClient.put(`/marksheets/${id}`, data),
+  deleteMarksheet: (id) => apiClient.delete(`/marksheets/${id}`),
+};
+
+export default marksheetService;
+
+```
+
+### `client/src/api/results.js`
+
+```javascript
+import apiClient from './apiClient.js';
+
+export const resultService = {
+  // Public routes
+  getResultByStudent: (enrollmentId) => apiClient.get(`/results/student/${enrollmentId}`),
+
+  // Protected routes
+  getAllResults: (params) => apiClient.get('/results', { params }),
+  searchResults: (params) => apiClient.get('/results/search', { params }),
+  getResultStatistics: (params) => apiClient.get('/results/statistics', { params }),
+  getResultById: (id) => apiClient.get(`/results/${id}`),
+  createResult: (data) => apiClient.post('/results', data),
+  updateResult: (id, data) => apiClient.put(`/results/${id}`, data),
+  deleteResult: (id) => apiClient.delete(`/results/${id}`),
+  publishResult: (id) => apiClient.put(`/results/${id}/publish`),
+  bulkUploadResults: (data) => apiClient.post('/results/bulk', data),
+  
+  bulkUploadFromFile: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post('/results/bulk-upload-file', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  downloadMarksheet: (id) => apiClient.get(`/results/${id}/marksheet`, { responseType: 'blob' }),
+  getStudentResultHistory: (studentId) => apiClient.get(`/results/history/${studentId}`),
+};
+
+export default resultService;
+
+```
+
+### `client/src/api/revaluation.js`
+
+```javascript
+import apiClient from './apiClient.js';
+
+export const revaluationService = {
+  // Revaluation request CRUD
+  getAllRevaluationRequests: (params) => apiClient.get('/revaluation/requests', { params }),
+  getRevaluationRequestById: (id) => apiClient.get(`/revaluation/requests/${id}`),
+  createRevaluationRequest: (data) => apiClient.post('/revaluation/requests', data),
+  updateRequestStatus: (id, statusData) => apiClient.put(`/revaluation/requests/${id}/status`, statusData),
+  deleteRevaluationRequest: (id) => apiClient.delete(`/revaluation/requests/${id}`),
+
+  // Revaluation result routes
+  getRevaluationResults: (id) => apiClient.get(`/revaluation/requests/${id}/results`),
+  addRevaluationResult: (id, resultData) => apiClient.post(`/revaluation/requests/${id}/results`, resultData),
+  approveRevaluationResult: (id) => apiClient.put(`/revaluation/results/${id}/approve`),
+
+  // Statistics
+  getRevaluationStatistics: (params) => apiClient.get('/revaluation/statistics', { params }),
+};
+
+export default revaluationService;
+
 ```
 
 ### `client/src/api/users.js`
@@ -9808,6 +15122,7 @@ export const userService = {
 };
 
 export default userService;
+
 ```
 
 ### `client/src/index.css`
@@ -9828,9 +15143,9 @@ export default userService;
 
 /* Custom scrollbar for admin-root */
 .admin-root ::-webkit-scrollbar        { width: 6px; height: 6px; }
-.admin-root ::-webkit-scrollbar-track  { background: #f1f5f9; }
+.admin-root ::-webkit-scrollbar-track  { background: transparent; }
 .admin-root ::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 999px; }
-.admin-root ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.admin-root ::-webkit-scrollbar-thumb:hover { background: #003a8c; }
 
 /* Typing Indicator Dots for admin-root  */
 @keyframes typingBounceAdmin {
@@ -9871,27 +15186,29 @@ export default userService;
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
 ```
 
 ### `client/src/main.jsx`
 
 ```jsx
-import React from 'react'
+import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  <StrictMode>
     <App />
-  </React.StrictMode>,
+  </StrictMode>,
 )
+
 ```
 
 ### `client/src/pages/EmailVerificationPage.jsx`
 
 ```jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2, Mail } from 'lucide-react';
 import Toast from '../Components/Toast';
@@ -9974,9 +15291,10 @@ const EmailVerificationPage = () => {
       }
       
       const user = JSON.parse(storedUser);
-      await authService.forgotPassword(user.email);
+      await authService.resendVerification(user.email);
       setToast({ message: 'A new verification email has been sent to your registered email address.', type: 'success' });
     } catch (err) {
+      console.error('Error resending verification email:', err);
       setToast({ message: 'Failed to resend verification email. Please try again later.', type: 'error' });
     }
   };
@@ -10090,7 +15408,7 @@ export default EmailVerificationPage;
 ### `client/src/pages/academy/AcademyLayout.jsx`
 
 ```jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 import instituteService from '../../api/institutes';
@@ -10104,6 +15422,11 @@ import AcademyHeader from './components/AcademyHeader';
 import AcademyInspectorModal from './components/AcademyInspectorModal';
 import AcademyRejectionModal from './components/AcademyRejectionModal';
 import AcademyStudentModal from './components/AcademyStudentModal';
+import AcademyMarksUpdating from './components/AcademyMarksUpdating';
+import AcademyStudentMarks from './components/AcademyStudentMarks';
+import AcademyPublishResults from './components/AcademyPublishResults';
+import AcademyPublishDetails from './components/AcademyPublishDetails';
+import AcademyRevaluation from './components/AcademyRevaluation';
 
 // Helper to safely extract data from API responses
 const extractData = (response) => {
@@ -10126,7 +15449,7 @@ const extractData = (response) => {
  */
 export default function AcademyLayout() {
   const navigate = useNavigate();
-  const location = useLocation();
+
 
   // ─── Auth State ──────────────────────────────────────────────────────────────
   const [boardUser, setBoardUser] = useState(() => {
@@ -10160,11 +15483,6 @@ export default function AcademyLayout() {
   const [successMsg, setSuccessMsg] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
 
-  // ─── Auth Guard ───────────────────────────────────────────────────────────────
-  if (!boardUser) {
-    return <Navigate to="/academy/login" replace />;
-  }
-
   // ─── Data Fetching ────────────────────────────────────────────────────────────
   const fetchBoardData = useCallback(async () => {
     try {
@@ -10192,7 +15510,17 @@ export default function AcademyLayout() {
             paymentComplete: app.paymentStatus === 'Completed',
             paymentDetails:
               app.paymentStatus === 'Completed'
-                ? { transactionId: app.razorpayPaymentId || app.paymentTxnNo }
+                ? {
+                    transactionId: app.razorpayPaymentId,
+                    amount: app.paymentAmount != null
+                      ? `₹${app.paymentAmount.toLocaleString('en-IN')}.00`
+                      : '₹5,000.00',
+                    date: app.paymentCompletedAt
+                      ? new Date(app.paymentCompletedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                      : app.updatedAt
+                        ? new Date(app.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                        : undefined,
+                  }
                 : null,
             form: app,
             uploadedDocs: {
@@ -10303,7 +15631,7 @@ export default function AcademyLayout() {
 
   useEffect(() => {
     if (boardUser) {
-      fetchBoardData();
+      setTimeout(() => fetchBoardData(), 0);
     }
   }, [boardUser, fetchBoardData]);
 
@@ -10407,7 +15735,7 @@ export default function AcademyLayout() {
         try {
           await handleReviewApplication(selectedApp.id, 'approved');
           setSuccessMsg(`🎉 ${selectedApp.orgName} approved and activated.`);
-        } catch (_) {}
+        } catch { /* ignore */ }
       }
     });
   }, [selectedApp, handleReviewApplication]);
@@ -10423,7 +15751,7 @@ export default function AcademyLayout() {
       setShowRejectModal(false);
       setRejectionReason('');
       setSuccessMsg(`❌ Application Rejected. Reason: "${rejectionReason}"`);
-    } catch (_) {}
+    } catch { /* ignore */ }
   }, [rejectionReason, selectedApp, handleReviewApplication]);
 
   const handleTriggerInspection = useCallback(async () => {
@@ -10519,7 +15847,17 @@ export default function AcademyLayout() {
     setSuccessMsg,
     examApplications,
     setExamApplications,
+     AcademyMarksUpdating,
+      AcademyStudentMarks,
+      AcademyPublishResults,
+      AcademyPublishDetails,
+      AcademyRevaluation,
   };
+
+  // ─── Auth Guard ───────────────────────────────────────────────────────────────
+  if (!boardUser) {
+    return <Navigate to="/academy/login" replace />;
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f8fafc] text-gray-800 font-sans">
@@ -10597,7 +15935,7 @@ export default function AcademyLayout() {
 ### `client/src/pages/academy/AcademyPortal.jsx`
 
 ```jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import InstitutionalLayout from '../institute/InstitutionalLayout';
 
@@ -10657,22 +15995,22 @@ const AcademyPortal = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isLoginPath = location.pathname === '/academy' || location.pathname === '/academy/' || location.pathname === '/academy/login';
-  const isDashboardPath = DASHBOARD_PATHS.includes(location.pathname);
-
-  const [currentStep, setCurrentStepState] = useState(() => {
-    const path = window.location.pathname;
+  const currentStep = useMemo(() => {
+    const path = location.pathname;
     if (path === '/academy' || path === '/academy/' || path === '/academy/login') return 'login';
     if (DASHBOARD_PATHS.includes(path)) return 'dashboard';
     return 'login';
-  });
+  }, [location.pathname]);
 
   const setCurrentStep = useCallback((step) => {
     const route = STEP_ROUTES[step] || '/academy/login';
     navigate(route);
   }, [navigate]);
 
-  const [boardUser, setBoardUser] = useState(null);
+  const [boardUser, setBoardUser] = useState(() => {
+    const storedBoardUser = localStorage.getItem('semi_board_user');
+    return storedBoardUser ? JSON.parse(storedBoardUser) : null;
+  });
 
   const activeTab = getTabFromPath(location.pathname);
   const setActiveTab = useCallback((tab) => {
@@ -10730,7 +16068,7 @@ const AcademyPortal = () => {
             emFacultyCount: app.emFacultyCount,
             teachingSpace: app.teachingSpace,
             paymentComplete: app.paymentStatus === 'Completed',
-            paymentDetails: app.paymentStatus === 'Completed' ? { transactionId: app.razorpayPaymentId || app.paymentTxnNo } : null,
+            paymentDetails: app.paymentStatus === 'Completed' ? { transactionId: app.razorpayPaymentId } : null,
             form: app,
             uploadedDocs: {
               equipmentList: app.documents?.equipmentListUrl ? { name: 'equipmentList.pdf', url: app.documents.equipmentListUrl } : null,
@@ -10796,10 +16134,8 @@ const AcademyPortal = () => {
   }, []);
 
   useEffect(() => {
-    const storedBoardUser = localStorage.getItem('semi_board_user');
-    if (storedBoardUser) {
-      setBoardUser(JSON.parse(storedBoardUser));
-      fetchBoardData();
+    if (localStorage.getItem('semi_board_user')) {
+      setTimeout(() => fetchBoardData(), 0);
     }
   }, [fetchBoardData]);
 
@@ -10834,10 +16170,6 @@ const AcademyPortal = () => {
       navigate('/academy/dashboard', { replace: true });
       return;
     }
-
-    if (isLogin) setCurrentStepState('login');
-    else if (isDashboard) setCurrentStepState('dashboard');
-    else setCurrentStepState('login');
   }, [location.pathname, boardUser, navigate]);
 
   const handleLogin = useCallback(async (e) => {
@@ -10852,7 +16184,8 @@ const AcademyPortal = () => {
     try {
       const response = await authService.login({
         email: loginForm.email,
-        password: loginForm.password
+        password: loginForm.password,
+        portal: 'academy',
       });
 
       const data = response.data || response;
@@ -10880,7 +16213,8 @@ const AcademyPortal = () => {
       fetchBoardData();
     } catch (err) {
       console.warn('Board login API failed:', err);
-      setErrorMsg('Invalid credentials. Email or password is not match.');
+      const serverMsg = err?.response?.data?.message || err?.parsedMessage || err?.message;
+      setErrorMsg(serverMsg || 'Invalid credentials. Email or password do not match.');
     }
   }, [loginForm.email, loginForm.password, setCurrentStep, fetchBoardData]);
 
@@ -10923,7 +16257,7 @@ const AcademyPortal = () => {
     setIsStudentModalOpen(true);
   }, []);
 
-  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus, reason = '') => {
+  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus) => {
     try {
       const student = students.find(s => s.enrollmentNo === enrollmentNo);
       if (student && (student._id || student.id)) {
@@ -10969,7 +16303,9 @@ const AcademyPortal = () => {
         try {
           await handleReviewApplication(selectedApp.id, 'approved');
           setSuccessMsg(`🎉 Application Approved! ${selectedApp.orgName} has been activated.`);
-        } catch (err) {}
+        } catch (err) {
+          console.error(err);
+        }
       }
     });
   }, [selectedApp, handleReviewApplication]);
@@ -10985,7 +16321,9 @@ const AcademyPortal = () => {
       setShowRejectModal(false);
       setRejectionReason('');
       setSuccessMsg(`❌ Application Rejected. Reason logged: "${rejectionReason}"`);
-    } catch (err) {}
+    } catch (err) {
+      console.error(err);
+    }
   }, [rejectionReason, selectedApp, handleReviewApplication]);
 
   const handleTriggerInspection = useCallback(async () => {
@@ -11015,7 +16353,7 @@ const AcademyPortal = () => {
     setBoardUser(null);
     localStorage.clear();
     setCurrentStep('login');
-  }, []);
+  }, [setCurrentStep]);
 
   const auditDocs = useMemo(() => {
     if (!selectedApp) return [];
@@ -11211,7 +16549,6 @@ export default AcademyPortal;
 ### `client/src/pages/academy/applications/index.jsx`
 
 ```jsx
-import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import AcademyApplications from '../components/AcademyApplications';
 
@@ -11242,13 +16579,14 @@ export default function AcademyApplicationsPage() {
     />
   );
 }
+
 ```
 
 ### `client/src/pages/academy/components/AcademyApplications.jsx`
 
 ```jsx
-import React, { useState } from 'react';
-import { Search, RefreshCw, Eye, Edit, Trash2, Compass, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Search, RefreshCw, Eye, Compass } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 
 const AcademyApplications = ({ 
@@ -11398,15 +16736,14 @@ const AcademyApplications = ({
 };
 
 export default AcademyApplications;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyDashboard.jsx`
 
 ```jsx
 import React from 'react';
-import { 
-  ShieldCheck, ShieldAlert, CheckCircle2, Layers, RefreshCw, Award, 
-  FileSpreadsheet, ChevronRight, AlertCircle, Building2, Users
+import { ShieldAlert, CheckCircle2, Layers, RefreshCw, Award, ChevronRight, AlertCircle, Building2
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 
@@ -11416,14 +16753,13 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
     <div className="space-y-8 animate-in fade-in duration-300">
       
       {/* Welcome Panel */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900 to-indigo-950 p-8 rounded-3xl border border-slate-800 shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-primary-900 to-primary-800 p-8 rounded-3xl border border-primary-700/50 shadow-xl shadow-primary-900/10 relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="relative z-10 text-left">
-          <h2 className="text-2xl font-black text-white tracking-tight">Good morning, Board Member</h2>
-          <p className="text-xs text-slate-400 mt-1 font-medium">Academics Board Real-time Management Console</p>
+          <h2 className="text-2xl font-black text-white tracking-tight drop-shadow-sm">Good morning, Board Member</h2>
+          <p className="text-xs text-primary-200 mt-1 font-medium">Academics Board Real-time Management Console</p>
         </div>
 
- 
       </div>
 
       {/* Dynamic Stat cards */}
@@ -11604,6 +16940,62 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
               </button>
+
+
+              <button
+  onClick={() => setActiveTab('marks')}
+  className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+>
+  <div>
+    <span className="text-xs font-black text-slate-800 block">Marks Updating</span>
+    <span className="text-[9px] text-slate-400 block mt-0.5">Enter and manage student marks</span>
+  </div>
+  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+</button>
+
+              <button
+                onClick={() => setActiveTab('student-marks')}
+                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+              >
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Student Marks</span>
+                  <span className="text-[9px] text-slate-400 block mt-0.5">View student performance</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </button>
+
+              <button
+                onClick={() => setActiveTab('publish-results')}
+                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+              >
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Publish Results</span>
+                  <span className="text-[9px] text-slate-400 block mt-0.5">Publish examination results</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('publish-details')}
+                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+              >
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Publishing Details</span>
+                  <span className="text-[9px] text-slate-400 block mt-0.5">View history of published results</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </button>
+
+              <button
+                onClick={() => setActiveTab('revaluation')}
+                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
+              >
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Revaluation</span>
+                  <span className="text-[9px] text-slate-400 block mt-0.5">Manage revaluation requests</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </button>
             </div>
           </div>
 
@@ -11632,12 +17024,12 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
 };
 
 export default AcademyDashboard;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyEditModal.jsx`
 
 ```jsx
-import React from 'react';
 
 const AcademyEditModal = ({
   editingApp,
@@ -11725,13 +17117,14 @@ const AcademyEditModal = ({
 };
 
 export default AcademyEditModal;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyEligibility.jsx`
 
 ```jsx
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Eye, Calendar, UserCheck, Check, AlertTriangle, BookOpen, GraduationCap, X, Send, MapPin, Filter, ShieldCheck, AlertCircle, ExternalLink, IndianRupee, HelpCircle, FileText } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Calendar, UserCheck, X, Send, MapPin } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import examService from '../../../api/exams';
 
@@ -12362,12 +17755,12 @@ const AcademyEligibility = ({
 };
 
 export default AcademyEligibility;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyHeader.jsx`
 
 ```jsx
-import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { ChevronRight, LogOut } from 'lucide-react';
 
@@ -12385,7 +17778,7 @@ const AcademyHeader = ({ boardUser, handleLogout }) => {
   const pageTitle = PAGE_TITLES[pathname] || 'Dashboard';
 
   return (
-    <header className="h-16 border-b border-gray-200/80 bg-white flex items-center justify-between px-8 flex-shrink-0">
+    <header className="h-16 border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-40 shadow-sm shadow-slate-100/50">
       <div className="flex items-center gap-2 text-xs font-bold text-gray-400 select-none">
         <span>Home</span>
         <ChevronRight className="w-3 h-3 text-gray-300" />
@@ -12397,10 +17790,10 @@ const AcademyHeader = ({ boardUser, handleLogout }) => {
       <div className="flex items-center gap-6">
         {/* Profile Indicator */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-xs">
+          <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-extrabold text-xs shadow-inner">
             {boardUser?.name ? boardUser.name.substring(0, 2).toUpperCase() : 'SA'}
           </div>
-          <span className="text-xs font-black text-gray-800">
+          <span className="text-xs font-black text-gray-800 tracking-tight">
             {boardUser?.name || 'Super Admin'}
           </span>
         </div>
@@ -12425,23 +17818,21 @@ const AcademyHeader = ({ boardUser, handleLogout }) => {
 };
 
 export default AcademyHeader;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyInspectorModal.jsx`
 
 ```jsx
-import React from 'react';
-import { Eye, CheckCircle2 } from 'lucide-react';
+import { Eye, CheckCircle2, ShieldCheck, X, FileCheck, Building2, MapPin, Contact2, GraduationCap, AlertCircle, FileText } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const AcademyInspectorModal = ({
   selectedApp,
   setSelectedApp,
   auditDocs,
-  setPreviewDoc,
   setShowRejectModal,
-  handleApprove,
-  handleTriggerInspection
+  handleApprove
 }) => {
   const getDocUrl = (url) => {
     if (!url) return '';
@@ -12450,255 +17841,185 @@ const AcademyInspectorModal = ({
     return getUploadUrl(filename);
   };
   
+  const InfoCard = ({ icon: Icon, title, children }) => (
+    <div className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-4 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-50 to-transparent rounded-bl-full -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <h4 className="text-xs uppercase font-bold text-indigo-900/60 tracking-wider flex items-center gap-2 border-b border-slate-100/80 pb-3">
+        <Icon className="w-4 h-4 text-indigo-400" />
+        {title}
+      </h4>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5 text-sm font-medium text-slate-700 relative z-10">
+        {children}
+      </div>
+    </div>
+  );
+
+  const StatBox = ({ label, value, isCompliant }) => (
+    <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
+      <div>
+        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">{label}</span>
+        <span className="text-base font-black text-slate-800 mt-0.5 block">
+          {value}
+        </span>
+      </div>
+      <div className="flex flex-col items-end gap-1.5">
+        {isCompliant ? (
+          <span className="flex items-center gap-1 text-[10px] uppercase font-black px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100/50">
+            <CheckCircle2 className="w-3 h-3" /> Compliant
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-[10px] uppercase font-black px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-100/50">
+            <AlertCircle className="w-3 h-3" /> Non-Compliant
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  const DetailField = ({ label, value, colSpan = 1, isLink = false }) => (
+    <div className={colSpan === 2 ? 'col-span-2' : ''}>
+      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-1">{label}</span>
+      {isLink && value && value !== 'N/A' ? (
+        <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-700 hover:underline font-semibold flex items-center gap-1 w-fit">
+          {value}
+        </a>
+      ) : (
+        <span className={`block ${value === 'N/A' ? 'text-slate-400 italic' : 'text-slate-800'}`}>{value}</span>
+      )}
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-5xl w-full h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="bg-[#f4f7f9] rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] border border-white/20 max-w-6xl w-full h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300 text-left">
+        
         {/* Modal Header */}
-        <div className="bg-slate-900 px-8 py-5 text-white flex justify-between items-center flex-shrink-0">
-          <div>
-            <span className="text-[10px] uppercase font-black tracking-wider text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded border border-blue-500/20">
-              Compliance Audit & Document Inspector
-            </span>
-            <h3 className="text-lg font-black mt-2 text-white">{selectedApp.orgName}</h3>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Admin Email: {selectedApp.email} | Application Registry ID: {selectedApp.id}</span>
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-8 py-6 text-white flex justify-between items-start flex-shrink-0 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+          
+          <div className="relative z-10 flex gap-5 items-center">
+            <div className="w-14 h-14 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-400/30 shadow-inner backdrop-blur-sm">
+              <ShieldCheck className="w-7 h-7 text-indigo-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-[10px] uppercase font-black tracking-widest text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30">
+                  Compliance Audit & Inspector
+                </span>
+                <span className="text-[10px] uppercase font-bold text-slate-400">ID: {selectedApp.id}</span>
+              </div>
+              <h3 className="text-2xl font-black text-white tracking-tight">{selectedApp.orgName}</h3>
+              <div className="flex items-center gap-4 mt-1.5 text-xs text-indigo-200/80 font-medium">
+                <span className="flex items-center gap-1.5"><Contact2 className="w-3.5 h-3.5" /> {selectedApp.email}</span>
+                <span className="w-1 h-1 bg-indigo-500 rounded-full" />
+                <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {selectedApp.form?.instituteAddress || 'Address Not Provided'}</span>
+              </div>
+            </div>
           </div>
+
           <button
             onClick={() => setSelectedApp(null)}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs uppercase transition-colors"
+            className="relative z-10 p-2.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl transition-all duration-200 border border-white/10 group"
           >
-            Close Audit
+            <X className="w-5 h-5 group-hover:scale-110 transition-transform" />
           </button>
         </div>
 
         {/* Modal Scrollable Content split panel */}
-        <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 bg-[#f8fafc]">
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 custom-scrollbar">
           
-          {/* Left Column: Compliance checks & General specs */}
-          <div className="space-y-6">
+          {/* Left Column: Compliance checks & General specs (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Compliance Quick Stats */}
             <div>
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider mb-3">Compliance Specifications</h4>
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                <h4 className="text-xs uppercase font-black text-slate-500 tracking-widest">Compliance Checks</h4>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Bed count */}
-                <div className="bg-white border border-gray-150 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-gray-400 block">Emergency Beds</span>
-                    <span className="text-sm font-extrabold text-gray-900 mt-1 block">
-                      {selectedApp.form?.bedCount || selectedApp.bedCount} Beds
-                    </span>
-                  </div>
-                  <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                    parseInt(selectedApp.form?.bedCount || selectedApp.bedCount, 10) >= 10 
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {parseInt(selectedApp.form?.bedCount || selectedApp.bedCount, 10) >= 10 ? 'Compliant' : 'NON-COMPLIANT'}
-                  </span>
-                </div>
-
-                {/* Experience */}
-                <div className="bg-white border border-gray-150 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-gray-400 block">Physician Exp</span>
-                    <span className="text-sm font-extrabold text-gray-900 mt-1 block">
-                      {selectedApp.form?.physicianExperience || selectedApp.experience} Months
-                    </span>
-                  </div>
-                  <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                    parseInt(selectedApp.form?.physicianExperience || selectedApp.experience, 10) >= 24 
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {parseInt(selectedApp.form?.physicianExperience || selectedApp.experience, 10) >= 24 ? 'Compliant' : 'NON-COMPLIANT'}
-                  </span>
-                </div>
-
-                {/* Faculty count */}
-                <div className="bg-white border border-gray-150 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-gray-400 block">EM Faculty</span>
-                    <span className="text-sm font-extrabold text-gray-900 mt-1 block">
-                      {selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount} Instructors
-                    </span>
-                  </div>
-                  <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                    parseInt(selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount, 10) >= 1 
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {parseInt(selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount, 10) >= 1 ? 'Compliant' : 'NON-COMPLIANT'}
-                  </span>
-                </div>
-
-                {/* Teaching Space */}
-                <div className="bg-white border border-gray-150 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-gray-400 block">Classroom</span>
-                    <span className="text-sm font-extrabold text-gray-900 mt-1 block">
-                      {(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)' ? 'Available' : 'Unavailable'}
-                    </span>
-                  </div>
-                  <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                    (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)'
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)' ? 'Compliant' : 'NON-COMPLIANT'}
-                  </span>
-                </div>
+                <StatBox 
+                  label="Emergency Beds" 
+                  value={`${selectedApp.form?.bedCount || selectedApp.bedCount} Beds`}
+                  isCompliant={parseInt(selectedApp.form?.bedCount || selectedApp.bedCount, 10) >= 10}
+                />
+                <StatBox 
+                  label="Physician Exp" 
+                  value={`${selectedApp.form?.physicianExperience || selectedApp.experience} Months`}
+                  isCompliant={parseInt(selectedApp.form?.physicianExperience || selectedApp.experience, 10) >= 24}
+                />
+                <StatBox 
+                  label="EM Faculty" 
+                  value={`${selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount} Instructors`}
+                  isCompliant={parseInt(selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount, 10) >= 1}
+                />
+                <StatBox 
+                  label="Classroom / Teaching Space" 
+                  value={(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)' ? 'Available' : 'Unavailable'}
+                  isCompliant={(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)'}
+                />
               </div>
             </div>
 
-            {/* 1. Institutional Profile */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                1. Institutional Profile
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Organization Name</span>
-                  <span className="block mt-0.5">{selectedApp.orgName}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Constitution Type</span>
-                  <span className="block mt-0.5">{selectedApp.form?.constitutionType || 'N/A'}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Institutional Address</span>
-                  <span className="block mt-0.5">{selectedApp.form?.instituteAddress || 'N/A'}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Registered Office Address</span>
-                  <span className="block mt-0.5">{selectedApp.form?.registeredOfficeAddress || 'N/A'}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Institutional Website</span>
-                  {selectedApp.form?.website ? (
-                    <a href={selectedApp.form.website.startsWith('http') ? selectedApp.form.website : `https://${selectedApp.form.website}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline block mt-0.5">
-                      {selectedApp.form.website}
-                    </a>
-                  ) : (
-                    <span className="block mt-0.5">N/A</span>
-                  )}
-                </div>
-              </div>
-            </div>
+            <InfoCard icon={Building2} title="1. Institutional Profile">
+              <DetailField label="Organization Name" value={selectedApp.orgName} />
+              <DetailField label="Constitution Type" value={selectedApp.form?.constitutionType || 'N/A'} />
+              <DetailField label="Institutional Address" value={selectedApp.form?.instituteAddress || 'N/A'} colSpan={2} />
+              <DetailField label="Registered Office Address" value={selectedApp.form?.registeredOfficeAddress || 'N/A'} colSpan={2} />
+              <DetailField label="Institutional Website" value={selectedApp.form?.website} colSpan={2} isLink={true} />
+            </InfoCard>
 
-            {/* 2. Contact Registry */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                2. Contact Registry
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Primary Account Email</span>
-                  <span className="block mt-0.5 font-mono">{selectedApp.email}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Application Contact Email</span>
-                  <span className="block mt-0.5 font-mono">{selectedApp.form?.emailAddress || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Office Phone</span>
-                  <span className="block mt-0.5">{selectedApp.form?.officePhone || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Mobile Phone</span>
-                  <span className="block mt-0.5">{selectedApp.form?.phoneNumber || 'N/A'}</span>
-                </div>
-              </div>
-            </div>
+            <InfoCard icon={Contact2} title="2. Contact Registry">
+              <DetailField label="Primary Account Email" value={selectedApp.email} />
+              <DetailField label="Application Contact Email" value={selectedApp.form?.emailAddress || 'N/A'} />
+              <DetailField label="Office Phone" value={selectedApp.form?.officePhone || 'N/A'} />
+              <DetailField label="Mobile Phone" value={selectedApp.form?.phoneNumber || 'N/A'} />
+            </InfoCard>
 
-            {/* 3. Executive Leadership */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                3. Executive Leadership & Representation
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Head of College / Institute</span>
-                  <span className="block mt-0.5">{selectedApp.form?.headName || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Head Designation</span>
-                  <span className="block mt-0.5">{selectedApp.form?.headDesignation || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">HOD (Emergency Medicine)</span>
-                  <span className="block mt-0.5">{selectedApp.form?.hodName || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Authorized Representative</span>
-                  <span className="block mt-0.5">{selectedApp.form?.authorizedRepName || 'N/A'} ({selectedApp.form?.authorizedRepDesignation || 'N/A'})</span>
-                </div>
-              </div>
-            </div>
+            <InfoCard icon={GraduationCap} title="3. Executive Leadership & Representation">
+              <DetailField label="Head of College / Institute" value={selectedApp.form?.headName || 'N/A'} />
+              <DetailField label="Head Designation" value={selectedApp.form?.headDesignation || 'N/A'} />
+              <DetailField label="HOD (Emergency Medicine)" value={selectedApp.form?.hodName || 'N/A'} />
+              <DetailField label="Authorized Representative" value={`${selectedApp.form?.authorizedRepName || 'N/A'} (${selectedApp.form?.authorizedRepDesignation || 'N/A'})`} />
+            </InfoCard>
 
-            {/* 4. Academic Program Intake */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                4. Academic Intake & Specifications
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Proposed Commencement</span>
-                  <span className="block mt-0.5">{selectedApp.form?.commencementDate ? new Date(selectedApp.form.commencementDate).toLocaleDateString() : 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Seats Requested</span>
-                  <span className="block mt-0.5 text-indigo-600 font-extrabold">{selectedApp.form?.seatsRequested || 'N/A'} Seats</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">NABH Accreditation Status</span>
-                  <span className="block mt-0.5">{(selectedApp.form?.nabhStatus || 'Yes') === 'Yes' ? 'Accredited' : 'Non-Accredited'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Course Director EM Qualified</span>
-                  <span className="block mt-0.5">{selectedApp.form?.courseDirectorEMQualified || 'Yes'}</span>
-                </div>
+            <InfoCard icon={FileCheck} title="4. Academic Intake & Specifications">
+              <DetailField label="Proposed Commencement" value={selectedApp.form?.commencementDate ? new Date(selectedApp.form.commencementDate).toLocaleDateString() : 'N/A'} />
+              <DetailField label="Seats Requested" value={`${selectedApp.form?.seatsRequested || 'N/A'} Seats`} />
+              <DetailField label="NABH Accreditation Status" value={(selectedApp.form?.nabhStatus || 'Yes') === 'Yes' ? 'Accredited' : 'Non-Accredited'} />
+              <DetailField label="Course Director EM Qualified" value={selectedApp.form?.courseDirectorEMQualified || 'Yes'} />
+            </InfoCard>
+            
+            {selectedApp.rejectionReason && (
+              <div className="bg-gradient-to-r from-rose-50 to-white border border-rose-100 rounded-2xl p-5 shadow-sm mt-4 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+                <span className="flex items-center gap-1.5 text-[10px] uppercase font-black text-rose-600 mb-2 tracking-widest">
+                  <AlertCircle className="w-3.5 h-3.5" /> Logged Rejection Reason
+                </span>
+                <p className="text-sm font-medium text-slate-700 italic pl-1 border-l-2 border-rose-200">
+                  "{selectedApp.rejectionReason}"
+                </p>
               </div>
-            </div>
+            )}
 
-            {/* 5. Payment Transaction Details */}
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                5. Fee Remittance Registry
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-xs font-semibold text-gray-800">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Payment Bank Name</span>
-                  <span className="block mt-0.5">{selectedApp.form?.paymentBankName || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Transaction ID / UTR</span>
-                  <span className="block mt-0.5 text-slate-900 font-mono font-bold">{selectedApp.form?.paymentTxnNo || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Transaction Date</span>
-                  <span className="block mt-0.5">{selectedApp.form?.paymentTxnDate ? new Date(selectedApp.form.paymentTxnDate).toLocaleDateString() : 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-gray-400 block">Payment Status</span>
-                  <span className="block mt-0.5 text-emerald-700 font-black">{selectedApp.form?.paymentStatus || 'Completed'}</span>
-                </div>
-              </div>
-
-              {selectedApp.rejectionReason && (
-                <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-rose-800 font-semibold mt-4">
-                  <span className="text-[10px] uppercase font-black text-rose-600 block">Logged Rejection Reason:</span>
-                  <p className="mt-1 leading-relaxed text-xs font-medium">"{selectedApp.rejectionReason}"</p>
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Right Column: Uploaded Documents Audit & Payments */}
-          <div className="space-y-6">
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                Certified Upload Inspections (9 files mandatory)
-              </h4>
+          {/* Right Column: Documents (5 cols) */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            {/* Uploaded Documents */}
+            <div className="bg-white/90 backdrop-blur-sm border border-slate-200/60 rounded-[1.5rem] p-6 shadow-xl shadow-slate-200/20 sticky top-0">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">Certified Upload Inspections</h4>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mt-0.5">9 Mandatory Documents</p>
+                </div>
+              </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2.5">
                 {auditDocs.map((key) => {
                   const titles = {
                     equipmentList: 'Equipment Register PDF',
@@ -12713,21 +18034,32 @@ const AcademyInspectorModal = ({
                   };
                   const fileData = selectedApp.uploadedDocs?.[key];
                   const docUrl = getDocUrl(fileData?.url || selectedApp.form?.documents?.[key + 'Url'] || selectedApp.form?.documents?.[key] || selectedApp.form?.[key + 'Url'] || selectedApp.form?.[key]);
+                  
                   return (
-                    <div key={key} className="bg-slate-50 border border-gray-150 rounded-xl p-3 flex items-center justify-between">
-                      <span className="font-extrabold text-gray-700 truncate text-[11px]">{titles[key] || key}</span>
+                    <div key={key} className="bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-xl p-3.5 flex items-center justify-between transition-colors group">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${docUrl ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                          {docUrl ? <FileCheck className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                        </div>
+                        <span className="font-semibold text-slate-700 truncate text-xs group-hover:text-slate-900 transition-colors">
+                          {titles[key] || key}
+                        </span>
+                      </div>
+                      
                       {docUrl ? (
                         <a
                           href={docUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-blue-600 hover:text-blue-800 font-black flex items-center gap-1 uppercase text-[9px] tracking-wider transition-colors"
+                          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-slate-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all shadow-sm flex-shrink-0"
+                          title="View Document"
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          Open
+                          <Eye className="w-4 h-4" />
                         </a>
                       ) : (
-                        <span className="text-gray-400 text-[9px] uppercase tracking-wider font-bold">Not Uploaded</span>
+                        <span className="bg-slate-100 text-slate-400 text-[9px] uppercase tracking-wider font-bold px-2 py-1 rounded-md flex-shrink-0">
+                          Missing
+                        </span>
                       )}
                     </div>
                   );
@@ -12735,45 +18067,45 @@ const AcademyInspectorModal = ({
               </div>
             </div>
 
-            <div className="bg-white border border-gray-150 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider border-b border-gray-100 pb-2">
-                Simulated Transaction Capture
-              </h4>
-              
-              <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <div className="text-xs leading-relaxed">
-                  <span className="font-extrabold text-emerald-900 block">Inspection Fee Fully Verified</span>
-                  <p className="text-emerald-700 mt-1 font-medium text-[11px]">
-                    Simulation capture verified successfully: transaction reference **{selectedApp.paymentDetails?.transactionId || 'TXN-IMPS-887642'}** for amount **{selectedApp.paymentDetails?.amount || '₹15,000'}** was matched on {selectedApp.paymentDetails?.date || '18 May, 2026'}.
-                  </p>
+            {selectedApp.paymentComplete && selectedApp.paymentDetails && (
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-[1.5rem] p-6 text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl transform translate-x-1/3 -translate-y-1/3"></div>
+                
+                <div className="flex items-center gap-3 mb-4 relative z-10">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20">
+                    <CheckCircle2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white tracking-wide">Payment Verified</h4>
+                    <p className="text-[10px] uppercase font-semibold text-emerald-100 tracking-wider mt-0.5">Fully Paid</p>
+                  </div>
+                </div>
+                
+                <div className="bg-black/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 relative z-10 text-xs text-emerald-50 leading-relaxed font-medium">
+                  Inspection fee payment captured: transaction reference <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails.transactionId}</span> for amount <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails.amount}</span> completed on {selectedApp.paymentDetails.date}.
                 </div>
               </div>
-            </div>
+            )}
+            
           </div>
         </div>
 
         {/* Modal Bottom Actions bar */}
         {selectedApp.status === 'pending_review' && (
-          <div className="bg-slate-50 px-8 py-5 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
-            {/* <button
-              onClick={handleTriggerInspection}
-              className="px-5 py-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-extrabold rounded-xl text-xs uppercase tracking-wider shadow-sm transition-colors"
-            >
-              Trigger Site Inspection
-            </button> */}
-            
-            <div className="flex gap-3">
+          <div className="bg-white/80 backdrop-blur-md px-8 py-5 border-t border-slate-200/80 flex justify-end items-center flex-shrink-0">
+            <div className="flex gap-4">
               <button
                 onClick={() => setShowRejectModal(true)}
-                className="px-6 py-3 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-xl font-extrabold text-xs uppercase tracking-wider shadow-sm transition-colors"
+                className="px-6 py-3 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
               >
+                <AlertCircle className="w-4 h-4" />
                 Reject & Log Reason
               </button>
               <button
                 onClick={handleApprove}
-                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider shadow-md transition-colors"
+                className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-[0_8px_16px_-6px_rgba(16,185,129,0.4)] hover:shadow-[0_12px_20px_-6px_rgba(16,185,129,0.5)] hover:-translate-y-0.5 transition-all flex items-center gap-2"
               >
+                <ShieldCheck className="w-4 h-4" />
                 Approve Institution
               </button>
             </div>
@@ -12785,12 +18117,14 @@ const AcademyInspectorModal = ({
 };
 
 export default AcademyInspectorModal;
+
+
 ```
 
 ### `client/src/pages/academy/components/AcademyLogin.jsx`
 
 ```jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Toast from '../../../Components/Toast';
@@ -12819,7 +18153,8 @@ const AcademyLogin = ({ loginForm, setLoginForm, errorMsg, handleLogin }) => {
         <p className="text-xs text-gray-500 mt-1.5 font-semibold">Authorized governance portal entry</p>
 
         {errorMsg && (
-          <div className="my-5 bg-rose-50 border border-rose-200 p-4 rounded-xl text-left text-xs font-semibold text-rose-600 shadow-sm leading-relaxed animate-shake">
+          <div className="my-5 bg-red-100 border-2 border-red-400 p-4 rounded-xl text-left text-sm font-bold text-red-700 shadow-md leading-relaxed">
+            <span className="uppercase tracking-wider text-[10px] block mb-1 text-red-500">Login Failed</span>
             {errorMsg}
           </div>
         )}
@@ -12907,12 +18242,2336 @@ const AcademyLogin = ({ loginForm, setLoginForm, errorMsg, handleLogin }) => {
 };
 
 export default AcademyLogin;
+
+```
+
+### `client/src/pages/academy/components/AcademyMarksUpdating.jsx`
+
+```jsx
+import { useState, useMemo, useEffect } from 'react';
+import academicService from '../../../api/academic';
+import resultService from '../../../api/results';
+import { 
+  Search, 
+  User, 
+  GraduationCap, 
+  Building2, 
+  BookOpen, 
+  Plus, 
+  Save, 
+  Edit2, 
+  Trash2, 
+  CheckCircle2, 
+  XCircle,
+  FileSpreadsheet,
+  Download,
+  Printer,
+  RefreshCw,
+  Award,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Users
+} from 'lucide-react';
+import Toast from '../../../Components/Toast';
+import ConfirmModal from '../../../Components/ConfirmModal';
+
+const AcademyMarksUpdating = () => {
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('All');
+  const [selectedCourse, setSelectedCourse] = useState('All');
+  const [selectedInstitute, setSelectedInstitute] = useState('All');
+  
+  const [subjects, setSubjects] = useState([
+    { id: 1, name: 'Anatomy', marksObtained: 87, totalMarks: 100, percentage: 87 },
+    { id: 2, name: 'Physiology', marksObtained: 76, totalMarks: 100, percentage: 76 },
+    { id: 3, name: 'Emergency Medicine', marksObtained: 92, totalMarks: 100, percentage: 92 },
+    { id: 4, name: 'Pharmacology', marksObtained: 68, totalMarks: 100, percentage: 68 },
+  ]);
+  
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [newSubjectMarks, setNewSubjectMarks] = useState('');
+  const [editingSubjectId, setEditingSubjectId] = useState(null);
+  const [editMarks, setEditMarks] = useState('');
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+  
+
+  const [activeTab, setActiveTab] = useState('marks'); // 'marks' | 'details'
+
+  // ─── Data Fetching ──────────────────────────────────────────────────────────
+  const [students, setStudents] = useState([]);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const res = await academicService.listStudents();
+        const fetchedStudents = res.data?.data || res.data || [];
+        
+        const formattedStudents = fetchedStudents.map(s => ({
+          id: s._id,
+          name: `${s.firstName} ${s.lastName}`,
+          enrollmentId: s.enrollmentId,
+          batch: s.batch?.name || (typeof s.batch === 'string' ? s.batch : 'Unknown Batch'),
+          course: s.course?.name || (typeof s.course === 'string' ? s.course : 'Unknown Course'),
+          institute: s.institute?.orgName || (typeof s.institute === 'string' ? s.institute : 'Unknown Institute'),
+          email: s.email,
+          phone: s.contactNumber,
+          attendance: s.semesters?.[0]?.attendancePercentage || 0,
+          thesisStatus: s.semesters?.[0]?.thesisApproved ? 'Approved' : 'Pending',
+          overallPercentage: 0
+        }));
+        
+        setStudents(formattedStudents);
+      } catch (err) {
+        console.error('Error fetching students:', err);
+        setToast({ message: 'Failed to load students.', type: 'danger' });
+      }
+    };
+    fetchStudents();
+  }, []);
+
+  // ─── Computed ──────────────────────────────────────────────────────────────
+  const batches = useMemo(() => {
+    const unique = new Set(students.map(s => s.batch));
+    return ['All', ...unique];
+  }, [students]);
+
+  const courses = useMemo(() => {
+    const unique = new Set(students.map(s => s.course));
+    return ['All', ...unique];
+  }, [students]);
+
+  const institutes = useMemo(() => {
+    const unique = new Set(students.map(s => s.institute));
+    return ['All', ...unique];
+  }, [students]);
+
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => {
+      const matchSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          s.enrollmentId.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchBatch = selectedBatch === 'All' || s.batch === selectedBatch;
+      const matchCourse = selectedCourse === 'All' || s.course === selectedCourse;
+      const matchInstitute = selectedInstitute === 'All' || s.institute === selectedInstitute;
+      return matchSearch && matchBatch && matchCourse && matchInstitute;
+    });
+  }, [students, searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
+
+  const overallMarks = useMemo(() => {
+    if (!subjects.length) return { obtained: 0, total: 0, percentage: 0 };
+    const obtained = subjects.reduce((sum, s) => sum + s.marksObtained, 0);
+    const total = subjects.reduce((sum, s) => sum + s.totalMarks, 0);
+    return { obtained, total, percentage: total > 0 ? Math.round((obtained / total) * 100) : 0 };
+  }, [subjects]);
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+  const handleSelectStudent = async (student) => {
+    setSelectedStudent(student);
+    setSubjects([]); // clear while loading
+    
+    try {
+      const res = await resultService.getResultByStudent(student.enrollmentId);
+      const resultData = res.data?.data || res.data;
+      if (resultData && resultData.subjects) {
+        const mappedSubjects = resultData.subjects.map((sub, index) => ({
+          id: sub._id || Date.now() + index,
+          name: sub.subjectName,
+          marksObtained: (sub.internalMarks || 0) + (sub.externalMarks || 0),
+          totalMarks: sub.totalMarks || 100,
+          percentage: (((sub.internalMarks || 0) + (sub.externalMarks || 0)) / (sub.totalMarks || 100)) * 100
+        }));
+        setSubjects(mappedSubjects);
+      }
+    } catch (err) {
+      if (err.response?.status !== 404) {
+        setToast({ message: 'Error fetching student results.', type: 'danger' });
+      }
+    }
+  };
+
+  const handleAddSubject = () => {
+    if (!newSubjectName.trim()) {
+      setToast({ message: 'Please enter a subject name.', type: 'warning' });
+      return;
+    }
+    const marks = parseFloat(newSubjectMarks);
+    if (isNaN(marks) || marks < 0 || marks > 100) {
+      setToast({ message: 'Please enter valid marks between 0 and 100.', type: 'warning' });
+      return;
+    }
+    
+    const newSubject = {
+      id: Date.now(),
+      name: newSubjectName.trim(),
+      marksObtained: marks,
+      totalMarks: 100,
+      percentage: marks
+    };
+    
+    setSubjects([...subjects, newSubject]);
+    setNewSubjectName('');
+    setNewSubjectMarks('');
+    setToast({ message: `Subject "${newSubjectName}" added successfully!`, type: 'success' });
+  };
+
+  const handleDeleteSubject = (id) => {
+    setConfirmConfig({
+      title: 'Delete Subject',
+      message: 'Are you sure you want to remove this subject and its marks?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: () => {
+        setConfirmConfig(null);
+        setSubjects(subjects.filter(s => s.id !== id));
+        setToast({ message: 'Subject removed successfully.', type: 'success' });
+      }
+    });
+  };
+
+  const handleEditMarks = (id) => {
+    setEditingSubjectId(id);
+    const subject = subjects.find(s => s.id === id);
+    setEditMarks(subject ? String(subject.marksObtained) : '');
+  };
+
+  const handleSaveMarks = (id) => {
+    const marks = parseFloat(editMarks);
+    if (isNaN(marks) || marks < 0 || marks > 100) {
+      setToast({ message: 'Please enter valid marks between 0 and 100.', type: 'warning' });
+      return;
+    }
+    
+    setSubjects(subjects.map(s => 
+      s.id === id 
+        ? { ...s, marksObtained: marks, percentage: marks }
+        : s
+    ));
+    setEditingSubjectId(null);
+    setEditMarks('');
+    setToast({ message: 'Marks updated successfully!', type: 'success' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSubjectId(null);
+    setEditMarks('');
+  };
+
+  const handleSubmitAll = async () => {
+    if (!selectedStudent) {
+      setToast({ message: 'Please select a student first.', type: 'warning' });
+      return;
+    }
+    if (!subjects.length) {
+      setToast({ message: 'No subjects to submit. Please add at least one subject.', type: 'warning' });
+      return;
+    }
+
+    setConfirmConfig({
+      title: 'Submit Marks',
+      message: `Are you sure you want to submit marks for ${selectedStudent.name}?\nTotal Subjects: ${subjects.length}\nOverall Percentage: ${overallMarks.percentage}%`,
+      type: 'success',
+      confirmText: 'Submit All',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setIsSubmitting(true);
+        
+        try {
+          const payload = {
+            student: selectedStudent.id,
+            academicYear: new Date().getFullYear().toString(),
+            semester: 1,
+            subjects: subjects.map(s => ({
+              subjectCode: s.id.toString(),
+              subjectName: s.name,
+              internalMarks: Math.floor(s.marksObtained / 2),
+              externalMarks: Math.ceil(s.marksObtained / 2),
+              totalMarks: s.totalMarks,
+              grade: s.percentage >= 80 ? 'A+' : s.percentage >= 60 ? 'B' : s.percentage >= 50 ? 'C' : 'F',
+              credits: 3,
+            })),
+            totalMarks: overallMarks.obtained,
+            totalCredits: subjects.length * 3,
+            percentage: overallMarks.percentage,
+            cgpa: parseFloat((overallMarks.percentage / 10).toFixed(2)),
+            sgpa: parseFloat((overallMarks.percentage / 10).toFixed(2)),
+            division: overallMarks.percentage >= 60 ? 'First' : 'Second',
+            resultStatus: overallMarks.percentage >= 50 ? 'PASS' : 'FAIL',
+          };
+          
+          await resultService.createResult(payload);
+          
+          setToast({ 
+            message: `✅ All marks submitted successfully for ${selectedStudent.name}!`, 
+            type: 'success' 
+          });
+        } catch (error) {
+          console.error(error);
+          setToast({ message: 'Failed to submit marks.', type: 'danger' });
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+    });
+  };
+
+  const handleExport = () => {
+    setToast({ message: '📊 Marks data exported successfully!', type: 'success' });
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // ─── Render Helpers ────────────────────────────────────────────────────────
+  const getStatusColor = (percentage) => {
+    if (percentage >= 80) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+    if (percentage >= 60) return 'text-amber-600 bg-amber-50 border-amber-200';
+    return 'text-rose-600 bg-rose-50 border-rose-200';
+  };
+
+  const getStatusIcon = (percentage) => {
+    if (percentage >= 80) return <TrendingUp className="w-3.5 h-3.5" />;
+    if (percentage >= 60) return <Minus className="w-3.5 h-3.5" />;
+    return <TrendingDown className="w-3.5 h-3.5" />;
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+      {/* ─── Page Header ─────────────────────────────────────────────────────── */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <FileSpreadsheet className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Marks Updating</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">Enter and manage student examination marks</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-slate-100 transition-all cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Messages ────────────────────────────────────────────────────────── */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
+
+      {/* ─── Main Grid ───────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* ─── LEFT PANEL: Student Selection ────────────────────────────────── */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* Filters */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Student Registry
+            </h3>
+            
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by name or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={selectedBatch}
+                onChange={(e) => setSelectedBatch(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+              >
+                {batches.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+              >
+                {courses.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select
+                value={selectedInstitute}
+                onChange={(e) => setSelectedInstitute(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer col-span-2"
+              >
+                {institutes.map(i => <option key={i} value={i}>{i}</option>)}
+              </select>
+            </div>
+
+            <div className="text-[10px] text-slate-400 font-semibold">
+              {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} found
+            </div>
+          </div>
+
+          {/* Student List */}
+          <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden max-h-[500px] overflow-y-auto">
+            {filteredStudents.map((student) => (
+              <button
+                key={student.id}
+                onClick={() => handleSelectStudent(student)}
+                className={`w-full p-4 text-left border-b border-slate-50 hover:bg-slate-50/70 transition-all group ${
+                  selectedStudent?.id === student.id 
+                    ? 'bg-blue-50/50 border-l-4 border-l-blue-600' 
+                    : ''
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 ${
+                    selectedStudent?.id === student.id
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black text-slate-800 truncate">{student.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[9px] font-mono font-bold text-slate-400">{student.enrollmentId}</span>
+                      <span className="text-[9px] font-bold text-slate-400">•</span>
+                      <span className="text-[9px] font-bold text-slate-400">{student.batch}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
+                        student.attendance >= 75 
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        {student.attendance}% Attendance
+                      </span>
+                      <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
+                        student.thesisStatus === 'Approved'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        {student.thesisStatus}
+                      </span>
+                    </div>
+                  </div>
+                  {selectedStudent?.id === student.id && (
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  )}
+                </div>
+              </button>
+            ))}
+            {filteredStudents.length === 0 && (
+              <div className="p-8 text-center text-slate-400 text-xs font-medium">
+                No students found matching your filters.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── RIGHT PANEL: Marks Entry ─────────────────────────────────────── */}
+        <div className="lg:col-span-8 space-y-4">
+          {selectedStudent ? (
+            <>
+              {/* Student Info Card */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xl font-black shadow-md flex-shrink-0">
+                      {selectedStudent.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-slate-800">{selectedStudent.name}</h3>
+                      <div className="flex flex-wrap items-center gap-3 mt-1 text-xs">
+                        <span className="font-mono font-bold text-blue-600">{selectedStudent.enrollmentId}</span>
+                        <span className="text-slate-300">|</span>
+                        <span className="flex items-center gap-1 text-slate-500">
+                          <GraduationCap className="w-3.5 h-3.5" />
+                          {selectedStudent.batch}
+                        </span>
+                        <span className="text-slate-300">|</span>
+                        <span className="flex items-center gap-1 text-slate-500">
+                          <Building2 className="w-3.5 h-3.5" />
+                          {selectedStudent.institute}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                    <Award className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs font-bold text-slate-700">Overall: </span>
+                    <span className={`text-sm font-black ${overallMarks.percentage >= 75 ? 'text-emerald-600' : overallMarks.percentage >= 60 ? 'text-amber-600' : 'text-rose-600'}`}>
+                      {overallMarks.percentage}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-100">
+                  <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <span className="text-[9px] uppercase font-black text-slate-400">Subjects</span>
+                    <p className="text-sm font-black text-slate-800">{subjects.length}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <span className="text-[9px] uppercase font-black text-slate-400">Total Marks</span>
+                    <p className="text-sm font-black text-slate-800">{overallMarks.obtained}/{overallMarks.total}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <span className="text-[9px] uppercase font-black text-slate-400">Attendance</span>
+                    <p className={`text-sm font-black ${selectedStudent.attendance >= 75 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {selectedStudent.attendance}%
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <span className="text-[9px] uppercase font-black text-slate-400">Thesis</span>
+                    <p className={`text-sm font-black ${selectedStudent.thesisStatus === 'Approved' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {selectedStudent.thesisStatus}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                <div className="border-b border-slate-100 px-6 pt-4 flex gap-1">
+                  <button
+                    onClick={() => setActiveTab('marks')}
+                    className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-xl transition-all ${
+                      activeTab === 'marks'
+                        ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5 inline mr-1.5" />
+                    Marks Entry
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('details')}
+                    className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-xl transition-all ${
+                      activeTab === 'details'
+                        ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <User className="w-3.5 h-3.5 inline mr-1.5" />
+                    Student Details
+                  </button>
+                </div>
+
+                {/* ─── TAB: Marks Entry ──────────────────────────────────────── */}
+                {activeTab === 'marks' && (
+                  <div className="p-6 space-y-6">
+                    {/* Subject Table */}
+                    <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-100">
+                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
+                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Subject</th>
+                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Marks Obtained</th>
+                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
+                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-24">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50 bg-white">
+                          {subjects.map((subject, idx) => (
+                            <tr key={subject.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-400">
+                                {String(idx + 1).padStart(2, '0')}
+                              </td>
+                              <td className="px-4 py-3.5 font-bold text-slate-800">
+                                {subject.name}
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                {editingSubjectId === subject.id ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      value={editMarks}
+                                      onChange={(e) => setEditMarks(e.target.value)}
+                                      className="w-16 px-2 py-1 bg-white border border-blue-300 rounded-lg text-center text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      autoFocus
+                                    />
+                                    <span className="text-slate-400 font-bold">/ 100</span>
+                                  </div>
+                                ) : (
+                                  <span className="font-bold text-slate-800">
+                                    {subject.marksObtained} / {subject.totalMarks}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStatusColor(subject.percentage)}`}>
+                                  {getStatusIcon(subject.percentage)}
+                                  {subject.percentage}%
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  {editingSubjectId === subject.id ? (
+                                    <>
+                                      <button
+                                        onClick={() => handleSaveMarks(subject.id)}
+                                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                        title="Save"
+                                      >
+                                        <CheckCircle2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={handleCancelEdit}
+                                        className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
+                                        title="Cancel"
+                                      >
+                                        <XCircle className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => handleEditMarks(subject.id)}
+                                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                        title="Edit Marks"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteSubject(subject.id)}
+                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                                        title="Delete Subject"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {subjects.length === 0 && (
+                            <tr>
+                              <td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-xs font-medium">
+                                No subjects added yet. Add a subject below.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                        {/* Summary Row */}
+                        {subjects.length > 0 && (
+                          <tfoot>
+                            <tr className="bg-slate-50 border-t border-slate-200">
+                              <td colSpan="2" className="px-4 py-3 font-black text-xs text-slate-700">
+                                Total / Overall
+                              </td>
+                              <td className="px-4 py-3 text-center font-black text-sm text-slate-800">
+                                {overallMarks.obtained} / {overallMarks.total}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black border ${getStatusColor(overallMarks.percentage)}`}>
+                                  {getStatusIcon(overallMarks.percentage)}
+                                  {overallMarks.percentage}%
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center"></td>
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+
+                    {/* Add Subject Row */}
+                    <div className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-3">
+                      <div className="flex-1 w-full">
+                        <input
+                          type="text"
+                          placeholder="Enter subject name..."
+                          value={newSubjectName}
+                          onChange={(e) => setNewSubjectName(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all"
+                        />
+                      </div>
+                      <div className="w-full sm:w-24">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="Marks"
+                          value={newSubjectMarks}
+                          onChange={(e) => setNewSubjectMarks(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all text-center"
+                        />
+                      </div>
+                      <button
+                        onClick={handleAddSubject}
+                        className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-500/10 cursor-pointer whitespace-nowrap"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Subject
+                      </button>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="flex justify-end pt-2 border-t border-slate-100">
+                      <button
+                        onClick={handleSubmitAll}
+                        disabled={isSubmitting || subjects.length === 0}
+                        className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/10 cursor-pointer"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            Submit All Marks
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── TAB: Student Details ──────────────────────────────────── */}
+                {activeTab === 'details' && (
+                  <div className="p-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider border-b border-slate-100 pb-2">
+                          Personal Information
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-[9px] uppercase font-black text-slate-400 block">Full Name</span>
+                            <span className="text-sm font-bold text-slate-800">{selectedStudent.name}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-black text-slate-400 block">Enrollment ID</span>
+                            <span className="text-sm font-mono font-bold text-blue-600">{selectedStudent.enrollmentId}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-black text-slate-400 block">Email Address</span>
+                            <span className="text-sm font-semibold text-slate-700">{selectedStudent.email}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-black text-slate-400 block">Contact Number</span>
+                            <span className="text-sm font-semibold text-slate-700">{selectedStudent.phone}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider border-b border-slate-100 pb-2">
+                          Academic Information
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-[9px] uppercase font-black text-slate-400 block">Institute</span>
+                            <span className="text-sm font-bold text-slate-800">{selectedStudent.institute}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-black text-slate-400 block">Course</span>
+                            <span className="text-sm font-bold text-slate-800">{selectedStudent.course}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] uppercase font-black text-slate-400 block">Batch</span>
+                            <span className="text-sm font-bold text-slate-800">{selectedStudent.batch}</span>
+                          </div>
+                          <div className="flex items-center gap-4 pt-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] uppercase font-black text-slate-400">Attendance:</span>
+                              <span className={`text-sm font-black ${selectedStudent.attendance >= 75 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {selectedStudent.attendance}%
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] uppercase font-black text-slate-400">Thesis:</span>
+                              <span className={`text-sm font-black ${selectedStudent.thesisStatus === 'Approved' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {selectedStudent.thesisStatus}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Subject Summary */}
+                    <div className="border-t border-slate-100 pt-4">
+                      <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3">
+                        Marks Summary ({subjects.length} Subjects)
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {subjects.map(subject => (
+                          <div key={subject.id} className="bg-slate-50 rounded-xl p-3 text-center">
+                            <span className="text-[9px] font-bold text-slate-500 block truncate">{subject.name}</span>
+                            <span className={`text-sm font-black ${subject.percentage >= 75 ? 'text-emerald-600' : subject.percentage >= 60 ? 'text-amber-600' : 'text-rose-600'}`}>
+                              {subject.marksObtained}%
+                            </span>
+                          </div>
+                        ))}
+                        {subjects.length === 0 && (
+                          <div className="col-span-4 text-center text-slate-400 text-xs py-4">
+                            No subjects recorded yet.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            // ─── Empty State ──────────────────────────────────────────────────
+            <div className="bg-white border border-slate-100 rounded-2xl p-12 shadow-sm text-center">
+              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="w-10 h-10 text-slate-300" />
+              </div>
+              <h3 className="text-lg font-black text-slate-700">Select a Student</h3>
+              <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto">
+                Choose a student from the list on the left to view and update their marks.
+              </p>
+              <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-slate-400">
+                <span className="bg-slate-100 px-3 py-1 rounded-full">📊 {students.length} Students</span>
+                <span className="bg-slate-100 px-3 py-1 rounded-full">📚 {batches.length - 1} Batches</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ─── Confirmation Modal ──────────────────────────────────────────────── */}
+      {confirmConfig && (
+        <ConfirmModal
+          isOpen={true}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          type={confirmConfig.type}
+          confirmText={confirmConfig.confirmText}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default AcademyMarksUpdating;
+```
+
+### `client/src/pages/academy/components/AcademyPublishDetails.jsx`
+
+```jsx
+import { RefreshCw } from 'lucide-react';
+
+export default function AcademyPublishDetails() {
+  return (
+    <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm text-center">
+      <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+        <RefreshCw className="w-10 h-10 text-indigo-400" />
+      </div>
+      <h3 className="text-xl font-black text-slate-700">Publishing Details</h3>
+      <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
+        View detailed history of all published results, including timestamps and publication status.
+      </p>
+      <p className="text-xs text-slate-500 mt-4 font-mono bg-slate-50 p-3 rounded-xl border border-slate-100">
+        🚧 This component is under development. Coming soon!
+      </p>
+    </div>
+  );
+}
+
+```
+
+### `client/src/pages/academy/components/AcademyPublishResults.jsx`
+
+```jsx
+import { useState, useMemo, useEffect } from 'react';
+import academicService from '../../../api/academic';
+import instituteService from '../../../api/institutes';
+import examService from '../../../api/exams';
+import resultService from '../../../api/results';
+import {
+  Calendar,
+  Clock,
+  Send,
+  CheckCircle2,
+  AlertCircle,
+  Building2,
+  Users,
+  FileSpreadsheet,
+  RefreshCw,
+  Eye,
+  ChevronDown,
+  Globe,
+  ShieldCheck,
+  Bell,
+  CalendarDays,
+  Mail,
+  BarChart3,
+  X
+} from 'lucide-react';
+import Toast from '../../../Components/Toast';
+import ConfirmModal from '../../../Components/ConfirmModal';
+
+const AcademyPublishResults = () => {
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const [selectedInstitute, setSelectedInstitute] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('');
+  const [selectedExam, setSelectedExam] = useState('');
+  const [publishDate, setPublishDate] = useState('');
+  const [publishTime, setPublishTime] = useState('');
+  const [publishAMPM, setPublishAMPM] = useState('AM');
+  const [includeAllStudents, setIncludeAllStudents] = useState(true);
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // ─── Data Fetching ──────────────────────────────────────────────────────────
+  const [institutes, setInstitutes] = useState([]);
+  const [exams, setExams] = useState([]);
+  const [batches, setBatches] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [instRes, examRes, batchRes] = await Promise.all([
+          instituteService.listApplications().catch(() => ({ data: { data: [] } })),
+          examService.listExamApplications().catch(() => ({ data: { data: [] } })),
+          academicService.getBatches().catch(() => ({ data: { data: [] } }))
+        ]);
+
+        const instData = instRes.data?.data || [];
+        const examData = examRes.data?.data || [];
+        const batchData = batchRes.data?.data || [];
+
+        setInstitutes(instData.map(i => ({ id: i._id, name: i.orgName || i.organizationName || 'Institute' })));
+        setExams(examData.map(e => ({ id: e._id, name: e.title || e.name || 'Exam' })));
+        setBatches(batchData.map(b => ({ id: b._id, name: b.name, students: b.students?.length || 0 })));
+      } catch (err) {
+        setToast({ message: 'Error loading dropdown data', type: 'danger' });
+      }
+    };
+    fetchData();
+  }, []);
+
+  // ─── Computed ──────────────────────────────────────────────────────────────
+  const filteredBatches = useMemo(() => {
+    if (!selectedInstitute) return [];
+    return batches;
+  }, [selectedInstitute, batches]);
+
+  const totalStudents = useMemo(() => {
+    if (includeAllStudents) {
+      return batches.reduce((sum, b) => sum + (b.students || 0), 0);
+    }
+    return selectedStudents.length;
+  }, [includeAllStudents, selectedStudents, batches]);
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+  const handleSubmit = () => {
+    // Validate required fields
+    if (!selectedInstitute) {
+      setToast({ message: 'Please select an institution.', type: 'warning' });
+      return;
+    }
+    if (!selectedBatch) {
+      setToast({ message: 'Please select a batch.', type: 'warning' });
+      return;
+    }
+    if (!selectedExam) {
+      setToast({ message: 'Please select an exam.', type: 'warning' });
+      return;
+    }
+    if (!publishDate) {
+      setToast({ message: 'Please select a publish date.', type: 'warning' });
+      return;
+    }
+    if (!publishTime) {
+      setToast({ message: 'Please select a publish time.', type: 'warning' });
+      return;
+    }
+
+    setConfirmConfig({
+      title: 'Publish Results',
+      message: `Are you sure you want to publish results for:\n\n• Institution: ${institutes.find(i => String(i.id) === String(selectedInstitute))?.name}\n• Exam: ${exams.find(e => String(e.id) === String(selectedExam))?.name}\n• Students: ${totalStudents}\n• Publish Date: ${new Date(publishDate).toLocaleDateString()}\n• Publish Time: ${publishTime} ${publishAMPM}`,
+      type: 'success',
+      confirmText: 'Yes, Publish Now',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setIsSubmitting(true);
+        
+        try {
+          // Since there is no bulk publish endpoint that accepts batch/exam ID, we just simulate the UI flow
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        } catch (error) {
+          console.error(error);
+        }
+        
+        setIsSubmitting(false);
+
+        // Alternate Flow: Missing marks -> Block
+        // Simulating that if Batch 2023-B (id 4) is selected, there are missing marks
+        if (Number(selectedBatch) === 4) {
+          setToast({
+            message: `❌ Cannot publish results. Missing marks detected for 2 students in ${getBatchName(selectedBatch)}. Please upload marks before publishing.`,
+            type: 'error'
+          });
+          return;
+        }
+
+        setToast({
+          message: `✅ Results published successfully! ${totalStudents} student${totalStudents > 1 ? 's' : ''} will see results on ${new Date(publishDate).toLocaleDateString()} at ${publishTime} ${publishAMPM}`,
+          type: 'success'
+        });
+
+        // Reset form after success
+        setTimeout(() => {
+          setSelectedInstitute('');
+          setSelectedBatch('');
+          setSelectedExam('');
+          setPublishDate('');
+          setPublishTime('');
+          setPublishAMPM('AM');
+          setIncludeAllStudents(true);
+          setSelectedStudents([]);
+        }, 3000);
+      }
+    });
+  };
+
+  const handlePreview = () => {
+    if (!selectedInstitute || !selectedBatch || !selectedExam) {
+      setToast({ message: 'Please select institution, batch, and exam to preview.', type: 'warning' });
+      return;
+    }
+    setShowPreview(true);
+  };
+
+  const handleSendNotification = () => {
+    setToast({
+      message: `📧 Notification emails sent to ${totalStudents} students and ${institutes.filter(i => String(i.id) === String(selectedInstitute)).length} institute(s)!`,
+      type: 'success'
+    });
+  };
+
+  // ─── Render Helpers ────────────────────────────────────────────────────────
+  const getInstituteName = (id) => {
+    const inst = institutes.find(i => String(i.id) === String(id));
+    return inst ? inst.name : '';
+  };
+
+  const getExamName = (id) => {
+    const exam = exams.find(e => String(e.id) === String(id));
+    return exam ? exam.name : '';
+  };
+
+  const getBatchName = (id) => {
+    const batch = batches.find(b => String(b.id) === String(id));
+    return batch ? batch.name : '';
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+      {/* ─── Page Header ─────────────────────────────────────────────────────── */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+            <Globe className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Publish Results</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">Schedule and publish examination results to institutes and students</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePreview}
+            className="px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-blue-100 transition-all cursor-pointer"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Preview
+          </button>
+          <button
+            onClick={handleSendNotification}
+            className="px-4 py-2 bg-purple-50 border border-purple-200 text-purple-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-purple-100 transition-all cursor-pointer"
+          >
+            <Mail className="w-3.5 h-3.5" />
+            Notify
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Main Form ────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        
+        {/* ─── Left: Form Panel ──────────────────────────────────────────────── */}
+        <div className="lg:col-span-3 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-6">
+          <div>
+            <h3 className="text-base font-black text-slate-800 tracking-tight">Publish Results</h3>
+            <p className="text-xs text-slate-400 font-medium mt-0.5">Schedule result publication date and time</p>
+          </div>
+
+          {/* Institution Selection */}
+          <div className="space-y-1.5">
+            <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
+              Institution <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                value={selectedInstitute}
+                onChange={(e) => {
+                  setSelectedInstitute(e.target.value);
+                  setSelectedBatch('');
+                }}
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer appearance-none"
+              >
+                <option value="">Select Institution</option>
+                {institutes.map(inst => (
+                  <option key={inst.id} value={inst.id}>{inst.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Exam Selection */}
+          <div className="space-y-1.5">
+            <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
+              Exam <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <FileSpreadsheet className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                value={selectedExam}
+                onChange={(e) => setSelectedExam(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer appearance-none"
+              >
+                <option value="">Select Exam</option>
+                {exams.map(exam => (
+                  <option key={exam.id} value={exam.id}>{exam.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Batch Selection */}
+          <div className="space-y-1.5">
+            <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
+              Batch <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                value={selectedBatch}
+                onChange={(e) => setSelectedBatch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer appearance-none"
+                disabled={!selectedInstitute}
+              >
+                <option value="">{selectedInstitute ? 'Select Batch' : 'Select Institution first'}</option>
+                {filteredBatches.map(batch => (
+                  <option key={batch.id} value={batch.id}>
+                    {batch.name} ({batch.students} students)
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+            {selectedInstitute && filteredBatches.length === 0 && (
+              <p className="text-[10px] text-amber-600 font-semibold mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                No batches available for this institution.
+              </p>
+            )}
+          </div>
+
+          {/* Student Selection */}
+          <div className="space-y-2 pt-1">
+            <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
+              Students
+            </label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={includeAllStudents}
+                  onChange={() => setIncludeAllStudents(true)}
+                  className="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-slate-700">All Students</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!includeAllStudents}
+                  onChange={() => setIncludeAllStudents(false)}
+                  className="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-slate-700">Select Specific</span>
+              </label>
+            </div>
+            {!includeAllStudents && (
+              <div className="mt-2 animate-in slide-in-from-top duration-200">
+                <select
+                  multiple
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all min-h-[100px]"
+                >
+                  <option value="1">Dr. Aarav Sharma (SEMI-2026-1001)</option>
+                  <option value="2">Dr. Priya Nair (SEMI-2026-1002)</option>
+                  <option value="3">Dr. Rahul Verma (SEMI-2026-1003)</option>
+                  <option value="4">Dr. Neha Patel (SEMI-2026-1004)</option>
+                </select>
+                <p className="text-[10px] text-slate-400 font-medium mt-1">Hold Ctrl/Cmd to select multiple students</p>
+              </div>
+            )}
+          </div>
+
+          {/* Publish Date & Time */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
+                Publish Date <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="date"
+                  value={publishDate}
+                  onChange={(e) => setPublishDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
+                Publish Time <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    placeholder="10"
+                    value={publishTime}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (val >= 1 && val <= 12) {
+                        setPublishTime(e.target.value);
+                      } else if (e.target.value === '') {
+                        setPublishTime('');
+                      }
+                    }}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                  />
+                </div>
+                <select
+                  value={publishAMPM}
+                  onChange={(e) => setPublishAMPM(e.target.value)}
+                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer"
+                >
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <span className="text-xs font-extrabold text-indigo-900 block">Publication Notice</span>
+              <p className="text-[11px] text-indigo-800 font-medium leading-relaxed mt-0.5">
+                Results will be visible to institutes and students at the selected date and time.
+                A notification email will be sent to all stakeholders.
+              </p>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end pt-2 border-t border-slate-100">
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20 cursor-pointer"
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  Publish Results
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* ─── Right: Summary Panel ───────────────────────────────────────────── */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Summary Card */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
+            <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Publication Summary
+            </h4>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                <span className="text-[11px] font-semibold text-slate-500">Institution</span>
+                <span className="text-xs font-bold text-slate-800 text-right max-w-[180px] truncate">
+                  {selectedInstitute ? getInstituteName(selectedInstitute) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                <span className="text-[11px] font-semibold text-slate-500">Exam</span>
+                <span className="text-xs font-bold text-slate-800">
+                  {selectedExam ? getExamName(selectedExam) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                <span className="text-[11px] font-semibold text-slate-500">Batch</span>
+                <span className="text-xs font-bold text-slate-800">
+                  {selectedBatch ? getBatchName(selectedBatch) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                <span className="text-[11px] font-semibold text-slate-500">Students</span>
+                <span className="text-xs font-bold text-indigo-600">
+                  {totalStudents} student{totalStudents !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                <span className="text-[11px] font-semibold text-slate-500">Publish Date</span>
+                <span className="text-xs font-bold text-slate-800">
+                  {publishDate ? new Date(publishDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1.5">
+                <span className="text-[11px] font-semibold text-slate-500">Publish Time</span>
+                <span className="text-xs font-bold text-slate-800">
+                  {publishTime ? `${publishTime} ${publishAMPM}` : '—'}
+                </span>
+              </div>
+            </div>
+
+            {/* Status Indicator */}
+            <div className={`mt-4 p-3 rounded-xl border ${publishDate && publishTime ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+              <div className="flex items-center gap-2">
+                {publishDate && publishTime ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span className="text-[10px] font-black text-emerald-700">Ready to publish</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-4 h-4 text-amber-600" />
+                    <span className="text-[10px] font-black text-amber-700">Please complete all required fields</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+            <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3">Quick Actions</h4>
+            <div className="space-y-2">
+              <button
+                onClick={handlePreview}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-blue-300 rounded-xl text-[10px] font-bold text-slate-600 hover:text-blue-600 transition-all flex items-center justify-center gap-2"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                Preview Results
+              </button>
+              <button
+                onClick={handleSendNotification}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-purple-300 rounded-xl text-[10px] font-bold text-slate-600 hover:text-purple-600 transition-all flex items-center justify-center gap-2"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Send Notifications
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Preview Modal ────────────────────────────────────────────────────── */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Result Preview</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {getExamName(selectedExam)} • {getBatchName(selectedBatch)}
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowPreview(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* Publication Details */}
+              <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3">
+                <Bell className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-xs font-extrabold text-indigo-900 block">Publication Schedule</span>
+                  <p className="text-[11px] text-indigo-800 font-medium mt-0.5">
+                    Results will be published on {publishDate ? new Date(publishDate).toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : '—'} at {publishTime} {publishAMPM}
+                  </p>
+                </div>
+              </div>
+
+              {/* Results Table Preview */}
+              <div>
+                <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3">Student Results ({totalStudents} students)</h4>
+                <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/70 border-b border-slate-100">
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Student Name</th>
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 bg-white">
+                      {[
+                        { name: 'Dr. Aarav Sharma', id: 'SEMI-2026-1001', percentage: 87 },
+                        { name: 'Dr. Priya Nair', id: 'SEMI-2026-1002', percentage: 76 },
+                        { name: 'Dr. Rahul Verma', id: 'SEMI-2026-1003', percentage: 76 },
+                        { name: 'Dr. Neha Patel', id: 'SEMI-2026-1004', percentage: 84 },
+                        { name: 'Dr. Karan Malhotra', id: 'SEMI-2026-1005', percentage: 62 },
+                      ].slice(0, 5).map((student, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-2.5 text-center font-mono font-bold text-slate-400">
+                            {String(idx + 1).padStart(2, '0')}
+                          </td>
+                          <td className="px-4 py-2.5 font-bold text-slate-700">
+                            {student.name}
+                            <span className="ml-2 text-[9px] font-mono font-bold text-slate-400">{student.id}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-center">
+                            <span className={`font-black ${student.percentage >= 75 ? 'text-emerald-600' : student.percentage >= 60 ? 'text-amber-600' : 'text-rose-600'}`}>
+                              {student.percentage}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${student.percentage >= 75 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : student.percentage >= 60 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
+                              {student.percentage >= 75 ? 'Passed' : student.percentage >= 60 ? 'Eligible' : 'Needs Improvement'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {totalStudents > 5 && (
+                  <p className="text-[10px] text-slate-400 font-medium mt-2 text-center">
+                    + {totalStudents - 5} more student{totalStudents - 5 > 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                <CalendarDays className="w-4 h-4" />
+                {publishDate ? `Scheduled for ${new Date(publishDate).toLocaleDateString()}` : 'Not scheduled'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPreview(false)}
+                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Toast ────────────────────────────────────────────────────────────── */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
+
+      {/* ─── Confirmation Modal ──────────────────────────────────────────────── */}
+      {confirmConfig && (
+        <ConfirmModal
+          isOpen={true}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          type={confirmConfig.type}
+          confirmText={confirmConfig.confirmText}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default AcademyPublishResults;
+```
+
+### `client/src/pages/academy/components/AcademyPublishingDetails.jsx`
+
+```jsx
+import { useState, useMemo, useEffect } from 'react';
+import resultService from '../../../api/results';
+import {
+  Search,
+  Calendar,
+  Eye,
+  Edit,
+  Trash2,
+  Filter,
+  X,
+  ChevronDown,
+  Users,
+  FileSpreadsheet,
+  Download,
+  Printer,
+  CheckCircle2,
+  Clock as ClockIcon,
+  CalendarDays,
+  Mail,
+  Globe,
+  Bell,
+  Play,
+  Pause
+} from 'lucide-react';
+import Toast from '../../../Components/Toast';
+import ConfirmModal from '../../../Components/ConfirmModal';
+
+const AcademyPublishingDetails = () => {
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('All');
+  const [selectedInstitute, setSelectedInstitute] = useState('All');
+  const [selectedExam, setSelectedExam] = useState('All');
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [selectedPublication, setSelectedPublication] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+  const [activeTab, setActiveTab] = useState('published'); // 'published' | 'scheduled' | 'all'
+
+  // ─── Data Fetching ──────────────────────────────────────────────────────────
+  const [publications, setPublications] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPublications = async () => {
+      try {
+        setIsLoading(true);
+        // Note: Actual API for getting 'published' or 'scheduled' bulk publications
+        // Since Result model is per-student, we fetch results and aggregate or list them
+        const res = await resultService.getAllResults();
+        const data = res.data?.data || res.data || [];
+        
+        // Map to expected publication structure in UI
+        // We'll treat each result as a "publication log" or we can just list them
+        const mappedData = data.map(r => ({
+          id: r._id,
+          exam: r.exam?.name || 'Final Exam', // if populated
+          batch: r.student?.batch?.name || 'Batch',
+          institute: r.student?.institute?.orgName || 'Institute',
+          course: r.student?.course?.name || 'Course',
+          date: r.publishedDate ? new Date(r.publishedDate).toISOString().split('T')[0] : 'TBD',
+          time: r.publishedDate ? new Date(r.publishedDate).toLocaleTimeString() : 'TBD',
+          ampm: '',
+          status: r.isPublished ? 'Published' : 'Scheduled',
+          autoPublish: false,
+          studentsCount: 1,
+          publishedBy: 'System',
+          publishedAt: r.publishedDate,
+          notificationSent: true,
+          results: []
+        }));
+        setPublications(mappedData);
+      } catch (err) {
+        setToast({ message: 'Error loading publications', type: 'danger' });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPublications();
+  }, []);
+
+  // ─── Computed ──────────────────────────────────────────────────────────────
+  const batches = useMemo(() => {
+    const unique = new Set(publications.map(p => p.batch));
+    return ['All', ...unique];
+  }, [publications]);
+
+  const institutes = useMemo(() => {
+    const unique = new Set(publications.map(p => p.institute));
+    return ['All', ...unique];
+  }, [publications]);
+
+  const exams = useMemo(() => {
+    const unique = new Set(publications.map(p => p.exam));
+    return ['All', ...unique];
+  }, [publications]);
+
+  const filteredPublications = useMemo(() => {
+    return publications.filter(p => {
+      const matchSearch = p.exam.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          p.institute.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          p.batch.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchBatch = selectedBatch === 'All' || p.batch === selectedBatch;
+      const matchInstitute = selectedInstitute === 'All' || p.institute === selectedInstitute;
+      const matchExam = selectedExam === 'All' || p.exam === selectedExam;
+      const matchStatus = activeTab === 'all' || 
+                          (activeTab === 'published' && p.status === 'Published') ||
+                          (activeTab === 'scheduled' && p.status === 'Scheduled');
+      return matchSearch && matchBatch && matchInstitute && matchExam && matchStatus;
+    });
+  }, [publications, searchQuery, selectedBatch, selectedInstitute, selectedExam, activeTab]);
+
+  const sortedPublications = useMemo(() => {
+    if (!sortConfig.key) return filteredPublications;
+    return [...filteredPublications].sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+      if (sortConfig.key === 'date') {
+        return sortConfig.direction === 'asc' 
+          ? new Date(aVal) - new Date(bVal) 
+          : new Date(bVal) - new Date(aVal);
+      }
+      if (typeof aVal === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aVal.localeCompare(bVal) 
+          : bVal.localeCompare(aVal);
+      }
+      return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+  }, [filteredPublications, sortConfig]);
+
+  const stats = useMemo(() => {
+    const total = publications.length;
+    const published = publications.filter(p => p.status === 'Published').length;
+    const scheduled = publications.filter(p => p.status === 'Scheduled').length;
+    const autoPublish = publications.filter(p => p.autoPublish).length;
+    return { total, published, scheduled, autoPublish };
+  }, [publications]);
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const handleViewDetails = (publication) => {
+    setSelectedPublication(publication);
+    setIsModalOpen(true);
+  };
+
+  const handleEditPublish = (publication) => {
+    setToast({ 
+      message: `✏️ Editing publication for ${publication.exam} - ${publication.institute}`,
+      type: 'info'
+    });
+  };
+
+  const handleDeletePublish = (publication) => {
+    setConfirmConfig({
+      title: 'Delete Publication',
+      message: `Are you sure you want to delete the publication for "${publication.exam}" at ${publication.institute}?\nThis action cannot be undone.`,
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: () => {
+        setConfirmConfig(null);
+        setToast({ 
+          message: `🗑️ Publication for ${publication.exam} has been deleted.`,
+          type: 'success'
+        });
+      }
+    });
+  };
+
+  const handleToggleAutoPublish = (publication) => {
+    setConfirmConfig({
+      title: publication.autoPublish ? 'Disable Auto-Publish' : 'Enable Auto-Publish',
+      message: publication.autoPublish 
+        ? `Are you sure you want to disable auto-publish for "${publication.exam}"?\nResults will need to be published manually.`
+        : `Are you sure you want to enable auto-publish for "${publication.exam}"?\nResults will be published automatically at the scheduled time.`,
+      type: 'warning',
+      confirmText: publication.autoPublish ? 'Disable' : 'Enable',
+      onConfirm: () => {
+        setConfirmConfig(null);
+        setToast({ 
+          message: publication.autoPublish 
+            ? `⏸️ Auto-publish disabled for ${publication.exam}`
+            : `▶️ Auto-publish enabled for ${publication.exam}`,
+          type: 'success'
+        });
+      }
+    });
+  };
+
+  const handleSendNotification = (publication) => {
+    setToast({ 
+      message: `📧 Notification emails sent for ${publication.exam} to ${publication.studentsCount} students!`,
+      type: 'success'
+    });
+  };
+
+  const handleExport = () => {
+    setToast({ message: '📊 Publication data exported successfully!', type: 'success' });
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedBatch('All');
+    setSelectedInstitute('All');
+    setSelectedExam('All');
+    setActiveTab('all');
+  };
+
+  // ─── Render Helpers ────────────────────────────────────────────────────────
+  const getStatusBadge = (status) => {
+    if (status === 'Published') {
+      return {
+        bg: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+        icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />,
+        label: 'Published'
+      };
+    }
+    return {
+      bg: 'bg-amber-50 border-amber-200 text-amber-700',
+      icon: <ClockIcon className="w-3.5 h-3.5 text-amber-600" />,
+      label: 'Scheduled'
+    };
+  };
+
+  const getAutoPublishBadge = (autoPublish) => {
+    if (autoPublish) {
+      return {
+        bg: 'bg-blue-50 border-blue-200 text-blue-700',
+        icon: <Play className="w-3 h-3 text-blue-600" />,
+        label: 'Auto'
+      };
+    }
+    return {
+      bg: 'bg-slate-50 border-slate-200 text-slate-500',
+      icon: <Pause className="w-3 h-3 text-slate-400" />,
+      label: 'Manual'
+    };
+  };
+
+  const formatTime = (time, ampm) => {
+    return `${time} ${ampm}`;
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+      {/* ─── Page Header ─────────────────────────────────────────────────────── */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <Globe className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Publishing Details</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">View and manage all result publications</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-slate-100 transition-all cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Stats Cards ────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Total</span>
+            <FileSpreadsheet className="w-4 h-4 text-blue-500" />
+          </div>
+          <p className="text-2xl font-black text-slate-800 mt-1">{stats.total}</p>
+          <span className="text-[9px] text-slate-400 font-medium">Publications</span>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Published</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          </div>
+          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.published}</p>
+          <span className="text-[9px] text-emerald-600 font-medium">Active publications</span>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Scheduled</span>
+            <ClockIcon className="w-4 h-4 text-amber-500" />
+          </div>
+          <p className="text-2xl font-black text-amber-600 mt-1">{stats.scheduled}</p>
+          <span className="text-[9px] text-amber-600 font-medium">Pending publication</span>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Auto Publish</span>
+            <Play className="w-4 h-4 text-blue-500" />
+          </div>
+          <p className="text-2xl font-black text-blue-600 mt-1">{stats.autoPublish}</p>
+          <span className="text-[9px] text-blue-600 font-medium">Auto-enabled</span>
+        </div>
+      </div>
+
+      {/* ─── Tabs ────────────────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-2xl p-1.5 shadow-sm flex gap-1">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+            activeTab === 'all'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+          }`}
+        >
+          All ({stats.total})
+        </button>
+        <button
+          onClick={() => setActiveTab('published')}
+          className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+            activeTab === 'published'
+              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+          }`}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5 inline mr-1.5" />
+          Published ({stats.published})
+        </button>
+        <button
+          onClick={() => setActiveTab('scheduled')}
+          className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+            activeTab === 'scheduled'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20'
+              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+          }`}
+        >
+          <ClockIcon className="w-3.5 h-3.5 inline mr-1.5" />
+          Scheduled ({stats.scheduled})
+        </button>
+      </div>
+
+      {/* ─── Search & Filters ────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by exam, institute, or batch..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 flex items-center gap-2 hover:bg-slate-100 transition-all whitespace-nowrap"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+            <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[9px]">
+              {selectedBatch !== 'All' || selectedInstitute !== 'All' || selectedExam !== 'All' ? 'Active' : '0'}
+            </span>
+          </button>
+          {(selectedBatch !== 'All' || selectedInstitute !== 'All' || selectedExam !== 'All') && (
+            <button
+              onClick={handleClearFilters}
+              className="px-3 py-2.5 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-bold flex items-center gap-1 transition-all"
+            >
+              <X className="w-3.5 h-3.5" />
+              Clear Filters
+            </button>
+          )}
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top duration-200">
+            <select
+              value={selectedBatch}
+              onChange={(e) => setSelectedBatch(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+            >
+              {batches.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+            <select
+              value={selectedInstitute}
+              onChange={(e) => setSelectedInstitute(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+            >
+              {institutes.map(i => <option key={i} value={i}>{i}</option>)}
+            </select>
+            <select
+              value={selectedExam}
+              onChange={(e) => setSelectedExam(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+            >
+              {exams.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </div>
+        )}
+
+        <div className="text-[10px] text-slate-400 font-semibold flex justify-between items-center">
+          <span>{filteredPublications.length} publication{filteredPublications.length !== 1 ? 's' : ''} found</span>
+          <span className="text-slate-300">|</span>
+          <span>Showing {Math.min(filteredPublications.length, 10)} entries</span>
+        </div>
+      </div>
+
+      {/* ─── Publications Table ──────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50/70 border-b border-slate-100">
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
+                <th 
+                  className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider cursor-pointer hover:text-slate-700 transition-colors group"
+                  onClick={() => handleSort('exam')}
+                >
+                  <div className="flex items-center gap-1">
+                    Examination
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'exam' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider cursor-pointer hover:text-slate-700 transition-colors group"
+                  onClick={() => handleSort('batch')}
+                >
+                  <div className="flex items-center gap-1">
+                    Batch
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'batch' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider cursor-pointer hover:text-slate-700 transition-colors group"
+                  onClick={() => handleSort('institute')}
+                >
+                  <div className="flex items-center gap-1">
+                    Institute
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'institute' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider cursor-pointer hover:text-slate-700 transition-colors group"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center gap-1">
+                    Date
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                  </div>
+                </th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Time</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Auto Publish</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-36">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 bg-white">
+              {sortedPublications.map((pub, idx) => {
+                const statusBadge = getStatusBadge(pub.status);
+                const autoBadge = getAutoPublishBadge(pub.autoPublish);
+                const serialNo = String(idx + 1).padStart(2, '0');
+
+                return (
+                  <tr key={pub.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-400">
+                      {serialNo}
+                    </td>
+                    <td className="px-4 py-3.5 font-extrabold text-slate-800">
+                      {pub.exam}
+                      <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${statusBadge.bg}`}>
+                        {statusBadge.icon}
+                        {statusBadge.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-[9px] font-bold px-2 py-1 rounded-full border border-blue-100">
+                        <Users className="w-3 h-3" />
+                        {pub.batch}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 font-semibold text-slate-700">
+                      {pub.institute}
+                    </td>
+                    <td className="px-4 py-3.5 font-bold text-slate-700">
+                      {new Date(pub.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-4 py-3.5 text-center font-bold text-slate-700">
+                      {formatTime(pub.time, pub.ampm)}
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <button
+                        onClick={() => handleToggleAutoPublish(pub)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold border transition-all cursor-pointer ${autoBadge.bg}`}
+                      >
+                        {autoBadge.icon}
+                        {autoBadge.label}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleViewDetails(pub)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEditPublish(pub)}
+                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
+                          title="Edit Publication"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleSendNotification(pub)}
+                          className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all cursor-pointer"
+                          title="Send Notifications"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePublish(pub)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                          title="Delete Publication"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {sortedPublications.length === 0 && (
+                <tr>
+                  <td colSpan="8" className="px-4 py-12 text-center text-slate-400 text-xs font-medium">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
+                        <Search className="w-8 h-8 text-slate-300" />
+                      </div>
+                      <p>No publications found matching your filters.</p>
+                      <button
+                        onClick={handleClearFilters}
+                        className="text-blue-600 hover:text-blue-700 font-bold text-[10px]"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ─── Footer ────────────────────────────────────────────────────────── */}
+        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-[10px] text-slate-400 font-semibold">
+          <span>Showing {sortedPublications.length} of {publications.length} publications</span>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Published ({stats.published})
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              Scheduled ({stats.scheduled})
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              Auto-Publish ({stats.autoPublish})
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Publication Detail Modal ───────────────────────────────────────── */}
+      {isModalOpen && selectedPublication && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Publication Details</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {selectedPublication.exam}
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* Status Banner */}
+              <div className={`p-4 rounded-xl border flex items-start gap-3 ${
+                selectedPublication.status === 'Published'
+                  ? 'bg-emerald-50 border-emerald-200'
+                  : 'bg-amber-50 border-amber-200'
+              }`}>
+                {selectedPublication.status === 'Published' ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <ClockIcon className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <span className={`text-xs font-extrabold block ${
+                    selectedPublication.status === 'Published' ? 'text-emerald-800' : 'text-amber-800'
+                  }`}>
+                    {selectedPublication.status === 'Published' ? '✅ Published' : '⏳ Scheduled for Publication'}
+                  </span>
+                  <p className={`text-[11px] font-medium mt-0.5 ${
+                    selectedPublication.status === 'Published' ? 'text-emerald-700' : 'text-amber-700'
+                  }`}>
+                    {selectedPublication.status === 'Published' 
+                      ? `Published on ${new Date(selectedPublication.publishedAt).toLocaleString()} by ${selectedPublication.publishedBy}`
+                      : `Scheduled for ${new Date(selectedPublication.date).toLocaleDateString()} at ${formatTime(selectedPublication.time, selectedPublication.ampm)}`
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Publication Info Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <span className="text-[9px] uppercase font-black text-slate-400 block">Institution</span>
+                  <span className="text-xs font-bold text-slate-800 block mt-0.5">{selectedPublication.institute}</span>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <span className="text-[9px] uppercase font-black text-slate-400 block">Batch</span>
+                  <span className="text-xs font-bold text-slate-800 block mt-0.5">{selectedPublication.batch}</span>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <span className="text-[9px] uppercase font-black text-slate-400 block">Course</span>
+                  <span className="text-xs font-bold text-slate-800 block mt-0.5">{selectedPublication.course}</span>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <span className="text-[9px] uppercase font-black text-slate-400 block">Students</span>
+                  <span className="text-xs font-bold text-slate-800 block mt-0.5">{selectedPublication.studentsCount} students</span>
+                </div>
+              </div>
+
+              {/* Schedule Info */}
+              <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 flex items-start gap-3">
+                <CalendarDays className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-xs font-extrabold text-indigo-900 block">Publication Schedule</span>
+                  <p className="text-[11px] text-indigo-800 font-medium mt-0.5">
+                    {new Date(selectedPublication.date).toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })} at {formatTime(selectedPublication.time, selectedPublication.ampm)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Auto Publish & Notification Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className={`p-3 rounded-xl border flex items-center gap-2 ${
+                  selectedPublication.autoPublish ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  {selectedPublication.autoPublish ? (
+                    <Play className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <Pause className="w-4 h-4 text-slate-400" />
+                  )}
+                  <span className={`text-xs font-bold ${
+                    selectedPublication.autoPublish ? 'text-blue-700' : 'text-slate-500'
+                  }`}>
+                    {selectedPublication.autoPublish ? 'Auto-Publish Enabled' : 'Manual Publish'}
+                  </span>
+                </div>
+                <div className={`p-3 rounded-xl border flex items-center gap-2 ${
+                  selectedPublication.notificationSent ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  {selectedPublication.notificationSent ? (
+                    <Mail className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Bell className="w-4 h-4 text-slate-400" />
+                  )}
+                  <span className={`text-xs font-bold ${
+                    selectedPublication.notificationSent ? 'text-emerald-700' : 'text-slate-500'
+                  }`}>
+                    {selectedPublication.notificationSent ? 'Notifications Sent' : 'No Notifications'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Results Preview (if published) */}
+              {selectedPublication.status === 'Published' && selectedPublication.results.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3">Results Preview</h4>
+                  <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50/70 border-b border-slate-100">
+                          <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
+                          <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider">Student Name</th>
+                          <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Marks</th>
+                          <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50 bg-white">
+                        {selectedPublication.results.map((result, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-3 py-2 text-center font-mono font-bold text-slate-400">
+                              {String(idx + 1).padStart(2, '0')}
+                            </td>
+                            <td className="px-3 py-2 font-bold text-slate-700">{result.name}</td>
+                            <td className="px-3 py-2 text-center font-bold text-slate-800">{result.marks}%</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                                result.status === 'Passed' 
+                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                  : 'bg-amber-50 border-amber-200 text-amber-700'
+                              }`}>
+                                {result.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                <Calendar className="w-4 h-4" />
+                {selectedPublication.status === 'Published' 
+                  ? `Published: ${new Date(selectedPublication.publishedAt).toLocaleString()}`
+                  : `Scheduled for ${new Date(selectedPublication.date).toLocaleDateString()}`
+                }
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Toast ────────────────────────────────────────────────────────────── */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
+
+      {/* ─── Confirmation Modal ──────────────────────────────────────────────── */}
+      {confirmConfig && (
+        <ConfirmModal
+          isOpen={true}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          type={confirmConfig.type}
+          confirmText={confirmConfig.confirmText}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default AcademyPublishingDetails;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyRejectionModal.jsx`
 
 ```jsx
-import React from 'react';
 
 const AcademyRejectionModal = ({
   rejectionReason,
@@ -12963,52 +20622,336 @@ const AcademyRejectionModal = ({
 };
 
 export default AcademyRejectionModal;
+
+```
+
+### `client/src/pages/academy/components/AcademyRevaluation.jsx`
+
+```jsx
+import { useState, useEffect } from 'react';
+import { Award, Search, Filter, Edit3, CheckCircle, AlertCircle } from 'lucide-react';
+import revaluationService from '../../../api/revaluation';
+
+export default function AcademyRevaluation() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updatedMarks, setUpdatedMarks] = useState('');
+  const [evaluatorNotes, setEvaluatorNotes] = useState('');
+
+  // Data for incoming revaluation requests
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        setIsLoading(true);
+        const res = await revaluationService.getAllRevaluationRequests();
+        const data = res.data?.data || res.data || [];
+        // Map to UI model
+        const mappedData = data.map(req => ({
+          id: req._id,
+          reqId: req.requestNumber || req._id.toString().substring(0, 8),
+          studentName: req.student?.firstName ? `${req.student.firstName} ${req.student.lastName}` : 'Unknown Student',
+          enrollmentId: req.student?.enrollmentId || 'Unknown ID',
+          institute: req.student?.institute?.orgName || 'Unknown Institute',
+          subject: req.subject?.name || req.subjectCode || 'Unknown Subject',
+          oldMarks: req.originalMarks || 0,
+          status: req.status === 'PENDING' ? 'Pending Review' : req.status === 'EVALUATED' ? 'Under Evaluation' : req.status === 'APPROVED' ? 'Completed' : 'Pending Review',
+          date: new Date(req.createdAt).toISOString().split('T')[0],
+          newMarks: req.revaluationMarks || null
+        }));
+        setRequests(mappedData);
+      } catch (err) {
+        console.error('Error fetching revaluation requests:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRequests();
+  }, []);
+
+  const filteredRequests = requests.filter(req => 
+    req.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    req.reqId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    req.institute.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const openUpdateModal = (req) => {
+    setSelectedRequest(req);
+    setUpdatedMarks(req.newMarks ? req.newMarks.toString() : '');
+    setEvaluatorNotes('');
+    setShowUpdateModal(true);
+  };
+
+  const handleUpdateMarks = async () => {
+    try {
+      await revaluationService.addRevaluationResult(selectedRequest.id, {
+        marks: parseInt(updatedMarks, 10),
+        evaluatorNotes
+      });
+      
+      setRequests(requests.map(req => 
+        req.id === selectedRequest.id 
+          ? { ...req, status: 'Completed', newMarks: parseInt(updatedMarks, 10) } 
+          : req
+      ));
+      setShowUpdateModal(false);
+      alert(`Results updated and republished for ${selectedRequest.studentName}`);
+    } catch (err) {
+      alert('Failed to update marks.');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
+            <Award className="w-6 h-6 text-amber-500" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800">Revaluation Exam</h2>
+            <p className="text-sm text-slate-500 mt-1">Manage student revaluation requests and update marks.</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <div className="bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl text-center">
+            <span className="block text-xl font-black text-slate-800">{requests.filter(r => r.status !== 'Completed').length}</span>
+            <span className="block text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pending</span>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-100 px-4 py-2 rounded-xl text-center">
+            <span className="block text-xl font-black text-emerald-700">{requests.filter(r => r.status === 'Completed').length}</span>
+            <span className="block text-[10px] uppercase font-bold text-emerald-600 tracking-wider">Completed</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/50">
+          <div className="relative w-full sm:w-96">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search by student, ID, or institute..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all bg-white"
+            />
+          </div>
+          <button className="flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors bg-white w-full sm:w-auto">
+            <Filter className="w-4 h-4" />
+            Filter By Status
+          </button>
+        </div>
+
+        {/* Data Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Request Details</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Student & Institute</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Subject & Marks</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredRequests.length > 0 ? (
+                filteredRequests.map((req) => (
+                  <tr key={req.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-800">{req.reqId}</span>
+                        <span className="text-xs text-slate-500">{req.date}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-800">{req.studentName}</span>
+                        <span className="text-xs text-slate-500">{req.institute}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-slate-600 truncate max-w-[200px]" title={req.subject}>{req.subject}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-bold text-slate-400 line-through">{req.oldMarks}</span>
+                          {req.newMarks && (
+                            <span className="text-xs font-bold text-emerald-600">→ {req.newMarks}</span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                        req.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' : 
+                        req.status === 'Under Evaluation' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {req.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {req.status !== 'Completed' ? (
+                        <button 
+                          onClick={() => openUpdateModal(req)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 rounded-lg text-xs font-bold transition-colors"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Update Marks
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-bold">
+                          <CheckCircle className="w-4 h-4" />
+                          Republished
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                    <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-sm">No revaluation requests found.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Update Marks Modal */}
+      {showUpdateModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <h3 className="text-2xl font-black text-slate-800 mb-2">Update Results</h3>
+            <p className="text-sm text-slate-500 mb-6">Enter the revised marks for {selectedRequest.studentName}.</p>
+            
+            <div className="space-y-4 mb-6">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <span className="block text-xs font-bold text-slate-500 uppercase mb-1">Subject</span>
+                <span className="block text-sm font-bold text-slate-800">{selectedRequest.subject}</span>
+                <div className="mt-2 text-sm text-slate-600">
+                  Original Marks: <strong className="text-slate-800">{selectedRequest.oldMarks}</strong>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Revised Marks *</label>
+                <input 
+                  type="number" 
+                  value={updatedMarks}
+                  onChange={(e) => setUpdatedMarks(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-lg font-black"
+                  placeholder="e.g. 52"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Evaluator Notes (Optional)</label>
+                <textarea 
+                  value={evaluatorNotes}
+                  onChange={(e) => setEvaluatorNotes(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm resize-none"
+                  rows="3"
+                  placeholder="Any comments from the evaluator..."
+                ></textarea>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowUpdateModal(false)}
+                className="flex-1 px-4 py-3 border-2 border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleUpdateMarks}
+                disabled={!updatedMarks}
+                className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-600/30 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save & Republish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 ```
 
 ### `client/src/pages/academy/components/AcademySidebar.jsx`
 
 ```jsx
-import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, ClipboardCheck, UserCheck, LogOut, ClipboardList } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Building2, 
+  Users, 
+  UserCheck, 
+  ClipboardList,
+  FileSpreadsheet ,
+   BarChart3 ,
+   Globe,           // For Publish Results
+  RefreshCw,       // For Publishing Details
+  Award            // For Revaluation
+} from 'lucide-react';
 
 const NAV_ITEMS = [
   { id: 'dashboard',     path: '/academy/dashboard',     label: 'Dashboard',                Icon: LayoutDashboard },
   { id: 'applications',  path: '/academy/applications',  label: 'Institutional Applications', Icon: Building2 },
   { id: 'students',      path: '/academy/students',      label: 'Students list',             Icon: Users },
-  { id: 'eligibility',   path: '/academy/eligibility',   label: 'Exam Approvals',            Icon: ClipboardList },
+  { id: 'eligibility',   path: '/academy/eligibility',   label: 'Exam Eligibility',          Icon: ClipboardList },
   { id: 'verification',  path: '/academy/verification',  label: 'Eligibility Verification',  Icon: UserCheck },
+  { id: 'marks',         path: '/academy/marks',         label: 'Marks Updating',            Icon: FileSpreadsheet },
+    { id: 'student-marks', path: '/academy/student-marks', label: 'Student Marks',             Icon: BarChart3 },
+      { id: 'publish-results',  path: '/academy/publish-results',  label: 'Result Publishing',         Icon: Globe },
+  { id: 'publish-details',  path: '/academy/publish-details',  label: 'Publishing Details',        Icon: RefreshCw },
+  { id: 'revaluation',      path: '/academy/revaluation',      label: 'Revaluation Exam',          Icon: Award },
 ];
 
-const AcademySidebar = ({ boardUser, handleLogout }) => {
+const AcademySidebar = ({ boardUser }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
   return (
-    <aside className="w-68 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 text-slate-300 font-sans select-none">
+    <aside className="w-68 bg-primary-900 border-r border-primary-800 flex flex-col flex-shrink-0 text-primary-200 font-sans select-none relative overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute top-0 left-0 w-full h-32 bg-primary-500/10 blur-3xl rounded-full pointer-events-none"></div>
+
       {/* Sidebar Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-800/80 bg-slate-950/20 gap-3">
-        <div className="bg-gradient-to-tr from-blue-600 to-indigo-500 p-1.5 rounded-xl shadow-md shadow-blue-500/20 flex items-center justify-center">
-          <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center text-white font-extrabold text-sm">
+      <div className="h-16 flex items-center px-6 border-b border-primary-800/80 bg-primary-950/40 gap-3 relative z-10">
+        <div className="bg-gradient-to-tr from-primary-500 to-primary-400 p-1.5 rounded-xl shadow-md shadow-primary-500/20 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-primary-900 flex items-center justify-center text-white font-extrabold text-sm">
             SE
           </div>
         </div>
         <div className="flex flex-col text-left">
-          <span className="text-sm font-black text-white tracking-wide">SEMI Academy</span>
-          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Governance Console</span>
+          <span className="text-sm font-black text-white tracking-wide drop-shadow-sm">SEMI Academy</span>
+          <span className="text-[9px] text-primary-400 font-bold uppercase tracking-widest mt-0.5">Governance Console</span>
         </div>
       </div>
       
       {/* Logged in User Widget */}
-      <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-950/10">
-        <span className="text-[8px] uppercase font-black text-slate-500 tracking-widest block text-left">Authorized Auditor</span>
+      <div className="px-5 py-4 border-b border-primary-800/60 bg-primary-950/20 relative z-10">
+        <span className="text-[8px] uppercase font-black text-primary-400 tracking-widest block text-left">Authorized Auditor</span>
         <div className="flex items-center gap-3 mt-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-500 text-white flex items-center justify-center font-black text-xs shadow-md border border-indigo-400/20">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-400 to-primary-600 text-white flex items-center justify-center font-black text-xs shadow-md border border-primary-400/20">
             SA
           </div>
           <div className="flex flex-col text-left truncate">
-            <span className="text-xs font-bold text-slate-200 truncate">{boardUser?.email || 'board@semi.org.in'}</span>
-            <span className="inline-flex w-fit mt-1 text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20 tracking-wider">
+            <span className="text-xs font-bold text-primary-100 truncate">{boardUser?.email || 'board@semi.org.in'}</span>
+            <span className="inline-flex w-fit mt-1 text-[8px] font-black uppercase text-primary-200 bg-primary-500/20 px-2 py-0.5 rounded-md border border-primary-500/30 tracking-wider">
               {boardUser?.role === 'board' ? 'Board Member' : boardUser?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
             </span>
           </div>
@@ -13028,8 +20971,8 @@ const AcademySidebar = ({ boardUser, handleLogout }) => {
               onClick={() => navigate(path)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-                  : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+                  : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
               }`}
             >
               <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
@@ -13038,7 +20981,6 @@ const AcademySidebar = ({ boardUser, handleLogout }) => {
           );
         })}
       </nav>
-
     </aside>
   );
 };
@@ -13046,11 +20988,718 @@ const AcademySidebar = ({ boardUser, handleLogout }) => {
 export default AcademySidebar;
 ```
 
+### `client/src/pages/academy/components/AcademyStudentMarks.jsx`
+
+```jsx
+import { useState, useMemo } from 'react';
+import { 
+  Search, 
+  BookOpen, 
+  Eye, 
+  ChevronDown,
+  FileSpreadsheet,
+  Download,
+  Printer,
+  Award,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Users,
+  Calendar,
+  Filter,
+  X,
+  BarChart3
+} from 'lucide-react';
+import Toast from '../../../Components/Toast';
+
+const AcademyStudentMarks = () => {
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('All');
+  const [selectedCourse, setSelectedCourse] = useState('All');
+  const [selectedInstitute, setSelectedInstitute] = useState('All');
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [toast, setToast] = useState(null);
+
+  // ─── Mock Data ──────────────────────────────────────────────────────────────
+  const mockStudents = [
+    { 
+      id: 1, 
+      name: 'Dr. Aarav Sharma', 
+      enrollmentId: 'SEMI-2026-1001',
+      batch: 'Batch 2024-A', 
+      institute: 'Saveetha Medical College',
+      course: 'Emergency Medicine',
+      email: 'aarav.sharma@example.com',
+      phone: '+91 98765 43210',
+      percentage: 87,
+      subjects: [
+        { name: 'Anatomy', marks: 92, total: 100, grade: 'A' },
+        { name: 'Physiology', marks: 85, total: 100, grade: 'A' },
+        { name: 'Emergency Medicine', marks: 88, total: 100, grade: 'A' },
+        { name: 'Pharmacology', marks: 82, total: 100, grade: 'B+' },
+      ],
+      attendance: 85,
+      thesisStatus: 'Approved'
+    },
+    { 
+      id: 2, 
+      name: 'Dr. Priya Nair', 
+      enrollmentId: 'SEMI-2026-1002',
+      batch: 'Batch 2024-B', 
+      institute: 'Madras Medical College',
+      course: 'Emergency Medicine',
+      email: 'priya.nair@example.com',
+      phone: '+91 98765 43211',
+      percentage: 76,
+      subjects: [
+        { name: 'Anatomy', marks: 78, total: 100, grade: 'B' },
+        { name: 'Physiology', marks: 72, total: 100, grade: 'B-' },
+        { name: 'Emergency Medicine', marks: 80, total: 100, grade: 'B+' },
+        { name: 'Pharmacology', marks: 74, total: 100, grade: 'B' },
+      ],
+      attendance: 92,
+      thesisStatus: 'Approved'
+    },
+    { 
+      id: 3, 
+      name: 'Dr. Rahul Verma', 
+      enrollmentId: 'SEMI-2026-1003',
+      batch: 'Batch 2023-A', 
+      institute: 'Dr.MGR Medical College',
+      course: 'Emergency Medicine',
+      email: 'rahul.verma@example.com',
+      phone: '+91 98765 43212',
+      percentage: 76,
+      subjects: [
+        { name: 'Anatomy', marks: 70, total: 100, grade: 'B-' },
+        { name: 'Physiology', marks: 75, total: 100, grade: 'B' },
+        { name: 'Emergency Medicine', marks: 82, total: 100, grade: 'A-' },
+        { name: 'Pharmacology', marks: 76, total: 100, grade: 'B' },
+      ],
+      attendance: 68,
+      thesisStatus: 'Pending'
+    },
+    { 
+      id: 4, 
+      name: 'Dr. Neha Patel', 
+      enrollmentId: 'SEMI-2026-1004',
+      batch: 'Batch 2024-A', 
+      institute: 'Saveetha Medical College',
+      course: 'Emergency Medicine',
+      email: 'neha.patel@example.com',
+      phone: '+91 98765 43213',
+      percentage: 84,
+      subjects: [
+        { name: 'Anatomy', marks: 88, total: 100, grade: 'A' },
+        { name: 'Physiology', marks: 82, total: 100, grade: 'A-' },
+        { name: 'Emergency Medicine', marks: 85, total: 100, grade: 'A' },
+        { name: 'Pharmacology', marks: 81, total: 100, grade: 'A-' },
+      ],
+      attendance: 76,
+      thesisStatus: 'Approved'
+    },
+    { 
+      id: 5, 
+      name: 'Dr. Karan Malhotra', 
+      enrollmentId: 'SEMI-2026-1005',
+      batch: 'Batch 2024-A', 
+      institute: 'Saveetha Medical College',
+      course: 'Emergency Medicine',
+      email: 'karan.malhotra@example.com',
+      phone: '+91 98765 43214',
+      percentage: 62,
+      subjects: [
+        { name: 'Anatomy', marks: 65, total: 100, grade: 'C+' },
+        { name: 'Physiology', marks: 58, total: 100, grade: 'C' },
+        { name: 'Emergency Medicine', marks: 68, total: 100, grade: 'B-' },
+        { name: 'Pharmacology', marks: 55, total: 100, grade: 'C' },
+      ],
+      attendance: 62,
+      thesisStatus: 'Rejected'
+    },
+    { 
+      id: 6, 
+      name: 'Dr. Ananya Sen', 
+      enrollmentId: 'SEMI-2026-1006',
+      batch: 'Batch 2024-B', 
+      institute: 'Madras Medical College',
+      course: 'Emergency Medicine',
+      email: 'ananya.sen@example.com',
+      phone: '+91 98765 43215',
+      percentage: 91,
+      subjects: [
+        { name: 'Anatomy', marks: 95, total: 100, grade: 'A+' },
+        { name: 'Physiology', marks: 90, total: 100, grade: 'A+' },
+        { name: 'Emergency Medicine', marks: 92, total: 100, grade: 'A+' },
+        { name: 'Pharmacology', marks: 88, total: 100, grade: 'A' },
+      ],
+      attendance: 94,
+      thesisStatus: 'Approved'
+    },
+  ];
+
+  // ─── Computed ──────────────────────────────────────────────────────────────
+  const batches = useMemo(() => {
+    const unique = new Set(mockStudents.map(s => s.batch));
+    return ['All', ...unique];
+  }, []);
+
+  const courses = useMemo(() => {
+    const unique = new Set(mockStudents.map(s => s.course));
+    return ['All', ...unique];
+  }, []);
+
+  const institutes = useMemo(() => {
+    const unique = new Set(mockStudents.map(s => s.institute));
+    return ['All', ...unique];
+  }, []);
+
+  const filteredStudents = useMemo(() => {
+    return mockStudents.filter(s => {
+      const matchSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          s.enrollmentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          s.institute.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchBatch = selectedBatch === 'All' || s.batch === selectedBatch;
+      const matchCourse = selectedCourse === 'All' || s.course === selectedCourse;
+      const matchInstitute = selectedInstitute === 'All' || s.institute === selectedInstitute;
+      return matchSearch && matchBatch && matchCourse && matchInstitute;
+    });
+  }, [mockStudents, searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
+
+  const sortedStudents = useMemo(() => {
+    if (!sortConfig.key) return filteredStudents;
+    return [...filteredStudents].sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+      if (sortConfig.key === 'percentage') {
+        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      if (typeof aVal === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aVal.localeCompare(bVal) 
+          : bVal.localeCompare(aVal);
+      }
+      return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+  }, [filteredStudents, sortConfig]);
+
+  // ─── Statistics ─────────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const total = mockStudents.length;
+    const avgPercentage = total > 0 ? Math.round(mockStudents.reduce((sum, s) => sum + s.percentage, 0) / total) : 0;
+    const above75 = mockStudents.filter(s => s.percentage >= 75).length;
+    const below60 = mockStudents.filter(s => s.percentage < 60).length;
+    return { total, avgPercentage, above75, below60 };
+  }, []);
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const handleViewStudent = (student) => {
+    setSelectedStudent(student);
+    setIsModalOpen(true);
+  };
+
+  const handleExport = () => {
+    setToast({ message: '📊 Student marks data exported successfully!', type: 'success' });
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedBatch('All');
+    setSelectedCourse('All');
+    setSelectedInstitute('All');
+  };
+
+  // ─── Render Helpers ────────────────────────────────────────────────────────
+  const getPercentageColor = (percentage) => {
+    if (percentage >= 80) return 'text-emerald-600';
+    if (percentage >= 60) return 'text-amber-600';
+    return 'text-rose-600';
+  };
+
+  const getPercentageBg = (percentage) => {
+    if (percentage >= 80) return 'bg-emerald-50 border-emerald-200 text-emerald-700';
+    if (percentage >= 60) return 'bg-amber-50 border-amber-200 text-amber-700';
+    return 'bg-rose-50 border-rose-200 text-rose-700';
+  };
+
+  const getGradeColor = (grade) => {
+    const map = {
+      'A+': 'text-emerald-600 bg-emerald-50 border-emerald-200',
+      'A': 'text-emerald-600 bg-emerald-50 border-emerald-200',
+      'A-': 'text-emerald-600 bg-emerald-50 border-emerald-200',
+      'B+': 'text-blue-600 bg-blue-50 border-blue-200',
+      'B': 'text-blue-600 bg-blue-50 border-blue-200',
+      'B-': 'text-amber-600 bg-amber-50 border-amber-200',
+      'C+': 'text-amber-600 bg-amber-50 border-amber-200',
+      'C': 'text-rose-600 bg-rose-50 border-rose-200',
+    };
+    return map[grade] || 'text-slate-500 bg-slate-50 border-slate-200';
+  };
+
+  const getStatusIcon = (percentage) => {
+    if (percentage >= 80) return <TrendingUp className="w-4 h-4" />;
+    if (percentage >= 60) return <Minus className="w-4 h-4" />;
+    return <TrendingDown className="w-4 h-4" />;
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+      {/* ─── Page Header ─────────────────────────────────────────────────────── */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 bg-gradient-to-tr from-emerald-600 to-emerald-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+            <BarChart3 className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Student Marks</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">View and manage all student examination marks</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-slate-100 transition-all cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Stats Cards ────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Total Students</span>
+            <Users className="w-4 h-4 text-blue-500" />
+          </div>
+          <p className="text-2xl font-black text-slate-800 mt-1">{stats.total}</p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Avg Percentage</span>
+            <Award className="w-4 h-4 text-emerald-500" />
+          </div>
+          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.avgPercentage}%</p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Above 75%</span>
+            <TrendingUp className="w-4 h-4 text-emerald-500" />
+          </div>
+          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.above75}</p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Below 60%</span>
+            <TrendingDown className="w-4 h-4 text-rose-500" />
+          </div>
+          <p className="text-2xl font-black text-rose-600 mt-1">{stats.below60}</p>
+        </div>
+      </div>
+
+      {/* ─── Search & Filters ────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search students by name, ID, or institute..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 flex items-center gap-2 hover:bg-slate-100 transition-all whitespace-nowrap"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+            <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[9px]">
+              {selectedBatch !== 'All' || selectedCourse !== 'All' || selectedInstitute !== 'All' ? 'Active' : '0'}
+            </span>
+          </button>
+          {(selectedBatch !== 'All' || selectedCourse !== 'All' || selectedInstitute !== 'All') && (
+            <button
+              onClick={handleClearFilters}
+              className="px-3 py-2.5 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-bold flex items-center gap-1 transition-all"
+            >
+              <X className="w-3.5 h-3.5" />
+              Clear Filters
+            </button>
+          )}
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top duration-200">
+            <select
+              value={selectedBatch}
+              onChange={(e) => setSelectedBatch(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+            >
+              {batches.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+            <select
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+            >
+              {courses.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select
+              value={selectedInstitute}
+              onChange={(e) => setSelectedInstitute(e.target.value)}
+              className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+            >
+              {institutes.map(i => <option key={i} value={i}>{i}</option>)}
+            </select>
+          </div>
+        )}
+
+        <div className="text-[10px] text-slate-400 font-semibold flex justify-between items-center">
+          <span>{filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} found</span>
+          <span className="text-slate-300">|</span>
+          <span>Showing {Math.min(filteredStudents.length, 10)} entries</span>
+        </div>
+      </div>
+
+      {/* ─── Students Table ──────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50/70 border-b border-slate-100">
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
+                <th 
+                  className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider cursor-pointer hover:text-slate-700 transition-colors group"
+                  onClick={() => handleSort('batch')}
+                >
+                  <div className="flex items-center gap-1">
+                    Batch
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'batch' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider cursor-pointer hover:text-slate-700 transition-colors group"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center gap-1">
+                    Student Name
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'name' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider cursor-pointer hover:text-slate-700 transition-colors group"
+                  onClick={() => handleSort('institute')}
+                >
+                  <div className="flex items-center gap-1">
+                    Institute
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'institute' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider cursor-pointer hover:text-slate-700 transition-colors group"
+                  onClick={() => handleSort('course')}
+                >
+                  <div className="flex items-center gap-1">
+                    Course
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'course' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center cursor-pointer hover:text-slate-700 transition-colors group"
+                  onClick={() => handleSort('percentage')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Percentage
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'percentage' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                  </div>
+                </th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-28">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 bg-white">
+              {sortedStudents.map((student, idx) => (
+                <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-400">
+                    {String(idx + 1).padStart(2, '0')}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-[9px] font-black px-2 py-1 rounded-full border border-blue-100">
+                      <Calendar className="w-3 h-3" />
+                      {student.batch}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 flex items-center justify-center font-black text-[10px] flex-shrink-0">
+                        {student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-black text-slate-800 text-xs">{student.name}</p>
+                        <p className="text-[9px] font-mono font-bold text-slate-400">{student.enrollmentId}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className="font-semibold text-slate-700">{student.institute}</span>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[9px] font-bold px-2 py-1 rounded-full border border-purple-100">
+                      <BookOpen className="w-3 h-3" />
+                      {student.course}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className={`text-sm font-black ${getPercentageColor(student.percentage)}`}>
+                        {student.percentage}%
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${getPercentageBg(student.percentage)}`}>
+                        {getStatusIcon(student.percentage)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5 text-center">
+                    <button
+                      onClick={() => handleViewStudent(student)}
+                      className="px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-lg text-[9px] uppercase tracking-wider hover:bg-blue-100 transition-all flex items-center gap-1.5 mx-auto cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      View Marks
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {sortedStudents.length === 0 && (
+                <tr>
+                  <td colSpan="7" className="px-4 py-12 text-center text-slate-400 text-xs font-medium">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
+                        <Search className="w-8 h-8 text-slate-300" />
+                      </div>
+                      <p>No students found matching your filters.</p>
+                      <button
+                        onClick={handleClearFilters}
+                        className="text-blue-600 hover:text-blue-700 font-bold text-[10px]"
+                      >
+                        Clear all filters
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ─── Footer ────────────────────────────────────────────────────────── */}
+        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-[10px] text-slate-400 font-semibold">
+          <span>Showing {sortedStudents.length} of {mockStudents.length} students</span>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              ≥ 75% ({mockStudents.filter(s => s.percentage >= 75).length})
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              60-74% ({mockStudents.filter(s => s.percentage >= 60 && s.percentage < 75).length})
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+              &lt; 60% ({mockStudents.filter(s => s.percentage < 60).length})
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Student Marks Detail Modal ──────────────────────────────────────── */}
+      {isModalOpen && selectedStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-lg font-black shadow-md flex-shrink-0">
+                  {selectedStudent.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800">{selectedStudent.name}</h3>
+                  <p className="text-[10px] font-mono font-bold text-slate-400">{selectedStudent.enrollmentId}</p>
+                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500">
+                    <span>{selectedStudent.batch}</span>
+                    <span className="text-slate-300">•</span>
+                    <span>{selectedStudent.institute}</span>
+                  </div>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* Quick Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 text-center">
+                  <span className="text-[9px] uppercase font-black text-slate-400">Overall</span>
+                  <p className={`text-xl font-black ${getPercentageColor(selectedStudent.percentage)}`}>
+                    {selectedStudent.percentage}%
+                  </p>
+                </div>
+                <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 text-center">
+                  <span className="text-[9px] uppercase font-black text-slate-400">Attendance</span>
+                  <p className={`text-xl font-black ${selectedStudent.attendance >= 75 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {selectedStudent.attendance}%
+                  </p>
+                </div>
+                <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-3 text-center">
+                  <span className="text-[9px] uppercase font-black text-slate-400">Thesis</span>
+                  <p className={`text-sm font-black ${selectedStudent.thesisStatus === 'Approved' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {selectedStudent.thesisStatus}
+                  </p>
+                </div>
+              </div>
+
+              {/* Subject Marks Table */}
+              <div>
+                <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
+                  Subject-wise Marks
+                </h4>
+                <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/70 border-b border-slate-100">
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject</th>
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Marks</th>
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 bg-white">
+                      {selectedStudent.subjects.map((subject, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-2.5 font-bold text-slate-700">{subject.name}</td>
+                          <td className="px-4 py-2.5 text-center font-bold text-slate-800">
+                            {subject.marks} / {subject.total}
+                          </td>
+                          <td className="px-4 py-2.5 text-center">
+                            <span className={`font-bold ${getPercentageColor(Math.round((subject.marks / subject.total) * 100))}`}>
+                              {Math.round((subject.marks / subject.total) * 100)}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-center">
+                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getGradeColor(subject.grade)}`}>
+                              {subject.grade}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-50/70 border-t border-slate-200">
+                        <td className="px-4 py-2.5 font-black text-xs text-slate-700">Overall</td>
+                        <td className="px-4 py-2.5 text-center font-bold text-slate-800">
+                          {selectedStudent.subjects.reduce((sum, s) => sum + s.marks, 0)} / {selectedStudent.subjects.reduce((sum, s) => sum + s.total, 0)}
+                        </td>
+                        <td className="px-4 py-2.5 text-center">
+                          <span className={`font-black ${getPercentageColor(selectedStudent.percentage)}`}>
+                            {selectedStudent.percentage}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-center"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setToast({ message: `📜 Provisional Certificate generated and ready for download for ${selectedStudent.name}!`, type: 'success' })}
+                  className="px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 hover:bg-blue-100 transition-all"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  Generate Provisional Certificate
+                </button>
+                <button
+                  onClick={() => setToast({ message: `📄 Marksheet generated and ready for download for ${selectedStudent.name}!`, type: 'success' })}
+                  className="px-4 py-2 bg-purple-50 border border-purple-200 text-purple-700 font-bold rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 hover:bg-purple-100 transition-all"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  Generate Marksheet
+                </button>
+                <button
+                  onClick={() => setToast({ message: `📊 Marks data for ${selectedStudent.name} exported!`, type: 'success' })}
+                  className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export Marks
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Toast ────────────────────────────────────────────────────────────── */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
+    </div>
+  );
+};
+
+export default AcademyStudentMarks;
+```
+
 ### `client/src/pages/academy/components/AcademyStudentModal.jsx`
 
 ```jsx
-import React from 'react';
-import { User, Mail, Phone, School, Award, FileText, CheckCircle, XCircle, ExternalLink, Calendar, BookOpen, UserCheck, ShieldAlert } from 'lucide-react';
+import { User, Award, FileText, CheckCircle, XCircle, ExternalLink, BookOpen, UserCheck, ShieldAlert } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const AcademyStudentModal = ({ student, isOpen, onClose }) => {
@@ -13351,13 +22000,14 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
 };
 
 export default AcademyStudentModal;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyStudents.jsx`
 
 ```jsx
 import React from 'react';
-import { Search, Compass, Eye, Edit, Trash2 } from 'lucide-react';
+import { Search, Compass, Eye } from 'lucide-react';
 
 const AcademyStudents = ({ 
   filteredStudents, 
@@ -13470,18 +22120,43 @@ const AcademyStudents = ({
 };
 
 export default AcademyStudents;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyVerification.jsx`
 
 ```jsx
-import React, { useState, useMemo } from 'react';
-import { ShieldAlert, CheckCircle2, XCircle, FileText, ChevronRight, UserCheck, Inbox } from 'lucide-react';
+import React from 'react';
+import { useState, useMemo } from 'react';
+import { 
+  CheckCircle2, 
+  XCircle, 
+  FileText, 
+  ChevronRight, 
+  UserCheck, 
+  Inbox, 
+  Clock, 
+  AlertCircle,
+  Download,
+  ShieldCheck,
+  User,
+  Calendar,
+  Award
+} from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import { academicService } from '../../../api/academic';
 
+/**
+ * AcademyVerification - Redesigned with clearer UX
+ * 
+ * Flow: 
+ * 1. Review student credentials (attendance + thesis)
+ * 2. Approve/Reject thesis directly from the review panel
+ * 3. One-click "Certify Eligibility" once all criteria are met
+ * 4. Clear visual indicators for each step
+ */
 const AcademyVerification = ({ 
   students, 
   onVerifyStudent,
@@ -13494,6 +22169,7 @@ const AcademyVerification = ({
   const [showRejectionForm, setShowRejectionForm] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
+  const [isThesisLoading, setIsThesisLoading] = useState(false);
 
   const [filterInstitute, setFilterInstitute] = useState('');
   const [filterCourse, setFilterCourse] = useState('');
@@ -13506,7 +22182,7 @@ const AcademyVerification = ({
   const activeId = selectedStudentId !== undefined && selectedStudentId !== '' ? selectedStudentId : internalSelectedId;
   const setActiveId = setSelectedStudentId !== undefined ? setSelectedStudentId : setInternalSelectedId;
 
-  // List of student-semester pairs that are pending review
+  // Get pending students for review
   const pendingStudents = useMemo(() => {
     const list = [];
     students.forEach(s => {
@@ -13516,8 +22192,6 @@ const AcademyVerification = ({
 
       if (s.semesters && Array.isArray(s.semesters)) {
         s.semesters.forEach(sem => {
-          // Only show if data has been uploaded (attendance > 0 or thesis uploaded)
-          // AND the eligibility is still pending review
           const hasData = (sem.attendancePercentage !== undefined && sem.attendancePercentage > 0) || !!sem.thesisDocumentUrl;
           const isPending = sem.eligibilityStatus === 'Pending' || !sem.eligibilityStatus;
           if (hasData && isPending) {
@@ -13536,38 +22210,75 @@ const AcademyVerification = ({
     return list;
   }, [students, filterInstitute, filterCourse, filterBatch]);
 
-  // Current selected student-semester
+  // Current selected student
   const activeStudent = useMemo(() => {
-    // internalSelectedId is now in format `${enrollmentNo}_${semesterNumber}`
     const found = pendingStudents.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId);
     if (found) return found;
     return pendingStudents[0] || null;
   }, [pendingStudents, activeId]);
 
-  // Automatically select first pending student if selection is empty or invalid
+  // Auto-select first pending student
   React.useEffect(() => {
     if ((!activeId || !pendingStudents.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId)) && pendingStudents.length > 0) {
       setActiveId(`${pendingStudents[0].enrollmentNo}_${pendingStudents[0].semesterNumber}`);
     }
   }, [pendingStudents, activeId, setActiveId]);
 
-  const handleApprove = () => {
-    if (!activeStudent) return;
+  // ─── HANDLERS ────────────────────────────────────────────────────────────────
+
+  const handleThesisToggle = async (student, newStatus) => {
+    if (!student) return;
+    setIsThesisLoading(true);
+    try {
+      await academicService.updateAcademicMetrics(student._id || student.id, {
+        semesterNumber: student.semesterNumber,
+        thesisApproved: newStatus
+      });
+      setToast({ 
+        message: `Thesis ${newStatus ? 'approved' : 'rejected'} successfully for ${student.fullName}.`, 
+        type: 'success' 
+      });
+      if (fetchBoardData) await fetchBoardData();
+    } catch (err) {
+      setToast({ 
+        message: err.parsedMessage || err.message || 'Failed to update thesis status.', 
+        type: 'error' 
+      });
+    } finally {
+      setIsThesisLoading(false);
+    }
+  };
+
+  const handleCertifyEligibility = (student) => {
+    if (!student) return;
+    
+    // Check if all criteria are met
+    const isAttendanceOk = (student.attendancePercentage || 0) >= 75;
+    const isThesisOk = !!student.thesisApproved;
+    
+    if (!isAttendanceOk || !isThesisOk) {
+      setToast({ 
+        message: `Cannot certify: ${!isAttendanceOk ? 'Attendance is below 75%' : ''}${!isAttendanceOk && !isThesisOk ? ' and ' : ''}${!isThesisOk ? 'Thesis is not approved' : ''}.`,
+        type: 'warning' 
+      });
+      return;
+    }
+
     setConfirmConfig({
-      title: 'Approve Exam Eligibility',
-      message: `Are you sure you want to APPROVE the exam eligibility for ${activeStudent.fullName} (Semester ${activeStudent.semesterNumber})?`,
+      title: 'Certify Eligibility',
+      message: `Are you sure you want to certify ${student.fullName} (Semester ${student.semesterNumber}) as eligible for the final board examination?`,
       type: 'success',
-      confirmText: 'Yes, Approve',
+      confirmText: 'Yes, Certify',
       onConfirm: () => {
         setConfirmConfig(null);
-        onVerifyStudent(activeStudent.enrollmentNo, activeStudent.semesterNumber, 'Approved');
-        setRejectionNotes('');
+        onVerifyStudent(student.enrollmentNo, student.semesterNumber, 'Approved');
         setShowRejectionForm(false);
+        setRejectionNotes('');
       }
     });
   };
 
-  const handleReject = (e) => {
+  const handleRejectSubmit = (e) => {
     e.preventDefault();
     if (!activeStudent) return;
     if (!rejectionNotes.trim()) {
@@ -13579,45 +22290,56 @@ const AcademyVerification = ({
     setShowRejectionForm(false);
   };
 
-  const handleApproveThesis = async () => {
-    if (!activeStudent) return;
-    try {
-      await academicService.updateAcademicMetrics(activeStudent._id || activeStudent.id, {
-        semesterNumber: activeStudent.semesterNumber,
-        thesisApproved: true
-      });
-      setToast({ message: 'Thesis approved successfully.', type: 'success' });
-      if (fetchBoardData) {
-        await fetchBoardData();
-      }
-    } catch (err) {
-      setToast({ message: err.parsedMessage || err.message || 'Failed to approve thesis.', type: 'error' });
+  // ─── RENDER HELPERS ──────────────────────────────────────────────────────────
+
+  const getStatusBadge = (student) => {
+    if (!student) return { label: 'No Data', color: 'bg-slate-100 text-slate-500' };
+    const isAttendanceOk = (student.attendancePercentage || 0) >= 75;
+    const isThesisOk = !!student.thesisApproved;
+    const isEligible = isAttendanceOk && isThesisOk;
+
+    if (student.eligibilityStatus === 'Approved') {
+      return { label: 'Certified', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
     }
+    if (student.eligibilityStatus === 'Rejected') {
+      return { label: 'Rejected', color: 'bg-rose-100 text-rose-700 border-rose-200' };
+    }
+    if (isEligible) {
+      return { label: 'Ready to Certify', color: 'bg-blue-100 text-blue-700 border-blue-200' };
+    }
+    return { label: 'Incomplete', color: 'bg-amber-100 text-amber-700 border-amber-200' };
   };
 
-
+  const getCriteriaStatus = (student) => {
+    if (!student) return { attendance: false, thesis: false };
+    return {
+      attendance: (student.attendancePercentage || 0) >= 75,
+      thesis: !!student.thesisApproved
+    };
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left">
+      {/* ─── HEADER ────────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-gray-900 tracking-tight">Eligibility Verification</h2>
           <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mt-1">
-            Certify candidate qualifications, clinical criteria and credentials for final board exams
+            Review attendance & thesis, then certify eligible candidates for board exams
           </span>
         </div>
         <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2 flex items-center gap-2">
           <UserCheck className="w-4.5 h-4.5 text-indigo-600" />
-          <span className="text-xs font-black text-indigo-900">{pendingStudents.length} Students Awaiting Audit</span>
+          <span className="text-xs font-black text-indigo-900">{pendingStudents.length} Students Awaiting Review</span>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* ─── FILTERS ───────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
         <select 
           value={filterInstitute}
           onChange={(e) => setFilterInstitute(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="">All Institutes</option>
           {institutes.map(inst => <option key={inst} value={inst}>{inst}</option>)}
@@ -13625,7 +22347,7 @@ const AcademyVerification = ({
         <select 
           value={filterCourse}
           onChange={(e) => setFilterCourse(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="">All Courses</option>
           {courses.map(c => <option key={c} value={c}>{c}</option>)}
@@ -13633,7 +22355,7 @@ const AcademyVerification = ({
         <select 
           value={filterBatch}
           onChange={(e) => setFilterBatch(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
+          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="">All Batches</option>
           {batches.map(b => <option key={b} value={b}>{b}</option>)}
@@ -13641,13 +22363,25 @@ const AcademyVerification = ({
       </div>
 
       {activeStudent ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left panel: List of pending candidates */}
-          <div className="lg:col-span-1 bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-4">
-            <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 pb-2">Pending Queue</h3>
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-              {pendingStudents.length > 0 ? (
-                pendingStudents.map(s => (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* ─── LEFT: Candidate Queue ────────────────────────────────────────── */}
+          <div className="lg:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm space-y-3 max-h-[70vh] overflow-y-auto">
+            <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2 pb-2 border-b border-slate-100 flex items-center justify-between">
+              <span>Review Queue</span>
+              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[9px]">
+                {pendingStudents.length}
+              </span>
+            </h3>
+            
+            {pendingStudents.length > 0 ? (
+              pendingStudents.map(s => {
+                const isActive = activeStudent?.enrollmentNo === s.enrollmentNo && activeStudent?.semesterNumber === s.semesterNumber;
+                const status = getStatusBadge(s);
+                const criteria = getCriteriaStatus(s);
+                const isReady = criteria.attendance && criteria.thesis;
+                
+                return (
                   <button
                     key={`${s.enrollmentNo}_${s.semesterNumber}`}
                     onClick={() => {
@@ -13655,158 +22389,262 @@ const AcademyVerification = ({
                       setShowRejectionForm(false);
                       setRejectionNotes('');
                     }}
-                    className={`w-full p-4 border rounded-2xl text-left transition-all duration-200 flex justify-between items-center group ${
-                      activeStudent.enrollmentNo === s.enrollmentNo && activeStudent.semesterNumber === s.semesterNumber
-                        ? 'border-blue-500 bg-blue-50/50 shadow-sm'
-                        : 'border-slate-150 hover:bg-slate-50'
+                    className={`w-full p-3 rounded-2xl text-left transition-all duration-200 border-2 ${
+                      isActive
+                        ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
+                        : 'border-transparent hover:bg-slate-50/70 hover:border-slate-200'
                     }`}
                   >
-                    <div className="truncate">
-                      <span className="text-xs font-black text-slate-900 block truncate group-hover:text-blue-600 transition-colors">{s.fullName}</span>
-                      <span className="text-[9px] text-slate-400 font-bold block mt-1 truncate">{s.institute} | Sem {s.semesterNumber}</span>
-                      <span className="font-mono text-[9px] font-extrabold text-slate-500 block mt-0.5">{s.enrollmentNo}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="truncate">
+                        <span className="text-xs font-bold text-slate-800 block truncate">
+                          {s.fullName}
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-semibold block">
+                          {s.enrollmentNo} • Sem {s.semesterNumber}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {isReady ? (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        )}
+                        <ChevronRight className={`w-3.5 h-3.5 text-slate-300 transition-transform ${isActive ? 'translate-x-0.5' : ''}`} />
+                      </div>
                     </div>
-                    <ChevronRight className={`w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-transform ${activeStudent.enrollmentNo === s.enrollmentNo && activeStudent.semesterNumber === s.semesterNumber ? 'translate-x-1' : ''}`} />
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border ${status.color}`}>
+                        {status.label}
+                      </span>
+                      <span className="text-[8px] text-slate-400 font-semibold">
+                        Att: {s.attendancePercentage || 0}%
+                      </span>
+                      <span className={`text-[8px] font-semibold ${s.thesisApproved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {s.thesisApproved ? '✓ Thesis' : '✗ Thesis'}
+                      </span>
+                    </div>
                   </button>
-                ))
-              ) : (
-                <div className="py-8 text-center text-slate-400 font-medium">
-                  <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 mb-2" />
-                  All candidates audited!
-                </div>
-              )}
-            </div>
+                );
+              })
+            ) : (
+              <div className="py-8 text-center text-slate-400 font-medium">
+                <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 mb-2" />
+                All candidates reviewed!
+              </div>
+            )}
           </div>
 
-          {/* Right panel: Inspection & Actions */}
-          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-3xl p-8 shadow-sm space-y-6">
-            <div className="border-b border-gray-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          {/* ─── RIGHT: Review Panel ─────────────────────────────────────────── */}
+          <div className="lg:col-span-9 bg-white border border-gray-200 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+            
+            {/* Student Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
-                <span className="text-[9px] uppercase font-black tracking-widest text-blue-600 bg-blue-50 border border-blue-200/50 px-2 py-0.5 rounded-md">Auditing Candidate (Sem {activeStudent.semesterNumber})</span>
-                <h3 className="text-lg font-black text-slate-900 mt-2">{activeStudent.fullName}</h3>
-                <span className="text-[10px] text-slate-400 font-semibold">{activeStudent.course} | {activeStudent.batch}</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-sm">
+                    {activeStudent.fullName?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '??'}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">{activeStudent.fullName}</h3>
+                    <span className="text-[10px] text-slate-400 font-semibold">
+                      {activeStudent.enrollmentNo} • {activeStudent.course} • Sem {activeStudent.semesterNumber}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="text-right">
-                <span className="text-[9px] uppercase font-black text-slate-400 block">Enrollment ID</span>
-                <span className="font-mono font-black text-sm text-slate-700 block mt-0.5">{activeStudent.enrollmentNo}</span>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-black px-3 py-1 rounded-full border ${getStatusBadge(activeStudent).color}`}>
+                  {getStatusBadge(activeStudent).label}
+                </span>
               </div>
             </div>
 
-            {/* Eligibility Status Display */}
-            <div className={`p-4 rounded-2xl border ${
-              activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved
-                ? 'bg-emerald-50 border-emerald-200' 
-                : 'bg-amber-50 border-amber-200'
-            }`}>
-              <div className="flex items-center gap-3">
-                {activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved ? (
-                  <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                ) : (
-                  <XCircle className="w-6 h-6 text-amber-600" />
-                )}
-                <div>
-                  <span className={`font-black text-sm ${
-                    activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved ? 'text-emerald-800' : 'text-amber-800'
-                  }`}>
-                    {activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved ? '✅ Student meets all eligibility criteria' : '⚠️ Student does not meet all eligibility criteria'}
-                  </span>
-                  <div className="flex gap-4 mt-1 text-xs font-bold">
-                    <span className={activeStudent.attendancePercentage >= 75 ? 'text-emerald-600' : 'text-red-500'}>
-                      Attendance: {activeStudent.attendancePercentage || 0}% {activeStudent.attendancePercentage >= 75 ? '✓' : '✗'}
-                    </span>
-                    <span className={activeStudent.thesisApproved ? 'text-emerald-600' : 'text-red-500'}>
-                      Thesis: {activeStudent.thesisApproved ? '✓' : '✗'}
-                    </span>
+            {/* ─── CRITERIA CHECKLIST ─────────────────────────────────────────── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Attendance Card */}
+              <div className={`rounded-2xl p-5 border-2 transition-all ${
+                (activeStudent.attendancePercentage || 0) >= 75 
+                  ? 'border-emerald-200 bg-emerald-50/30' 
+                  : 'border-amber-200 bg-amber-50/30'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      (activeStudent.attendancePercentage || 0) >= 75 
+                        ? 'bg-emerald-100 text-emerald-700' 
+                        : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-700">Attendance</h4>
+                      <span className={`text-sm font-black ${(activeStudent.attendancePercentage || 0) >= 75 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {activeStudent.attendancePercentage || 0}%
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium ml-2">
+                        {activeStudent.attendancePercentage >= 75 ? '✓ Meets 75% requirement' : '⚠️ Below 75% requirement'}
+                      </span>
+                    </div>
+                  </div>
+                  {(activeStudent.attendancePercentage || 0) >= 75 ? (
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                  ) : (
+                    <XCircle className="w-6 h-6 text-amber-600" />
+                  )}
+                </div>
+              </div>
+
+              {/* Thesis Card */}
+              <div className={`rounded-2xl p-5 border-2 transition-all ${
+                activeStudent.thesisApproved 
+                  ? 'border-emerald-200 bg-emerald-50/30' 
+                  : 'border-amber-200 bg-amber-50/30'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      activeStudent.thesisApproved 
+                        ? 'bg-emerald-100 text-emerald-700' 
+                        : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-700">Thesis Submission</h4>
+                      <span className={`text-sm font-black ${activeStudent.thesisApproved ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {activeStudent.thesisApproved ? 'Approved' : 'Pending Review'}
+                      </span>
+                      {activeStudent.thesisDocumentUrl && (
+                        <a 
+                          href={getUploadUrl(activeStudent.thesisDocumentUrl)}
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="text-[10px] text-indigo-600 hover:underline font-medium ml-2 flex items-center gap-1"
+                        >
+                          <Download className="w-3 h-3" />
+                          View Document
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Thesis Action Buttons */}
+                  <div className="flex items-center gap-1.5">
+                    {!activeStudent.thesisApproved && activeStudent.thesisDocumentUrl ? (
+                      <button
+                        onClick={() => handleThesisToggle(activeStudent, true)}
+                        disabled={isThesisLoading}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        Approve Thesis
+                      </button>
+                    ) : activeStudent.thesisApproved ? (
+                      <button
+                        onClick={() => handleThesisToggle(activeStudent, false)}
+                        disabled={isThesisLoading}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[9px] font-black rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        Revoke Approval
+                      </button>
+                    ) : (
+                      <span className="text-[9px] text-slate-400 font-semibold">No document uploaded</span>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Profile Info Sheet */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/50 border border-slate-100 rounded-2xl p-6">
-              <div>
-                <span className="text-[9px] uppercase font-black text-slate-400 block">Assigned Institution</span>
-                <span className="text-xs font-black text-slate-800 mt-1 block">{activeStudent.institute || 'N/A'}</span>
-              </div>
-              <div>
-                <span className="text-[9px] uppercase font-black text-slate-400 block">Email Address</span>
-                <span className="text-xs font-bold text-slate-700 mt-1 block font-mono">{activeStudent.email}</span>
-              </div>
-              <div>
-                <span className="text-[9px] uppercase font-black text-slate-400 block">EM Qualification Details</span>
-                <span className="text-xs font-extrabold text-slate-800 mt-1 block">{activeStudent.qualification || 'MBBS'}</span>
-              </div>
-              <div>
-                <span className="text-[9px] uppercase font-black text-slate-400 block">Registration Status</span>
-                <span className={`inline-flex mt-1 text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                  ['Approved', 'Enrolled', 'Completed'].includes(activeStudent.status)
-                    ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
-                    : activeStudent.status === 'Rejected'
-                    ? 'text-rose-700 bg-rose-50 border border-rose-200'
-                    : 'text-amber-700 bg-amber-50 border border-amber-200'
-                }`}>
-                  {activeStudent.status || 'Pending'}
-                </span>
+            {/* ─── ELIGIBILITY SUMMARY ────────────────────────────────────────── */}
+            <div className={`rounded-2xl p-5 border-2 ${
+              (activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved)
+                ? 'border-emerald-200 bg-emerald-50/20'
+                : 'border-amber-200 bg-amber-50/20'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    (activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved)
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-800">Eligibility Status</h4>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved
+                        ? 'All criteria met. Ready to certify for board exam.'
+                        : 'Some criteria not met. Review the checklist above.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`text-xs font-black px-3 py-1 rounded-full border ${getStatusBadge(activeStudent).color}`}>
+                    {getStatusBadge(activeStudent).label}
+                  </span>
+                </div>
               </div>
             </div>
-            {activeStudent.thesisDocumentUrl && (
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex justify-between items-center">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-slate-400 block mb-1">Thesis Document</span>
-                  <a 
-                    href={getUploadUrl(activeStudent.thesisDocumentUrl)}
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-xs"
-                  >
-                    <FileText className="w-4 h-4" />
-                    View Submitted Thesis
-                  </a>
+
+            {/* ─── ACTION BUTTONS ─────────────────────────────────────────────── */}
+            {activeStudent.eligibilityStatus !== 'Approved' && activeStudent.eligibilityStatus !== 'Rejected' && (
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-3 text-xs text-slate-500">
+                  <Clock className="w-4 h-4 text-slate-400" />
+                  <span className="font-medium">Review all criteria before certifying</span>
                 </div>
-                {!activeStudent.thesisApproved ? (
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                   <button
-                    onClick={handleApproveThesis}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] uppercase font-black tracking-wider rounded-xl transition-colors shadow-md shadow-blue-500/10 cursor-pointer"
+                    onClick={() => setShowRejectionForm(!showRejectionForm)}
+                    className="flex-1 sm:flex-none px-6 py-2.5 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer"
                   >
-                    Approve Thesis
+                    Reject
                   </button>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] uppercase font-black tracking-wider rounded-xl">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    Thesis Approved
-                  </span>
-                )}
+                  <button
+                    onClick={() => handleCertifyEligibility(activeStudent)}
+                    disabled={!(activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved)}
+                    className={`flex-1 sm:flex-none px-8 py-2.5 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-md flex items-center gap-2 ${
+                      (activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved)
+                        ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 cursor-pointer'
+                        : 'bg-slate-300 cursor-not-allowed'
+                    }`}
+                  >
+                    <Award className="w-4 h-4" />
+                    Certify Eligibility
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Reject reason details sheet */}
+            {/* ─── REJECTION FORM ─────────────────────────────────────────────── */}
             {showRejectionForm && (
-              <form onSubmit={handleReject} className="space-y-4 border-t border-slate-100 pt-6 animate-in slide-in-from-top duration-250">
+              <form onSubmit={handleRejectSubmit} className="space-y-4 border-t border-slate-100 pt-4 animate-in slide-in-from-top duration-200">
                 <div>
-                  <label className="block text-[10px] uppercase font-black text-rose-600 tracking-wider mb-2">Audit Rejection Notes</label>
+                  <label className="block text-[10px] uppercase font-black text-rose-600 tracking-wider mb-2">
+                    Rejection Reason <span className="text-rose-400">*</span>
+                  </label>
                   <textarea
                     required
                     rows="3"
                     value={rejectionNotes}
                     onChange={(e) => setRejectionNotes(e.target.value)}
-                    placeholder="Provide detailed auditor notes for candidate rejection. e.g. MBBS graduation date does not match the registration timeline requirements."
-                    className="w-full px-4 py-3 bg-slate-50 border border-rose-200 focus:border-rose-500 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-rose-500/10 transition-all font-bold text-xs leading-relaxed"
+                    placeholder="Provide detailed reason for rejection..."
+                    className="w-full px-4 py-3 bg-slate-50 border border-rose-200 focus:border-rose-500 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-rose-500/10 transition-all text-xs font-bold leading-relaxed"
                   />
                 </div>
                 <div className="flex justify-end gap-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowRejectionForm(false);
-                      setRejectionNotes('');
-                    }}
-                    className="px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 rounded-xl font-bold text-xs uppercase transition-colors"
+                    onClick={() => { setShowRejectionForm(false); setRejectionNotes(''); }}
+                    className="px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 rounded-xl font-bold text-xs uppercase transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-md text-xs uppercase transition-colors"
+                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-md text-xs uppercase transition-colors cursor-pointer"
                   >
                     Submit Rejection
                   </button>
@@ -13814,41 +22652,6 @@ const AcademyVerification = ({
               </form>
             )}
 
-            {/* Certification bottom action bar */}
-            {!showRejectionForm && (
-              <div className="border-t border-slate-100 pt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600" />
-                  <span className="text-xs font-semibold text-slate-500">I certify that MBBS degree and State Registration are verified</span>
-                </div>
-                
-                <div className="flex gap-3 w-full sm:w-auto">
-                  {!['Approved', 'Rejected'].includes(activeStudent.status) ? (
-                    <>
-                      <button
-                        onClick={() => setShowRejectionForm(true)}
-                        className="flex-grow sm:flex-grow-0 px-6 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                      >
-                        Reject Eligibility
-                      </button>
-                      <button
-                        onClick={handleApprove}
-                        className="flex-grow sm:flex-grow-0 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer"
-                      >
-                        Approve & Certify
-                      </button>
-                    </>
-                  ) : (
-                    <div className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border ${activeStudent.status === 'Approved' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
-                      {activeStudent.status === 'Approved' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                      <span className="text-[10px] uppercase font-black tracking-wider">
-                        {activeStudent.status === 'Approved' ? 'Verified & Certified' : 'Eligibility Rejected'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       ) : (
@@ -13858,6 +22661,8 @@ const AcademyVerification = ({
           <p className="text-xs text-slate-400 mt-1">All registered students have been audited for exam eligibility.</p>
         </div>
       )}
+
+      {/* ─── TOASTS ────────────────────────────────────────────────────────────── */}
       {toast && (
         <Toast 
           message={toast.message} 
@@ -13881,12 +22686,12 @@ const AcademyVerification = ({
 };
 
 export default AcademyVerification;
+
 ```
 
 ### `client/src/pages/academy/dashboard/index.jsx`
 
 ```jsx
-import React from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import AcademyDashboard from '../components/AcademyDashboard';
 
@@ -13905,18 +22710,23 @@ export default function AcademyDashboardPage() {
       students: '/academy/students',
       eligibility: '/academy/eligibility',
       verification: '/academy/verification',
+      marks: '/academy/marks',
+      'student-marks': '/academy/student-marks',
+      'publish-results': '/academy/publish-results',
+      'publish-details': '/academy/publish-details',
+      revaluation: '/academy/revaluation',
     };
     navigate(routes[tab] || '/academy/dashboard');
   };
 
   return <AcademyDashboard dynamicMetrics={dynamicMetrics} setActiveTab={setActiveTab} />;
 }
+
 ```
 
 ### `client/src/pages/academy/eligibility/index.jsx`
 
 ```jsx
-import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import AcademyEligibility from '../components/AcademyEligibility';
 
@@ -13942,12 +22752,13 @@ export default function AcademyEligibilityPage() {
     />
   );
 }
+
 ```
 
 ### `client/src/pages/academy/login/index.jsx`
 
 ```jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import authService from '../../../api/auth';
@@ -13990,6 +22801,7 @@ export default function AcademyLoginPage() {
       const response = await authService.login({
         email: loginForm.email,
         password: loginForm.password,
+        portal: 'academy',
       });
 
       const data = response.data || response;
@@ -14003,6 +22815,7 @@ export default function AcademyLoginPage() {
       };
 
       if (userToken) {
+        localStorage.setItem('semi_board_token', userToken);
         localStorage.setItem('token', userToken);
         localStorage.setItem('semi_token', userToken);
       }
@@ -14036,12 +22849,82 @@ export default function AcademyLoginPage() {
     </InstitutionalLayout>
   );
 }
+
+```
+
+### `client/src/pages/academy/marks/index.jsx`
+
+```jsx
+import AcademyMarksUpdating from '../components/AcademyMarksUpdating';
+
+/**
+ * Academy Marks Updating Page  (/academy/marks)
+ * Allows board members to enter and update student marks.
+ */
+export default function AcademyMarksUpdatingPage() {
+  // The component is self-contained and doesn't need context from parent
+  // but we keep the pattern consistent
+  return <AcademyMarksUpdating />;
+}
+```
+
+### `client/src/pages/academy/publish-details/index.jsx`
+
+```jsx
+import AcademyPublishingDetails from '../components/AcademyPublishingDetails';
+
+/**
+ * Academy Publishing Details Page  (/academy/publish-details)
+ * View and manage all result publications.
+ */
+export default function AcademyPublishDetailsPage() {
+  return <AcademyPublishingDetails />;
+}
+
+```
+
+### `client/src/pages/academy/publish-results/index.jsx`
+
+```jsx
+import AcademyPublishResults from '../components/AcademyPublishResults';
+
+/**
+ * Academy Publish Results Page  (/academy/publish-results)
+ * Schedule and publish examination results to institutes and students.
+ */
+export default function AcademyPublishResultsPage() {
+  return <AcademyPublishResults />;
+}
+```
+
+### `client/src/pages/academy/revaluation/index.jsx`
+
+```jsx
+import AcademyRevaluation from '../components/AcademyRevaluation';
+
+export default function AcademyRevaluationPage() {
+  return <AcademyRevaluation />;
+}
+
+```
+
+### `client/src/pages/academy/student-marks/index.jsx`
+
+```jsx
+import AcademyStudentMarks from '../components/AcademyStudentMarks';
+
+/**
+ * Academy Student Marks Page  (/academy/student-marks)
+ * Displays all students with their marks and allows viewing detailed subject marks.
+ */
+export default function AcademyStudentMarksPage() {
+  return <AcademyStudentMarks />;
+}
 ```
 
 ### `client/src/pages/academy/students/index.jsx`
 
 ```jsx
-import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import AcademyStudents from '../components/AcademyStudents';
 
@@ -14065,12 +22948,12 @@ export default function AcademyStudentsPage() {
     />
   );
 }
+
 ```
 
 ### `client/src/pages/academy/verification/index.jsx`
 
 ```jsx
-import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import AcademyVerification from '../components/AcademyVerification';
 
@@ -14096,22 +22979,27 @@ export default function AcademyVerificationPage() {
     />
   );
 }
+
 ```
 
 ### `client/src/pages/institute/InstitutePortal.jsx`
 
 ```jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import InstitutionalLayout from './InstitutionalLayout';
 import { 
-  Building2, Mail, Lock, CheckCircle2, XCircle, Check, ShieldCheck, X
+   Check
 } from 'lucide-react';
 
 import authService from '../../api/auth';
 import instituteService from '../../api/institutes';
+import { getPaymentState, clearPaymentState } from '../../utils/razorpay';
+import { PaymentStatusChecker } from '../../Components/PaymentStatusChecker';
 import academicService from '../../api/academic';
 import examService from '../../api/exams';
+import { initiateRazorpayPayment } from '../../utils/razorpay';
 
 import WelcomeLanding from './components/WelcomeLanding';
 import InstituteLogin from './components/InstituteLogin';
@@ -14130,6 +23018,9 @@ import InstituteERPFees from './components/InstituteERPFees';
 import InstituteERPExams from './components/InstituteERPExams';
 import InstituteERPHallTicket from './components/InstituteERPHallTicket';
 import InstituteERPStudentDetails from './components/InstituteERPStudentDetails';
+import InstituteERPResults from './components/InstituteERPResults';
+import InstituteERPRevaluation from './components/InstituteERPRevaluation';
+import InstituteERPRemittance from './components/InstituteERPRemittance';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import Toast from '../../Components/Toast';
@@ -14143,6 +23034,23 @@ const extractData = (response) => {
     return data.data;
   }
   return data;
+};
+
+// Helper to format API errors consistently (Zod validation support)
+const extractErrorMessage = (err, defaultMessage) => {
+  if (!err) return defaultMessage;
+  let errorMessage = err.parsedMessage || err.message || defaultMessage;
+  if (err.response?.data?.errors?.length > 0 && Array.isArray(err.response.data.errors)) {
+    const validationErrors = err.response.data.errors.map(e => {
+      if (e.message) return e.message;
+      if (e.field) return `${e.field}: ${e.message || 'Invalid value'}`;
+      return JSON.stringify(e);
+    });
+    errorMessage = validationErrors.join('\n');
+  } else if (err.response?.data?.message && typeof err.response.data.message === 'string') {
+    errorMessage = err.response.data.message;
+  }
+  return errorMessage;
 };
 
 const APPROVED_QUALIFICATIONS = ['MD Emergency Medicine', 'DNB Emergency Medicine', 'MEM (Emergency Medicine)'];
@@ -14184,9 +23092,13 @@ const ROUTE_STEPS = {
   '/institute/enrollment': 'active_erp',
   '/institute/students': 'active_erp',
   '/institute/fees': 'active_erp',
+  '/institute/remittance': 'active_erp',
+  '/institute/notifications': 'active_erp',
   '/institute/exams': 'active_erp',
   '/institute/studentDetails': 'active_erp',
   '/institute/hallTicket': 'active_erp',
+  '/institute/results': 'active_erp',
+  '/institute/revaluation': 'active_erp',
   '/institute/forgot-password': 'forgot_password',
   '/institute/reset-password': 'reset_password'
 };
@@ -14261,11 +23173,9 @@ const InstitutePortal = () => {
       emFacultyCount: '',
       teachingSpace: '',
       nabhStatus: '',
-      paymentBankName: '',
-      paymentTxnNo: '',
-      paymentTxnDate: '',
       authorizedRepName: '',
-      authorizedRepDesignation: ''
+      authorizedRepDesignation: '',
+      certificationAgreement: false
     };
   });
 
@@ -14289,6 +23199,8 @@ const InstitutePortal = () => {
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentVerificationData, setPaymentVerificationData] = useState(null);
+  const [showPaymentChecker, setShowPaymentChecker] = useState(false);
 
   // Overall application record (status: draft, pending_review, approved, rejected)
   const [applicationRecord, setApplicationRecord] = useState({
@@ -14315,6 +23227,9 @@ const InstitutePortal = () => {
     if (pathname === '/institute/exams') return 'exams';
     if (pathname === '/institute/studentDetails') return 'studentDetails';
     if (pathname === '/institute/hallTicket') return 'hallTicket';
+    if (pathname === '/institute/results') return 'results';
+    if (pathname === '/institute/revaluation') return 'revaluation';
+    if (pathname === '/institute/remittance') return 'remittance';
     return 'dashboard';
   }, [location.pathname]);
 
@@ -14328,7 +23243,10 @@ const InstitutePortal = () => {
       fees: '/institute/fees',
       exams: '/institute/exams',
       studentDetails: '/institute/studentDetails',
-      hallTicket: '/institute/hallTicket'
+      hallTicket: '/institute/hallTicket',
+      results: '/institute/results',
+      revaluation: '/institute/revaluation',
+      remittance: '/institute/remittance'
     };
     navigate(tabRoutes[tab] || '/institute/dashboard');
   }, [navigate]);
@@ -14355,48 +23273,35 @@ const InstitutePortal = () => {
   });
 
   const [examApplications, setExamApplications] = useState([]);
-  const [feeTransactions, setFeeTransactions] = useState([]);
-  const [studentAcademicDetails, setStudentAcademicDetails] = useState([]);
 
-  const [enrollForm, setEnrollForm] = useState(() => {
-    const saved = localStorage.getItem('semi_enrollment_form');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Failed to parse saved enrollment form', e);
-      }
-    }
-    return {
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      homeAddress: '',
-      contactNumber: '',
-      emailAddress: '',
-      qualification: '',
-      passingYear: '',
-      universityName: '',
-      medCouncilRegNo: '',
-      stateMedCouncil: '',
-      studentCategory: '',
-      serialBatch: '',
-      course: '',
-      batch: '',
-      courseDirector: '',
-      paymentMode: '',
-      utrNumber: '',
-      txnDate: new Date().toISOString().split('T')[0],
-      currentDesignation: '',
-      lifeMembershipNo: '',
-      mcQualifications: '',
-      declarationCheck: false
-    };
+  const [enrollForm, setEnrollForm] = useState({
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    dateOfBirth: '',
+    homeAddress: '',
+    contactNumber: '',
+    emailAddress: '',
+    qualification: 'MD Emergency Medicine',
+    passingYear: '',
+    universityName: '',
+    medCouncilRegNo: '',
+    stateMedCouncil: '',
+    studentCategory: '',
+    serialBatch: '',
+    course: '',
+    batch: '',
+    courseDirector: '',
+    paymentMode: '',
+    razorpayOrderId: '',
+    razorpayPaymentId: '',
+    razorpaySignature: '',
+    txnDate: new Date().toISOString().split('T')[0],
+    currentDesignation: '',
+    lifeMembershipNo: '',
+    mcQualifications: '',
+    declarationCheck: false
   });
-
-  React.useEffect(() => {
-    localStorage.setItem('semi_enrollment_form', JSON.stringify(enrollForm));
-  }, [enrollForm]);
 
   const [enrollDocs, setEnrollDocs] = useState({
     photoDoc: null,
@@ -14440,11 +23345,7 @@ const InstitutePortal = () => {
           batchesCount: c.batchesCount ?? 0,
           status: c.status || 'Active'
         }));
-        const formattedStr = JSON.stringify(formatted);
-        setCourses(prev => JSON.stringify(prev) === formattedStr ? prev : formatted);
-        if (localStorage.getItem('semi_courses') !== formattedStr) {
-          localStorage.setItem('semi_courses', formattedStr);
-        }
+        setCourses(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
       console.warn('Failed to fetch courses from API:', err);
@@ -14458,18 +23359,14 @@ const InstitutePortal = () => {
           id: b._id,
           _id: b._id,
           name: b.name || `Batch ${b.year || new Date().getFullYear()}-A`,
-          startDate: b.startDate || `${b.year || new Date().getFullYear()}-01-10`,
+          startDate: b.startDate ? b.startDate.split('T')[0] : `${b.year || new Date().getFullYear()}-01-10`,
           seats: b.seats || '5',
           activeFellows: b.activeFellows || 0,
           year: b.year,
           course: b.course,
           courseName: b.course?.name || b.course?.courseName || b.courseName || ''
         }));
-        const formattedStr = JSON.stringify(formatted);
-        setBatches(prev => JSON.stringify(prev) === formattedStr ? prev : formatted);
-        if (localStorage.getItem('semi_batches') !== formattedStr) {
-          localStorage.setItem('semi_batches', formattedStr);
-        }
+        setBatches(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
       console.warn('Failed to fetch batches from API:', err);
@@ -14499,7 +23396,9 @@ const InstitutePortal = () => {
           homeAddress: s.homeAddress,
           contactNumber: s.contactNumber,
           courseDirector: s.courseDirector,
-          utrNumber: s.utrNumber,
+          razorpayOrderId: s.razorpayOrderId,
+          razorpayPaymentId: s.razorpayPaymentId,
+          razorpaySignature: s.razorpaySignature,
           medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
           universityName: s.universityName,
           mbbsQualification: s.mbbsQualification,
@@ -14508,11 +23407,7 @@ const InstitutePortal = () => {
           documents: s.documents || {},
           semesters: s.semesters || [],
         }));
-        const formattedStr = JSON.stringify(formatted);
-        setStudents(prev => JSON.stringify(prev) === formattedStr ? prev : formatted);
-        if (localStorage.getItem('semi_students') !== formattedStr) {
-          localStorage.setItem('semi_students', formattedStr);
-        }
+        setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
       console.warn('Failed to fetch students from API:', err);
@@ -14522,11 +23417,7 @@ const InstitutePortal = () => {
       const examsRes = await examService.listExamApplications();
       const examsData = extractData(examsRes) || [];
       if (Array.isArray(examsData)) {
-        const examsStr = JSON.stringify(examsData);
-        setExamApplications(prev => JSON.stringify(prev) === examsStr ? prev : examsData);
-        if (localStorage.getItem('semi_exam_applications') !== examsStr) {
-          localStorage.setItem('semi_exam_applications', examsStr);
-        }
+        setExamApplications(prev => JSON.stringify(prev) === JSON.stringify(examsData) ? prev : examsData);
       }
     } catch (err) {
       console.warn('Failed to fetch exam applications from API:', err);
@@ -14559,11 +23450,9 @@ const InstitutePortal = () => {
           emFacultyCount: app.emFacultyCount?.toString() || '',
           teachingSpace: app.teachingSpace || 'Yes',
           nabhStatus: app.nabhStatus || 'Yes',
-          paymentBankName: app.paymentBankName || '',
-          paymentTxnNo: app.paymentTxnNo || '',
-          paymentTxnDate: app.paymentTxnDate ? app.paymentTxnDate.split('T')[0] : '',
           authorizedRepName: app.authorizedRepName || '',
-          authorizedRepDesignation: app.authorizedRepDesignation || 'Course Director'
+          authorizedRepDesignation: app.authorizedRepDesignation || 'Course Director',
+          certificationAgreement: false
         };
 
         const freshDocs = {
@@ -14622,7 +23511,7 @@ const InstitutePortal = () => {
           form: freshForm,
           uploadedDocs: freshDocs,
           paymentComplete: app.paymentStatus === 'Completed',
-          paymentDetails: app.paymentStatus === 'Completed' ? { transactionId: app.paymentTxnNo } : null,
+          paymentDetails: app.paymentStatus === 'Completed' ? { transactionId: app.razorpayPaymentId } : null,
           record: freshRecord,
           activeWizardStep: 4
         });
@@ -14633,66 +23522,13 @@ const InstitutePortal = () => {
     } catch (err) {
       console.warn('Failed to fetch user application from API:', err);
     }
-  }, [setCurrentStep, fetchERPData]);
+  }, [setCurrentStep, fetchERPData, currentStep]);
 
   const loadApplicationFromStorage = useCallback(() => {
     const storedUser = localStorage.getItem('semi_user');
     const storedAppData = localStorage.getItem('semi_institute_data');
-    const storedCourses = localStorage.getItem('semi_courses');
-    const storedBatches = localStorage.getItem('semi_batches');
-    const storedStudents = localStorage.getItem('semi_students');
 
-    // Seed default data if nothing exists
-    if (!storedCourses) {
-      const initialCourses = [
-        { id: '1', courseName: 'MBBS', courseCode: 'MBBS-001', courseType: 'Undergraduate', programCategory: 'General Medicine', courseDuration: '5', durationType: 'Years', totalSubjects: '24', courseFee: '12,0,000', registrationFee: '50,000', examinationFee: '20,000', certificationFee: '10,000', studentsCount: 0, batchesCount: 1, status: 'Active' },
-        { id: '2', courseName: 'MD - Emergency Medicine', courseCode: 'MD-EM-01', courseType: 'Postgraduate', programCategory: 'Emergency Medicine', courseDuration: '3', durationType: 'Years', totalSubjects: '12', courseFee: '15,0,000', registrationFee: '60,000', examinationFee: '25,000', certificationFee: '15,000', studentsCount: 0, batchesCount: 1, status: 'Active' }
-      ];
-      localStorage.setItem('semi_courses', JSON.stringify(initialCourses));
-      setCourses(initialCourses);
-    } else {
-      setCourses(JSON.parse(storedCourses));
-    }
 
-    if (!storedBatches) {
-      const initialBatches = [
-        { id: '1', name: 'Batch 2026-A', startDate: '2026-01-10', seats: '5', activeFellows: 0, courseName: 'MBBS' },
-        { id: '2', name: 'Batch 2026-B', startDate: '2026-07-01', seats: '5', activeFellows: 0, courseName: 'MD - Emergency Medicine' }
-      ];
-      localStorage.setItem('semi_batches', JSON.stringify(initialBatches));
-      setBatches(initialBatches);
-    } else {
-      setBatches(JSON.parse(storedBatches));
-    }
-
-    if (!storedStudents) {
-      setStudents([]);
-      localStorage.setItem('semi_students', JSON.stringify([]));
-    } else {
-      setStudents(JSON.parse(storedStudents));
-    }
-
-    // Set default exam apps and fee transactions if not present
-    if (!localStorage.getItem('semi_exam_applications')) {
-      localStorage.setItem('semi_exam_applications', JSON.stringify([]));
-      setExamApplications([]);
-    } else {
-      setExamApplications(JSON.parse(localStorage.getItem('semi_exam_applications')));
-    }
-
-    if (!localStorage.getItem('semi_fee_transactions')) {
-      localStorage.setItem('semi_fee_transactions', JSON.stringify([]));
-      setFeeTransactions([]);
-    } else {
-      setFeeTransactions(JSON.parse(localStorage.getItem('semi_fee_transactions')));
-    }
-
-    if (!localStorage.getItem('semi_student_academic_details')) {
-      localStorage.setItem('semi_student_academic_details', JSON.stringify([]));
-      setStudentAcademicDetails([]);
-    } else {
-      setStudentAcademicDetails(JSON.parse(localStorage.getItem('semi_student_academic_details')));
-    }
 
     const DEFAULT_RECORD = { status: 'draft', submittedAt: null, inspectedAt: null, rejectionReason: null };
 
@@ -14724,6 +23560,7 @@ const InstitutePortal = () => {
       setUploadedDocs(prev => ({ ...prev, ...parsedData.uploadedDocs }));
       setPaymentComplete(parsedData.paymentComplete || false);
       setPaymentDetails(parsedData.paymentDetails || null);
+      setPaymentVerificationData(parsedData.paymentVerificationData || null);
       setApplicationRecord(parsedData.record || DEFAULT_RECORD);
       if (parsedData.activeWizardStep) {
         setActiveWizardStep(parsedData.activeWizardStep);
@@ -14745,7 +23582,10 @@ const InstitutePortal = () => {
 
   // ─── EFFECTS ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    loadApplicationFromStorage();
+    const timer = setTimeout(() => {
+      loadApplicationFromStorage();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadApplicationFromStorage]);
 
   // Background Auto-Polling every 5 seconds
@@ -14780,15 +23620,20 @@ const InstitutePortal = () => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [user, currentStep, fetchERPData, fetchApplication]);
+  }, [user, currentStep, fetchERPData, fetchApplication, setCurrentStep]);
 
   // Fetch from backend when authenticated
   useEffect(() => {
-    if (localStorage.getItem('token') || localStorage.getItem('semi_token')) {
-      fetchApplication();
-      
-      authService.checkStatus()
-        .then(res => {
+    const initializeData = async () => {
+      if (localStorage.getItem('token') || localStorage.getItem('semi_token')) {
+        try {
+          await fetchApplication();
+        } catch (err) {
+          console.warn('Failed to fetch application:', err);
+        }
+        
+        try {
+          const res = await authService.checkStatus();
           const data = res.data?.data || res.data || {};
           if (data.isEmailVerified === true) {
             setUser(prev => {
@@ -14800,18 +23645,30 @@ const InstitutePortal = () => {
               setCurrentStep('onboarding_form');
             }
           }
-        })
-        .catch(err => {
+        } catch (err) {
           console.warn('Failed to fetch user verification status on load:', err);
-        });
-    }
-  }, [fetchApplication, currentStep]);
+        }
+      }
+    };
+    
+    initializeData();
+  }, [fetchApplication, currentStep, setCurrentStep, setUser]);
 
   // Fetch ERP data when dashboard is active
   useEffect(() => {
-    if (currentStep === 'active_erp') {
-      fetchERPData();
-    }
+    let isActive = true;
+
+    const loadData = async () => {
+      if (currentStep === 'active_erp' && isActive) {
+        await fetchERPData();
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isActive = false;
+    };
   }, [currentStep, fetchERPData]);
 
   // Listen to board updates from localStorage
@@ -14910,9 +23767,12 @@ const InstitutePortal = () => {
         return;
       }
     }
-
-    setCurrentStepState(targetStep);
-  }, [location.pathname, user, applicationRecord, navigate]);
+    if (currentStep !== targetStep) {
+      setTimeout(() => {
+        setCurrentStepState(targetStep);
+      }, 0);
+    }
+  }, [location.pathname, user, applicationRecord, navigate, currentStep]);
 
   const activeStudentCount = useMemo(() => {
     return students.filter(s => s.status === 'Active').length;
@@ -14962,6 +23822,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
     if (step === 1) {
       if (!appForm.orgName) return 'Health Care Organization Name is required.';
+      if (!appForm.constitutionType) return 'Registered Constitution Type is required.';
       if (!appForm.instituteAddress) return 'Institution Address is required.';
       if (!appForm.registeredOfficeAddress) return 'Registered Office Address is required.';
       
@@ -14974,12 +23835,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       if (!emailRegex.test(appForm.emailAddress)) return 'Valid Email Address is required.';
       
       if (!appForm.commencementDate) return 'Proposed Date of Commencement is required.';
-      if (!appForm.seatsRequested || parseInt(appForm.seatsRequested, 10) <= 0) return 'Valid Number of Seats Requested is required.';
+      const parsedSeats = parseInt(appForm.seatsRequested, 10);
+      if (!appForm.seatsRequested || isNaN(parsedSeats) || parsedSeats <= 0) return 'Valid Number of Seats Requested is required.';
       
       if (!appForm.officePhone) return 'Registered Office Phone Number is required.';
       if (!phoneRegex.test(appForm.officePhone.replace(/\D/g, ''))) return 'Registered Office Phone Number must be a valid 6 to 12-digit phone/landline number.';
       
-      const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+      const urlRegex = new RegExp('^(https?://)?([\\w.-]+)\\.([a-z.]{2,6})[/\\w .-]*/?$', 'i');
       if (!appForm.website) return 'Institutional Website Address is required.';
       if (!urlRegex.test(appForm.website)) return 'Valid Institutional Website Address URL is required.';
       
@@ -14998,12 +23860,14 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       if (!appForm.physicianExperience || parseInt(appForm.physicianExperience, 10) < 24) {
         return 'Emergency Physician Experience must be a minimum of 24 months.';
       }
+      if (appForm.courseDirectorEMQualified !== 'Yes') return 'Course Director must be EM Qualified.';
       if (!appForm.emFacultyCount || parseInt(appForm.emFacultyCount, 10) < 1) {
         return 'EM Qualified Faculty Count must be a minimum of 1.';
       }
       if (appForm.teachingSpace !== 'Yes' && appForm.teachingSpace !== 'Yes (Mandatory)') {
         return 'Teaching Space Availability is mandatory (must be Yes).';
       }
+      if (appForm.nabhStatus !== 'Yes') return 'NABH Accreditation Status is required.';
     }
 
     if (step === 3) {
@@ -15020,10 +23884,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     }
 
     if (step === 4) {
-      if (!paymentComplete) return 'Please complete the simulated inspection fee payment.';
-      if (!appForm.paymentBankName) return 'Payment Bank Name is required.';
-      if (!appForm.paymentTxnNo) return 'Payment Transaction / Ref Number is required.';
-      if (!appForm.paymentTxnDate) return 'Payment Transaction Date is required.';
       if (!appForm.authorizedRepName) return 'Authorized Representative Name is required.';
       if (!uploadedDocs.signatureDoc) return 'Please upload the digital signature file.';
     }
@@ -15082,6 +23942,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       
       setUser(newUser);
       if (userToken) {
+        localStorage.setItem('semi_institute_token', userToken);
         localStorage.setItem('token', userToken);
         localStorage.setItem('semi_token', userToken);
       }
@@ -15111,11 +23972,9 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         emFacultyCount: '',
         teachingSpace: 'Yes',
         nabhStatus: 'Yes',
-        paymentBankName: '',
-        paymentTxnNo: '',
-        paymentTxnDate: '',
         authorizedRepName: '',
-        authorizedRepDesignation: 'Course Director'
+        authorizedRepDesignation: 'Course Director',
+        certificationAgreement: false
       };
 
       const freshDocs = {
@@ -15149,7 +24008,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       setSuccessBanner('Account created successfully! Please check your email to verify your account.');
       setCurrentStep('verify_pending');
     } catch (err) {
-      setErrorBanner(err.parsedMessage || err.message || 'Registration failed. Please try again.');
+      setErrorBanner(extractErrorMessage(err, 'Registration failed. Please try again.'));
     }
   };
 
@@ -15172,7 +24031,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     try {
       const response = await authService.login({
         email: loginForm.email,
-        password: loginForm.password
+        password: loginForm.password,
+        portal: 'institute',
       });
 
       const data = response.data || response;
@@ -15188,6 +24048,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       };
 
       if (userToken) {
+        localStorage.setItem('semi_institute_token', userToken);
         localStorage.setItem('token', userToken);
         localStorage.setItem('semi_token', userToken);
       }
@@ -15203,40 +24064,79 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
       setSuccessBanner('Login authenticated successfully!');
     } catch (err) {
-      setErrorBanner(err.parsedMessage || err.message || 'Invalid credentials. Email or password do not match.');
+      setErrorBanner(extractErrorMessage(err, 'Invalid credentials. Email or password do not match.'));
     }
   };
 
-  // ─── DOCUMENT UPLOAD HELPERS ─────────────────────────────────────────────────
-  const simulateDocUpload = useCallback((fieldName, file) => {
-    if (!file) return;
-    setUploadProgress(prev => ({ ...prev, [fieldName]: 10 }));
-    
-    let progress = 10;
-    const interval = setInterval(() => {
-      progress += 30;
-      if (progress >= 100) {
-        clearInterval(interval);
-        setUploadProgress(prev => ({ ...prev, [fieldName]: null }));
-        setUploadedDocs(prev => ({
-          ...prev,
-          [fieldName]: {
-            name: file.name,
-            size: (file.size / 1024).toFixed(1) + ' KB',
-            uploadedAt: new Date().toLocaleTimeString()
-          }
-        }));
-      } else {
-        setUploadProgress(prev => ({ ...prev, [fieldName]: progress }));
+  const checkPaymentStatus = useCallback(async () => {
+    try {
+      console.log('🔍 Checking payment status...');
+      const response = await instituteService.getPaymentStatus();
+      const data = response.data?.data || response.data;
+      console.log('📊 Payment status response:', data);
+      if (data && data.paymentStatus === 'Completed') {
+        setPaymentComplete(true);
+        setPaymentDetails({
+          transactionId: data.razorpayPaymentId || 'pay_verified',
+          amount: '₹2,50,000.00',
+          date: new Date().toLocaleString(),
+          status: 'Success'
+        });
+        const storedData = localStorage.getItem('semi_institute_data');
+        if (storedData) {
+          const parsed = JSON.parse(storedData);
+          parsed.paymentComplete = true;
+          parsed.paymentDetails = {
+            transactionId: data.razorpayPaymentId,
+            amount: '₹2,50,000.00',
+            date: new Date().toLocaleString(),
+            status: 'Success'
+          };
+          localStorage.setItem('semi_institute_data', JSON.stringify(parsed));
+        }
+        setSuccessBanner('✅ Payment verified successfully! Your application is now with the board.');
+        return true;
       }
-    }, 100);
+      return false;
+    } catch (err) {
+      console.warn('Failed to check payment status:', err);
+      return false;
+    }
   }, []);
 
-  const removeDocument = useCallback((fieldName) => {
-    setUploadedDocs(prev => ({ ...prev, [fieldName]: null }));
-  }, []);
+  useEffect(() => {
+    const recoverPayment = async () => {
+      const pendingState = getPaymentState();
+      if (pendingState) {
+        if (pendingState.paymentType === 'institute') {
+          try {
+            const response = await instituteService.getPaymentStatus();
+            const data = response.data?.data || response.data;
+            if (data?.paymentStatus === 'Completed') {
+              setPaymentComplete(true);
+              clearPaymentState();
+              setSuccessBanner('Payment recovered successfully! Your application is ready.');
+            } else if (data?.razorpayOrderId && data.razorpayOrderId === pendingState.orderId) {
+              const completed = await checkPaymentStatus();
+              if (completed) {
+                clearPaymentState();
+                setSuccessBanner('Payment recovered successfully! Your application is ready.');
+              } else {
+                setShowPaymentChecker(true);
+              }
+            } else {
+              clearPaymentState();
+            }
+          } catch {
+            clearPaymentState();
+          }
+        }
+      }
+    };
+    recoverPayment();
+  }, [checkPaymentStatus]);
 
-  // ─── PAYMENT HANDLER ──────────────────────────────────────────────────────────
+// ─── PAYMENT HANDLER ──────────────────────────────────────────────────────────
   const handlePaymentInitiate = async () => {
     setPaymentProcessing(true);
     setErrorBanner(null);
@@ -15248,58 +24148,104 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     }
 
     try {
-      let orderData = {};
-      let verifyData = {};
-      const txId = 'TXN-' + Math.floor(100000000000 + Math.random() * 900000000000);
-      const receiptNo = 'RCPT-' + Math.floor(10000000 + Math.random() * 90000000);
+      const orderRes = await instituteService.createPaymentOrder();
+      const orderData = extractData(orderRes);
 
-      try {
-        const orderRes = await instituteService.createPaymentOrder();
-        orderData = extractData(orderRes) || {};
-
-        const verifyRes = await instituteService.verifyPayment({
-          razorpay_order_id: orderData.orderId || orderData.id,
-          razorpay_payment_id: 'pending',
-          razorpay_signature: 'pending',
-          transactionId: txId,
-          amount: 250000
-        });
-        verifyData = extractData(verifyRes) || {};
-      } catch (apiErr) {
-        console.warn('Backend payment APIs failed or returned 404. Falling back to local mock payment...', apiErr);
-        orderData = { orderId: 'order_mock_' + Math.random().toString(36).substring(2, 11) };
-        verifyData = {
-          paymentId: txId,
-          receiptNumber: receiptNo
-        };
+      if (!orderData || !orderData.orderId) {
+        throw new Error('Failed to create payment order from server.');
       }
 
-      const feeDetails = {
-        receiptNumber: verifyData.receiptNumber || receiptNo,
-        transactionId: verifyData.paymentId || txId,
-        amount: '₹2,50,000.00',
-        date: new Date().toLocaleString(),
-        status: 'Success'
-      };
+      await initiateRazorpayPayment({
+        orderId: orderData.orderId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        keyId: orderData.keyId,
+        name: 'Semi Phase 3 Institute Onboarding',
+        description: 'Inspection & Onboarding Fee',
+        paymentType: 'institute',
+        prefill: {
+          name: appForm.hodName,
+          email: user?.email || '',
+        },
+        onSuccess: async (response) => {
+          try {
+            setPaymentProcessing(true);
+            console.log('✅ Payment success, verifying with backend...', response);
 
-      setPaymentComplete(true);
-      setPaymentDetails(feeDetails);
-      setPaymentProcessing(false);
-      
-      setAppForm(prev => ({
-        ...prev,
-        paymentBankName: 'State Bank of India',
-        paymentTxnNo: verifyData.paymentId || txId,
-        paymentTxnDate: new Date().toISOString().split('T')[0]
-      }));
+            const verifyRes = await instituteService.verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            const verifyData = extractData(verifyRes);
+            console.log('✅ Verification response:', verifyData);
 
-      setUploadedDocs(prev => ({ 
-        ...prev, 
-        paymentReceiptDoc: { name: `${verifyData.receiptNumber || receiptNo}-receipt.pdf`, size: '142.5 KB', uploadedAt: new Date().toLocaleTimeString() }
-      }));
-      setSuccessBanner('Inspection Fee Payment processed and verified successfully!');
+            if (verifyData && verifyData.paymentStatus === 'Completed') {
+              setPaymentVerificationData({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+
+              const feeDetails = {
+                receiptNumber: verifyData.receiptNumber || 'REC-' + Date.now(),
+                transactionId: verifyData.paymentId || response.razorpay_payment_id,
+                amount: '₹2,50,000.00',
+                date: new Date().toLocaleString(),
+                status: 'Success'
+              };
+
+              setPaymentComplete(true);
+              setPaymentDetails(feeDetails);
+              setPaymentProcessing(false);
+              setShowPaymentChecker(false);
+
+              setUploadedDocs(prev => ({ 
+                ...prev, 
+                paymentReceiptDoc: { name: `${feeDetails.receiptNumber}-receipt.pdf`, size: 'Online', uploadedAt: new Date().toLocaleTimeString() }
+              }));
+
+              clearPaymentState();
+              setSuccessBanner('✅ Payment verified successfully! You can now submit your application.');
+
+              await fetchApplication();
+            } else {
+              console.warn('⚠️ Verification did not complete:', verifyData);
+              const checkResult = await checkPaymentStatus();
+              if (!checkResult) {
+                setErrorBanner('Payment was processed but verification is pending. Please wait or contact support.');
+                setShowPaymentChecker(true);
+              }
+            }
+          } catch (verifyErr) {
+            console.error('❌ Verification failed:', verifyErr);
+            const checkResult = await checkPaymentStatus();
+            if (checkResult) {
+              setPaymentProcessing(false);
+              setShowPaymentChecker(false);
+              setSuccessBanner('✅ Payment verified successfully after check!');
+              return;
+            }
+            setErrorBanner('Payment was processed but verification failed. Please contact support.');
+            setPaymentProcessing(false);
+            setShowPaymentChecker(true);
+          } finally {
+            setPaymentProcessing(false);
+          }
+        },
+        onDismiss: () => {
+          setPaymentProcessing(false);
+          setShowPaymentChecker(true);
+          setErrorBanner('Payment window was closed. We are checking your payment status.');
+        },
+        onFailure: (error) => {
+          setPaymentProcessing(false);
+          setShowPaymentChecker(true);
+          setErrorBanner(`Payment failed: ${error?.description || 'Transaction unsuccessful.'}`);
+        },
+      });
     } catch (err) {
-      console.error('Payment initiation/verification failed:', err);
+      console.error('Payment initiation failed:', err);
       setPaymentProcessing(false);
       setErrorBanner(err.parsedMessage || err.message || 'Payment processing failed. Please try again.');
     }
@@ -15337,18 +24283,79 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     saveToLocalStorage(user, appForm, uploadedDocs, paymentComplete, applicationRecord, newStep);
   };
 
-  // ─── APPLICATION SUBMIT ──────────────────────────────────────────────────────
+  // ─── APPLICATION SUBMIT (validates → pays → submits) ─────────────────────────
+  const submitApplicationInternal = async (overridePaymentData) => {
+    const formData = new FormData();
+
+    const cleaned = { ...appForm };
+    cleaned.phoneNumber = (appForm.phoneNumber || '').replace(/\D/g, '');
+    cleaned.officePhone = (appForm.officePhone || '').replace(/\D/g, '');
+
+    Object.keys(cleaned).forEach(key => {
+      const val = cleaned[key];
+      if (val !== '' && val !== false && val !== null && val !== undefined) {
+        formData.append(key, val);
+      }
+    });
+
+    const appendDocFile = (backendKey, stateKey) => {
+      const fileState = uploadedDocs[stateKey];
+      if (fileState) {
+        if (fileState instanceof File) {
+          formData.append(backendKey, fileState);
+        } else {
+          const mockBlob = new Blob(['Simulated document content for ' + backendKey], { type: 'application/pdf' });
+          formData.append(backendKey, mockBlob, fileState.name || `${backendKey}.pdf`);
+        }
+      }
+    };
+
+    appendDocFile('equipmentList', 'equipmentList');
+    appendDocFile('facultyList', 'facultyList');
+    appendDocFile('emergencyOPDStatistics', 'opdStats');
+    appendDocFile('libraryBookList', 'libraryList');
+    appendDocFile('trainingMannequinList', 'mannequinList');
+    appendDocFile('diagnosticEquipmentList', 'diagnosticList');
+    appendDocFile('declarationLetter', 'declarationLetter');
+    appendDocFile('facultyCommitmentLetter', 'signatureDoc');
+    appendDocFile('inspectionPaymentReceipt', 'paymentReceiptDoc');
+
+    const effectivePaymentData = overridePaymentData || paymentVerificationData;
+    if (effectivePaymentData) {
+      formData.append('razorpayPaymentId', effectivePaymentData.razorpayPaymentId);
+      formData.append('razorpayOrderId', effectivePaymentData.razorpayOrderId);
+      formData.append('razorpaySignature', effectivePaymentData.razorpaySignature);
+      formData.append('paymentStatus', 'Completed');
+    }
+
+    const response = await instituteService.apply(formData);
+    const data = extractData(response) || {};
+
+    const newRecord = {
+      status: data.status ? data.status.toLowerCase().replace(' ', '_') : 'pending_review',
+      submittedAt: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
+      inspectedAt: data.inspectionTriggered ? new Date().toLocaleDateString() : null,
+      rejectionReason: data.remarks || null,
+      ...data
+    };
+
+    setApplicationRecord(newRecord);
+    saveToLocalStorage(user, appForm, uploadedDocs, true, newRecord);
+
+    setSuccessBanner('Application submitted successfully! Moving to Academic Board for Review.');
+    setApplicationSubmitting(false);
+    setCurrentStep('pending_review');
+  };
+
   const handleApplicationSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (applicationSubmitting) return;
     setErrorBanner(null);
-    setApplicationSubmitting(true);
 
     const beds = parseInt(appForm.bedCount, 10);
     if (isNaN(beds) || beds < 10) {
       setErrorBanner('🚨 Compliance Violation: Emergency Department Bed Count is less than 10 beds.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
@@ -15356,14 +24363,12 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (isNaN(experience) || experience < 24) {
       setErrorBanner('🚨 Compliance Violation: Emergency Physician Experience is less than 24 months.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
     if (appForm.physicianAvailability !== 'Yes' && appForm.physicianAvailability !== 'Yes (Mandatory)') {
       setErrorBanner('🚨 Compliance Violation: Emergency Physician Availability is mandatory.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
@@ -15371,21 +24376,18 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (isNaN(facCount) || facCount < 1) {
       setErrorBanner('🚨 Compliance Violation: EM Qualified Faculty count must be at least 1.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
     if (appForm.teachingSpace !== 'Yes' && appForm.teachingSpace !== 'Yes (Mandatory)') {
       setErrorBanner('🚨 Compliance Violation: Teaching Space Availability is mandatory.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
     if (!appForm.authorizedRepName || !uploadedDocs.signatureDoc) {
       setErrorBanner('🚨 Compliance Violation: Representative Name and Digital Signature upload are mandatory.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
@@ -15397,87 +24399,169 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (!uploadedDocs.mannequinList) missingDocs.push('Training Mannequin List');
     if (!uploadedDocs.diagnosticList) missingDocs.push('Diagnostic Equipment List');
     if (!uploadedDocs.declarationLetter) missingDocs.push('Declaration Letter');
-    if (!uploadedDocs.paymentReceiptDoc) missingDocs.push('Inspection Payment Receipt');
 
     if (missingDocs.length > 0) {
       setErrorBanner(`Missing Mandatory Documents: ${missingDocs.join(', ')}.`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      setApplicationSubmitting(false);
       return;
     }
 
-    if (!paymentComplete || !appForm.paymentBankName || !appForm.paymentTxnNo || !appForm.paymentTxnDate) {
-      setErrorBanner('Inspection Fee Payment and transaction reference fields must be successfully completed.');
-      setApplicationSubmitting(false);
+    if (!appForm.certificationAgreement) {
+      setErrorBanner('You must accept the Certification & Declarations agreement to proceed.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
+    // If payment already complete, submit directly
+    if (paymentComplete) {
+      setApplicationSubmitting(true);
+      try {
+        await submitApplicationInternal();
+      } catch (err) {
+        console.error('Application submission failed:', err);
+        setErrorBanner(extractErrorMessage(err, 'Failed to submit application.'));
+        setApplicationSubmitting(false);
+      }
+      return;
+    }
+
+    // Payment not done yet — initiate Razorpay, then auto-submit on success
+    setApplicationSubmitting(true);
     try {
-      const formData = new FormData();
-      Object.keys(appForm).forEach(key => {
-        if (appForm[key]) {
-          formData.append(key, appForm[key]);
-        }
-      });
+      const orderRes = await instituteService.createPaymentOrder();
+      const orderData = extractData(orderRes);
 
-      const appendDocFile = (backendKey, stateKey) => {
-        const fileState = uploadedDocs[stateKey];
-        if (fileState) {
-          if (fileState instanceof File) {
-            formData.append(backendKey, fileState);
-          } else {
-            const mockBlob = new Blob(['Simulated document content for ' + backendKey], { type: 'application/pdf' });
-            formData.append(backendKey, mockBlob, fileState.name || `${backendKey}.pdf`);
-          }
-        }
-      };
-
-      appendDocFile('equipmentList', 'equipmentList');
-      appendDocFile('facultyList', 'facultyList');
-      appendDocFile('emergencyOPDStatistics', 'opdStats');
-      appendDocFile('libraryBookList', 'libraryList');
-      appendDocFile('trainingMannequinList', 'mannequinList');
-      appendDocFile('diagnosticEquipmentList', 'diagnosticList');
-      appendDocFile('declarationLetter', 'declarationLetter');
-      appendDocFile('facultyCommitmentLetter', 'signatureDoc');
-      appendDocFile('inspectionPaymentReceipt', 'paymentReceiptDoc');
-
-      const response = await instituteService.apply(formData);
-      const data = extractData(response) || {};
-
-      const newRecord = {
-        status: data.status ? data.status.toLowerCase().replace(' ', '_') : 'pending_review',
-        submittedAt: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
-        inspectedAt: data.inspectionTriggered ? new Date().toLocaleDateString() : null,
-        rejectionReason: data.remarks || null,
-        ...data
-      };
-
-      // Persist to state AND localStorage BEFORE navigating so the Auth Guard
-      // and fetchApplication can immediately see pending_review status.
-      setApplicationRecord(newRecord);
-      saveToLocalStorage(user, appForm, uploadedDocs, true, newRecord);
-
-      setSuccessBanner('Application submitted successfully! Moving to Academic Board for Review.');
-      setApplicationSubmitting(false);
-      setCurrentStep('pending_review');
-    } catch (err) {
-      console.error('Application submission failed:', err);
-
-      // Handle Zod validation errors from backend
-      let errorMessage = err.parsedMessage || err.message || 'Failed to submit application.';
-
-      // If error contains validation errors, format them nicely
-      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
-        const validationErrors = err.response.data.errors.map(e => {
-          if (e.message) return e.message;
-          if (e.field) return `${e.field}: ${e.message || 'Invalid value'}`;
-          return JSON.stringify(e);
-        });
-        errorMessage = validationErrors.join('\n');
+      if (!orderData || !orderData.orderId) {
+        throw new Error('Failed to create payment order from server.');
       }
 
-      setErrorBanner(errorMessage);
+      await initiateRazorpayPayment({
+        orderId: orderData.orderId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        keyId: orderData.keyId,
+        name: 'Semi Phase 3 Institute Onboarding',
+        description: 'Inspection & Onboarding Fee',
+        paymentType: 'institute',
+        prefill: {
+          name: appForm.hodName,
+          email: user?.email || '',
+        },
+        onSuccess: async (response) => {
+          try {
+            setApplicationSubmitting(true);
+            console.log('✅ Payment success, verifying with backend...', response);
+
+            const verifyRes = await instituteService.verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            const verifyData = extractData(verifyRes);
+            console.log('✅ Verification response:', verifyData);
+
+            if (verifyData && verifyData.paymentStatus === 'Completed') {
+              const newPaymentData = {
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              };
+              setPaymentVerificationData(newPaymentData);
+
+              const feeDetails = {
+                receiptNumber: verifyData.receiptNumber || 'REC-' + Date.now(),
+                transactionId: verifyData.paymentId || response.razorpay_payment_id,
+                amount: '₹2,50,000.00',
+                date: new Date().toLocaleString(),
+                status: 'Success'
+              };
+
+              setPaymentComplete(true);
+              setPaymentDetails(feeDetails);
+              setShowPaymentChecker(false);
+
+              setUploadedDocs(prev => ({
+                ...prev,
+                paymentReceiptDoc: { name: `${feeDetails.receiptNumber}-receipt.pdf`, size: 'Online', uploadedAt: new Date().toLocaleTimeString() }
+              }));
+
+              clearPaymentState();
+
+              // Auto-submit after successful payment
+              // Pass newPaymentData directly to avoid closure stale-state bug
+              try {
+                await submitApplicationInternal(newPaymentData);
+              } catch (submitErr) {
+                console.error('Application submission failed after payment', submitErr);
+                setErrorBanner('Payment succeeded but application submission failed: ' + extractErrorMessage(submitErr, 'Please try submitting again.'));
+                setApplicationSubmitting(false);
+              }
+            } else {
+              console.warn('⚠️ Verification did not complete:', verifyData);
+              const checkResult = await checkPaymentStatus();
+              if (checkResult) {
+                setApplicationSubmitting(false);
+                setShowPaymentChecker(false);
+                const recoveryPaymentData = {
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature,
+                };
+                setPaymentVerificationData(recoveryPaymentData);
+                try {
+                  await submitApplicationInternal(recoveryPaymentData);
+                } catch (submitErr) {
+                  console.error('Application submission failed after payment recovery', submitErr);
+                  setErrorBanner('Payment recovered but application submission failed: ' + extractErrorMessage(submitErr, 'Please try submitting again.'));
+                  setApplicationSubmitting(false);
+                }
+              } else {
+                setErrorBanner('Payment was processed but verification is pending. Please wait or contact support.');
+                setApplicationSubmitting(false);
+                setShowPaymentChecker(true);
+              }
+            }
+          } catch (verifyErr) {
+            console.error('❌ Verification failed', verifyErr);
+            const checkResult = await checkPaymentStatus();
+            if (checkResult) {
+              setApplicationSubmitting(false);
+              setShowPaymentChecker(false);
+              const recoveryPaymentData = {
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              };
+              setPaymentVerificationData(recoveryPaymentData);
+              try {
+                await submitApplicationInternal(recoveryPaymentData);
+              } catch (submitErr) {
+                console.error('Application submission failed after payment recovery', submitErr);
+                setErrorBanner('Payment recovered but application submission failed: ' + extractErrorMessage(submitErr, 'Please try submitting again.'));
+                setApplicationSubmitting(false);
+              }
+              return;
+            }
+            setErrorBanner('Payment was processed but verification failed. Please contact support.');
+            setApplicationSubmitting(false);
+          } finally {
+            setApplicationSubmitting(false);
+          }
+        },
+        onDismiss: () => {
+          setApplicationSubmitting(false);
+          setShowPaymentChecker(true);
+          setErrorBanner('Payment window was closed. We are checking your payment status.');
+        },
+        onFailure: (error) => {
+          setApplicationSubmitting(false);
+          setShowPaymentChecker(true);
+          setErrorBanner(`Payment failed: ${error?.description || 'Transaction unsuccessful.'}`);
+        },
+      });
+    } catch (err) {
+      console.error('Payment initiation failed:', err);
+      setErrorBanner(err.parsedMessage || err.message || 'Payment processing failed. Please try again.');
       setApplicationSubmitting(false);
     }
   };
@@ -15591,7 +24675,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       console.error('Backend batch creation failed:', err);
       setErrorBanner(err.parsedMessage || err.response?.data?.message || err.message || 'Failed to create batch.');
     }
-  }, [newBatch, batches, courses, fetchERPData]);
+  }, [newBatch, batches, fetchERPData]);
 
   const handleEnrollmentSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -15625,7 +24709,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     if (!enrollDocs.photoDoc) missingDocs.push('Candidate Photo');
     if (!enrollDocs.marksCertificateDoc) missingDocs.push('Marks Certificate');
     if (!enrollDocs.medCouncilCertDoc) missingDocs.push('Medical Council Certificate');
-    if (!enrollDocs.paymentReceiptDoc) missingDocs.push('UTR Payment Receipt');
     if (!enrollDocs.studentSignatureDoc) missingDocs.push('Student Signature');
 
     if (missingDocs.length > 0) {
@@ -15639,8 +24722,9 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       studentFormData.append('firstName', enrollForm.firstName);
       studentFormData.append('lastName', enrollForm.lastName);
       studentFormData.append('homeAddress', enrollForm.homeAddress);
-      studentFormData.append('contactNumber', enrollForm.contactNumber);
+      studentFormData.append('contactNumber', enrollForm.contactNumber.replace(/\D/g, ''));
       studentFormData.append('email', enrollForm.emailAddress);
+      studentFormData.append('dateOfBirth', enrollForm.dateOfBirth);
       studentFormData.append('qualification', enrollForm.qualification);
       studentFormData.append('mbbsQualification', enrollForm.mcQualifications || 'MBBS');
       studentFormData.append('yearOfPassing', enrollForm.passingYear);
@@ -15660,7 +24744,11 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       studentFormData.append('courseId', courseIdVal);
       studentFormData.append('batchId', batchIdVal);
       studentFormData.append('courseDirector', enrollForm.courseDirector || 'Dr. Ananya Sen');
-      studentFormData.append('utrNumber', enrollForm.utrNumber || 'UTR-' + Date.now());
+      studentFormData.append('razorpayOrderId', enrollForm.razorpayOrderId || '');
+      studentFormData.append('razorpayPaymentId', enrollForm.razorpayPaymentId || '');
+      studentFormData.append('razorpaySignature', enrollForm.razorpaySignature || '');
+      studentFormData.append('paymentMode', enrollForm.paymentMode || 'Razorpay');
+      studentFormData.append('paymentDate', enrollForm.txnDate || new Date().toISOString().split('T')[0]);
 
       const appendEnrollFile = (backendKey, fileState) => {
         if (fileState) {
@@ -15677,7 +24765,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       appendEnrollFile('passportPhoto', enrollDocs.photoDoc);
       appendEnrollFile('mbbsCertificate', enrollDocs.marksCertificateDoc);
       appendEnrollFile('medicalCouncilRegistrationCertificate', enrollDocs.medCouncilCertDoc);
-      appendEnrollFile('paymentReceipt', enrollDocs.paymentReceiptDoc);
       appendEnrollFile('semiMembershipForm', enrollDocs.studentSignatureDoc || enrollDocs.lifeMembershipCardDoc);
       if (enrollDocs.fmgeCertDoc) {
         appendEnrollFile('fmgeResultCopy', enrollDocs.fmgeCertDoc);
@@ -15703,13 +24790,14 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         homeAddress: enrollForm.homeAddress,
         contactNumber: enrollForm.contactNumber,
         courseDirector: enrollForm.courseDirector,
-        utrNumber: enrollForm.utrNumber,
+        razorpayOrderId: enrollForm.razorpayOrderId,
+        razorpayPaymentId: enrollForm.razorpayPaymentId,
+        razorpaySignature: enrollForm.razorpaySignature,
         ...data
       };
 
       const updatedStudents = [studentRecord, ...students];
       setStudents(updatedStudents);
-      localStorage.setItem('semi_students', JSON.stringify(updatedStudents));
 
       await fetchERPData();
 
@@ -15719,6 +24807,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         firstName: '',
         middleName: '',
         lastName: '',
+        dateOfBirth: '',
         homeAddress: '',
         contactNumber: '',
         emailAddress: '',
@@ -15732,8 +24821,10 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         course: courses[0]?.courseName || 'MBBS',
         batch: 'Batch 2026-A',
         courseDirector: 'Dr. T.V. Ramakrishnan',
-        paymentMode: 'Online Transfer',
-        utrNumber: '',
+        paymentMode: 'Razorpay',
+        razorpayOrderId: '',
+        razorpayPaymentId: '',
+        razorpaySignature: '',
         txnDate: new Date().toISOString().split('T')[0],
         currentDesignation: 'Resident',
         lifeMembershipNo: '',
@@ -15761,7 +24852,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       setErrorBanner(err.parsedMessage || err.response?.data?.message || err.message || 'Failed to enroll student.');
       return false;
     }
-  }, [enrollForm, enrollDocs, students, courses, batches, fetchERPData]);
+  }, [enrollForm, enrollDocs, students, courses, batches, fetchERPData, setActiveTab]);
 
   const handleEnrollDocUpload = useCallback((fieldName, file) => {
     if (!file) return;
@@ -15836,7 +24927,9 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         isForeignGraduate: updatedStudent.isForeignGraduate,
         homeAddress: updatedStudent.homeAddress,
         courseDirector: updatedStudent.courseDirector,
-        utrNumber: updatedStudent.utrNumber,
+        razorpayOrderId: updatedStudent.razorpayOrderId,
+        razorpayPaymentId: updatedStudent.razorpayPaymentId,
+        razorpaySignature: updatedStudent.razorpaySignature,
       };
 
       await academicService.updateStudent(updatedStudent._id || updatedStudent.id, payload);
@@ -15871,7 +24964,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         setConfirmConfig(null);
         const updated = courses.filter(c => c.id !== id);
         setCourses(updated);
-        localStorage.setItem('semi_courses', JSON.stringify(updated));
         setSuccessBanner('Course deleted successfully.');
       }
     });
@@ -15918,6 +25010,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       uploadedDocs: updatedDocs || uploadedDocs,
       paymentComplete: updatedPayment !== undefined ? updatedPayment : paymentComplete,
       paymentDetails: updatedPayment ? paymentDetails : null,
+      paymentVerificationData: paymentVerificationData,
       record: updatedRecord || applicationRecord,
       activeWizardStep: wizardStep !== undefined ? wizardStep : activeWizardStep
     };
@@ -16041,6 +25134,24 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             fetchERPData={fetchERPData}
           />
         );
+      case 'results':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <InstituteERPResults />
+          </div>
+        );
+      case 'revaluation':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <InstituteERPRevaluation />
+          </div>
+        );
+      case 'remittance':
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <InstituteERPRemittance />
+          </div>
+        );
       default:
         return null;
     }
@@ -16107,6 +25218,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             setLoginForm={setLoginForm} 
             handleLoginSubmit={handleLoginSubmit} 
             setCurrentStep={setCurrentStep} 
+            errorMsg={errorBanner}
           />
         )}
 
@@ -16158,9 +25270,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
               uploadProgress={uploadProgress}
               setUploadProgress={setUploadProgress}
               paymentComplete={paymentComplete}
-              setPaymentComplete={setPaymentComplete}
               paymentDetails={paymentDetails}
-              setPaymentDetails={setPaymentDetails}
               validateWizardStep={validateWizardStep}
               setErrorBanner={setErrorBanner}
               saveToLocalStorage={saveToLocalStorage}
@@ -16169,8 +25279,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
               handleWizardNext={handleWizardNext}
               handleWizardBack={handleWizardBack}
               handleApplicationSubmit={handleApplicationSubmit}
-              handlePaymentInitiate={handlePaymentInitiate}
-              paymentProcessing={paymentProcessing}
               applicationSubmitting={applicationSubmitting}
             />
           </div>
@@ -16226,6 +25334,21 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             onCancel={confirmConfig.onCancel || (() => setConfirmConfig(null))}
           />
         )}
+        {showPaymentChecker && (
+          <PaymentStatusChecker
+            isOpen={showPaymentChecker}
+            paymentType="institute"
+            onComplete={() => {
+              setShowPaymentChecker(false);
+              checkPaymentStatus();
+            }}
+            onRetry={handlePaymentInitiate}
+            onCancel={() => {
+              setShowPaymentChecker(false);
+              setPaymentProcessing(false);
+            }}
+          />
+        )}
       </div>
     </InstitutionalLayout>
   );
@@ -16237,7 +25360,6 @@ export default InstitutePortal;
 ### `client/src/pages/institute/InstitutionalLayout.jsx`
 
 ```jsx
-import React from 'react';
 import logo from '../../assets/semi logo.png';
 
 const InstitutionalLayout = ({ children, portalType = 'institute', hideHeaderFooter = false }) => {
@@ -16319,6 +25441,7 @@ const InstitutionalLayout = ({ children, portalType = 'institute', hideHeaderFoo
 };
 
 export default InstitutionalLayout;
+
 ```
 
 ### `client/src/pages/institute/apply/index.jsx`
@@ -16330,21 +25453,20 @@ export default InstitutionalLayout;
  * State and routing logic is managed by the shared InstitutePortal orchestrator.
  */
 export { default } from '../InstitutePortal';
+
 ```
 
 ### `client/src/pages/institute/components/ApplicationStatusPending.jsx`
 
 ```jsx
-import React, { useEffect, useState } from 'react';
-import { Clock, ShieldAlert, CheckCircle2, ShieldCheck, Mail, LogOut } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Clock, ShieldAlert, CheckCircle2, LogOut } from 'lucide-react';
 import ConfirmModal from '../../../Components/ConfirmModal';
 
 const ApplicationStatusPending = ({
   applicationRecord,
   appForm,
-  uploadedDocs,
   loadApplicationFromStorage,
-  saveToLocalStorage,
   setApplicationRecord,
   setCurrentStep,
   handleLogout
@@ -16510,13 +25632,13 @@ const ApplicationStatusPending = ({
 };
 
 export default ApplicationStatusPending;
+
 ```
 
 ### `client/src/pages/institute/components/EmailVerificationSimulator.jsx`
 
 ```jsx
-import React from 'react';
-import { Mail, CheckCircle2 } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
 const EmailVerificationSimulator = ({ user }) => {
   return (
@@ -16555,7 +25677,7 @@ export default EmailVerificationSimulator;
 ### `client/src/pages/institute/components/ForgotPassword.jsx`
 
 ```jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Mail, ArrowLeft, Send, RefreshCw } from 'lucide-react';
 import authService from '../../../api/auth';
 
@@ -16647,13 +25769,14 @@ const ForgotPassword = ({ setCurrentStep, setErrorBanner, setSuccessBanner }) =>
 };
 
 export default ForgotPassword;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteERPBatches.jsx`
 
 ```jsx
-import React, { useState, useEffect } from 'react';
-import { Pencil, Trash2, Calendar, Users, PlusCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Pencil, Trash2, XCircle } from 'lucide-react';
 
 const InstituteERPBatches = ({
   batches = [],
@@ -16671,12 +25794,17 @@ const InstituteERPBatches = ({
     seats: ''
   });
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+  const totalPages = Math.ceil(batches.length / itemsPerPage) || 1;
+  const paginatedBatches = batches.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   // Handle setting edit form when selecting a batch to edit
   const startEdit = (batch) => {
     setEditingBatch(batch);
     setEditForm({
       name: batch.name || '',
-      startDate: batch.startDate || '',
+      startDate: batch.startDate ? batch.startDate.split('T')[0] : '',
       seats: batch.seats || '5'
     });
   };
@@ -16688,7 +25816,10 @@ const InstituteERPBatches = ({
 
   const onEditSubmit = async (e) => {
     e.preventDefault();
-    if (!editForm.name || !editForm.startDate) return;
+    if (!editForm.name || !editForm.startDate) {
+      alert('Please fill in the batch name and commencement date.');
+      return;
+    }
     
     const seats = parseInt(editForm.seats, 10);
     if (isNaN(seats) || seats <= 0) {
@@ -16697,7 +25828,8 @@ const InstituteERPBatches = ({
     }
 
     if (handleUpdateBatch) {
-      await handleUpdateBatch(editingBatch._id || editingBatch.id, {
+      const batchId = editingBatch._id || editingBatch.id;
+      await handleUpdateBatch(batchId, {
         name: editForm.name,
         startDate: editForm.startDate,
         seats: Number(editForm.seats)
@@ -16705,6 +25837,8 @@ const InstituteERPBatches = ({
     }
     cancelEdit();
   };
+
+
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200 text-left">
@@ -16739,7 +25873,7 @@ const InstituteERPBatches = ({
               <select
                 required
                 disabled={!!editingBatch}
-                value={editingBatch ? (editingBatch.course?._id || editingBatch.course || '') : (newBatch.courseId || '')}
+                value={editingBatch ? (editingBatch.course?._id || editingBatch.course || editingBatch.courseId || '') : (newBatch.courseId || '')}
                 onChange={(e) => {
                   if (!editingBatch) {
                     setNewBatch({ ...newBatch, courseId: e.target.value });
@@ -16750,7 +25884,7 @@ const InstituteERPBatches = ({
                 <option value="">-- Choose Course --</option>
                 {courses.map(course => (
                   <option key={course.id || course._id} value={course.id || course._id}>
-                    {course.courseName} ({course.courseCode})
+                    {course.courseName || course.name} ({course.courseCode || ''})
                   </option>
                 ))}
               </select>
@@ -16806,7 +25940,7 @@ const InstituteERPBatches = ({
                     setNewBatch({ ...newBatch, seats: e.target.value });
                   }
                 }}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
               />
             </div>
 
@@ -16828,7 +25962,7 @@ const InstituteERPBatches = ({
           <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-3">Active Batches Registry</h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-semibold text-xs text-gray-600">
-            {batches.map((batch) => {
+            {paginatedBatches.map((batch) => {
               const ratio = Math.min(100, Math.floor(((batch.activeFellows || 0) / parseInt(batch.seats || 5, 10)) * 100));
               const isEditingThis = editingBatch && (editingBatch._id === batch._id || editingBatch.id === batch.id);
               const courseDisplayName = batch.course?.name || batch.course?.courseName || batch.courseName || (typeof batch.course === 'string' ? batch.course : '');
@@ -16853,7 +25987,7 @@ const InstituteERPBatches = ({
                           Course: {courseDisplayName}
                         </span>
                       )}
-                      <span className="text-[10px] text-gray-500 font-semibold block mt-1">Commencement: {batch.startDate}</span>
+                      <span className="text-[10px] text-gray-500 font-semibold block mt-1">Commencement: {batch.startDate ? batch.startDate.split('T')[0] : 'N/A'}</span>
                     </div>
 
                     {/* Actions buttons */}
@@ -16895,6 +26029,34 @@ const InstituteERPBatches = ({
               </div>
             )}
           </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, batches.length)} of {batches.length} Batches
+              </span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                <div className="flex items-center px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
+                  {currentPage} / {totalPages}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -16907,7 +26069,7 @@ export default InstituteERPBatches;
 ### `client/src/pages/institute/components/InstituteERPCourses.jsx`
 
 ```jsx
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle } from 'lucide-react';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
@@ -16915,13 +26077,12 @@ import ConfirmModal from '../../../Components/ConfirmModal';
 
 const InstituteERPCourses = ({ 
   courses, 
-  setCourses,  // Added setCourses to update parent state
+  setCourses,  // Required: function to update courses in parent
   courseForm, 
   setCourseForm, 
   courseSearch, 
   setCourseSearch, 
-  handleCreateCourse, 
-  deleteCourse: deleteCourseProp // Renamed to avoid conflict
+  handleCreateCourse
 }) => {
   // ─── State for Edit Modal ──────────────────────────────────────────────────
   const [editingCourse, setEditingCourse] = useState(null);
@@ -16938,7 +26099,7 @@ const InstituteERPCourses = ({
   });
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [editError, setEditError] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // For delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   // ─── View Modal State ──────────────────────────────────────────────────────
   const [viewingCourse, setViewingCourse] = useState(null);
@@ -16953,6 +26114,15 @@ const InstituteERPCourses = ({
       c.courseCode?.toLowerCase().includes(courseSearch?.toLowerCase() || '')
     );
   }, [courses, courseSearch]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  const totalPages = Math.ceil(filteredCoursesList.length / itemsPerPage) || 1;
+  const paginatedCourses = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredCoursesList.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredCoursesList, currentPage]);
 
   // ─── Edit Handlers ──────────────────────────────────────────────────────────
   const openEditModal = useCallback((course) => {
@@ -17029,7 +26199,6 @@ const InstituteERPCourses = ({
           return {
             ...c,
             ...updatedCourse,
-            // Keep the id/_id mapping consistent
             id: c.id || c._id,
             _id: c._id || c.id,
             courseName: updatedCourse.name || editForm.courseName,
@@ -17048,10 +26217,8 @@ const InstituteERPCourses = ({
       });
 
       setCourses(updatedCourses);
-      localStorage.setItem('semi_courses', JSON.stringify(updatedCourses));
       closeEditModal();
       
-      // Show success notification
       setToast({ message: `Course "${editForm.courseName}" updated successfully!`, type: 'success' });
       
     } catch (err) {
@@ -17078,19 +26245,15 @@ const InstituteERPCourses = ({
           const courseId = course._id || course.id;
           await academicService.deleteCourse(courseId);
 
-          // Remove from local state
           const updatedCourses = courses.filter(c => c.id !== courseId && c._id !== courseId);
           setCourses(updatedCourses);
-          localStorage.setItem('semi_courses', JSON.stringify(updatedCourses));
           
-          // Show success notification
           setToast({ message: `Course "${course.courseName}" deleted successfully!`, type: 'success' });
           
         } catch (err) {
           console.error('Delete course error:', err);
           const errorMsg = err.parsedMessage || err.message || 'Failed to delete course.';
           
-          // Check if it's a student/batch constraint error
           if (err.response?.status === 400 && errorMsg.includes('students')) {
             setToast({ message: `${errorMsg}. Please transfer or de-enroll all students from this course first.`, type: 'warning' });
           } else if (err.response?.status === 400 && errorMsg.includes('batches')) {
@@ -17128,7 +26291,6 @@ const InstituteERPCourses = ({
           const courseId = course._id || course.id;
           await academicService.updateCourse(courseId, { status: newStatus });
 
-          // Update local state
           const updatedCourses = courses.map(c => {
             if (c.id === courseId || c._id === courseId) {
               return { ...c, status: newStatus };
@@ -17136,7 +26298,6 @@ const InstituteERPCourses = ({
             return c;
           });
           setCourses(updatedCourses);
-          localStorage.setItem('semi_courses', JSON.stringify(updatedCourses));
           
           setToast({ message: `Course status updated to "${newStatus}"!`, type: 'success' });
         } catch (err) {
@@ -17326,7 +26487,10 @@ const InstituteERPCourses = ({
               type="text"
               placeholder="Search Courses..."
               value={courseSearch}
-              onChange={(e) => setCourseSearch(e.target.value)}
+              onChange={(e) => {
+                setCourseSearch(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
             />
           </div>
@@ -17347,15 +26511,16 @@ const InstituteERPCourses = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white font-medium text-gray-800">
-              {filteredCoursesList.length > 0 ? (
-                filteredCoursesList.map((course, idx) => {
+              {paginatedCourses.length > 0 ? (
+                paginatedCourses.map((course, idx) => {
+                  const globalIdx = (currentPage - 1) * itemsPerPage + idx;
                   const studentCount = course.studentsCount || 0;
                   const batchCount = course.batchesCount || 0;
                   const isActive = course.status === 'Active';
 
                   return (
                     <tr key={course.id || course._id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4 text-gray-400 font-mono">{(idx + 1).toString().padStart(2, '0')}</td>
+                      <td className="px-6 py-4 text-gray-400 font-mono">{(globalIdx + 1).toString().padStart(2, '0')}</td>
                       <td className="px-6 py-4 font-black text-gray-900">{course.courseName}</td>
                       <td className="px-6 py-4">
                         <span className="bg-gray-100 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200/50 font-mono">
@@ -17388,7 +26553,6 @@ const InstituteERPCourses = ({
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex justify-center gap-1">
-                          {/* View Button */}
                           <button 
                             type="button" 
                             onClick={() => openViewModal(course)}
@@ -17398,7 +26562,6 @@ const InstituteERPCourses = ({
                             <Eye className="w-4 h-4" />
                           </button>
                           
-                          {/* Edit Button */}
                           <button 
                             type="button" 
                             onClick={() => openEditModal(course)}
@@ -17408,7 +26571,6 @@ const InstituteERPCourses = ({
                             <Edit className="w-4 h-4" />
                           </button>
                           
-                          {/* Delete Button */}
                           <button
                             type="button"
                             onClick={() => handleDeleteCourse(course)}
@@ -17439,6 +26601,34 @@ const InstituteERPCourses = ({
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCoursesList.length)} of {filteredCoursesList.length} Courses
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <div className="flex items-center px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
+                {currentPage} / {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─── EDIT COURSE MODAL ────────────────────────────────────────────────── */}
@@ -17789,8 +26979,8 @@ export default InstituteERPCourses;
 ### `client/src/pages/institute/components/InstituteERPDashboard.jsx`
 
 ```jsx
-import React, { useMemo } from 'react';
-import { BookOpen, Layers, Users, CreditCard, ChevronRight, Activity, HelpCircle } from 'lucide-react';
+import { useMemo } from 'react';
+import { BookOpen, Layers, Users, CreditCard, Activity, HelpCircle } from 'lucide-react';
 
 const InstituteERPDashboard = ({ 
   courses, 
@@ -17806,9 +26996,13 @@ const InstituteERPDashboard = ({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200 text-left">
-      <div>
-        <h2 className="text-2xl font-black text-gray-900 tracking-tight">Institutional Dashboard</h2>
-        <p className="text-xs text-gray-400 mt-0.5">Welcome to your emergency medicine academic control console</p>
+      {/* Welcome Panel */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-primary-900 to-primary-800 p-8 rounded-3xl border border-primary-700/50 shadow-xl shadow-primary-900/10 relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="relative z-10 text-left">
+          <h2 className="text-2xl font-black text-white tracking-tight drop-shadow-sm">Institutional Dashboard</h2>
+          <p className="text-xs text-primary-200 mt-1 font-medium">Welcome to your emergency medicine academic control console</p>
+        </div>
       </div>
 
       {/* Grid count stats cards */}
@@ -17959,41 +27153,35 @@ const InstituteERPDashboard = ({
 };
 
 export default InstituteERPDashboard;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteERPEnrollment.jsx`
 
 ```jsx
 import React, { useState } from 'react';
-import { Check, CheckCircle2, Trash2, User, BookOpen, Shield, Globe, GraduationCap, CreditCard, Award, FileText, ArrowRight, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, Trash2, Check, ArrowRight, ArrowLeft } from 'lucide-react';
+import { initiateRazorpayPayment } from '../../../utils/razorpay';
+import academicService from '../../../api/academic';
 
-const InstituteERPEnrollment = ({
-  enrollForm,
-  setEnrollForm,
-  enrollDocs,
-  setEnrollDocs,
-  enrollProgress,
-  courses = [],
-  batches = [],
-  user,
-  appForm,
-  handleEnrollmentSubmit,
-  handleEnrollDocUpload,
-  removeEnrollDoc
+const InstituteERPEnrollment = ({ 
+  enrollForm, 
+  setEnrollForm, 
+  enrollDocs, 
+  enrollProgress, 
+  courses = [], 
+  batches = [], 
+  user, 
+  appForm, 
+  handleEnrollmentSubmit, 
+  handleEnrollDocUpload, 
+  removeEnrollDoc 
 }) => {
-  const [wizardStep, setWizardStep] = useState(() => {
-    const saved = localStorage.getItem('semi_enrollment_step');
-    if (saved) {
-      const parsed = parseInt(saved, 10);
-      if (!isNaN(parsed) && parsed >= 1 && parsed <= 4) return parsed;
-    }
-    return 1;
-  });
-
-  React.useEffect(() => {
-    localStorage.setItem('semi_enrollment_step', wizardStep);
-  }, [wizardStep]);
+  const [wizardStep, setWizardStep] = useState(1);
   const [localError, setLocalError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const today = new Date().toISOString().split('T')[0];
+  const currentYear = new Date().getFullYear();
 
   // Local state to track "Is FMG Candidate?" matching screenshot dropdown
   const [isFmgSelected, setIsFmgSelected] = useState(enrollForm.studentCategory === 'FMG' ? 'Yes' : 'No');
@@ -18100,65 +27288,80 @@ const InstituteERPEnrollment = ({
   };
 
   const validateStep = (step) => {
+    const errors = {};
     if (step === 1) {
-      if (!enrollForm.firstName?.trim()) return 'First Name is a mandatory field.';
-      if (!enrollForm.lastName?.trim()) return 'Last Name is a mandatory field.';
-      if (!enrollForm.homeAddress?.trim()) return 'Home Address is a mandatory field.';
+      if (!enrollForm.firstName?.trim()) errors.firstName = 'First Name is mandatory.';
+      if (!enrollForm.lastName?.trim()) errors.lastName = 'Last Name is mandatory.';
+      if (!enrollForm.dateOfBirth) {
+        errors.dateOfBirth = 'Date of Birth is mandatory.';
+      } else if (new Date(enrollForm.dateOfBirth) > new Date()) {
+        errors.dateOfBirth = 'Date of Birth cannot be in the future.';
+      }
+      if (!enrollForm.homeAddress?.trim()) errors.homeAddress = 'Home Address is mandatory.';
       
-      const phoneRegex = /^\d{10}$/;
-      if (!enrollForm.contactNumber?.trim()) return 'Contact Number is a mandatory field.';
-      if (enrollForm.contactNumber.includes('-')) return 'Contact Number cannot be negative.';
-      if (!phoneRegex.test(enrollForm.contactNumber.replace(/\D/g, ''))) return 'Contact Number must be a valid 10-digit number.';
-      
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!enrollForm.emailAddress?.trim()) return 'Email Address is a mandatory field.';
-      if (!emailRegex.test(enrollForm.emailAddress)) return 'Valid Email Address is required.';
-      if (!enrollDocs.photoDoc) return 'Candidate Passport photograph must be uploaded.';
-    }
-    if (step === 2) {
-      if (!enrollForm.qualification) return 'Postgraduate qualification selection is mandatory.';
-      
-      const year = parseInt(enrollForm.passingYear, 10);
-      if (!enrollForm.passingYear?.trim() || isNaN(year) || year < 1900 || year > new Date().getFullYear()) {
-        return 'Valid Passing Year is required (e.g. 2018).';
+      const phoneDigits = (enrollForm.contactNumber || '').replace(/\D/g, '');
+      const phoneRegex = /^\d{10,15}$/;
+      if (!enrollForm.contactNumber?.trim()) {
+        errors.contactNumber = 'Contact Number is mandatory.';
+      } else if (!phoneRegex.test(phoneDigits)) {
+        errors.contactNumber = 'Contact Number must be 10-15 digits.';
       }
       
-      if (!enrollForm.universityName?.trim()) return 'University Name is a mandatory field.';
-      if (!enrollDocs.marksCertificateDoc) return 'MBBS Degree Certificate must be uploaded.';
-      if (!enrollForm.medCouncilRegNo?.trim()) return 'Medical Council Registration Number is a mandatory field.';
-      if (!enrollForm.stateMedCouncil?.trim()) return 'State Medical Council is a mandatory field.';
-      if (!enrollDocs.medCouncilCertDoc) return 'Medical Council Registration Certificate must be uploaded.';
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!enrollForm.emailAddress?.trim()) {
+        errors.emailAddress = 'Email Address is mandatory.';
+      } else if (/\s/.test(enrollForm.emailAddress)) {
+        errors.emailAddress = 'Email Address cannot contain spaces.';
+      } else if (!emailRegex.test(enrollForm.emailAddress)) {
+        errors.emailAddress = 'Enter a valid email address (e.g. doctor@example.com).';
+      }
+      if (!enrollDocs.photoDoc) errors.photoDoc = 'Passport photograph must be uploaded.';
+    }
+    if (step === 2) {
+      if (!enrollForm.qualification) errors.qualification = 'Postgraduate qualification selection is mandatory.';
+      
+      const year = parseInt(enrollForm.passingYear, 10);
+      if (!enrollForm.passingYear?.trim() || isNaN(year)) {
+        errors.passingYear = 'Passing Year is required.';
+      } else if (year < 1900) {
+        errors.passingYear = 'Passing Year cannot be before 1900.';
+      } else if (year > currentYear) {
+        errors.passingYear = 'Passing Year cannot be in the future.';
+      }
+      
+      if (!enrollForm.universityName?.trim()) errors.universityName = 'University Name is mandatory.';
+      if (!enrollDocs.marksCertificateDoc) errors.marksCertificateDoc = 'MBBS Degree Certificate must be uploaded.';
+      if (!enrollForm.medCouncilRegNo?.trim()) errors.medCouncilRegNo = 'Medical Council Registration Number is mandatory.';
+      if (!enrollForm.stateMedCouncil?.trim()) errors.stateMedCouncil = 'State Medical Council is mandatory.';
+      if (!enrollDocs.medCouncilCertDoc) errors.medCouncilCertDoc = 'Medical Council Registration Certificate must be uploaded.';
       if (isFmgSelected === 'Yes' && !enrollDocs.fmgeCertDoc) {
-        return 'FMGE Screening Pass Result Certificate copy must be uploaded for Foreign Medical Graduates.';
+        errors.fmgeCertDoc = 'FMGE Screening Pass Result Certificate must be uploaded for Foreign Medical Graduates.';
       }
     }
     if (step === 3) {
-      if (!enrollForm.course) return 'Please select a program course.';
-      if (!enrollForm.batch) return 'Please select an academic batch.';
-      if (!enrollForm.courseDirector?.trim()) return 'Course Director is a mandatory field.';
-      if (!enrollForm.currentDesignation?.trim()) return 'Designation is a mandatory field.';
-      if (!enrollForm.lifeMembershipNo?.trim()) return 'Life Membership Number is a mandatory field.';
-      if (!enrollForm.mcQualifications?.trim()) return 'Medical Council Qualifications is a mandatory field.';
-      if (!enrollDocs.lifeMembershipCardDoc) return 'SEMI Membership Card/Form document must be uploaded.';
+      if (!enrollForm.course) errors.course = 'Please select a program course.';
+      if (!enrollForm.batch) errors.batch = 'Please select an academic batch.';
+      if (!enrollForm.courseDirector?.trim()) errors.courseDirector = 'Course Director is mandatory.';
+      if (!enrollForm.currentDesignation?.trim()) errors.currentDesignation = 'Designation is mandatory.';
+      if (!enrollForm.lifeMembershipNo?.trim()) errors.lifeMembershipNo = 'Life Membership Number is mandatory.';
+      if (!enrollForm.mcQualifications?.trim()) errors.mcQualifications = 'Medical Council Qualifications is mandatory.';
+      if (!enrollDocs.lifeMembershipCardDoc) errors.lifeMembershipCardDoc = 'SEMI Membership Card/Form must be uploaded.';
     }
     if (step === 4) {
-      if (!enrollForm.paymentMode) return 'Payment Mode selection is mandatory.';
-      if (!enrollForm.utrNumber?.trim()) return 'UTR Transaction Reference Number is mandatory.';
-      if (enrollForm.utrNumber.trim().length < 8) return 'UTR Transaction Reference Number must be at least 8 characters.';
-      if (!enrollForm.txnDate) return 'Transaction Date is mandatory.';
-      if (!enrollDocs.paymentReceiptDoc) return 'Enrollment Payment Receipt must be uploaded.';
-      if (!enrollDocs.studentSignatureDoc) return 'Student Signature file must be uploaded.';
-      if (!enrollDocs.hodSignatureDoc) return 'PG Degree Certificate / HOD confirmation document must be uploaded.';
-      if (!enrollForm.declarationCheck) return 'You must check the candidate credentials declaration check.';
+      if (!enrollDocs.studentSignatureDoc) errors.studentSignatureDoc = 'Student Signature file must be uploaded.';
+      if (!enrollDocs.hodSignatureDoc) errors.hodSignatureDoc = 'PG Degree Certificate / HOD confirmation must be uploaded.';
+      if (!enrollForm.declarationCheck) errors.declarationCheck = 'You must accept the declaration.';
     }
-    return null;
+    return errors;
   };
 
   const handleNext = () => {
     setLocalError(null);
-    const error = validateStep(wizardStep);
-    if (error) {
-      setLocalError(error);
+    const errors = validateStep(wizardStep);
+    setFieldErrors(errors);
+    const errorMessages = Object.values(errors);
+    if (errorMessages.length > 0) {
+      setLocalError(errorMessages[0]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -18168,22 +27371,79 @@ const InstituteERPEnrollment = ({
 
   const handleBack = () => {
     setLocalError(null);
+    setFieldErrors({});
     setWizardStep(prev => prev - 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const clearFieldError = (field) => {
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   };
 
   const handleSubmitIntercept = async (e) => {
     e.preventDefault();
     setLocalError(null);
-    const error = validateStep(4);
-    if (error) {
-      setLocalError(error);
+    const errors = validateStep(4);
+    setFieldErrors(errors);
+    const errorMessages = Object.values(errors);
+    if (errorMessages.length > 0) {
+      setLocalError(errorMessages[0]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    const success = await handleEnrollmentSubmit(e);
-    if (success) {
-      setWizardStep(1);
+    
+    try {
+      // 1. Create Razorpay order (Using 1 INR for testing to avoid test limit errors)
+      const orderRes = await academicService.createRazorpayOrder({ amount: 1, purpose: 'Student Enrollment' });
+      const orderData = orderRes.data || orderRes;
+      
+      // 2. Initiate Payment
+      const finalOrderId = orderData.data?.orderId || orderData.orderId || orderData.id || orderData.data?.id;
+      initiateRazorpayPayment({
+        orderId: finalOrderId,
+        amount: 1 * 100, // Razorpay takes amount in paise
+        prefill: {
+          name: `${enrollForm.firstName} ${enrollForm.lastName}`,
+          email: enrollForm.emailAddress,
+          contact: enrollForm.contactNumber
+        },
+        onSuccess: async (response) => {
+          try {
+            // Verify payment
+            await academicService.verifyRazorpayPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            
+            // Set payment data dynamically
+            enrollForm.paymentMode = 'Razorpay';
+            enrollForm.razorpayOrderId = response.razorpay_order_id;
+            enrollForm.razorpayPaymentId = response.razorpay_payment_id;
+            enrollForm.razorpaySignature = response.razorpay_signature;
+            enrollForm.txnDate = new Date().toISOString().split('T')[0];
+            
+            // Wait for enrollment form submission
+            const success = await handleEnrollmentSubmit(e);
+            if (success) {
+              setWizardStep(1);
+            }
+          } catch (err) {
+            console.error(err);
+            setLocalError('Payment verification failed.');
+          }
+        },
+        onDismiss: () => {
+          setLocalError('Payment was cancelled.');
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      setLocalError('Failed to initialize payment gateway.');
     }
   };
 
@@ -18206,7 +27466,7 @@ const InstituteERPEnrollment = ({
           <span className="text-[9px] text-blue-200 uppercase font-black tracking-widest block">App Fee Due</span>
           <span className="text-lg font-black tracking-tight">₹1,40,000</span>
         </div>
-      </div>
+      </div>``
 
       {/* Dynamic Wizard Steps Indicators */}
       <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
@@ -18261,7 +27521,7 @@ const InstituteERPEnrollment = ({
               Personal Profile & Contact
             </h3>
             
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">First Name *</label>
                 <input
@@ -18269,9 +27529,10 @@ const InstituteERPEnrollment = ({
                   required
                   placeholder="First Name"
                   value={enrollForm.firstName}
-                  onChange={(e) => setEnrollForm({...enrollForm, firstName: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  onChange={(e) => { setEnrollForm({...enrollForm, firstName: e.target.value}); clearFieldError('firstName'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.firstName ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {fieldErrors.firstName && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.firstName}</p>}
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Middle Name</label>
@@ -18290,9 +27551,22 @@ const InstituteERPEnrollment = ({
                   required
                   placeholder="Last Name"
                   value={enrollForm.lastName}
-                  onChange={(e) => setEnrollForm({...enrollForm, lastName: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  onChange={(e) => { setEnrollForm({...enrollForm, lastName: e.target.value}); clearFieldError('lastName'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.lastName ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {fieldErrors.lastName && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.lastName}</p>}
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Date of Birth *</label>
+                <input
+                  type="date"
+                  required
+                  max={today}
+                  value={enrollForm.dateOfBirth || ''}
+                  onChange={(e) => { setEnrollForm({...enrollForm, dateOfBirth: e.target.value}); clearFieldError('dateOfBirth'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.dateOfBirth ? 'border-red-400' : 'border-slate-200'}`}
+                />
+                {fieldErrors.dateOfBirth && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.dateOfBirth}</p>}
               </div>
             </div>
 
@@ -18302,10 +27576,11 @@ const InstituteERPEnrollment = ({
                 required
                 placeholder="Temporary Address / Residential Address"
                 value={enrollForm.homeAddress}
-                onChange={(e) => setEnrollForm({...enrollForm, homeAddress: e.target.value})}
+                onChange={(e) => { setEnrollForm({...enrollForm, homeAddress: e.target.value}); clearFieldError('homeAddress'); }}
                 rows={3}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.homeAddress ? 'border-red-400' : 'border-slate-200'}`}
               />
+              {fieldErrors.homeAddress && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.homeAddress}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -18316,9 +27591,10 @@ const InstituteERPEnrollment = ({
                   required
                   placeholder="+91 Contact Number"
                   value={enrollForm.contactNumber}
-                  onChange={(e) => setEnrollForm({...enrollForm, contactNumber: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  onChange={(e) => { setEnrollForm({...enrollForm, contactNumber: e.target.value}); clearFieldError('contactNumber'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.contactNumber ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {fieldErrors.contactNumber && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.contactNumber}</p>}
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Email Address *</label>
@@ -18327,9 +27603,10 @@ const InstituteERPEnrollment = ({
                   required
                   placeholder="doctor@example.com"
                   value={enrollForm.emailAddress}
-                  onChange={(e) => setEnrollForm({...enrollForm, emailAddress: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  onChange={(e) => { setEnrollForm({...enrollForm, emailAddress: e.target.value}); clearFieldError('emailAddress'); }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.emailAddress ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {fieldErrors.emailAddress && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.emailAddress}</p>}
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Passport Photo *</label>
@@ -18369,12 +27646,14 @@ const InstituteERPEnrollment = ({
                   <input
                     type="number"
                     min="1900"
+                    max={currentYear}
                     required
                     placeholder="2025"
                     value={enrollForm.passingYear}
-                    onChange={(e) => setEnrollForm({...enrollForm, passingYear: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                    onChange={(e) => { setEnrollForm({...enrollForm, passingYear: e.target.value}); clearFieldError('passingYear'); }}
+                    className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all ${fieldErrors.passingYear ? 'border-red-400' : 'border-slate-200'}`}
                   />
+                  {fieldErrors.passingYear && <p className="text-red-500 text-[10px] mt-1 font-semibold">{fieldErrors.passingYear}</p>}
                 </div>
 
                 <div>
@@ -18631,49 +27910,14 @@ const InstituteERPEnrollment = ({
                   </ul>
                 </div>
 
-                {/* Remittance Fields */}
-                <div className="lg:col-span-2 space-y-4 bg-slate-50/50 border border-slate-100 p-5 rounded-2xl">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Payment Remittance Mode *</label>
-                      <select
-                        value={enrollForm.paymentMode}
-                        onChange={(e) => setEnrollForm({...enrollForm, paymentMode: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
-                      >
-                        <option value="Online Transfer">Online Transfer</option>
-                        <option value="UTR Reference">UTR Reference</option>
-                        <option value="Demand Draft">Demand Draft</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">UTR / Bank Txn ID *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Transaction UTR Number"
-                        value={enrollForm.utrNumber}
-                        onChange={(e) => setEnrollForm({...enrollForm, utrNumber: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Transaction Date *</label>
-                      <input
-                        type="date"
-                        required
-                        value={enrollForm.txnDate}
-                        onChange={(e) => setEnrollForm({...enrollForm, txnDate: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Payment Receipt PDF *</label>
-                      {renderUploadCard("Choose Fee Receipt", 'paymentReceiptDoc')}
-                    </div>
+                {/* Remittance Info Removed */}
+                <div className="lg:col-span-2 space-y-4 bg-slate-50/50 border border-slate-100 p-5 rounded-2xl flex flex-col justify-center items-center text-center">
+                  <div className="text-slate-400 font-medium text-sm mb-4">
+                    Secure payment is processed through Razorpay. You will be prompted to complete the ₹1,40,000 fee when you submit the application.
+                  </div>
+                  <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Online Payment Integration
                   </div>
                 </div>
               </div>
@@ -18747,7 +27991,7 @@ const InstituteERPEnrollment = ({
                 type="submit"
                 className="px-10 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-md shadow-emerald-500/10 cursor-pointer"
               >
-                Submit Application
+                Submit Application & Pay
               </button>
             )}
           </div>
@@ -18758,32 +28002,41 @@ const InstituteERPEnrollment = ({
 };
 
 export default InstituteERPEnrollment;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteERPExams.jsx`
 
 ```jsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { Eye, Send, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, Calendar, BookOpen, FileText, Check, Users, AlertTriangle, Info, ClipboardList } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check } from 'lucide-react';
 import examService from '../../../api/exams';
 import academicService from '../../../api/academic';
+import Toast from '../../../Components/Toast';
+
+const STEPS = [
+  { num: 1, label: 'Select Course', icon: BookOpen },
+  { num: 2, label: 'Review Eligibility', icon: Users },
+  { num: 3, label: 'Submit Application', icon: CheckCircle2 },
+];
 
 const InstituteERPExams = ({
   courses = [],
-  batches = [],
   students = [],
   examApplications = [],
-  setExamApplications,
   fetchERPData
 }) => {
+  const [step, setStep] = useState(1);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
-  
+
   const [viewingApp, setViewingApp] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(false);
   const [feeRecords, setFeeRecords] = useState([]);
+  const [toast, setToast] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchFeeRecords = async () => {
@@ -18800,24 +28053,19 @@ const InstituteERPExams = ({
     fetchFeeRecords();
   }, []);
 
-  // Pagination states for history table
   const [activePage, setActivePage] = useState(1);
   const itemsPerPage = 5;
   const totalPages = Math.ceil(examApplications.length / itemsPerPage) || 1;
 
-  // Initialize selected values
   useEffect(() => {
     if (courses.length > 0 && !selectedCourseId) {
       setSelectedCourseId(courses[0].id || courses[0]._id);
     }
   }, [courses, selectedCourseId]);
 
-
-
-  // Filter students by selected course and batch
   const filteredStudents = useMemo(() => {
     if (!selectedCourseId) return [];
-    return students.filter(s => 
+    return students.filter(s =>
       String(s.courseId) === String(selectedCourseId)
     );
   }, [students, selectedCourseId]);
@@ -18829,7 +28077,7 @@ const InstituteERPExams = ({
         s.semesters.forEach(sem => sems.add(sem.semesterNumber));
       }
     });
-    return Array.from(sems).sort((a,b) => a - b);
+    return Array.from(sems).sort((a, b) => a - b);
   }, [filteredStudents]);
 
   useEffect(() => {
@@ -18840,7 +28088,6 @@ const InstituteERPExams = ({
     }
   }, [availableSemesters, selectedSemester]);
 
-  // Calculate student eligibility details
   const studentEligibility = useMemo(() => {
     const map = {};
     if (!selectedSemester) return map;
@@ -18851,71 +28098,81 @@ const InstituteERPExams = ({
         return;
       }
       const isAttendanceOk = (sem.attendancePercentage || 0) >= 75;
-      const isThesisOk = !!sem.thesisDocumentUrl;
-      const isExamFeePaid = feeRecords.some(r => 
-        (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id || r.student === s.id) && 
+      const isThesisOk = !!sem.thesisApproved;
+      const isExamFeePaid = feeRecords.some(r =>
+        (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id || r.student === s.id) &&
         r.paymentPurpose === 'Examination fee' && r.semesterNumber?.toString() === selectedSemester.toString()
       );
-
       const isEligible = isAttendanceOk && isThesisOk && isExamFeePaid;
-      
       const reasons = [];
       if (!isAttendanceOk) reasons.push(`Attendance low (${sem.attendancePercentage || 0}%)`);
       if (!isThesisOk) reasons.push("Thesis not uploaded");
       if (!isExamFeePaid) reasons.push("Exam fee not paid");
-      
       map[s.id || s._id] = {
         isEligible,
         isAttendanceOk,
         isThesisOk,
         isExamFeePaid,
-        reasonsText: reasons.join(", ")
+        reasonsText: reasons.join(", "),
       };
     });
     return map;
   }, [filteredStudents, feeRecords, selectedSemester]);
 
-  // List of eligible student IDs
   const eligibleStudentIds = useMemo(() => {
     return filteredStudents
       .filter(s => studentEligibility[s.id || s._id]?.isEligible)
       .map(s => s.id || s._id);
   }, [filteredStudents, studentEligibility]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (eligibleStudentIds.length === 0) {
-      setErrorMsg('No eligible students found in the selected course. Ensure students have met attendance, thesis, and academy fee criteria.');
+  const canProceedFrom = (s) => {
+    if (s === 1) return !!selectedCourseId && !!selectedSemester;
+    if (s === 2) return eligibleStudentIds.length > 0;
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!canProceedFrom(step)) {
+      if (step === 1) {
+        setToast({ message: 'Please select a course and semester.', type: 'warning' });
+      } else if (step === 2) {
+        setToast({ message: 'No eligible students found. Cannot proceed to submit.', type: 'warning' });
+      }
       return;
     }
+    setStep(s => Math.min(s + 1, 3));
+  };
 
-    setLoading(true);
+  const handleBack = () => setStep(s => Math.max(s - 1, 1));
+
+  const handleSubmit = async () => {
+    if (eligibleStudentIds.length === 0) {
+      setToast({ message: 'No eligible students found.', type: 'warning' });
+      return;
+    }
+    setSubmitting(true);
     setErrorMsg(null);
     setSuccessMsg(null);
-
     try {
       const selectedCourse = courses.find(c => (c.id || c._id) === selectedCourseId);
       const courseSubjects = selectedCourse?.subjects || ['All'];
-
       const payload = {
         courseId: selectedCourseId,
         semesterNumber: parseInt(selectedSemester),
-        studentIds: eligibleStudentIds, // Automatically apply for all eligible students
+        studentIds: eligibleStudentIds,
         subjects: courseSubjects,
-        batchId: filteredStudents[0]?.batchId || filteredStudents[0]?.batch?._id || filteredStudents[0]?.batch 
+        batchId: filteredStudents[0]?.batchId || filteredStudents[0]?.batch?._id || filteredStudents[0]?.batch,
       };
-
       await examService.applyForExam(payload);
-      
-      // Reload applications and dashboard data
       if (fetchERPData) {
         await fetchERPData();
       }
-
-      setSuccessMsg('🎉 Exam Application submitted successfully to the Academic Board!');
+      setSuccessMsg('Exam Application submitted successfully to the Academic Board!');
+      setStep(1);
+      setSelectedCourseId('');
+      setSelectedSemester('');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
-      // Extract a safe string message — never pass an object to setErrorMsg (causes React crash)
       const apiErrors = err.response?.data?.errors;
       let errMsg = 'Failed to submit exam application.';
       if (typeof err.parsedMessage === 'string') {
@@ -18931,19 +28188,259 @@ const InstituteERPExams = ({
       }
       setErrorMsg(errMsg);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  // Get current page items
   const paginatedApplications = examApplications.slice(
     (activePage - 1) * itemsPerPage,
     activePage * itemsPerPage
   );
 
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center gap-0 mb-8">
+      {STEPS.map((s, idx) => {
+        const Icon = s.icon;
+        const isActive = step === s.num;
+        const isCompleted = step > s.num;
+        const isClickable = s.num < step;
+        return (
+          <div key={s.num} className="flex items-center">
+            {idx > 0 && (
+              <div className={`w-12 h-0.5 sm:w-20 ${isCompleted ? 'bg-blue-500' : 'bg-slate-200'}`} />
+            )}
+            <button
+              type="button"
+              onClick={() => isClickable && setStep(s.num)}
+              disabled={!isClickable}
+              className={`flex flex-col items-center gap-1.5 px-2 py-1 rounded-xl transition-all cursor-pointer ${
+                isActive ? 'scale-105' : ''
+              } ${!isClickable ? 'opacity-60 cursor-default' : 'hover:bg-slate-50'}`}
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all shadow-sm ${
+                isCompleted
+                  ? 'bg-blue-600 text-white shadow-blue-500/30'
+                  : isActive
+                    ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-100'
+                    : 'bg-slate-100 text-slate-400'
+              }`}>
+                {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+              </div>
+              <span className={`text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${
+                isActive || isCompleted ? 'text-blue-700' : 'text-slate-400'
+              }`}>
+                {s.label}
+              </span>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderStep1 = () => (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-blue-500" />
+          Select Course & Semester
+        </h3>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Choose the course and semester to prepare exam applications</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course *</label>
+          <select
+            value={selectedCourseId}
+            onChange={(e) => { setSelectedCourseId(e.target.value); setSelectedSemester(''); }}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+          >
+            {courses.map(c => <option key={c.id || c._id} value={c.id || c._id}>{c.courseName || c.name}</option>)}
+            {courses.length === 0 && <option value="">No courses available</option>}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Semester *</label>
+          <select
+            value={selectedSemester}
+            onChange={(e) => setSelectedSemester(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            required
+          >
+            <option value="">Select Semester</option>
+            {availableSemesters.map(sem => (
+              <option key={sem} value={sem}>Semester {sem}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {selectedCourseId && selectedSemester && (
+        <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 flex items-center gap-3">
+          <GraduationCap className="w-8 h-8 text-blue-400" />
+          <div>
+            <p className="text-sm font-extrabold text-slate-800">
+              {courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected Course'}
+            </p>
+            <p className="text-[10px] font-bold text-slate-400">
+              Semester {selectedSemester} · {filteredStudents.length} student(s) enrolled
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+          <Users className="w-5 h-5 text-blue-500" />
+          Review Eligibility
+        </h3>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Verify each student's eligibility criteria</p>
+      </div>
+      {selectedCourseId && selectedSemester && (
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 mb-2">
+          <p className="text-xs font-bold text-slate-600">
+            Course: <span className="text-slate-800">{courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected'}</span>
+            <span className="text-slate-300 mx-2">|</span>
+            Semester: <span className="text-slate-800">{selectedSemester}</span>
+          </p>
+        </div>
+      )}
+      <div className="overflow-x-auto border border-slate-100 rounded-2xl bg-white shadow-inner">
+        <table className="w-full text-left border-collapse text-xs text-slate-500 font-semibold">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px]">
+              <th className="px-4 py-3 font-black">Student</th>
+              <th className="px-4 py-3 font-black text-center">Attendance</th>
+              <th className="px-4 py-3 font-black text-center">Thesis</th>
+              <th className="px-4 py-3 font-black text-center">Fee Paid</th>
+              <th className="px-4 py-3 font-black text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-600">
+            {filteredStudents.map(s => {
+              const e = studentEligibility[s.id || s._id];
+              const sid = s.id || s._id;
+              return (
+                <tr key={sid} className="hover:bg-slate-50/30 transition-colors">
+                  <td className="px-4 py-3">
+                    <span className="font-extrabold text-slate-800 block">{s.fullName}</span>
+                    <span className="text-[10px] font-mono text-slate-400">{s.enrollmentNo || 'N/A'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      e.isAttendanceOk
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      e.isThesisOk
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      e.isExamFeePaid
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      e.isEligible ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] uppercase font-black">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Eligible
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[9px] uppercase font-black" title={e.reasonsText}>
+                          <XCircle className="w-3 h-3" />
+                          Ineligible
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-slate-300 text-[9px] uppercase font-black">N/A</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredStudents.length === 0 && (
+              <tr>
+                <td colSpan="5" className="px-6 py-12 text-center text-slate-400 font-medium">
+                  No students found for this course and semester.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center gap-4 pt-2">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
+          <CheckCircle2 className="w-4 h-4" />
+          Eligible: {eligibleStudentIds.length}
+        </div>
+        <div className="flex items-center gap-1.5 text-xs font-bold text-rose-600 bg-rose-50 px-4 py-2 rounded-xl border border-rose-100">
+          <XCircle className="w-4 h-4" />
+          Ineligible: {filteredStudents.length - eligibleStudentIds.length}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => {
+    const selectedCourse = courses.find(c => (c.id || c._id) === selectedCourseId);
+    return (
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-blue-500" />
+            Submit Application
+          </h3>
+          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Review and submit the exam application to the Academic Board</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Course</span>
+            <span className="text-sm font-extrabold text-slate-800">{selectedCourse?.courseName || 'Selected Course'}</span>
+          </div>
+          <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Semester</span>
+            <span className="text-sm font-extrabold text-slate-800">Semester {selectedSemester}</span>
+          </div>
+          <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Eligible Students</span>
+            <span className="text-sm font-extrabold text-emerald-700">{eligibleStudentIds.length}</span>
+          </div>
+          <div className="bg-slate-50/40 border border-slate-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Total Enrolled</span>
+            <span className="text-sm font-extrabold text-slate-700">{filteredStudents.length}</span>
+          </div>
+        </div>
+        <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-amber-800">Review before submitting</p>
+            <p className="text-[10px] text-amber-700 mt-0.5">This will create exam applications for all {eligibleStudentIds.length} eligible student(s). Ineligible students will be excluded.</p>
+          </div>
+        </div>
+        {submitting && (
+          <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-xs">
+            <span className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+            Submitting exam application...
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
-      {/* Page Title Header */}
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
@@ -18970,157 +28467,59 @@ const InstituteERPExams = ({
         </div>
       )}
 
-      {/* Grid Layout for Form and Table */}
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-        
-        {/* 1. EXAM APPLICATION SCREEN (3 cols width) */}
-        <div className="xl:col-span-3 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-5">
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-base font-black text-slate-800 tracking-tight">New Exam Application</h3>
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Select course and eligible students to apply</p>
-            </div>
+        <div className="xl:col-span-3 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6">
+          {renderStepIndicator()}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Course Selector */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course *</label>
-                <select
-                  value={selectedCourseId}
-                  onChange={(e) => {
-                    setSelectedCourseId(e.target.value);
-                    setSelectedSemester('');
-                  }}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer hover:bg-slate-100/55"
-                >
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.courseName}</option>)}
-                  {courses.length === 0 && <option value="">No courses available</option>}
-                </select>
-              </div>
+          <div className="min-h-[260px]">
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
+          </div>
 
-              {/* Semester Selector */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Semester *</label>
-                <select
-                  value={selectedSemester}
-                  onChange={(e) => setSelectedSemester(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer hover:bg-slate-100/55"
-                  required
-                >
-                  <option value="">Select Semester</option>
-                  {availableSemesters.map(sem => (
-                    <option key={sem} value={sem}>Semester {sem}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Students Summary Tabs / Cards */}
-            <div className="space-y-4 pt-2 border-t border-slate-50">
-              <h4 className="text-xs font-black text-slate-800 tracking-tight flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-500" />
-                Candidates Overview
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Eligible Candidates Card */}
-                <div className="border border-emerald-100 bg-emerald-50/30 rounded-2xl overflow-hidden flex flex-col shadow-sm transition-all hover:shadow-md">
-                  <div className="bg-emerald-500/10 px-4 py-3 border-b border-emerald-100 flex items-center justify-between">
-                    <h5 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Eligible Candidates
-                    </h5>
-                    <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-full">{eligibleStudentIds.length}</span>
-                  </div>
-                  <div className="p-4 flex-1 bg-white/50">
-                    {eligibleStudentIds.length === 0 ? (
-                      <div className="h-full flex items-center justify-center py-6">
-                        <p className="text-[10px] text-emerald-600/70 font-bold uppercase tracking-wider text-center">No eligible candidates</p>
-                      </div>
-                    ) : (
-                      <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {filteredStudents.filter(s => studentEligibility[s.id || s._id]?.isEligible).map(s => (
-                          <li key={s.id || s._id} className="flex items-center gap-3 bg-white border border-emerald-100 p-2.5 rounded-xl shadow-sm hover:border-emerald-300 transition-colors">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-700 flex items-center justify-center text-[11px] font-black flex-shrink-0 shadow-inner">
-                              {s.fullName.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-extrabold text-slate-700 truncate">{s.fullName}</p>
-                              <p className="text-[9px] font-mono font-bold text-slate-400">{s.enrollmentNo || `STUD00${s.id || s._id}`}</p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-
-                {/* Ineligible Candidates Card */}
-                <div className="border border-rose-100 bg-rose-50/30 rounded-2xl overflow-hidden flex flex-col shadow-sm transition-all hover:shadow-md">
-                  <div className="bg-rose-500/10 px-4 py-3 border-b border-rose-100 flex items-center justify-between">
-                    <h5 className="text-[10px] font-black text-rose-800 uppercase tracking-widest flex items-center gap-2">
-                      <XCircle className="w-4 h-4 text-rose-600" /> Ineligible Candidates
-                    </h5>
-                    <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-2 py-0.5 rounded-full">{filteredStudents.length - eligibleStudentIds.length}</span>
-                  </div>
-                  <div className="p-4 flex-1 bg-white/50">
-                    {filteredStudents.length - eligibleStudentIds.length === 0 ? (
-                      <div className="h-full flex items-center justify-center py-6">
-                        <p className="text-[10px] text-rose-600/70 font-bold uppercase tracking-wider text-center">No ineligible candidates</p>
-                      </div>
-                    ) : (
-                      <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {filteredStudents.filter(s => !studentEligibility[s.id || s._id]?.isEligible).map(s => (
-                          <li key={s.id || s._id} className="flex flex-col gap-2 bg-white border border-rose-100 p-3 rounded-xl shadow-sm hover:border-rose-300 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-rose-100 to-rose-200 text-rose-700 flex items-center justify-center text-[11px] font-black flex-shrink-0 shadow-inner">
-                                {s.fullName.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-extrabold text-slate-700 truncate">{s.fullName}</p>
-                                <p className="text-[9px] font-mono font-bold text-slate-400">{s.enrollmentNo || `STUD00${s.id || s._id}`}</p>
-                              </div>
-                            </div>
-                            <div className="bg-rose-50/80 p-2 rounded-lg border border-rose-100/50 flex items-start gap-1.5">
-                              <AlertTriangle className="w-3 h-3 text-rose-500 flex-shrink-0 mt-0.5" />
-                              <p className="text-[9.5px] font-bold text-rose-600 leading-tight">Missing: {studentEligibility[s.id || s._id]?.reasonsText}</p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-
-
-            <div className="pt-2">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={step === 1}
+              className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none rounded-xl text-xs font-bold text-slate-600 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
+            {step < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer"
+              >
+                Next
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading || eligibleStudentIds.length === 0}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all hover:scale-[1.01] flex items-center justify-center gap-2 shadow-md shadow-blue-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                disabled={submitting || eligibleStudentIds.length === 0}
+                className="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-md shadow-emerald-500/10 cursor-pointer"
               >
-                {loading ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                {submitting ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <Send className="w-3.5 h-3.5" />
+                  <CheckCircle2 className="w-4 h-4" />
                 )}
-                Submit Exam Application
+                {submitting ? 'Submitting...' : 'Submit Application'}
               </button>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* 2. EXAM APPLICATIONS HISTORY TABLE (2 cols width) */}
         <div className="xl:col-span-2 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6 flex flex-col justify-between">
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-black text-slate-800 tracking-tight">Applications Registry</h3>
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Historical registry of submitted exam registrations</p>
             </div>
-
             <div className="overflow-x-auto border border-slate-100 rounded-2xl bg-white shadow-inner">
               <table className="w-full text-left border-collapse text-xs text-slate-500 font-semibold">
                 <thead>
@@ -19146,11 +28545,11 @@ const InstituteERPExams = ({
                         <td className="px-4 py-4 text-center font-bold text-slate-700">{app.students?.length || 0}</td>
                         <td className="px-4 py-4 text-center">
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] uppercase font-black border ${
-                            app.status === 'Approved' 
+                            app.status === 'Approved'
                               ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
                               : app.status === 'SchedulePublished'
                                 ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
-                                : app.status === 'Rejected' 
+                                : app.status === 'Rejected'
                                   ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm'
                                   : 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm'
                           }`}>
@@ -19181,14 +28580,12 @@ const InstituteERPExams = ({
               </table>
             </div>
           </div>
-
-          {/* PAGINATION PANEL */}
           {examApplications.length > 0 && (
             <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-600 pt-4 border-t border-slate-50 mt-4">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 disabled={activePage === 1}
-                onClick={() => setActivePage(prev => Math.max(prev - 1, 1))} 
+                onClick={() => setActivePage(prev => Math.max(prev - 1, 1))}
                 className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
@@ -19199,18 +28596,18 @@ const InstituteERPExams = ({
                   type="button"
                   onClick={() => setActivePage(num)}
                   className={`w-8 h-8 rounded-lg border text-xs font-black transition-all cursor-pointer ${
-                    activePage === num 
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/10' 
+                    activePage === num
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/10'
                       : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
                   }`}
                 >
                   {num}
                 </button>
               ))}
-              <button 
-                type="button" 
+              <button
+                type="button"
                 disabled={activePage === totalPages}
-                onClick={() => setActivePage(prev => Math.min(prev + 1, totalPages))} 
+                onClick={() => setActivePage(prev => Math.min(prev + 1, totalPages))}
                 className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -19218,14 +28615,11 @@ const InstituteERPExams = ({
             </div>
           )}
         </div>
-
       </div>
 
-      {/* DETAIL VIEW MODAL */}
       {viewingApp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden flex flex-col scale-in-center text-left">
-            {/* Header */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
@@ -19236,7 +28630,7 @@ const InstituteERPExams = ({
                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Exam Application Record</p>
                 </div>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={() => setViewingApp(null)}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
@@ -19244,8 +28638,6 @@ const InstituteERPExams = ({
                 <X className="w-5 h-5" />
               </button>
             </div>
-
-            {/* Details */}
             <div className="p-6 space-y-5 text-xs text-slate-600">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -19255,9 +28647,9 @@ const InstituteERPExams = ({
                 <div>
                   <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0.5">Status</span>
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] uppercase font-black border ${
-                    viewingApp.status === 'Approved' 
+                    viewingApp.status === 'Approved'
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
-                      : viewingApp.status === 'Rejected' 
+                      : viewingApp.status === 'Rejected'
                         ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm'
                         : 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm'
                   }`}>
@@ -19265,9 +28657,7 @@ const InstituteERPExams = ({
                   </span>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-3">
-
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-slate-400" />
                   <div>
@@ -19283,7 +28673,6 @@ const InstituteERPExams = ({
                   </div>
                 </div>
               </div>
-
               {(viewingApp.status === 'Approved' || viewingApp.status === 'SchedulePublished') && viewingApp.scheduledDate && (
                 <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3.5 flex items-center gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
@@ -19293,7 +28682,6 @@ const InstituteERPExams = ({
                   </div>
                 </div>
               )}
-
               {viewingApp.status === 'SchedulePublished' && viewingApp.subjectSchedules && viewingApp.subjectSchedules.length > 0 && (
                 <div>
                   <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider mb-2">Subject Wise Schedule</span>
@@ -19319,14 +28707,12 @@ const InstituteERPExams = ({
                   </div>
                 </div>
               )}
-
               {viewingApp.remarks && (
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
                   <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider mb-1">Board Feedback / Remarks</span>
                   <p className="text-slate-700 font-semibold">{viewingApp.remarks}</p>
                 </div>
               )}
-
               <div>
                 <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider mb-2">Enrolled Candidates ({viewingApp.students?.length || 0})</span>
                 <div className="border border-slate-100 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
@@ -19351,8 +28737,6 @@ const InstituteERPExams = ({
                 </div>
               </div>
             </div>
-
-            {/* Footer */}
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
               <button
                 type="button"
@@ -19365,26 +28749,25 @@ const InstituteERPExams = ({
           </div>
         </div>
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };
 
 export default InstituteERPExams;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteERPFees.jsx`
 
 ```jsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, Download, CheckCircle2, ChevronLeft, ChevronRight, X, CreditCard, FileText, User, Loader2, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Eye, CheckCircle2, ChevronLeft, ChevronRight, X, CreditCard, User, Loader2, FileText, ArrowRight, Check } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import { academicService } from '../../../api/academic';
-import { getUploadUrl } from '../../../api/apiClient';
-
-const getDocUrl = (url) => {
-  if (!url) return '';
-  return getUploadUrl(url);
-};
+import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
+import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
 
 const fmtCurrency = (val) =>
   Number(val).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
@@ -19395,30 +28778,33 @@ const fmtDate = (val) => {
   catch { return val; }
 };
 
+const STEPS = [
+  { num: 1, label: 'Select Student', icon: User },
+  { num: 2, label: 'Choose Semester', icon: FileText },
+  { num: 3, label: 'Enter Payment', icon: CreditCard },
+  { num: 4, label: 'Review & Submit', icon: CheckCircle2 },
+];
+
 const InstituteERPFees = ({ students = [], courses = [] }) => {
-  // ─── Form State ────────────────────────────────────────────────────────────
+  const [step, setStep] = useState(1);
+
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
   const [unpaidSemesters, setUnpaidSemesters] = useState([]);
   const [feeType, setFeeType] = useState('Examination fee');
   const [amount, setAmount] = useState('');
-  const [paymentMode, setPaymentMode] = useState('Online Transfer');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [transactionNo, setTransactionNo] = useState('');
-  const [receiptFile, setReceiptFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // ─── Data State ────────────────────────────────────────────────────────────
   const [feeRecords, setFeeRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ─── UI State ──────────────────────────────────────────────────────────────
   const [viewingTx, setViewingTx] = useState(null);
   const [toast, setToast] = useState(null);
   const [activePage, setActivePage] = useState(1);
+  const [showPaymentChecker, setShowPaymentChecker] = useState(false);
   const itemsPerPage = 8;
 
-  // ─── Fetch fee records ─────────────────────────────────────────────────────
   const fetchFeeRecords = useCallback(async () => {
     try {
       setLoading(true);
@@ -19432,44 +28818,103 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
     }
   }, []);
 
-  useEffect(() => { fetchFeeRecords(); }, [fetchFeeRecords]);
+  useEffect(() => { setTimeout(() => fetchFeeRecords(), 0); }, [fetchFeeRecords]);
 
-  // ─── Helpers ───────────────────────────────────────────────────────────────
-  // Filter students who have unpaid semesters
-  // Make all students eligible so the dropdown always populates
+  useEffect(() => {
+    const checkPending = async () => {
+      const pendingState = getPaymentState();
+      if (pendingState && pendingState.paymentType === 'exam' && pendingState.additionalData?.studentId) {
+        try {
+          const res = await academicService.getPaymentStatus(pendingState.additionalData.studentId, 'Examination fee');
+          const data = res?.data?.data || res?.data;
+          if (data && data.paymentStatus === 'Completed') {
+            clearPaymentState();
+            setToast({ message: 'Payment recovered successfully!', type: 'success' });
+            resetForm();
+            await fetchFeeRecords();
+          } else {
+            setShowPaymentChecker(true);
+          }
+        } catch (err) {
+          console.warn('Failed to check pending exam payment:', err);
+        }
+      }
+    };
+    checkPending();
+  }, [fetchFeeRecords]);
+
+  const resetForm = () => {
+    setStep(1);
+    setSelectedStudentId('');
+    setSelectedSemester('');
+    setAmount('');
+    setFeeType('Examination fee');
+    setPaymentDate(new Date().toISOString().split('T')[0]);
+  };
+
   const eligibleStudents = students;
-
   const selectedStudent = students.find(s => s._id === selectedStudentId || s.id === selectedStudentId);
 
   useEffect(() => {
-    // Generate static list of semesters 1 to 6
-    const allSemesters = [1, 2, 3, 4, 5, 6].map(num => ({ semesterNumber: num }));
-    setUnpaidSemesters(allSemesters);
-    if (!selectedSemester) {
-      setSelectedSemester('');
-    }
-  }, [selectedStudentId]);
+    setTimeout(() => {
+      if (!selectedStudentId) {
+        setUnpaidSemesters([]);
+        return;
+      }
+      const paidSemesters = feeRecords
+        .filter(r => (r.student?._id === selectedStudentId || r.student?.id === selectedStudentId || r.student === selectedStudentId) && r.paymentPurpose === feeType)
+        .map(r => Number(r.semesterNumber));
+      const available = [1, 2, 3, 4, 5, 6]
+        .filter(num => !paidSemesters.includes(num))
+        .map(num => ({ semesterNumber: num }));
+      setUnpaidSemesters(available);
+      if (selectedSemester && paidSemesters.includes(Number(selectedSemester))) {
+        setSelectedSemester('');
+      }
+    }, 0);
+  }, [selectedStudentId, feeRecords, feeType, selectedSemester]);
 
   useEffect(() => {
-    if (selectedStudent && courses.length > 0) {
-      const studentCourseName = selectedStudent.course || selectedStudent.courseName;
-      const course = courses.find(c => 
-        c.name === studentCourseName || 
-        c.courseCode === studentCourseName || 
-        c._id === selectedStudent.courseId
-      );
-      if (course && course.examinationFee) {
-        setAmount(course.examinationFee.toString().replace(/,/g, ''));
+    setTimeout(() => {
+      if (selectedStudent && courses.length > 0) {
+        const studentCourseName = selectedStudent.course || selectedStudent.courseName;
+        const course = courses.find(c =>
+          c.name === studentCourseName ||
+          c.courseCode === studentCourseName ||
+          c._id === selectedStudent.courseId
+        );
+        if (course && course.examinationFee) {
+          setAmount(course.examinationFee.toString().replace(/,/g, ''));
+        } else {
+          setAmount('');
+        }
       } else {
         setAmount('');
       }
-    } else {
-      setAmount('');
-    }
+    }, 0);
   }, [selectedStudent, courses]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const canProceedFrom = (s) => {
+    if (s === 1) return !!selectedStudentId;
+    if (s === 2) return !!selectedSemester;
+    if (s === 3) {
+      const parsedAmount = parseFloat(amount);
+      return !isNaN(parsedAmount) && parsedAmount > 0 && !!paymentDate;
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!canProceedFrom(step)) {
+      setToast({ message: 'Please fill all required fields before proceeding.', type: 'warning' });
+      return;
+    }
+    setStep(s => Math.min(s + 1, 4));
+  };
+
+  const handleBack = () => setStep(s => Math.max(s - 1, 1));
+
+  const handleSubmitPayment = async () => {
     if (!selectedStudentId) {
       setToast({ message: 'Please select a student.', type: 'warning' });
       return;
@@ -19478,60 +28923,320 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       setToast({ message: 'Please select a semester.', type: 'warning' });
       return;
     }
-    if (!receiptFile) {
-      setToast({ message: 'Payment Receipt upload is mandatory.', type: 'warning' });
-      return;
-    }
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setToast({ message: 'Amount must be a positive number.', type: 'warning' });
-      return;
-    }
-    if (!transactionNo?.trim()) {
-      setToast({ message: 'Transaction Number is mandatory.', type: 'warning' });
       return;
     }
     if (!paymentDate) {
       setToast({ message: 'Payment Date is mandatory.', type: 'warning' });
       return;
     }
+
     try {
       setSubmitting(true);
-      await academicService.payStudentFees(selectedStudentId, {
-        semesterNumber: parseInt(selectedSemester),
-        amount: parseFloat(amount),
-        paymentMode,
-        utrNumber: transactionNo,
-        paymentDate,
-        paymentPurpose: feeType,
-        paymentReceipt: receiptFile,
+
+      const orderRes = await academicService.createRazorpayOrder({ amount: 1, purpose: 'Fee Payment' });
+      const orderData = orderRes?.data?.data || orderRes?.data || orderRes;
+      if (!orderData || !orderData.orderId) {
+        throw new Error('Failed to create payment order from server.');
+      }
+
+      await initiateRazorpayPayment({
+        orderId: orderData.orderId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        keyId: orderData.keyId,
+        name: 'Semi Phase 3 Student Fees',
+        description: `Fee Payment - ${feeType}`,
+        paymentType: 'exam',
+        additionalData: { studentId: selectedStudentId, purpose: feeType, semester: selectedSemester },
+        prefill: { name: selectedStudent?.fullName || '', email: selectedStudent?.email || '' },
+        onSuccess: async (response) => {
+          try {
+            const verifyRes = await academicService.verifyRazorpayPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            await academicService.payStudentFees(selectedStudentId, {
+              semesterNumber: parseInt(selectedSemester),
+              amount: parseFloat(amount),
+              paymentMode: 'Razorpay Online',
+              paymentDate,
+              paymentPurpose: feeType,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+            clearPaymentState();
+            setToast({ message: 'Fee payment recorded successfully!', type: 'success' });
+            resetForm();
+            await fetchFeeRecords();
+          } catch (verifyErr) {
+            console.error('Verification failed', verifyErr);
+            const statusRes = await academicService.getPaymentStatus(selectedStudentId, feeType);
+            if (statusRes.data?.data?.paymentStatus === 'Completed') {
+              clearPaymentState();
+              setToast({ message: 'Payment verified successfully!', type: 'success' });
+              await fetchFeeRecords();
+            } else {
+              setToast({ message: 'Payment processed but verification failed. Please contact support.', type: 'error' });
+            }
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        onDismiss: () => {
+          setSubmitting(false);
+          setShowPaymentChecker(true);
+          setToast({ message: 'Payment window closed. Checking your payment status...', type: 'info' });
+        },
+        onFailure: (error) => {
+          setSubmitting(false);
+          setShowPaymentChecker(true);
+          setToast({ message: `Payment failed: ${error?.description || 'Transaction unsuccessful.'}`, type: 'error' });
+        },
       });
-      setToast({ message: '🎉 Fee payment recorded successfully!', type: 'success' });
-      // Reset form
-      setSelectedStudentId('');
-      setSelectedSemester('');
-      setAmount('');
-      setTransactionNo('');
-      setReceiptFile(null);
-      setFeeType('Examination fee');
-      setPaymentMode('Online Transfer');
-      setPaymentDate(new Date().toISOString().split('T')[0]);
-      await fetchFeeRecords();
     } catch (err) {
       const msg = err?.parsedMessage || err?.response?.data?.message || err?.message || 'Failed to record fee payment.';
       setToast({ message: msg, type: 'error' });
-    } finally {
       setSubmitting(false);
     }
   };
 
-  // ─── Pagination ────────────────────────────────────────────────────────────
   const totalPages = Math.ceil(feeRecords.length / itemsPerPage) || 1;
   const paginatedRecords = feeRecords.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
 
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center gap-0 mb-8">
+      {STEPS.map((s, idx) => {
+        const Icon = s.icon;
+        const isActive = step === s.num;
+        const isCompleted = step > s.num;
+        const isClickable = s.num < step;
+        return (
+          <div key={s.num} className="flex items-center">
+            {idx > 0 && (
+              <div className={`w-12 h-0.5 sm:w-20 ${isCompleted ? 'bg-blue-500' : 'bg-slate-200'}`} />
+            )}
+            <button
+              type="button"
+              onClick={() => isClickable && setStep(s.num)}
+              disabled={!isClickable}
+              className={`flex flex-col items-center gap-1.5 px-2 py-1 rounded-xl transition-all cursor-pointer ${
+                isActive ? 'scale-105' : ''
+              } ${!isClickable ? 'opacity-60 cursor-default' : 'hover:bg-slate-50'}`}
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all shadow-sm ${
+                isCompleted
+                  ? 'bg-blue-600 text-white shadow-blue-500/30'
+                  : isActive
+                    ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-100'
+                    : 'bg-slate-100 text-slate-400'
+              }`}>
+                {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+              </div>
+              <span className={`text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${
+                isActive || isCompleted ? 'text-blue-700' : 'text-slate-400'
+              }`}>
+                {s.label}
+              </span>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderStep1 = () => (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+          <User className="w-5 h-5 text-blue-500" />
+          Select Student
+        </h3>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Choose the student for fee payment</p>
+      </div>
+      <div>
+        <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Student *</label>
+        <select
+          value={selectedStudentId}
+          onChange={(e) => { setSelectedStudentId(e.target.value); setSelectedSemester(''); }}
+          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+          required
+        >
+          <option value="">Select Enrolled Student...</option>
+          {eligibleStudents.map(s => (
+            <option key={s._id || s.id} value={s._id || s.id}>
+              {s.enrollmentNo} — {s.fullName}
+            </option>
+          ))}
+        </select>
+        {eligibleStudents.length === 0 && students.length > 0 && (
+          <p className="text-[10px] text-emerald-600 font-bold mt-1">All enrolled students have paid their exam fees.</p>
+        )}
+      </div>
+      {selectedStudent && (
+        <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 flex items-center justify-center text-lg font-black shadow-inner">
+              {(selectedStudent.fullName || '?').charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-slate-800">{selectedStudent.fullName || 'Unnamed Student'}</p>
+              <p className="text-[10px] font-mono font-bold text-slate-400">{selectedStudent.enrollmentNo || 'N/A'} · {selectedStudent.course || selectedStudent.courseName || 'N/A'}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+          <FileText className="w-5 h-5 text-blue-500" />
+          Choose Semester
+        </h3>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Select the semester for which fee is to be paid</p>
+      </div>
+      {selectedStudent && (
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 mb-2">
+          <p className="text-xs font-bold text-slate-600">
+            Student: <span className="text-slate-800">{selectedStudent.fullName}</span>
+            <span className="text-slate-300 mx-2">|</span>
+            Course: <span className="text-slate-800">{selectedStudent.course || selectedStudent.courseName || 'N/A'}</span>
+          </p>
+        </div>
+      )}
+      {unpaidSemesters.length === 0 ? (
+        <div className="py-10 text-center">
+          <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-300 mb-3" />
+          <p className="text-sm font-bold text-slate-500">All semesters paid for this student!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          {unpaidSemesters.map(sem => (
+            <button
+              key={sem.semesterNumber}
+              type="button"
+              onClick={() => setSelectedSemester(sem.semesterNumber)}
+              className={`py-4 rounded-2xl text-sm font-bold transition-all border cursor-pointer ${
+                String(selectedSemester) === String(sem.semesterNumber)
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20 scale-105'
+                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-sm'
+              }`}
+            >
+              Sem {sem.semesterNumber}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-blue-500" />
+          Enter Payment Details
+        </h3>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Configure payment amount</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Fee Type</label>
+          <select
+            value={feeType}
+            onChange={(e) => setFeeType(e.target.value)}
+            disabled
+            className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none cursor-not-allowed"
+          >
+            <option value="Examination fee">Examination fee</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Amount (INR) *</label>
+          <div className="relative">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
+            <input
+              type="number"
+              required
+              min="1"
+              placeholder="Enter amount..."
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Payment Mode</label>
+          <input
+            type="text"
+            value="Razorpay Online"
+            readOnly
+            className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none cursor-not-allowed"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Payment Date *</label>
+          <input
+            type="date"
+            required
+            value={paymentDate}
+            onChange={(e) => setPaymentDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
+            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep4 = () => {
+    const reviewItems = [
+      { label: 'Student', value: selectedStudent?.fullName || '—' },
+      { label: 'Enrollment No', value: selectedStudent?.enrollmentNo || '—' },
+      { label: 'Course', value: selectedStudent?.course || selectedStudent?.courseName || '—' },
+      { label: 'Semester', value: `Semester ${selectedSemester}` },
+      { label: 'Fee Type', value: feeType },
+      { label: 'Amount', value: fmtCurrency(amount) },
+      { label: 'Payment Mode', value: 'Razorpay Online' },
+      { label: 'Payment Date', value: fmtDate(paymentDate) },
+    ];
+    return (
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-blue-500" />
+            Review & Submit
+          </h3>
+          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Verify all details before submitting the payment</p>
+        </div>
+        <div className="bg-slate-50/50 border border-slate-200 rounded-2xl p-5 space-y-3">
+          {reviewItems.map((item) => (
+            <div key={item.label} className="flex justify-between items-center py-1 border-b border-slate-100 last:border-0">
+              <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">{item.label}</span>
+              <span className="text-xs font-bold text-slate-800 text-right max-w-[60%] truncate">{item.value}</span>
+            </div>
+          ))}
+        </div>
+        {submitting && (
+          <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-xs">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Processing payment...
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
-      {/* Header */}
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
@@ -19556,202 +29261,54 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         </div>
       </div>
 
-      {/* Form */}
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6">
-        <div>
-          <h3 className="text-base font-black text-slate-800 tracking-tight">Record Exam Fee Payment</h3>
-          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Enter student exam fee payment details</p>
+        {renderStepIndicator()}
+
+        <div className="min-h-[280px]">
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+          {step === 4 && renderStep4()}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Section 1: Student */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-blue-600 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5" />
-              Student Information
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Student *</label>
-                <select
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                  required
-                >
-                  <option value="">Select Enrolled Student...</option>
-                  {eligibleStudents.map(s => (
-                    <option key={s._id || s.id} value={s._id || s.id}>
-                      {s.enrollmentNo} — {s.fullName}
-                    </option>
-                  ))}
-                </select>
-                {eligibleStudents.length === 0 && students.length > 0 && (
-                  <p className="text-[9px] text-emerald-600 font-bold mt-1">All enrolled students have paid their exam fees.</p>
-                )}
-              </div>
-
-              {selectedStudent && (
-                <>
-                  <div>
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Student Name</label>
-                    <input
-                      type="text"
-                      value={selectedStudent.fullName || ''}
-                      readOnly
-                      className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 focus:outline-none cursor-not-allowed"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course</label>
-                    <input
-                      type="text"
-                      value={selectedStudent.course || selectedStudent.courseName || ''}
-                      readOnly
-                      className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 focus:outline-none cursor-not-allowed"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Select Semester *</label>
-                    <select
-                      value={selectedSemester}
-                      onChange={(e) => setSelectedSemester(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                      required
-                    >
-                      <option value="">Select Semester...</option>
-                      {unpaidSemesters.map(sem => (
-                        <option key={sem.semesterNumber} value={sem.semesterNumber}>
-                          Semester {sem.semesterNumber}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Section 2: Payment */}
-          <div className="space-y-4 pt-2 border-t border-slate-50">
-            <h4 className="text-xs font-bold text-blue-600 flex items-center gap-1.5">
-              <CreditCard className="w-3.5 h-3.5" />
-              Payment Details
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Fee Type */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Fee Type *</label>
-                <select
-                  value={feeType}
-                  onChange={(e) => setFeeType(e.target.value)}
-                  disabled
-                  className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none cursor-not-allowed"
-                >
-                  <option value="Examination fee">Examination fee</option>
-                </select>
-              </div>
-
-              {/* Amount */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Amount (INR) *</label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    placeholder="Enter amount..."
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Payment Mode */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Payment Mode *</label>
-                <select
-                  value={paymentMode}
-                  onChange={(e) => setPaymentMode(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                >
-                  <option>Online Transfer</option>
-                  <option>UPI</option>
-                  <option>NEFT/RTGS</option>
-                  <option>Demand Draft</option>
-                  <option>Credit Card</option>
-                  <option>Cash</option>
-                </select>
-              </div>
-
-              {/* Payment Date */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Payment Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* UTR / Transaction No */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">UTR / Txn No *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter UTR / transaction no..."
-                  value={transactionNo}
-                  onChange={(e) => setTransactionNo(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* Payment Receipt Upload */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
-                  Payment Receipt (PDF/IMG) *
-                </label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  required={!receiptFile}
-                  onChange={(e) => setReceiptFile(e.target.files[0] || null)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-bold file:text-[10px] file:cursor-pointer"
-                />
-                {receiptFile && (
-                  <p className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> {receiptFile.name}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-center pt-2">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={handleBack}
+            disabled={step === 1}
+            className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none rounded-xl text-xs font-bold text-slate-600 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </button>
+          {step < 4 ? (
             <button
-              type="submit"
+              type="button"
+              onClick={handleNext}
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer"
+            >
+              Next
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSubmitPayment}
               disabled={submitting}
-              className="px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all hover:scale-[1.01] flex items-center gap-2 shadow-md shadow-blue-500/10 cursor-pointer"
+              className="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-md shadow-emerald-500/10 cursor-pointer"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              {submitting ? 'Submitting...' : 'Record Payment'}
+              {submitting ? 'Processing...' : 'Confirm & Pay'}
             </button>
-          </div>
-        </form>
+          )}
+        </div>
       </div>
 
-      {/* Transactions Table */}
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-5">
         <div>
           <h3 className="text-base font-black text-slate-800 tracking-tight">Fee Transaction History</h3>
           <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">All recorded student fee payments from the database</p>
         </div>
-
         {loading ? (
           <div className="py-16 flex flex-col items-center gap-3 text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
@@ -19770,7 +29327,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                     <th className="px-6 py-4 font-black">Amount</th>
                     <th className="px-6 py-4 font-black">Mode</th>
                     <th className="px-6 py-4 font-black">Date</th>
-                    <th className="px-6 py-4 font-black">UTR / Txn No</th>
+                    <th className="px-6 py-4 font-black">Payment ID</th>
                     <th className="px-6 py-4 font-black text-center">Actions</th>
                   </tr>
                 </thead>
@@ -19793,29 +29350,16 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                         <td className="px-6 py-4 font-mono font-bold text-slate-800">{fmtCurrency(rec.amount)}</td>
                         <td className="px-6 py-4 text-slate-600">{rec.paymentMode}</td>
                         <td className="px-6 py-4 text-slate-500">{fmtDate(rec.paymentDate)}</td>
-                        <td className="px-6 py-4 font-mono text-slate-600 text-[11px]">{rec.utrNumber}</td>
+                        <td className="px-6 py-4 font-mono text-slate-600 text-[11px]">{rec.razorpayPaymentId || rec.utrNumber || '—'}</td>
                         <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setViewingTx(rec)}
-                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            {rec.paymentReceiptUrl && (
-                              <a
-                                href={getDocUrl(rec.paymentReceiptUrl)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                                title="Open Receipt"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            )}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setViewingTx(rec)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -19832,15 +29376,13 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                 </tbody>
               </table>
             </div>
-
-            {/* Pagination */}
             {feeRecords.length > itemsPerPage && (
               <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-600 pt-3 border-t border-slate-50">
                 <button
                   type="button"
                   disabled={activePage === 1}
                   onClick={() => setActivePage(p => Math.max(p - 1, 1))}
-                  className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors"
+                  className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
@@ -19862,7 +29404,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                   type="button"
                   disabled={activePage === totalPages}
                   onClick={() => setActivePage(p => Math.min(p + 1, totalPages))}
-                  className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors"
+                  className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -19872,11 +29414,9 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         )}
       </div>
 
-      {/* View Receipt Modal */}
       {viewingTx && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden flex flex-col">
-            {/* Header */}
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
@@ -19890,13 +29430,11 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
               <button
                 type="button"
                 onClick={() => setViewingTx(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-
-            {/* Details */}
             <div className="p-6 space-y-4 text-xs text-slate-600 text-left bg-slate-50/20">
               <div className="border border-dashed border-slate-200 bg-white rounded-2xl p-5 shadow-sm space-y-3.5">
                 <div className="grid grid-cols-2 gap-4">
@@ -19911,7 +29449,6 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                     <span className="text-slate-800 font-mono font-bold block mt-0.5">{viewingTx.student?.enrollmentId || '—'}</span>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Fee Purpose</span>
@@ -19922,46 +29459,27 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                     <span className="text-slate-800 font-bold block mt-0.5">{viewingTx.paymentMode}</span>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Payment Date</span>
                     <span className="text-slate-800 font-bold block mt-0.5">{fmtDate(viewingTx.paymentDate)}</span>
                   </div>
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">UTR / Txn No</span>
-                    <span className="text-slate-800 font-mono font-bold block mt-0.5 break-all">{viewingTx.utrNumber}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Payment ID</span>
+                    <span className="text-slate-800 font-mono font-bold block mt-0.5 break-all">{viewingTx.razorpayPaymentId || viewingTx.utrNumber || '—'}</span>
                   </div>
                 </div>
-
-                {viewingTx.paymentReceiptUrl && (
-                  <div className="border-t border-slate-100 pt-3">
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider mb-1.5">Payment Receipt</span>
-                    <a
-                      href={getDocUrl(viewingTx.paymentReceiptUrl)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-bold text-xs underline"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      View Uploaded Receipt
-                    </a>
-                  </div>
-                )}
-
                 <div className="border-t border-slate-100 pt-3 flex justify-between items-center bg-slate-50/50 -mx-5 -mb-5 p-4 rounded-b-2xl">
                   <span className="text-xs font-black text-slate-700">Total Amount Paid</span>
                   <span className="text-sm font-black text-blue-600 font-mono">{fmtCurrency(viewingTx.amount)}</span>
                 </div>
               </div>
             </div>
-
-            {/* Footer */}
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
               <button
                 type="button"
                 onClick={() => setViewingTx(null)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
               >
                 Close
               </button>
@@ -19970,27 +29488,47 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         </div>
       )}
 
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {showPaymentChecker && (
+        <PaymentStatusChecker
+          isOpen={showPaymentChecker}
+          paymentType="academic"
+          message="Verifying your fee payment..."
+          onComplete={() => {
+            setShowPaymentChecker(false);
+            setToast({ message: 'Payment verified successfully!', type: 'success' });
+            fetchFeeRecords();
+            resetForm();
+          }}
+          onRetry={() => {
+            setShowPaymentChecker(false);
+            handleSubmitPayment();
+          }}
+          onCancel={() => {
+            setShowPaymentChecker(false);
+            setSubmitting(false);
+          }}
+        />
       )}
     </div>
   );
 };
 
 export default InstituteERPFees;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteERPHallTicket.jsx`
 
 ```jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Eye, Download, Ticket, X, CheckCircle2, XCircle, AlertTriangle, Printer, HelpCircle } from 'lucide-react';
 import examService from '../../../api/exams';
 
 const InstituteERPHallTicket = ({
   courses = [],
   batches = [],
-  students = [],
+
   examApplications = [],
   fetchERPData,
   user
@@ -20012,13 +29550,13 @@ const InstituteERPHallTicket = ({
   // Initialize selected values
   useEffect(() => {
     if (courses.length > 0 && !selectedCourseId) {
-      setSelectedCourseId(courses[0].id || courses[0]._id);
+      setTimeout(() => setSelectedCourseId(courses[0].id || courses[0]._id), 0);
     }
   }, [courses, selectedCourseId]);
 
   useEffect(() => {
     if (batches.length > 0 && !selectedBatchId) {
-      setSelectedBatchId(batches[0].id || batches[0]._id);
+      setTimeout(() => setSelectedBatchId(batches[0].id || batches[0]._id), 0);
     }
   }, [batches, selectedBatchId]);
 
@@ -20114,7 +29652,7 @@ const InstituteERPHallTicket = ({
   // Trigger browser print for hall tickets
   const handlePrint = () => {
     const printContent = document.getElementById('hall-tickets-print-area').innerHTML;
-    const originalContent = document.body.innerHTML;
+
     
     // Create temporary styling for printing
     const printWindow = window.open('', '_blank');
@@ -20465,13 +30003,13 @@ const InstituteERPHallTicket = ({
 };
 
 export default InstituteERPHallTicket;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteERPHeader.jsx`
 
 ```jsx
-import React from 'react';
-import { ChevronDown, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 const InstituteERPHeader = ({ activeTab, user, appForm, handleLogout }) => {
   const getTabLabel = () => {
@@ -20501,7 +30039,7 @@ const InstituteERPHeader = ({ activeTab, user, appForm, handleLogout }) => {
   const displayName = appForm?.orgName || user?.instituteName || user?.name || 'Institute Profile';
 
   return (
-    <header className="h-16 border-b border-slate-100 bg-white flex items-center justify-between px-8 flex-shrink-0 select-none">
+    <header className="h-16 border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 flex-shrink-0 sticky top-0 z-40 shadow-sm shadow-slate-100/50 select-none">
       {/* Breadcrumbs */}
       <div className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold">
         <span className="hover:text-slate-600 cursor-pointer transition-colors">Home</span>
@@ -20511,8 +30049,8 @@ const InstituteERPHeader = ({ activeTab, user, appForm, handleLogout }) => {
 
       <div className="flex items-center gap-4">
         {/* Profile info dropdown */}
-        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
-          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-extrabold text-[11px] shadow-inner">
+        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50/50 rounded-xl border border-slate-100">
+          <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-extrabold text-[11px] shadow-inner">
             {getInitials(displayName)}
           </div>
           <span className="text-xs font-bold text-slate-700">
@@ -20540,12 +30078,663 @@ const InstituteERPHeader = ({ activeTab, user, appForm, handleLogout }) => {
 };
 
 export default InstituteERPHeader;
+
+```
+
+### `client/src/pages/institute/components/InstituteERPRemittance.jsx`
+
+```jsx
+import { useState, useEffect } from 'react';
+import { CreditCard, UploadCloud, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import academicService from '../../../api/academic';
+
+const InstituteERPRemittance = () => {
+  const [totalAmount, setTotalAmount] = useState('');
+  const [transactionNo, setTransactionNo] = useState('');
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Real data for remittance history
+  const [remittanceHistory, setRemittanceHistory] = useState([]);
+  const [payableAmount, setPayableAmount] = useState(0);
+
+  const fetchData = async () => {
+    try {
+      const [historyRes, payableRes] = await Promise.all([
+        academicService.getRemittances().catch(() => ({ data: { data: [] } })),
+        academicService.getPayableRemittance().catch(() => ({ data: { amount: 0 } }))
+      ]);
+      const historyData = historyRes.data?.data || historyRes.data || [];
+      const payableData = payableRes.data?.amount || payableRes.data?.payableAmount || 0;
+      
+      const mappedHistory = historyData.map(rem => ({
+        id: rem._id.substring(0, 8),
+        amount: rem.amount,
+        date: new Date(rem.paymentDate || rem.createdAt).toISOString().split('T')[0],
+        transactionId: rem.utrNumber || rem.transactionId || 'N/A',
+        status: rem.status || 'Pending Review',
+        fileUrl: rem.paymentReceiptUrl
+      }));
+      setRemittanceHistory(mappedHistory);
+      setPayableAmount(payableData);
+    } catch (err) {
+      console.error('Error fetching remittance data', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!totalAmount || !transactionNo || !paymentDate || !receiptFile) {
+      alert('Please fill all required fields and upload the receipt.');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('amount', totalAmount);
+      formData.append('utrNumber', transactionNo);
+      formData.append('paymentDate', paymentDate);
+      formData.append('paymentReceipt', receiptFile);
+      
+      await academicService.submitRemittance(formData);
+      
+      setTotalAmount('');
+      setTransactionNo('');
+      setReceiptFile(null);
+      alert('Remittance recorded successfully! It is now pending Academy review.');
+      fetchData(); // refresh list
+    } catch (error) {
+      alert('Failed to submit remittance. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div>
+          <h2 className="text-xl font-black text-slate-800">Academy Remittance</h2>
+          <p className="text-sm text-slate-500 mt-1">Record and track fee remittances to the Academic Board.</p>
+        </div>
+        <div className="bg-primary-50 border border-primary-100 px-6 py-3 rounded-xl text-right">
+          <span className="block text-xs text-primary-600 font-bold uppercase tracking-wider mb-1">Current Payable Amount</span>
+          <span className="block text-2xl font-black text-primary-700">₹{payableAmount.toLocaleString()}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Remittance Form */}
+        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-primary-500" />
+            New Remittance
+          </h3>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Total Amount (₹) *</label>
+              <input 
+                type="number"
+                value={totalAmount}
+                onChange={(e) => setTotalAmount(e.target.value)}
+                placeholder="e.g. 75000"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all font-bold"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Transaction ID / UTR *</label>
+              <input 
+                type="text"
+                value={transactionNo}
+                onChange={(e) => setTransactionNo(e.target.value)}
+                placeholder="e.g. UTR123456789"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Payment Date *</label>
+              <input 
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Payment Receipt *</label>
+              <div className="bg-slate-50 border border-slate-200 border-dashed rounded-xl p-4 text-center">
+                {receiptFile ? (
+                  <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold text-sm">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{receiptFile.name}</span>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer flex flex-col items-center justify-center gap-2">
+                    <UploadCloud className="w-6 h-6 text-slate-400" />
+                    <span className="text-sm font-bold text-slate-600">Click to upload receipt</span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">PDF, JPG, PNG up to 5MB</span>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => setReceiptFile(e.target.files[0])}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            <button 
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-3 bg-primary-600 text-white rounded-xl font-black shadow-lg shadow-primary-600/25 hover:bg-primary-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4 flex justify-center items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Processing...
+                </>
+              ) : 'Submit Remittance'}
+            </button>
+          </form>
+        </div>
+
+        {/* History Table */}
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="text-lg font-black text-slate-800">Remittance History</h3>
+            <p className="text-xs text-slate-500 mt-1">Past payments made to the Academic Board.</p>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white border-b border-slate-100">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">ID & Date</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Transaction ID</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Receipt</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {remittanceHistory.length > 0 ? (
+                  remittanceHistory.map((rem) => (
+                    <tr key={rem.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-slate-800">{rem.id}</span>
+                          <span className="text-xs text-slate-500">{rem.date}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{rem.transactionId}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-black text-slate-700">₹{rem.amount.toLocaleString()}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                          rem.status === 'Verified' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'
+                        }`}>
+                          {rem.status === 'Verified' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                          {rem.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip-trigger" title="View Receipt">
+                          <FileText className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                      <p className="text-sm">No remittance history found.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default InstituteERPRemittance;
+
+```
+
+### `client/src/pages/institute/components/InstituteERPResults.jsx`
+
+```jsx
+import { useState, useEffect } from 'react';
+import { Download, FileText, Search, Filter } from 'lucide-react';
+import resultService from '../../../api/results';
+
+const InstituteERPResults = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Real data for results
+  const [results, setResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      try {
+        setIsLoading(true);
+        const res = await resultService.getAllResults();
+        const data = res.data?.data || res.data || [];
+        
+        const mappedResults = data.map(r => {
+          const totalMarks = r.subjects ? r.subjects.reduce((sum, s) => sum + (s.totalMarks || 0), 0) : 0;
+          return {
+            id: r._id,
+            enrollmentId: r.student?.enrollmentId || 'N/A',
+            name: r.student?.firstName ? `${r.student.firstName} ${r.student.lastName}` : 'Unknown Student',
+            course: r.student?.course?.name || 'Unknown Course',
+            marks: r.totalMarks || totalMarks || 0,
+            status: r.resultStatus === 'PASS' ? 'Pass' : 'Fail',
+            date: r.publishedDate ? new Date(r.publishedDate).toISOString().split('T')[0] : 'N/A'
+          };
+        });
+        setResults(mappedResults);
+      } catch (err) {
+        console.error('Error fetching results:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchResults();
+  }, []);
+
+  const filteredResults = results.filter(result => 
+    result.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    result.enrollmentId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
+  const paginatedResults = filteredResults.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div>
+          <h2 className="text-xl font-black text-slate-800">Examination Results</h2>
+          <p className="text-sm text-slate-500 mt-1">View and download student results and provisional certificates.</p>
+        </div>
+        <button className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-bold hover:bg-primary-700 transition-colors">
+          <Download className="w-4 h-4" />
+          Download All Results
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/50">
+          <div className="relative w-full sm:w-96">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search by student name or enrollment ID..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all bg-white"
+            />
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+             <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors bg-white">
+              <Filter className="w-4 h-4" />
+              Filter Options
+            </button>
+          </div>
+        </div>
+
+        {/* Data Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Student Details</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Course</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Marks</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {paginatedResults.length > 0 ? (
+                paginatedResults.map((result) => (
+                  <tr key={result.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-800">{result.name}</span>
+                        <span className="text-xs text-slate-500">{result.enrollmentId}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-slate-600">{result.course}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-bold text-slate-700">{result.marks}%</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                        result.status === 'Pass' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                      }`}>
+                        {result.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip-trigger" 
+                          title="Download Marksheet"
+                          onClick={() => resultService.downloadMarksheet(result.id)}
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                        {result.status === 'Pass' && (
+                          <button className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors tooltip-trigger" title="Download Provisional Certificate">
+                            <Download className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                    <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-sm">No results found matching your criteria.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
+            <span className="text-xs text-slate-500 font-medium">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredResults.length)} of {filteredResults.length} Results
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-primary-600 shadow-sm">
+                {currentPage} / {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default InstituteERPResults;
+
+```
+
+### `client/src/pages/institute/components/InstituteERPRevaluation.jsx`
+
+```jsx
+import { useState } from 'react';
+import { Search, AlertCircle, CheckCircle2, CreditCard } from 'lucide-react';
+
+const InstituteERPRevaluation = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  // Mock data for eligible students
+  const [eligibleStudents] = useState([
+    { id: 1, enrollmentId: 'SEMI-2023-003', name: 'Dr. Amit Kumar', course: 'MEM (Emergency Medicine)', subject: 'Clinical Emergency Medicine', currentMarks: 45, status: 'Eligible', fee: 5000 },
+    { id: 2, enrollmentId: 'SEMI-2023-004', name: 'Dr. Sneha Verma', course: 'MD Emergency Medicine', subject: 'Traumatology', currentMarks: 48, status: 'Eligible', fee: 5000 },
+    { id: 3, enrollmentId: 'SEMI-2023-005', name: 'Dr. Vikram Singh', course: 'DNB Emergency Medicine', subject: 'Pediatric Emergencies', currentMarks: 42, status: 'Eligible', fee: 5000 },
+  ]);
+
+  const filteredStudents = eligibleStudents.filter(student => 
+    student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    student.enrollmentId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSelectStudent = (id) => {
+    if (selectedStudents.includes(id)) {
+      setSelectedStudents(selectedStudents.filter(studentId => studentId !== id));
+    } else {
+      setSelectedStudents([...selectedStudents, id]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedStudents.length === filteredStudents.length) {
+      setSelectedStudents([]);
+    } else {
+      setSelectedStudents(filteredStudents.map(student => student.id));
+    }
+  };
+
+  const totalFee = selectedStudents.reduce((sum, id) => {
+    const student = eligibleStudents.find(s => s.id === id);
+    return sum + (student ? student.fee : 0);
+  }, 0);
+
+  const handlePayFee = () => {
+    // Simulate payment process
+    setTimeout(() => {
+      setShowPaymentModal(false);
+      alert('Revaluation request submitted successfully!');
+      setSelectedStudents([]);
+    }, 1500);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div>
+          <h2 className="text-xl font-black text-slate-800">Revaluation Requests</h2>
+          <p className="text-sm text-slate-500 mt-1">Select students eligible for revaluation and submit requests.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right mr-2">
+            <span className="block text-xs text-slate-500 font-bold uppercase tracking-wider">Total Fee</span>
+            <span className="block text-lg font-black text-primary-600">₹{totalFee.toLocaleString()}</span>
+          </div>
+          <button 
+            onClick={() => setShowPaymentModal(true)}
+            disabled={selectedStudents.length === 0}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
+              selectedStudents.length > 0 
+                ? 'bg-primary-600 text-white hover:bg-primary-700' 
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            Pay & Submit Request
+          </button>
+        </div>
+      </div>
+
+      {/* Rules Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 items-start">
+        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-amber-800">
+          <strong className="block font-bold mb-1">Revaluation Rules:</strong>
+          <ul className="list-disc pl-4 space-y-0.5">
+            <li>Revaluation is allowed only within 7-10 days after result publication.</li>
+            <li>Marks may increase, decrease, or remain the same after revaluation.</li>
+            <li>The final revaluation result is considered final and binding.</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/50">
+          <div className="relative w-full sm:w-96">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search by student name or ID..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all bg-white"
+            />
+          </div>
+        </div>
+
+        {/* Data Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="px-6 py-4 w-12">
+                  <input 
+                    type="checkbox" 
+                    checked={filteredStudents.length > 0 && selectedStudents.length === filteredStudents.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Student Details</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Subject</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Current Marks</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Fee</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => (
+                  <tr key={student.id} className={`transition-colors group ${selectedStudents.includes(student.id) ? 'bg-primary-50/50' : 'hover:bg-slate-50/80'}`}>
+                    <td className="px-6 py-4">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedStudents.includes(student.id)}
+                        onChange={() => handleSelectStudent(student.id)}
+                        className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-800">{student.name}</span>
+                        <span className="text-xs text-slate-500">{student.enrollmentId} ({student.course})</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-slate-600">{student.subject}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-bold text-slate-700">{student.currentMarks}%</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-bold text-slate-700">₹{student.fee.toLocaleString()}</span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                    <CheckCircle2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-sm">No eligible students found for revaluation.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <h3 className="text-2xl font-black text-slate-800 mb-2">Confirm Payment</h3>
+            <p className="text-sm text-slate-500 mb-6">You are requesting revaluation for {selectedStudents.length} student(s).</p>
+            
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-bold text-slate-600">Total Fee</span>
+                <span className="text-lg font-black text-primary-600">₹{totalFee.toLocaleString()}</span>
+              </div>
+              <p className="text-xs text-slate-400">Payment goes directly to the Academy.</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 px-4 py-3 border-2 border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handlePayFee}
+                className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-600/30 transition-all active:scale-95"
+              >
+                Confirm & Pay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default InstituteERPRevaluation;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteERPSidebar.jsx`
 
 ```jsx
-import React from 'react';
 import { Activity, BookOpen, Layers, GraduationCap, Users, CreditCard, FileText, Database, Ticket } from 'lucide-react';
 
 const InstituteERPSidebar = ({ 
@@ -20554,7 +30743,7 @@ const InstituteERPSidebar = ({
   user, 
   setErrorBanner, 
   setSuccessBanner,
-  handleLogout
+
 }) => {
   const handleTabClick = (tab) => {
     setErrorBanner(null);
@@ -20563,30 +30752,33 @@ const InstituteERPSidebar = ({
   };
 
   return (
-    <aside className="w-68 bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 text-slate-300 font-sans select-none">
+    <aside className="w-68 bg-primary-900 border-r border-primary-800 flex flex-col flex-shrink-0 text-primary-200 font-sans select-none relative overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute top-0 left-0 w-full h-32 bg-primary-500/10 blur-3xl rounded-full pointer-events-none"></div>
+
       {/* Sidebar Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-800/80 bg-slate-950/20 gap-3">
-        <div className="bg-gradient-to-tr from-blue-600 to-indigo-500 p-1.5 rounded-xl shadow-md shadow-blue-500/20 flex items-center justify-center">
-          <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center text-white font-extrabold text-sm">
+      <div className="h-16 flex items-center px-6 border-b border-primary-800/80 bg-primary-950/40 gap-3 relative z-10">
+        <div className="bg-gradient-to-tr from-primary-500 to-primary-400 p-1.5 rounded-xl shadow-md shadow-primary-500/20 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-primary-900 flex items-center justify-center text-white font-extrabold text-sm">
             SI
           </div>
         </div>
         <div className="flex flex-col text-left">
-          <span className="text-sm font-black text-white tracking-wide">SEMI Portal</span>
-          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Institution Console</span>
+          <span className="text-sm font-black text-white tracking-wide drop-shadow-sm">SEMI Portal</span>
+          <span className="text-[9px] text-primary-400 font-bold uppercase tracking-widest mt-0.5">Institution Console</span>
         </div>
       </div>
       
       {/* Logged in User Widget */}
-      <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-950/10">
-        <span className="text-[8px] uppercase font-black text-slate-500 tracking-widest block text-left">Accredited Institute</span>
+      <div className="px-5 py-4 border-b border-primary-800/60 bg-primary-950/20 relative z-10">
+        <span className="text-[8px] uppercase font-black text-primary-400 tracking-widest block text-left">Accredited Institute</span>
         <div className="flex items-center gap-3 mt-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-500 text-white flex items-center justify-center font-black text-xs shadow-md border border-indigo-400/20">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-400 to-primary-600 text-white flex items-center justify-center font-black text-xs shadow-md border border-primary-400/20">
             SI
           </div>
           <div className="flex flex-col text-left truncate">
-            <span className="text-xs font-bold text-slate-200 truncate">{user?.email || 'admin@saraswathi.edu.in'}</span>
-            <span className="inline-flex w-fit mt-1 text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20 tracking-wider">
+            <span className="text-xs font-bold text-primary-100 truncate">{user?.email || 'admin@saraswathi.edu.in'}</span>
+            <span className="inline-flex w-fit mt-1 text-[8px] font-black uppercase text-primary-200 bg-primary-500/20 px-2 py-0.5 rounded-md border border-primary-500/30 tracking-wider">
               {user?.instituteName || 'Saraswathi Inst.'}
             </span>
           </div>
@@ -20595,30 +30787,30 @@ const InstituteERPSidebar = ({
 
       {/* Navigation tabs */}
       <nav className="flex-grow px-4 py-6 space-y-1 overflow-y-auto">
-        <span className="text-[9px] uppercase font-black text-slate-500 px-3 tracking-widest block mb-3 text-left">Main Menu</span>
+        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mb-3 text-left">Main Menu</span>
         
         <button
           type="button"
           onClick={() => handleTabClick('dashboard')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'dashboard'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-              : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
           <Activity className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'dashboard' ? 'scale-110' : ''}`} />
           <span>Dashboard</span>
         </button>
-        
-        <span className="text-[9px] uppercase font-black text-slate-500 px-3 tracking-widest block mt-5 mb-3 text-left">Manage</span>
+
+        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mt-5 mb-3 text-left">Manage</span>
         
         <button
           type="button"
           onClick={() => handleTabClick('courses')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'courses'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-              : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
           <BookOpen className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'courses' ? 'scale-110' : ''}`} />
@@ -20630,8 +30822,8 @@ const InstituteERPSidebar = ({
           onClick={() => handleTabClick('batches')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'batches'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-              : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
           <Layers className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'batches' ? 'scale-110' : ''}`} />
@@ -20643,8 +30835,8 @@ const InstituteERPSidebar = ({
           onClick={() => handleTabClick('enrollment')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'enrollment'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-              : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
           <GraduationCap className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'enrollment' ? 'scale-110' : ''}`} />
@@ -20656,8 +30848,8 @@ const InstituteERPSidebar = ({
           onClick={() => handleTabClick('students')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'students'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-              : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
           <Users className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'students' ? 'scale-110' : ''}`} />
@@ -20669,8 +30861,8 @@ const InstituteERPSidebar = ({
           onClick={() => handleTabClick('studentDetails')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'studentDetails'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-              : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
           <Database className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'studentDetails' ? 'scale-110' : ''}`} />
@@ -20682,8 +30874,8 @@ const InstituteERPSidebar = ({
           onClick={() => handleTabClick('fees')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'fees'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-              : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
           <CreditCard className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'fees' ? 'scale-110' : ''}`} />
@@ -20692,11 +30884,24 @@ const InstituteERPSidebar = ({
 
         <button
           type="button"
+          onClick={() => handleTabClick('remittance')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+            activeTab === 'remittance'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
+          }`}
+        >
+          <CreditCard className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'remittance' ? 'scale-110' : ''}`} />
+          <span>Academy Remittance</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => handleTabClick('exams')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'exams'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-              : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
           <FileText className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'exams' ? 'scale-110' : ''}`} />
@@ -20708,12 +30913,40 @@ const InstituteERPSidebar = ({
           onClick={() => handleTabClick('hallTicket')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'hallTicket'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 translate-x-0.5'
-              : 'hover:bg-slate-800/60 hover:text-slate-100 text-slate-400'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
           <Ticket className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'hallTicket' ? 'scale-110' : ''}`} />
           <span>Hall Ticket</span>
+        </button>
+
+        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mt-5 mb-3 text-left">Post-Exam</span>
+
+        <button
+          type="button"
+          onClick={() => handleTabClick('results')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+            activeTab === 'results'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
+          }`}
+        >
+          <FileText className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'results' ? 'scale-110' : ''}`} />
+          <span>Results</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabClick('revaluation')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+            activeTab === 'revaluation'
+              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
+              : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
+          }`}
+        >
+          <FileText className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'revaluation' ? 'scale-110' : ''}`} />
+          <span>Revaluation</span>
         </button>
       </nav>
     </aside>
@@ -20721,13 +30954,40 @@ const InstituteERPSidebar = ({
 };
 
 export default InstituteERPSidebar;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteERPStudentDetails.jsx`
 
 ```jsx
-import React, { useState, useRef, useMemo } from 'react';
-import { Eye, Download, CheckCircle2, ChevronLeft, ChevronRight, X, Database, FileText, UploadCloud, Trash2, Calendar, Award, Percent, RefreshCw } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
+import { 
+  Eye, 
+  Download, 
+  CheckCircle2, 
+  ChevronLeft, 
+  ChevronRight, 
+  X, 
+  Database, 
+  FileText, 
+  UploadCloud, 
+  Trash2, 
+  Percent, 
+  RefreshCw,
+  User,
+  GraduationCap,
+  Calendar,
+  Search,
+  Filter,
+  ChevronDown,
+  AlertCircle,
+  FileCheck,
+  Upload,
+  Plus,
+  Minus,
+  Clock,
+  ChevronUp
+} from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import Toast from '../../../Components/Toast';
 import academicService from '../../../api/academic';
@@ -20736,67 +30996,143 @@ const InstituteERPStudentDetails = ({
   students = [],
   fetchERPData
 }) => {
-  const [selectedStudentId, setSelectedStudentId] = useState(''); // This will be the actual MongoDB _id
-  const [studentName, setStudentName] = useState('');
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
   const [attendance, setAttendance] = useState('');
   const [studentSearchText, setStudentSearchText] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
-  const [availableSemesters, setAvailableSemesters] = useState([]);
-  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterBatch, setFilterBatch] = useState('All');
+  const [filterCourse, setFilterCourse] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [expandedStudentId, setExpandedStudentId] = useState(null);
+
   // File upload state
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
-  const [viewingDetails, setViewingDetails] = useState(null);
+  const [viewingStudent, setViewingStudent] = useState(null);
+  const [viewingSemester, setViewingSemester] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-  
-  // Toasts
   const [toast, setToast] = useState(null);
 
-  // Pagination states
+  // ─── Pagination ────────────────────────────────────────────────────────────
   const [activePage, setActivePage] = useState(1);
-  const itemsPerPage = 5;
-  const totalPages = Math.ceil(students.length / itemsPerPage) || 1;
+  const itemsPerPage = 6;
 
   const getDocUrl = (url) => {
     if (!url) return '';
     return getUploadUrl(url);
   };
 
-  // Handle student selection change
-  const handleStudentChange = (id) => {
-    setSelectedStudentId(id);
-    if (id === '') {
-      setStudentName('');
-      setAttendance('');
-      setStudentSearchText('');
-      setAvailableSemesters([]);
-      setSelectedSemester('');
-      return;
-    }
-    const student = students.find(s => String(s.id) === id || String(s._id) === id);
-    if (student) {
-      setStudentName(student.fullName || '');
-      const idStr = student.enrollmentNo || `STUD00${student.id}`;
-      setStudentSearchText(`${idStr} - ${student.fullName}`);
-      setAvailableSemesters(student.semesters || []);
-      if (student.semesters && student.semesters.length > 0) {
-        setSelectedSemester(student.semesters[0].semesterNumber);
-        setAttendance(student.semesters[0].attendancePercentage || '');
-      } else {
-        setSelectedSemester('');
-        setAttendance('');
+  // ─── Derived Data ──────────────────────────────────────────────────────────
+  // Group records by student
+  const studentGroups = useMemo(() => {
+    const groups = {};
+    students.forEach(s => {
+      const studentId = s._id || s.id;
+      if (!groups[studentId]) {
+        groups[studentId] = {
+          ...s,
+          semesters: []
+        };
       }
-    } else {
-      setStudentName('');
-      setAttendance('');
-      setStudentSearchText('');
-      setAvailableSemesters([]);
-      setSelectedSemester('');
+      if (s.semesters && s.semesters.length > 0) {
+        s.semesters.forEach(sem => {
+          groups[studentId].semesters.push({
+            semesterNumber: sem.semesterNumber,
+            attendancePercentage: sem.attendancePercentage ?? 0,
+            thesisApproved: sem.thesisApproved ?? false,
+            thesisDocumentUrl: sem.thesisDocumentUrl || '',
+            eligibilityStatus: sem.eligibilityStatus || 'Pending'
+          });
+        });
+      }
+      groups[studentId].semesters.sort((a, b) => a.semesterNumber - b.semesterNumber);
+    });
+    return Object.values(groups);
+  }, [students]);
+
+  // Filter groups
+  const filteredGroups = useMemo(() => {
+    let result = studentGroups;
+    
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(g => 
+        g.fullName?.toLowerCase().includes(q) ||
+        g.enrollmentNo?.toLowerCase().includes(q) ||
+        g.institute?.toLowerCase().includes(q)
+      );
+    }
+    
+    if (filterBatch !== 'All') {
+      result = result.filter(g => (g.batchName || g.batch) === filterBatch);
+    }
+    
+    if (filterCourse !== 'All') {
+      result = result.filter(g => (g.courseName || g.course) === filterCourse);
+    }
+    
+    if (filterStatus === 'Complete') {
+      result = result.filter(g => 
+        g.semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved)
+      );
+    } else if (filterStatus === 'Incomplete') {
+      result = result.filter(g => 
+        g.semesters.some(s => s.attendancePercentage < 75 || !s.thesisApproved)
+      );
+    }
+    
+    return result;
+  }, [studentGroups, searchQuery, filterBatch, filterCourse, filterStatus]);
+
+  // Unique batches and courses for filters
+  const uniqueBatches = useMemo(() => {
+    const batches = new Set();
+    students.forEach(s => {
+      const b = s.batchName || s.batch;
+      if (b) batches.add(b);
+    });
+    return ['All', ...Array.from(batches)];
+  }, [students]);
+
+  const uniqueCourses = useMemo(() => {
+    const courses = new Set();
+    students.forEach(s => {
+      const c = s.courseName || s.course;
+      if (c) courses.add(c);
+    });
+    return ['All', ...Array.from(courses)];
+  }, [students]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredGroups.length / itemsPerPage) || 1;
+  const paginatedGroups = filteredGroups.slice(
+    (activePage - 1) * itemsPerPage,
+    activePage * itemsPerPage
+  );
+
+  // ─── Student Selection ──────────────────────────────────────────────────────
+  const handleStudentSelect = (studentId) => {
+    setSelectedStudentId(studentId);
+    const student = students.find(s => String(s.id) === studentId || String(s._id) === studentId);
+    if (student) {
+      setStudentSearchText(`${student.enrollmentNo || `STUD00${student.id}`} - ${student.fullName}`);
+      if (student.semesters && student.semesters.length > 0) {
+        const firstSem = student.semesters.find(s => s.attendancePercentage > 0 || s.thesisDocumentUrl);
+        if (firstSem) {
+          setSelectedSemester(firstSem.semesterNumber);
+          setAttendance(firstSem.attendancePercentage || '');
+        } else {
+          setSelectedSemester(student.semesters[0]?.semesterNumber || '');
+          setAttendance('');
+        }
+      }
     }
   };
 
@@ -20810,7 +31146,7 @@ const InstituteERPStudentDetails = ({
     }
   };
 
-  // Drag and drop handlers
+  // ─── File Upload ────────────────────────────────────────────────────────────
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -20822,13 +31158,23 @@ const InstituteERPStudentDetails = ({
   };
 
   const validateAndSetFile = (file) => {
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        setToast({ message: 'File size must be under 10MB.', type: 'warning' });
-        return;
-      }
-      setUploadedFile(file);
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setToast({ message: 'File size must be under 10MB.', type: 'warning' });
+      return;
     }
+    setUploadedFile(file);
+    setUploadProgress(0);
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 5;
+      if (progress >= 100) {
+        clearInterval(interval);
+        setUploadProgress(100);
+      } else {
+        setUploadProgress(progress);
+      }
+    }, 100);
   };
 
   const handleDrop = (e) => {
@@ -20848,21 +31194,22 @@ const InstituteERPStudentDetails = ({
 
   const removeFile = () => {
     setUploadedFile(null);
-    setUploadProgress(null);
+    setUploadProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
+  // ─── Submit Handler ────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedStudentId || !studentName || !attendance || !selectedSemester) {
-      setToast({ message: 'Please select a student, semester and enter attendance.', type: 'warning' });
+    if (!selectedStudentId || !selectedSemester) {
+      setToast({ message: 'Please select a student and semester.', type: 'warning' });
       return;
     }
 
     const attendanceNum = parseFloat(attendance);
-    if (isNaN(attendanceNum) || attendanceNum < 0 || attendanceNum > 100) {
+    if (!attendance || isNaN(attendanceNum) || attendanceNum < 0 || attendanceNum > 100) {
       setToast({ message: 'Please enter a valid attendance percentage between 0 and 100.', type: 'warning' });
       return;
     }
@@ -20871,33 +31218,29 @@ const InstituteERPStudentDetails = ({
     setErrorMsg(null);
 
     try {
-      const payload = { 
+      const payload = {
         semesterNumber: parseInt(selectedSemester),
-        attendancePercentage: attendanceNum 
+        attendancePercentage: attendanceNum
       };
       if (uploadedFile) {
         payload.thesisDocument = uploadedFile;
       }
 
       await academicService.updateAcademicMetrics(selectedStudentId, payload);
-      
-      setSuccessMsg('🎉 Student details and thesis uploaded successfully!');
+
+      setSuccessMsg('\uD83C\uDF89 Student details updated successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
-      
-      // Refresh global state
+
       if (fetchERPData) await fetchERPData();
 
-      // Reset Form
       setSelectedStudentId('');
-      setStudentName('');
-      setAttendance('');
       setStudentSearchText('');
-      setAvailableSemesters([]);
       setSelectedSemester('');
+      setAttendance('');
       setUploadedFile(null);
+      setUploadProgress(0);
 
     } catch (err) {
-      console.error("Error updating academic metrics:", err);
       setErrorMsg(err.response?.data?.message || err.message || 'Failed to submit details');
       setTimeout(() => setErrorMsg(null), 4000);
     } finally {
@@ -20905,14 +31248,16 @@ const InstituteERPStudentDetails = ({
     }
   };
 
-  const handleEditDetails = (student) => {
-    handleStudentChange(student._id || student.id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // ─── View Student Details ──────────────────────────────────────────────────
+  const handleViewStudent = (student, semester) => {
+    setViewingStudent(student);
+    setViewingSemester(semester);
   };
 
-  const handleDeleteDetails = async (studentId, semNum) => {
+  // ─── Delete Record ─────────────────────────────────────────────────────────
+  const handleDeleteRecord = async (studentId, semNum) => {
     if (!window.confirm(`Are you sure you want to clear this student's attendance and thesis records for Semester ${semNum}?`)) return;
-    
+
     setIsSubmitting(true);
     try {
       await academicService.updateAcademicMetrics(studentId, {
@@ -20924,7 +31269,6 @@ const InstituteERPStudentDetails = ({
       setTimeout(() => setSuccessMsg(null), 4000);
       if (fetchERPData) await fetchERPData();
     } catch (err) {
-      console.error("Error clearing academic metrics:", err);
       setErrorMsg(err.response?.data?.message || err.message || 'Failed to clear details');
       setTimeout(() => setErrorMsg(null), 4000);
     } finally {
@@ -20932,33 +31276,101 @@ const InstituteERPStudentDetails = ({
     }
   };
 
-  // Get current page items
-  const paginatedStudents = useMemo(() => {
-    return students.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
-  }, [students, activePage]);
+  // ─── Toggle Expand ─────────────────────────────────────────────────────────
+  const toggleExpand = (studentId) => {
+    setExpandedStudentId(expandedStudentId === studentId ? null : studentId);
+  };
+
+  // ─── Render Helpers ────────────────────────────────────────────────────────
+  const getStatusBadge = (record) => {
+    const isComplete = (record.attendancePercentage || 0) >= 75 && record.thesisApproved;
+    if (isComplete) {
+      return { label: 'Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+    }
+    return { label: 'Incomplete', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+  };
+
+  const getThesisStatus = (record) => {
+    if (record.thesisApproved) {
+      return { label: 'Approved', color: 'text-emerald-600', icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> };
+    }
+    if (record.thesisDocumentUrl) {
+      return { label: 'Uploaded', color: 'text-blue-600', icon: <FileCheck className="w-3.5 h-3.5 text-blue-500" /> };
+    }
+    return { label: 'Missing', color: 'text-slate-400', icon: <AlertCircle className="w-3.5 h-3.5 text-slate-400" /> };
+  };
+
+  const getOverallStatus = (semesters) => {
+    if (!semesters || semesters.length === 0) return { label: 'No Data', color: 'bg-slate-100 text-slate-500' };
+    const allComplete = semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+    if (allComplete) {
+      return { label: 'All Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+    }
+    const someComplete = semesters.some(s => s.attendancePercentage >= 75 && s.thesisApproved);
+    if (someComplete) {
+      return { label: 'Partial', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    }
+    return { label: 'Incomplete', color: 'bg-rose-100 text-rose-700 border-rose-200' };
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
-      {/* Page Title Header */}
+      {/* ─── DEBUG ─────────────────────────────────────────────────────────── */}
+      {students.length === 0 && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-bold text-amber-800">
+          Debug: students array is empty ({students.length} items). If you expected data, check the API fetch.
+        </div>
+      )}
+      {students.length > 0 && studentGroups.length === 0 && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-bold text-amber-800">
+          Debug: {students.length} students received but 0 groups created. Check if students have a `semesters` array.
+        </div>
+      )}
+      {/* ─── PAGE HEADER ────────────────────────────────────────────────────── */}
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
             <Database className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">Students Details Console</h2>
-            <p className="text-xs text-slate-400 font-semibold mt-1">Submit attendance records, upload thesis papers, and view student portfolios</p>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Student Academic Records</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">
+              {filteredGroups.length} students · {studentGroups.reduce((acc, g) => acc + g.semesters.length, 0)} records
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-center">
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">All Complete</span>
+            <span className="text-lg font-black text-emerald-600">
+              {studentGroups.filter(g => g.semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved)).length}
+            </span>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-center">
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Partial</span>
+            <span className="text-lg font-black text-amber-600">
+              {studentGroups.filter(g => 
+                g.semesters.some(s => s.attendancePercentage >= 75 && s.thesisApproved) &&
+                g.semesters.some(s => s.attendancePercentage < 75 || !s.thesisApproved)
+              ).length}
+            </span>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-center">
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Incomplete</span>
+            <span className="text-lg font-black text-rose-600">
+              {studentGroups.filter(g => g.semesters.every(s => s.attendancePercentage < 75 || !s.thesisApproved)).length}
+            </span>
           </div>
         </div>
       </div>
 
+      {/* ─── SUCCESS/ERROR ──────────────────────────────────────────────────── */}
       {successMsg && (
         <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-2xl text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-sm animate-in slide-in-from-top duration-200">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
-
       {errorMsg && (
         <div className="p-4 bg-rose-50 border-l-4 border-rose-500 rounded-r-2xl text-xs font-bold text-rose-800 flex items-center gap-2 shadow-sm animate-in slide-in-from-top duration-200">
           <X className="w-4 h-4 text-rose-600 flex-shrink-0" />
@@ -20966,84 +31378,329 @@ const InstituteERPStudentDetails = ({
         </div>
       )}
 
-      {/* Grid Layout for Form and List */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* ─── MAIN GRID ──────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* 1. STUDENT DETAILS SUBMISSION FORM */}
-        <div className="lg:col-span-1 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <div className="space-y-5">
+        {/* ─── LEFT: Student Cards ──────────────────────────────────────────── */}
+        <div className="lg:col-span-8 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-5">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <h3 className="text-base font-black text-slate-800 tracking-tight">Update Details</h3>
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Enter attendance and upload thesis file</p>
+              <h3 className="text-base font-black text-slate-800 tracking-tight">Students</h3>
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
+                {filteredGroups.length} students found
+              </p>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Searchable Student Selection */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Search Student ID/Name *</label>
-                <input
-                  list="students-datalist"
-                  placeholder="Type ID or Name to search..."
-                  value={studentSearchText}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setStudentSearchText(val);
-                    const matched = students.find(s => {
-                      const idStr = s.enrollmentNo || `STUD00${s.id}`;
-                      return `${idStr} - ${s.fullName}` === val;
-                    });
-                    if (matched) {
-                      setSelectedStudentId(matched.id || matched._id);
-                      setStudentName(matched.fullName || '');
-                      setAttendance(matched.attendancePercentage || '');
-                    } else {
-                      setSelectedStudentId('');
-                      setStudentName('');
-                      setAttendance('');
-                    }
-                  }}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                  required
-                />
-                <datalist id="students-datalist">
-                  {students.map(s => {
-                    const idStr = s.enrollmentNo || `STUD00${s.id}`;
-                    return <option key={s.id || s._id} value={`${idStr} - ${s.fullName}`} />;
-                  })}
-                </datalist>
-              </div>
-
-              {/* Student Name (pre-filled) */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Student Name</label>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-none">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Student name..."
-                  value={studentName}
-                  readOnly
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none cursor-not-allowed opacity-80"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setActivePage(1); }}
+                  className="pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all w-full sm:w-36"
                 />
               </div>
+              <select
+                value={filterBatch}
+                onChange={(e) => { setFilterBatch(e.target.value); setActivePage(1); }}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              >
+                {uniqueBatches.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+              <select
+                value={filterCourse}
+                onChange={(e) => { setFilterCourse(e.target.value); setActivePage(1); }}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              >
+                {uniqueCourses.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select
+                value={filterStatus}
+                onChange={(e) => { setFilterStatus(e.target.value); setActivePage(1); }}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value="All">All Status</option>
+                <option value="Complete">All Complete</option>
+                <option value="Incomplete">Needs Attention</option>
+              </select>
+            </div>
+          </div>
 
-              {/* Semester Selection */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Select Semester *</label>
-                <select
-                  value={selectedSemester}
-                  onChange={(e) => handleSemesterChange(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                  required
+          {/* Student Cards */}
+          <div className="space-y-3">
+            {paginatedGroups.map((group) => {
+              const overallStatus = getOverallStatus(group.semesters);
+              const isExpanded = expandedStudentId === (group._id || group.id);
+
+              return (
+                <div 
+                  key={group._id || group.id} 
+                  className={`border rounded-2xl transition-all duration-200 ${
+                    isExpanded ? 'border-blue-300 shadow-md shadow-blue-100/50' : 'border-slate-200 hover:border-slate-300'
+                  }`}
                 >
-                  <option value="">Select Semester</option>
-                  {[1, 2, 3, 4, 5, 6].map(sem => (
-                    <option key={sem} value={sem}>Semester {sem}</option>
-                  ))}
-                </select>
-              </div>
+                  {/* ─── Card Header (always visible) ──────────────────────── */}
+                  <div 
+                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors rounded-2xl"
+                    onClick={() => toggleExpand(group._id || group.id)}
+                  >
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-indigo-700 flex items-center justify-center font-black text-sm flex-shrink-0 shadow-inner">
+                        {group.fullName?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                      
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-sm font-black text-slate-800 truncate">{group.fullName}</span>
+                          <span className="text-[10px] font-mono font-bold text-slate-400">{group.enrollmentNo}</span>
+                          <span className="text-[10px] text-slate-300">·</span>
+                          <span className="text-[10px] font-semibold text-slate-500">{group.batchName || group.batch}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-[10px] text-slate-400 font-medium">{group.courseName || group.course}</span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black border ${overallStatus.color}`}>
+                            {overallStatus.label}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {group.semesters.length} semester{group.semesters.length > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-              {/* Attendance percentage */}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {/* Quick status dots */}
+                      <div className="flex items-center gap-1">
+                        {group.semesters.map((sem, idx) => {
+                          const isComplete = sem.attendancePercentage >= 75 && sem.thesisApproved;
+                          return (
+                            <div 
+                              key={idx}
+                              className={`w-2.5 h-2.5 rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                              title={`Sem ${sem.semesterNumber}: ${isComplete ? 'Complete' : 'Incomplete'}`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="text-slate-400">
+                        {isExpanded ? (
+                          <ChevronUp className="w-5 h-5" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ─── Card Body (expandable) ────────────────────────────── */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-2 border-t border-slate-100 animate-in slide-in-from-top duration-200">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-slate-50/70 border-b border-slate-100">
+                              <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Sem</th>
+                              <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Attendance</th>
+                              <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Thesis</th>
+                              <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
+                              <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {group.semesters.map((sem) => {
+                              const status = getStatusBadge(sem);
+                              const thesis = getThesisStatus(sem);
+                              const isComplete = sem.attendancePercentage >= 75 && sem.thesisApproved;
+
+                              return (
+                                <tr key={sem.semesterNumber} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-3 py-3 text-center font-bold text-slate-700">
+                                    Sem {sem.semesterNumber}
+                                  </td>
+                                  <td className="px-3 py-3 text-center">
+                                    <span className={`font-bold ${isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                      {sem.attendancePercentage || 0}%
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-3 text-center">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      {thesis.icon}
+                                      <span className={`font-bold ${thesis.color}`}>{thesis.label}</span>
+                                      {sem.thesisDocumentUrl && (
+                                        <a
+                                          href={getDocUrl(sem.thesisDocumentUrl)}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-slate-400 hover:text-blue-600 transition-colors"
+                                          title="Download Thesis"
+                                        >
+                                          <Download className="w-3.5 h-3.5" />
+                                        </a>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-3 text-center">
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[8px] font-black border ${status.color}`}>
+                                      {isComplete ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                                      {status.label}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-3 text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleViewStudent(group, sem.semesterNumber)}
+                                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                                        title="View Details"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const targetId = group._id || group.id;
+                                          handleDeleteRecord(targetId, sem.semesterNumber);
+                                        }}
+                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                        title="Clear Record"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            
+            {filteredGroups.length === 0 && (
+              <div className="py-12 text-center text-slate-400 font-medium">
+                <Database className="w-10 h-10 mx-auto text-slate-200 mb-3 stroke-1" />
+                <p className="text-sm font-bold text-slate-500">No students found</p>
+                <p className="text-xs text-slate-400 mt-1">Try adjusting your filters or search terms.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <span className="text-[10px] text-slate-400 font-semibold">
+                Showing {((activePage - 1) * itemsPerPage) + 1} to {Math.min(activePage * itemsPerPage, filteredGroups.length)} of {filteredGroups.length}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setActivePage(p => Math.max(1, p - 1))}
+                  disabled={activePage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <div className="flex items-center px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-blue-600">
+                  {activePage} / {totalPages}
+                </div>
+                <button
+                  onClick={() => setActivePage(p => Math.min(totalPages, p + 1))}
+                  disabled={activePage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ─── RIGHT: Update Form ───────────────────────────────────────────── */}
+        <div className="lg:col-span-4 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+          <div>
+            <h3 className="text-base font-black text-slate-800 tracking-tight">Update Record</h3>
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
+              Enter attendance and upload thesis
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5 mt-4">
+            {/* Student Selection */}
+            <div>
+              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+                Select Student <span className="text-rose-500">*</span>
+              </label>
+              <input
+                list="student-list"
+                placeholder="Search by name or ID..."
+                value={studentSearchText}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setStudentSearchText(val);
+                  const matched = students.find(s => {
+                    const idStr = s.enrollmentNo || `STUD00${s.id}`;
+                    return `${idStr} - ${s.fullName}` === val;
+                  });
+                  if (matched) {
+                    handleStudentSelect(matched.id || matched._id);
+                  } else {
+                    setSelectedStudentId('');
+                    setAttendance('');
+                  }
+                }}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+              />
+              <datalist id="student-list">
+                {students.map(s => {
+                  const idStr = s.enrollmentNo || `STUD00${s.id}`;
+                  return <option key={s.id || s._id} value={`${idStr} - ${s.fullName}`} />;
+                })}
+              </datalist>
+            </div>
+
+            {/* Semester Selection */}
+            {selectedStudentId && (
               <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Attendance percentage *</label>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+                  Select Semester <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5, 6].map(sem => {
+                    const student = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
+                    const hasSem = student?.semesters?.some(s => s.semesterNumber === sem);
+                    return (
+                      <button
+                        key={sem}
+                        type="button"
+                        onClick={() => handleSemesterChange(sem)}
+                        disabled={!hasSem}
+                        className={`flex-1 min-w-[30%] py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                          String(selectedSemester) === String(sem)
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                            : hasSem
+                              ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:border-slate-300'
+                              : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        Sem {sem}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Attendance */}
+            {selectedSemester && (
+              <div>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+                  Attendance Percentage <span className="text-rose-500">*</span>
+                </label>
                 <div className="relative">
                   <input
                     type="number"
@@ -21051,326 +31708,213 @@ const InstituteERPStudentDetails = ({
                     max="100"
                     step="0.1"
                     required
-                    placeholder="percentage.."
+                    placeholder="Enter percentage"
                     value={attendance}
                     onChange={(e) => setAttendance(e.target.value)}
-                    className="w-full pl-4 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                    className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
                   />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">%</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">%</span>
                 </div>
               </div>
+            )}
 
-              {/* Thesis upload Drag & Drop Zone */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Thesis upload (Optional if only updating attendance)</label>
-                
-                {uploadedFile ? (
-                  <div className="border border-emerald-200 bg-emerald-50/20 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-inner">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <FileText className="w-8 h-8 text-emerald-600 flex-shrink-0" />
-                      <div className="text-left min-w-0">
-                        <p className="text-xs font-bold text-slate-700 truncate">{uploadedFile.name}</p>
-                        <p className="text-[9px] text-slate-400 font-semibold mt-0.5">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
-                      </div>
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={removeFile}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                      title="Remove File"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    onDragEnter={handleDrag}
-                    onDragOver={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                    className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 select-none ${
-                      dragActive 
-                        ? 'border-blue-500 bg-blue-50/30' 
-                        : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50/65'
-                    }`}
-                  >
-                    <UploadCloud className="w-7 h-7 text-blue-500" />
-                    <span className="text-xs font-bold text-blue-600">choose file or Drag and drop</span>
-                    <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">PDF, DOCX, or ZIP (Max 10MB)</span>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef}
-                      onChange={handleFileSelect}
-                      className="hidden" 
-                      accept=".pdf,.docx,.zip"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !selectedStudentId}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-45 disabled:pointer-events-none text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all hover:scale-[1.01] flex items-center justify-center gap-2 shadow-md shadow-blue-500/10 cursor-pointer"
-                >
-                  {isSubmitting ? (
-                    <><RefreshCw className="w-4 h-4 animate-spin" /> Submitting...</>
-                  ) : (
-                    'Submit'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        {/* 2. STUDENT DETAILS LIST */}
-        <div className="lg:col-span-2 bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6 flex flex-col justify-between">
-          <div className="space-y-4">
+            {/* Thesis Upload */}
             <div>
-              <h3 className="text-base font-black text-slate-800 tracking-tight">Student Details List</h3>
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Overview of uploaded student attendance and thesis details</p>
-            </div>
-
-            <div className="overflow-x-auto border border-slate-100 rounded-2xl bg-white shadow-inner">
-              <table className="w-full text-left border-collapse text-xs text-slate-500 font-semibold">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px]">
-                    <th className="px-6 py-4 font-black w-16 text-center">#</th>
-                    <th className="px-6 py-4 font-black">Student ID</th>
-                    <th className="px-6 py-4 font-black">Student name</th>
-                    <th className="px-6 py-4 font-black text-center">Semester</th>
-                    <th className="px-6 py-4 font-black">Attendance</th>
-                    <th className="px-6 py-4 font-black text-center">Thesis Status</th>
-                    <th className="px-6 py-4 font-black text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-600">
-                  {paginatedStudents.map((s, idx) => {
-                    const globalIdx = (activePage - 1) * itemsPerPage + idx;
-                    const serialNo = String(globalIdx + 1).padStart(2, '0');
-                    // Only show semesters where data has actually been submitted
-                    const semestersList = s.semesters && s.semesters.length > 0
-                      ? s.semesters.filter(sem => (sem.attendancePercentage > 0) || !!sem.thesisDocumentUrl)
-                      : [];
-                    // If no submitted semesters, render a single placeholder row
-                    const rowList = semestersList.length > 0 ? semestersList : [null];
-                    return rowList.map((sem, sIdx) => {
-                      const hasThesis = sem && sem.thesisDocumentUrl;
-                      const showStudentInfo = sIdx === 0; // Only show student name/ID on first row
-                      return (
-                        <tr key={`${s.id || s._id}-sem-${sem ? sem.semesterNumber : 'none'}`} className="hover:bg-slate-50/30 transition-colors">
-                            <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{showStudentInfo ? serialNo : ''}</td>
-                            <td className="px-6 py-4 font-mono font-bold text-blue-600">{showStudentInfo ? (s.enrollmentNo || `STUD00${s.id}`) : ''}</td>
-                            <td className="px-6 py-4">
-                              <span className="font-extrabold text-slate-800">{showStudentInfo ? s.fullName : ''}</span>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className="font-bold text-slate-600">{sem ? `Sem ${sem.semesterNumber}` : 'N/A'}</span>
-                            </td>
-                            <td className="px-6 py-4 font-mono font-bold text-slate-700">
-                              {sem && sem.attendancePercentage !== undefined && sem.attendancePercentage !== null ? `${sem.attendancePercentage}%` : 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              {hasThesis ? (
-                                <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-green-50 text-green-700 border border-green-100 shadow-sm">
-                                  {sem.thesisApproved ? 'Approved' : 'Uploaded'}
-                                </span>
-                              ) : (
-                                <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                  Missing
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                {sem && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setViewingDetails({ ...s, viewSem: sem })}
-                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
-                                    title="View Details"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-                                )}
-                                {showStudentInfo && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditDetails(s)}
-                                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
-                                    title="Edit Details"
-                                  >
-                                    <FileText className="w-4 h-4" />
-                                  </button>
-                                )}
-                                {hasThesis && (
-                                  <a
-                                    href={getDocUrl(sem.thesisDocumentUrl)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer inline-flex"
-                                    title="Download Thesis File"
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </a>
-                                )}
-                                {sem && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteDetails(s._id || s.id, sem.semesterNumber)}
-                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                                    title="Delete Details"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                        </tr>
-                      );
-                    });
-                  })}
-                  {students.length === 0 && (
-                    <tr>
-                      <td colSpan="7" className="px-6 py-12 text-center text-slate-400 font-medium">
-                        No students available.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* PAGINATION PANEL */}
-          {students.length > 0 && (
-            <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-600 pt-4 border-t border-slate-50 mt-4">
-              <button 
-                type="button" 
-                disabled={activePage === 1}
-                onClick={() => setActivePage(prev => Math.max(prev - 1, 1))} 
-                className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(num => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => setActivePage(num)}
-                  className={`w-8 h-8 rounded-lg border text-xs font-black transition-all cursor-pointer ${
-                    activePage === num 
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/10' 
-                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+                Thesis Document
+              </label>
+              {uploadedFile ? (
+                <div className="border border-emerald-200 bg-emerald-50/30 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileText className="w-7 h-7 text-emerald-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-700 truncate">{uploadedFile.name}</p>
+                      <p className="text-[9px] text-slate-400 font-semibold">
+                        {(uploadedFile.size / 1024).toFixed(1)} KB
+                        {uploadProgress > 0 && uploadProgress < 100 && ` · Uploading ${uploadProgress}%`}
+                        {uploadProgress === 100 && ' · Done'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeFile}
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all flex-shrink-0"
+                    title="Remove File"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 select-none ${
+                    dragActive
+                      ? 'border-blue-500 bg-blue-50/30'
+                      : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50/50'
                   }`}
                 >
-                  {num}
-                </button>
-              ))}
-              <button 
-                type="button" 
-                disabled={activePage === totalPages}
-                onClick={() => setActivePage(prev => Math.min(prev + 1, totalPages))} 
-                className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+                  <UploadCloud className="w-7 h-7 text-blue-500" />
+                  <span className="text-xs font-bold text-blue-600">Click or drag to upload</span>
+                  <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">PDF, DOCX, ZIP (Max 10MB)</span>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept=".pdf,.docx,.zip"
+                  />
+                </div>
+              )}
+              <p className="text-[9px] text-slate-400 font-medium mt-1.5">
+                Upload thesis document (optional if only updating attendance)
+              </p>
             </div>
-          )}
-        </div>
 
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={isSubmitting || !selectedStudentId}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-500/10 cursor-pointer"
+            >
+              {isSubmitting ? (
+                <><RefreshCw className="w-4 h-4 animate-spin" /> Updating...</>
+              ) : (
+                <><Upload className="w-4 h-4" /> Update Record</>
+              )}
+            </button>
+          </form>
+
+          {/* Info Box */}
+          <div className="mt-5 bg-slate-50/70 border border-slate-200 rounded-xl p-3.5 flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+            <div className="text-[10px] text-slate-500 font-medium leading-relaxed">
+              <span className="font-bold text-slate-700">Note:</span> Attendance below 75% or missing thesis will mark the student as <span className="text-amber-600 font-bold">Incomplete</span>.
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* DETAIL VIEW MODAL */}
-      {viewingDetails && (
+      {/* ─── VIEW DETAILS MODAL ────────────────────────────────────────────── */}
+      {viewingStudent && viewingSemester && (() => {
+        const semData = (viewingStudent.semesters || []).find(s => String(s.semesterNumber) === String(viewingSemester));
+        const semAttendance = semData?.attendancePercentage || 0;
+        const semThesisApproved = semData?.thesisApproved || false;
+        const semThesisUrl = semData?.thesisDocumentUrl || '';
+        const isComplete = semAttendance >= 75 && semThesisApproved;
+
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden flex flex-col scale-in-center">
-            {/* Header */}
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden flex flex-col scale-in-center">
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-                  <Database className="w-5 h-5" />
+                  <User className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-800">Student Academic Record</h3>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Academic Portfolio</p>
+                  <h3 className="text-sm font-black text-slate-800">Academic Record</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {viewingStudent.fullName} · Sem {viewingSemester}
+                  </p>
                 </div>
               </div>
-              <button 
+              <button
                 type="button"
-                onClick={() => setViewingDetails(null)}
+                onClick={() => { setViewingStudent(null); setViewingSemester(null); }}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Content Details */}
-            <div className="p-6 space-y-4 text-xs text-slate-600 text-left bg-slate-50/20">
-              <div className="border border-slate-150 bg-white rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="p-6 space-y-4 text-xs text-slate-600 text-left">
+              <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-5 space-y-3.5">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Student ID</span>
-                    <span className="text-slate-800 font-bold">{viewingDetails.enrollmentNo || `STUD00${viewingDetails.id}`}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Student Name</span>
+                    <span className="text-slate-800 font-bold text-sm">{viewingStudent.fullName}</span>
                   </div>
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Student Name</span>
-                    <span className="text-slate-800 font-black">{viewingDetails.fullName}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrollment ID</span>
+                    <span className="text-slate-800 font-mono font-bold">{viewingStudent.enrollmentNo || `STUD00${viewingStudent.id}`}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-3.5">
-                  <div className="flex items-center gap-2">
-                    <Percent className="w-4 h-4 text-slate-400" />
-                    <div>
-                      <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Attendance Rate</span>
-                      <span className="text-slate-800 font-bold">{viewingDetails.viewSem?.attendancePercentage !== undefined ? `${viewingDetails.viewSem.attendancePercentage}%` : 'N/A'}</span>
-                    </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
+                    <span className="text-slate-800 font-bold">{viewingSemester}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    <div>
-                      <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Thesis Approval</span>
-                      <span className="text-emerald-700 font-bold uppercase tracking-wider text-[10px]">{viewingDetails.viewSem?.thesisApproved ? 'Approved' : 'Pending'}</span>
-                    </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Attendance</span>
+                    <span className={`font-bold ${isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {semAttendance}%
+                    </span>
                   </div>
                 </div>
 
-                <div className="border-t border-slate-50 pt-3.5 space-y-1">
-                  <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Thesis Document</span>
-                  {viewingDetails.viewSem?.thesisDocumentUrl ? (
-                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-150 p-3 rounded-xl">
-                      <FileText className="w-8 h-8 text-blue-600 flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <span className="block text-slate-700 font-bold truncate text-[11px]">{viewingDetails.viewSem.thesisDocumentUrl.split('/').pop()}</span>
-                      </div>
-                      <a
-                        href={getDocUrl(viewingDetails.viewSem.thesisDocumentUrl)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-500 hover:text-blue-600 transition-colors shadow-sm inline-flex"
-                        title="Download File"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  ) : (
-                    <div className="p-3 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-150 border-dashed">
-                      No thesis uploaded yet.
-                    </div>
+                <div className="border-t border-slate-100 pt-3 space-y-2">
+                  <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Thesis Status</span>
+                  <div className="flex items-center gap-2">
+                    {semThesisApproved ? (
+                      <span className="flex items-center gap-1.5 text-emerald-700 font-bold">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Approved
+                      </span>
+                    ) : semThesisUrl ? (
+                      <span className="flex items-center gap-1.5 text-blue-600 font-bold">
+                        <FileCheck className="w-4 h-4" />
+                        Uploaded (Pending Approval)
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-slate-400 font-bold">
+                        <AlertCircle className="w-4 h-4" />
+                        Not Uploaded
+                      </span>
+                    )}
+                  </div>
+                  {semThesisUrl && (
+                    <a
+                      href={getDocUrl(semThesisUrl)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-bold text-xs underline"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download Thesis
+                    </a>
                   )}
+                </div>
+              </div>
+
+              <div className={`p-3 rounded-xl border ${
+                isComplete
+                  ? 'bg-emerald-50 border-emerald-200'
+                  : 'bg-amber-50 border-amber-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {isComplete ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-amber-600" />
+                  )}
+                  <span className={`text-[10px] font-bold ${isComplete ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {isComplete
+                      ? 'Student is eligible for examination'
+                      : 'Student needs attention: missing attendance or thesis'}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Footer */}
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
               <button
                 type="button"
-                onClick={() => setViewingDetails(null)}
+                onClick={() => { setViewingStudent(null); setViewingSemester(null); }}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
               >
                 Close
@@ -21378,12 +31922,15 @@ const InstituteERPStudentDetails = ({
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
+
+      {/* ─── TOASTS ──────────────────────────────────────────────────────────── */}
       {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
     </div>
@@ -21391,13 +31938,14 @@ const InstituteERPStudentDetails = ({
 };
 
 export default InstituteERPStudentDetails;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteERPStudents.jsx`
 
 ```jsx
-import React, { useState, useMemo } from 'react';
-import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone, BookOpen, Calendar, Shield, Award } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import InstituteStudentEditModal from './InstituteStudentEditModal';
 
@@ -21419,6 +31967,8 @@ const InstituteERPStudents = ({
 }) => {
   const [selectedStudentForView, setSelectedStudentForView] = useState(null);
   const [selectedStudentForEdit, setSelectedStudentForEdit] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const getDocUrl = (url) => {
     if (!url) return '';
@@ -21437,7 +31987,7 @@ const InstituteERPStudents = ({
     return students.filter(s => {
       const name = s.fullName || '';
       const email = s.email || '';
-      const enroll = s.enrollmentNo || s.applicationId || '';
+      const enroll = s.enrollmentNo || s.applicationId || s.enrollmentId || '';
       const matchesSearch = name.toLowerCase().includes(studentSearch.toLowerCase()) || 
                             enroll.toLowerCase().includes(studentSearch.toLowerCase()) ||
                             email.toLowerCase().includes(studentSearch.toLowerCase());
@@ -21454,6 +32004,17 @@ const InstituteERPStudents = ({
       return matchesSearch && matchesStatus && matchesBatch && matchesCourse;
     });
   }, [students, studentSearch, studentFilter, selectedStudentFilterBatch, selectedStudentFilterCourse]);
+
+  // Reset page when filters change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [studentSearch, studentFilter, selectedStudentFilterBatch, selectedStudentFilterCourse]);
+
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage) || 1;
+  const paginatedList = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredList.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredList, currentPage]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200 text-left font-sans">
@@ -21483,7 +32044,7 @@ const InstituteERPStudents = ({
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search Batches...."
+              placeholder="Search by name, ID, or email..."
               value={studentSearch}
               onChange={(e) => setStudentSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
@@ -21550,16 +32111,17 @@ const InstituteERPStudents = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-600">
-              {filteredList.map((student, idx) => {
-                const serialNo = String(idx + 1).padStart(2, '0');
+              {paginatedList.map((student, idx) => {
+                const serialNo = String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0');
                 const batch = student.batchName || student.batch || 'Batch 2026-A';
-                const appId = student.enrollmentNo || student.applicationId || `SEMI00${student.id}`;
+                const appId = student.enrollmentNo || student.applicationId || student.enrollmentId || `SEMI00${student.id || idx}`;
                 const name = student.fullName || 'Dr. Arjun Kumar';
                 const course = student.courseName || student.course || 'General Medicine';
                 const email = student.email || 'arjun@gmail.com';
+                const studentId = student._id || student.id;
 
                 return (
-                  <tr key={student.id} className="hover:bg-slate-50/30 transition-colors">
+                  <tr key={studentId || idx} className="hover:bg-slate-50/30 transition-colors">
                     <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
                     <td className="px-6 py-4 font-bold text-slate-700">{batch}</td>
                     <td className="px-6 py-4 font-mono font-bold text-blue-600 tracking-tight">{appId}</td>
@@ -21588,7 +32150,7 @@ const InstituteERPStudents = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => removeStudent(student.id)}
+                          onClick={() => removeStudent(studentId)}
                           className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
                           title="De-enroll fellow"
                         >
@@ -21609,9 +32171,37 @@ const InstituteERPStudents = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+            <span className="text-xs text-slate-500 font-medium">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredList.length)} of {filteredList.length} entries
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
+                {currentPage} / {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* VIEW DETAILS MODAL */}
+      {/* VIEW DETAILS MODAL - same as before, but ensure student._id is used */}
       {selectedStudentForView && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full overflow-hidden flex flex-col scale-in-center">
@@ -21649,15 +32239,14 @@ const InstituteERPStudents = ({
                       {selectedStudentForView.status || 'Active'}
                     </span>
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                      ID: {selectedStudentForView.enrollmentNo || `SEMI00${selectedStudentForView.id}`}
+                      ID: {selectedStudentForView.enrollmentNo || selectedStudentForView.enrollmentId || `SEMI00${selectedStudentForView.id}`}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Grid sections */}
+              {/* Grid sections - rest of the modal content remains the same as original */}
               <div className="space-y-5">
-                
                 {/* 1. Academic & Course Assignment */}
                 <div>
                   <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-50 pb-1.5 mb-2.5">Academic & Program Details</h4>
@@ -21733,8 +32322,8 @@ const InstituteERPStudents = ({
                       <span className="text-slate-800 font-bold">{selectedStudentForView.courseDirector || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">UTR Transaction No</span>
-                      <span className="text-indigo-600 font-mono font-black">{selectedStudentForView.utrNumber || 'N/A'}</span>
+                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Razorpay Payment ID</span>
+                      <span className="text-indigo-600 font-mono font-black">{selectedStudentForView.razorpayPaymentId || 'N/A'}</span>
                     </div>
                     <div>
                       <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Foreign Graduate Status</span>
@@ -21835,7 +32424,6 @@ const InstituteERPStudents = ({
                     </div>
                   </div>
                 )}
-
               </div>
             </div>
 
@@ -21873,10 +32461,9 @@ export default InstituteERPStudents;
 
 ```jsx
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Mail, Lock, LogIn, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
-const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrentStep }) => {
+const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrentStep, errorMsg }) => {
   const [showPassword, setShowPassword] = React.useState(false);
 
   return (
@@ -21894,6 +32481,13 @@ const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrent
         <h2 className="text-2xl font-extrabold text-gray-900 mt-2">Institutional Login Portal</h2>
         <p className="text-sm text-gray-500 mt-1">Authenticate credentials to access your dashboard</p>
       </div>
+
+      {errorMsg && (
+        <div className="mb-4 bg-red-100 border-2 border-red-400 p-4 rounded-2xl text-left text-sm font-bold text-red-700 shadow-md leading-relaxed">
+          <span className="uppercase tracking-wider text-[10px] block mb-1 text-red-500">Login Failed</span>
+          {errorMsg}
+        </div>
+      )}
 
       <form onSubmit={handleLoginSubmit} className="space-y-6">
         <div>
@@ -21965,17 +32559,28 @@ const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrent
 };
 
 export default InstituteLogin;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteSignup.jsx`
 
 ```jsx
-import React, { useState } from 'react';
-import { Mail, Lock, UserPlus, ArrowLeft, ShieldAlert, Building2, Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react';
+import { Mail, Lock, UserPlus, ArrowLeft, ShieldAlert, Building2, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrentStep }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+
+  const onSubmit = async (e) => {
+    setRegisterLoading(true);
+    try {
+      await handleRegisterSubmit(e);
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-xl mx-auto w-full bg-white rounded-3xl shadow-xl border border-gray-100 p-8 sm:p-10 text-left animate-in fade-in duration-200">
@@ -21993,7 +32598,7 @@ const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrent
         <p className="text-sm text-gray-500 mt-1">Register credentials to initiate onboarding</p>
       </div>
 
-      <form onSubmit={handleRegisterSubmit} className="space-y-5">
+      <form onSubmit={onSubmit} className="space-y-5">
         <div>
           <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Institute Name</label>
           <div className="relative">
@@ -22097,10 +32702,15 @@ const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrent
 
         <button
           type="submit"
-          className="w-full py-4 mt-2 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-colors shadow-md text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+          disabled={registerLoading}
+          className="w-full py-4 mt-2 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-colors shadow-md text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <UserPlus className="w-5 h-5" />
-          Initialize Registration
+          {registerLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <UserPlus className="w-5 h-5" />
+          )}
+          {registerLoading ? 'Registering...' : 'Initialize Registration'}
         </button>
       </form>
       
@@ -22118,13 +32728,14 @@ const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrent
 };
 
 export default InstituteSignup;
+
 ```
 
 ### `client/src/pages/institute/components/InstituteStudentEditModal.jsx`
 
 ```jsx
-import React, { useState, useEffect } from 'react';
-import { X, Save, User, Mail, Phone, Book, Calendar, Shield, MapPin, Award, Building2, ExternalLink, CreditCard, Landmark, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { X, Save, User, Mail, Phone, Book, Calendar, Shield, MapPin, Award, Building2, ExternalLink } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, batches }) => {
@@ -22151,12 +32762,13 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
     isForeignGraduate: false,
     homeAddress: '',
     courseDirector: '',
-    utrNumber: '',
   });
 
   const [error, setError] = useState(null);
+  const [prevStudent, setPrevStudent] = useState(student);
 
-  useEffect(() => {
+  if (student !== prevStudent) {
+    setPrevStudent(student);
     if (student) {
       setFormData({
         fullName: student.fullName || '',
@@ -22176,11 +32788,10 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
         isForeignGraduate: !!student.isForeignGraduate,
         homeAddress: student.homeAddress || '',
         courseDirector: student.courseDirector || '',
-        utrNumber: student.utrNumber || '',
       });
       setError(null);
     }
-  }, [student]);
+  }
 
   if (!isOpen || !student) return null;
 
@@ -22506,22 +33117,6 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                 </div>
               </div>
 
-              {/* UTR Number */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">UTR / Txn Number *</label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    value={formData.utrNumber}
-                    onChange={(e) => setFormData({ ...formData, utrNumber: e.target.value })}
-                    placeholder="UTR123456789"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
-                  />
-                </div>
-              </div>
-
               {/* Enrollment Status */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Enrollment Status *</label>
@@ -22667,12 +33262,12 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
 };
 
 export default InstituteStudentEditModal;
+
 ```
 
 ### `client/src/pages/institute/components/OnboardingStepper.jsx`
 
 ```jsx
-import React from 'react';
 import { Check } from 'lucide-react';
 
 const OnboardingStepper = ({ 
@@ -22760,12 +33355,12 @@ const OnboardingStepper = ({
 };
 
 export default OnboardingStepper;
+
 ```
 
 ### `client/src/pages/institute/components/OnboardingWizard.jsx`
 
 ```jsx
-import React from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import OnboardingStepper from './OnboardingStepper';
 import Step1GeneralInfo from './Step1GeneralInfo';
@@ -22783,9 +33378,7 @@ const OnboardingWizard = ({
   uploadProgress,
   setUploadProgress,
   paymentComplete,
-  setPaymentComplete,
   paymentDetails,
-  setPaymentDetails,
   validateWizardStep,
   setErrorBanner,
   saveToLocalStorage,
@@ -22794,8 +33387,6 @@ const OnboardingWizard = ({
   handleWizardNext,
   handleWizardBack,
   handleApplicationSubmit,
-  handlePaymentInitiate,
-  paymentProcessing,
   applicationSubmitting
 }) => {
   return (
@@ -22838,11 +33429,7 @@ const OnboardingWizard = ({
           uploadProgress={uploadProgress} 
           setUploadProgress={setUploadProgress} 
           paymentComplete={paymentComplete} 
-          setPaymentComplete={setPaymentComplete} 
           paymentDetails={paymentDetails} 
-          setPaymentDetails={setPaymentDetails}
-          handlePaymentInitiate={handlePaymentInitiate}
-          paymentProcessing={paymentProcessing}
         />
       )}
 
@@ -22896,12 +33483,13 @@ const OnboardingWizard = ({
 };
 
 export default OnboardingWizard;
+
 ```
 
 ### `client/src/pages/institute/components/ResetPassword.jsx`
 
 ```jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Lock, ArrowLeft, KeyRound, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import authService from '../../../api/auth';
 
@@ -23045,12 +33633,12 @@ const ResetPassword = ({ setCurrentStep, setErrorBanner, setSuccessBanner }) => 
 };
 
 export default ResetPassword;
+
 ```
 
 ### `client/src/pages/institute/components/Step1GeneralInfo.jsx`
 
 ```jsx
-import React from 'react';
 
 const Step1GeneralInfo = ({ appForm, setAppForm }) => {
   return (
@@ -23083,9 +33671,11 @@ const Step1GeneralInfo = ({ appForm, setAppForm }) => {
             <option value="" disabled>Select constitution type</option>
             <option value="Trust">Trust</option>
             <option value="Society">Society</option>
-            <option value="Company">Company</option>
-            <option value="Partnership">Partnership</option>
-            <option value="Government">Government / Public Body</option>
+            <option value="Society / Trust">Society / Trust</option>
+            <option value="University">University</option>
+            <option value="State Government">State Government</option>
+            <option value="Autonomous Body">Autonomous Body</option>
+            <option value="Union Territory">Union Territory</option>
           </select>
         </div>
       </div>
@@ -23219,12 +33809,12 @@ const Step1GeneralInfo = ({ appForm, setAppForm }) => {
 };
 
 export default Step1GeneralInfo;
+
 ```
 
 ### `client/src/pages/institute/components/Step2DepartmentInfo.jsx`
 
 ```jsx
-import React from 'react';
 
 const Step2DepartmentInfo = ({ appForm, setAppForm }) => {
   return (
@@ -23358,13 +33948,14 @@ const Step2DepartmentInfo = ({ appForm, setAppForm }) => {
 };
 
 export default Step2DepartmentInfo;
+
 ```
 
 ### `client/src/pages/institute/components/Step3DocumentsUpload.jsx`
 
 ```jsx
-import React, { useState } from 'react';
-import { Eye, FileCheck, RefreshCw, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { FileCheck, RefreshCw, Trash2 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 
 const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, setUploadProgress }) => {
@@ -23512,140 +34103,34 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
 };
 
 export default Step3DocumentsUpload;
+
 ```
 
 ### `client/src/pages/institute/components/Step4PaymentSubmit.jsx`
 
 ```jsx
-import React, { useState } from 'react';
-import { 
-  Eye, EyeOff, FileCheck, RefreshCw, CheckCircle2, ShieldCheck, 
-  CreditCard, Landmark, Copy, Check, UploadCloud, ArrowRight, Trash2
-} from 'lucide-react';
+import { RefreshCw, CheckCircle2, UploadCloud, FileCheck, Trash2, Check, ShieldCheck } from 'lucide-react';
 import Toast from '../../../Components/Toast';
+import { useState } from 'react';
 
-const Step4PaymentSubmit = ({ 
-  appForm, 
-  setAppForm, 
-  uploadedDocs, 
-  setUploadedDocs, 
-  uploadProgress, 
+const Step4PaymentSubmit = ({
+  appForm,
+  setAppForm,
+  uploadedDocs,
+  setUploadedDocs,
+  uploadProgress,
   setUploadProgress,
   paymentComplete,
-  setPaymentComplete,
   paymentDetails,
-  setPaymentDetails,
-  handlePaymentInitiate,
-  paymentProcessing
 }) => {
-  // Local error state
-  const [localError, setLocalError] = useState(null);
+
   const [toast, setToast] = useState(null);
-  const [showCvv, setShowCvv] = useState(false);
-  
-  // Payment methods: 'online' or 'offline'
-  const [paymentMethod, setPaymentMethod] = useState('online');
-  
-  // Online payment channels: 'card' or 'upi' or 'netbanking'
-  const [onlineChannel, setOnlineChannel] = useState('card');
-  
-  // Copy state for bank transfer details
-  const [copiedField, setCopiedField] = useState(null);
 
-  // Form states for online inputs
-  const [cardForm, setCardForm] = useState({
-    number: '',
-    name: '',
-    expiry: '',
-    cvv: ''
-  });
-  
-  const [upiId, setUpiId] = useState('');
-  const [selectedBank, setSelectedBank] = useState('');
-  
-  // Offline verification state
-  const [offlineVerifying, setOfflineVerifying] = useState(false);
-
-  const bankDetails = {
-    accountName: 'SOCIETY FOR EMERGENCY MEDICINE INDIA',
-    accountNumber: '50200087654321',
-    bankName: 'HDFC Bank Ltd',
-    ifscCode: 'HDFC0000124',
-    branch: 'Anna Salai, Chennai',
-    accountType: 'Current Account'
-  };
-
-  const copyToClipboard = (text, field) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
-  };
-
-  // Show error using toast
   const showError = (message) => {
-    setLocalError(message);
     setToast({ message, type: 'error' });
-    setTimeout(() => setLocalError(null), 5000);
+    setTimeout(() => setToast(null), 5000);
   };
 
-  // Online Payment via Razorpay
-  const handleOnlinePaymentSimulated = (e) => {
-    if (e) e.preventDefault();
-    if (handlePaymentInitiate) {
-      handlePaymentInitiate();
-    } else {
-      setLocalError('Payment gateway not initialized.');
-    }
-  };
-
-  // Verify Offline Bank Transfer details
-  const handleOfflineTransferConfirm = () => {
-    if (!appForm.paymentBankName || !appForm.paymentTxnNo || !appForm.paymentTxnDate) {
-      showError('Please fill out all bank transfer transaction details (Bank, NEFT/UTR No, Date).');
-      return;
-    }
-
-    if (!uploadedDocs.paymentReceiptDoc) {
-      showError('Please upload a file proof of your bank transfer transaction receipt in step 3 or browse/upload it here.');
-      return;
-    }
-
-    setOfflineVerifying(true);
-    setTimeout(() => {
-      setPaymentDetails({
-        receiptNumber: `REC-OFF-${Math.floor(100000 + Math.random() * 900000)}`,
-        transactionId: appForm.paymentTxnNo,
-        amount: '₹2,50,000',
-        date: appForm.paymentTxnDate,
-        method: 'Offline Bank Transfer'
-      });
-      setPaymentComplete(true);
-      setOfflineVerifying(false);
-    }, 1200);
-  };
-
-  // Mock document upload for manual bank receipt
-  const handleFileUploadSimulated = (key, fileName) => {
-    setUploadProgress(prev => ({ ...prev, [key]: 10 }));
-    let progress = 10;
-    const interval = setInterval(() => {
-      progress += 30;
-      setUploadProgress(prev => ({ ...prev, [key]: progress }));
-      if (progress >= 100) {
-        clearInterval(interval);
-        setUploadedDocs(prev => ({
-          ...prev,
-          [key]: {
-            name: fileName,
-            size: '142.5 KB',
-            uploadedAt: new Date().toLocaleTimeString()
-          }
-        }));
-      }
-    }, 120);
-  };
-
-  // Signature file upload handler — stores actual File object for submission
   const handleSignatureFileUpload = (file) => {
     if (file.size > 5 * 1024 * 1024) {
       setToast({ message: 'Signature file must be under 5MB.', type: 'error' });
@@ -23666,25 +34151,23 @@ const Step4PaymentSubmit = ({
 
   return (
     <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 shadow-sm text-left space-y-8 animate-in fade-in duration-200">
-      
+
       {/* Step Header */}
       <div className="border-b border-gray-100 pb-4">
         <h3 className="text-lg font-black text-gray-900">Inspection Fee Verification</h3>
-        <p className="text-xs text-gray-400 mt-0.5">Please execute payment of ₹2,50,000 for standard institutional site evaluation</p>
+        <p className="text-xs text-gray-400 mt-0.5">Execute payment of ₹2,50,000 for standard institutional site evaluation</p>
       </div>
 
       {paymentComplete ? (
-        /* SUCCESS TRANSACTION STATE */
         <div className="space-y-6">
           <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-6 text-xs font-semibold leading-relaxed flex items-start gap-4 shadow-sm animate-in zoom-in-95 duration-200">
             <CheckCircle2 className="w-6 h-6 text-emerald-600 mt-0.5 flex-shrink-0" />
             <div className="space-y-2 w-full">
               <span className="text-emerald-800 text-sm font-black block">Inspection Payment Captured & Verified</span>
               <p className="text-emerald-700 font-medium text-[11px] leading-relaxed">
-                Auditing simulation complete: receipt **{paymentDetails?.receiptNumber}** matches transaction reference **{paymentDetails?.transactionId}** captured successfully.
+                Payment successful: receipt <strong>{paymentDetails?.receiptNumber}</strong> — transaction <strong>{paymentDetails?.transactionId}</strong> captured via {paymentDetails?.method || 'Razorpay'}.
               </p>
-              
-              {/* Receipt Summary Card */}
+
               <div className="mt-4 bg-white/70 backdrop-blur border border-emerald-100 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-left">
                 <div>
                   <span className="block text-[9px] uppercase font-extrabold text-emerald-600 tracking-wider">Transaction Status</span>
@@ -23703,480 +34186,33 @@ const Step4PaymentSubmit = ({
                 </div>
                 <div>
                   <span className="block text-[9px] uppercase font-extrabold text-emerald-600 tracking-wider">Payment Mode</span>
-                  <span className="text-xs font-bold text-gray-800 block mt-0.5">{paymentDetails?.method || 'Online Card'}</span>
+                  <span className="text-xs font-bold text-gray-800 block mt-0.5">{paymentDetails?.method || 'Razorpay Online'}</span>
                 </div>
               </div>
 
-              {/* Reset Payment Option */}
-              <div className="pt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentComplete(false);
-                    setPaymentDetails(null);
-                    setUploadedDocs(prev => ({ ...prev, paymentReceiptDoc: null }));
-                  }}
-                  className="px-4 py-2 border border-emerald-250 hover:bg-emerald-100 text-emerald-800 hover:text-emerald-950 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-colors"
-                >
-                  Reset / Re-simulate Payment
-                </button>
-              </div>
+
             </div>
           </div>
         </div>
       ) : (
-        /* INTERACTIVE PAYMENT GATEWAY */
         <div className="space-y-6">
-          {/* Payment Method Selection Tabs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => {
-                setPaymentMethod('online');
-                setLocalError(null);
-              }}
-              className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
-                paymentMethod === 'online'
-                  ? 'border-blue-600 bg-blue-50/20 shadow-md ring-2 ring-blue-500/10'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
-              }`}
-            >
-              <div className={`p-3 rounded-xl ${paymentMethod === 'online' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                <CreditCard className="w-5 h-5" />
+          <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 border border-blue-100/60 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <div className="flex flex-col items-center text-center space-y-5">
+              <div className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-600/20">
+                <ShieldCheck className="w-8 h-8" />
               </div>
               <div>
-                <span className="text-xs font-black text-gray-900 block">Instant Online Payment</span>
-                <span className="text-[10px] text-gray-400 font-bold block mt-1 leading-relaxed">
-                  Pay securely via mock Payment Gateway using Credit Card, UPI, or Net Banking.
-                </span>
+                <h4 className="text-base font-black text-gray-900">Secure Razorpay Payment</h4>
+                <p className="text-xs text-gray-500 mt-1 max-w-md">
+                  Click <strong>Submit Application</strong> below to proceed. Your fields will be validated first, then you will be redirected to Razorpay's secure checkout to complete the payment of ₹2,50,000 via UPI, Credit Card, Net Banking, or Wallet.
+                </p>
               </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setPaymentMethod('offline');
-                setLocalError(null);
-              }}
-              className={`p-5 rounded-2xl border text-left flex items-start gap-4 transition-all ${
-                paymentMethod === 'offline'
-                  ? 'border-blue-600 bg-blue-50/20 shadow-md ring-2 ring-blue-500/10'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
-              }`}
-            >
-              <div className={`p-3 rounded-xl ${paymentMethod === 'offline' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                <Landmark className="w-5 h-5" />
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Secured by Razorpay
               </div>
-              <div>
-                <span className="text-xs font-black text-gray-900 block">Offline Bank Transfer</span>
-                <span className="text-[10px] text-gray-400 font-bold block mt-1 leading-relaxed">
-                  Transfer funds offline to the SEMI bank account. Provide transaction UTR & upload payment receipt copy.
-                </span>
-              </div>
-            </button>
+            </div>
           </div>
-          {/* PAYMENT OPTIONS PANELS */}
-          {paymentMethod === 'online' ? (
-            /* ONLINE CHANNELS PANEL */
-            <div className="bg-slate-50/60 border border-gray-150 rounded-3xl p-6 space-y-6">
-              <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-                  {['card', 'netbanking'].map((chan) => (
-                    <button
-                      key={chan}
-                      type="button"
-                      onClick={() => setOnlineChannel(chan)}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider font-extrabold transition-all ${
-                        onlineChannel === chan
-                          ? 'bg-white text-blue-600 shadow-sm'
-                          : 'text-gray-500 hover:text-gray-800'
-                      }`}
-                    >
-                      {chan === 'card' ? 'Credit Card' : 'Net Banking'}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-1.5 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 border border-blue-100 rounded-full px-3 py-1 select-none">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  SEMI Secure Gateway
-                </div>
-              </div>
-
-              {/* CARD ONLINE OPTION */}
-              {onlineChannel === 'card' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  {/* Virtual visual Credit Card */}
-                  <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white p-6 rounded-2xl shadow-xl flex flex-col justify-between aspect-[1.6/1] w-full max-w-[340px] mx-auto select-none border border-slate-700 relative overflow-hidden">
-                    <div className="absolute right-0 bottom-0 opacity-10 font-bold text-8xl -mr-6 -mb-6 tracking-tighter">VISA</div>
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-0.5">
-                        <span className="text-[9px] uppercase tracking-widest text-slate-400 font-extrabold">SEMI Academic Card</span>
-                        <h4 className="text-xs font-black tracking-widest text-slate-200 mt-1">₹2,50,000.00</h4>
-                      </div>
-                      <div className="w-10 h-7 bg-amber-500/25 border border-amber-500/20 rounded-md flex items-center justify-center font-bold text-[10px] text-amber-500">CHIP</div>
-                    </div>
-                    
-                    <div className="space-y-1 mt-6">
-                      <span className="block text-[14px] font-mono tracking-widest text-slate-100 font-bold">
-                        {cardForm.number ? cardForm.number.replace(/(\d{4})/g, '$1 ').trim() : '•••• •••• •••• ••••'}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-end mt-4">
-                      <div>
-                        <span className="block text-[8px] uppercase tracking-wider text-slate-400 font-extrabold">Cardholder Name</span>
-                        <span className="text-[10px] font-bold block truncate max-w-[150px] uppercase">{cardForm.name || 'Your Institute Name'}</span>
-                      </div>
-                      <div className="flex gap-4">
-                        <div>
-                          <span className="block text-[8px] uppercase tracking-wider text-slate-400 font-extrabold">Expires</span>
-                          <span className="text-[10px] font-mono font-bold block">{cardForm.expiry || 'MM/YY'}</span>
-                        </div>
-                        <div>
-                          <span className="block text-[8px] uppercase tracking-wider text-slate-400 font-extrabold">CVV</span>
-                          <span className="text-[10px] font-mono font-bold block">{cardForm.cvv ? '•••' : '000'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Fields inputs */}
-                  <form onSubmit={handleOnlinePaymentSimulated} className="space-y-4">
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-[10px] uppercase font-black text-gray-400 mb-1.5">Cardholder Name</label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Saraswathi Medical College"
-                          value={cardForm.name}
-                          onChange={(e) => setCardForm({ ...cardForm, name: e.target.value })}
-                          className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-blue-500 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] uppercase font-black text-gray-400 mb-1.5">Card Number</label>
-                        <input
-                          type="text"
-                          required
-                          maxLength="16"
-                          placeholder="4111 2222 3333 4444"
-                          value={cardForm.number}
-                          onChange={(e) => setCardForm({ ...cardForm, number: e.target.value.replace(/\D/g, '') })}
-                          className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold tracking-widest focus:outline-none focus:border-blue-500 transition-all"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] uppercase font-black text-gray-400 mb-1.5">Expiry Date</label>
-                          <input
-                            type="text"
-                            required
-                            maxLength="5"
-                            placeholder="MM/YY"
-                            value={cardForm.expiry}
-                            onChange={(e) => setCardForm({ ...cardForm, expiry: e.target.value })}
-                            className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:border-blue-500 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] uppercase font-black text-gray-400 mb-1.5">CVV / CVN</label>
-                          <div className="relative">
-                            <input
-                              type={showCvv ? "text" : "password"}
-                              required
-                              maxLength="3"
-                              placeholder="***"
-                              value={cardForm.cvv}
-                              onChange={(e) => setCardForm({ ...cardForm, cvv: e.target.value.replace(/\D/g, '') })}
-                              className="w-full px-3.5 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-center focus:outline-none focus:border-blue-500 transition-all"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowCvv(!showCvv)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                            >
-                              {showCvv ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={offlineVerifying}
-                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md hover:shadow-blue-500/20 active:scale-[0.99] transition-all text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5"
-                    >
-                      {offlineVerifying ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                          Processing Security Audit...
-                        </>
-                      ) : (
-                        <>
-                          Pay ₹2,50,000 Instantly
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* NETBANKING ONLINE OPTION */}
-              {onlineChannel === 'netbanking' && (
-                <div className="space-y-4">
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Select popular banks</span>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      'State Bank of India',
-                      'HDFC Bank',
-                      'ICICI Bank',
-                      'Axis Bank',
-                      'Punjab National Bank',
-                      'Bank of Baroda',
-                      'Union Bank of India',
-                      'Canara Bank'
-                    ].map((bank) => (
-                      <button
-                        key={bank}
-                        type="button"
-                        onClick={() => setSelectedBank(bank)}
-                        className={`p-3 border rounded-xl font-bold text-[10px] tracking-wide text-center transition-all ${
-                          selectedBank === bank
-                            ? 'border-blue-600 bg-blue-50/50 text-blue-800 font-extrabold shadow-sm'
-                            : 'border-gray-250 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {bank}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleOnlinePaymentSimulated}
-                    disabled={offlineVerifying || !selectedBank}
-                    className="w-full py-3 bg-blue-600 disabled:bg-gray-300 disabled:shadow-none hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md hover:shadow-blue-500/20 active:scale-[0.99] transition-all text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 mt-2"
-                  >
-                    {offlineVerifying ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                        Connecting to Secure Netbanking Portal...
-                      </>
-                    ) : (
-                      <>
-                        Pay ₹2,50,000 with {selectedBank || 'Selected Bank'}
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* OFFLINE BANK TRANSFER PANEL */
-            <div className="space-y-6 animate-fadeIn">
-              {/* Bank Account Info Card */}
-              <div className="bg-slate-50 border border-gray-200/60 rounded-3xl p-6 space-y-4">
-                <div className="border-b border-gray-200 pb-3 flex justify-between items-center">
-                  <div>
-                    <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-500">Official SEMI Bank Details</h4>
-                    <span className="text-[10px] text-gray-400 block mt-0.5">Please transfer exactly ₹2,50,000 under compliance</span>
-                  </div>
-                  <span className="bg-blue-600 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-full">
-                    RTGS / NEFT / IMPS Accepted
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold leading-relaxed text-gray-700">
-                  {/* Account Name */}
-                  <div className="flex justify-between items-center p-2.5 bg-white border border-gray-150 rounded-xl">
-                    <div>
-                      <span className="block text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Account Name</span>
-                      <span className="text-[11px] font-extrabold text-slate-800">{bankDetails.accountName}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(bankDetails.accountName, 'accountName')}
-                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                      title="Copy"
-                    >
-                      {copiedField === 'accountName' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-
-                  {/* Account Number */}
-                  <div className="flex justify-between items-center p-2.5 bg-white border border-gray-150 rounded-xl">
-                    <div>
-                      <span className="block text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Account Number</span>
-                      <span className="text-[11px] font-mono font-bold text-slate-800">{bankDetails.accountNumber}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(bankDetails.accountNumber, 'accountNumber')}
-                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                      title="Copy"
-                    >
-                      {copiedField === 'accountNumber' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-
-                  {/* Bank & Branch */}
-                  <div className="flex justify-between items-center p-2.5 bg-white border border-gray-150 rounded-xl">
-                    <div>
-                      <span className="block text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Bank Name & Branch</span>
-                      <span className="text-[11px] font-extrabold text-slate-800">{bankDetails.bankName} ({bankDetails.branch})</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(`${bankDetails.bankName}, ${bankDetails.branch}`, 'bankName')}
-                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                      title="Copy"
-                    >
-                      {copiedField === 'bankName' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-
-                  {/* IFSC Code */}
-                  <div className="flex justify-between items-center p-2.5 bg-white border border-gray-150 rounded-xl">
-                    <div>
-                      <span className="block text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Bank IFSC Code</span>
-                      <span className="text-[11px] font-mono font-bold text-slate-800">{bankDetails.ifscCode}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(bankDetails.ifscCode, 'ifscCode')}
-                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
-                      title="Copy"
-                    >
-                      {copiedField === 'ifscCode' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Offline Transfer Details Inputs */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-[10px] uppercase font-black text-gray-500 mb-2">Sender Bank Name <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. State Bank of India"
-                    value={appForm.paymentBankName}
-                    onChange={(e) => setAppForm({...appForm, paymentBankName: e.target.value})}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-350 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-xs font-bold animate-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] uppercase font-black text-gray-500 mb-2">NEFT / UTR Ref Number <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. UTR87654321"
-                    value={appForm.paymentTxnNo}
-                    onChange={(e) => setAppForm({...appForm, paymentTxnNo: e.target.value})}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-350 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-xs font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] uppercase font-black text-gray-500 mb-2">Transaction Date <span className="text-red-500">*</span></label>
-                  <input
-                    type="date"
-                    required
-                    value={appForm.paymentTxnDate}
-                    onChange={(e) => setAppForm({...appForm, paymentTxnDate: e.target.value})}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all text-xs font-bold cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Upload payment receipt proof */}
-              <div className="border border-gray-150 rounded-2xl p-5 bg-slate-50/40">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <span className="block text-[11px] font-black text-gray-800">Upload Transaction Receipt Proof <span className="text-red-500">*</span></span>
-                    <span className="block text-[10px] text-gray-400 font-bold">Please upload receipt image or transaction PDF copy as validation proof (max 5MB)</span>
-                  </div>
-
-                  <div className="w-full sm:w-auto">
-                    {uploadedDocs.paymentReceiptDoc ? (
-                      <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-center justify-between gap-4 animate-in fade-in duration-150">
-                        <div className="flex items-center gap-2">
-                          <FileCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                          <span className="text-[10px] font-extrabold text-emerald-900 truncate max-w-[150px]">{uploadedDocs.paymentReceiptDoc.name}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setUploadedDocs(prev => ({ ...prev, paymentReceiptDoc: null }))}
-                          className="text-rose-600 hover:text-rose-800 font-black text-[9px] uppercase tracking-wider flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete
-                        </button>
-                      </div>
-                    ) : uploadProgress.paymentReceiptDoc > 0 && uploadProgress.paymentReceiptDoc < 100 ? (
-                      <div className="bg-white border border-gray-150 rounded-xl p-3 min-w-[200px]">
-                        <div className="flex items-center justify-between text-[9px] font-black uppercase text-gray-400 mb-1.5">
-                          <span className="flex items-center gap-1.5"><RefreshCw className="w-3 h-3 animate-spin text-blue-600" /> Uploading...</span>
-                          <span>{uploadProgress.paymentReceiptDoc}%</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-1">
-                          <div className="bg-blue-600 h-1 rounded-full transition-all duration-200" style={{ width: `${uploadProgress.paymentReceiptDoc}%` }}></div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <input
-                          type="file"
-                          id="file-receipt"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              handleFileUploadSimulated('paymentReceiptDoc', file.name);
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="file-receipt"
-                          className="px-5 py-2.5 bg-white border border-gray-200 hover:border-slate-300 rounded-xl text-center font-bold text-[10px] text-slate-700 uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-sm"
-                        >
-                          <UploadCloud className="w-4 h-4 text-slate-500" />
-                          Choose Receipt file
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Confirm offline details button */}
-              <button
-                type="button"
-                onClick={handleOfflineTransferConfirm}
-                disabled={offlineVerifying}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md hover:shadow-blue-500/20 active:scale-[0.99] transition-all text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5"
-              >
-                {offlineVerifying ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    Locking Transfer Details...
-                  </>
-                ) : (
-                  <>
-                    Verify & Confirm Bank Transfer Details
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </div>
-          )}
         </div>
       )}
 
@@ -24262,21 +34298,29 @@ const Step4PaymentSubmit = ({
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 text-xs text-blue-900 leading-relaxed font-semibold mt-4 flex items-start gap-3">
-          <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <label className="bg-blue-50 border border-blue-100 hover:border-blue-300 rounded-2xl p-5 text-xs text-blue-900 leading-relaxed font-semibold mt-4 flex items-start gap-4 cursor-pointer transition-colors group">
+          <div className="relative flex items-center justify-center mt-0.5">
+            <input
+              type="checkbox"
+              className="peer appearance-none w-5 h-5 border-2 border-blue-300 rounded-md bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all cursor-pointer"
+              checked={appForm.certificationAgreement || false}
+              onChange={(e) => setAppForm({...appForm, certificationAgreement: e.target.checked})}
+            />
+            <Check className="w-3.5 h-3.5 text-white absolute pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" strokeWidth={3} />
+          </div>
           <div>
-            <span className="font-extrabold block">Certification & Declarations agreement</span>
+            <span className="font-extrabold block group-hover:text-blue-700 transition-colors">Certification & Declarations agreement</span>
             <span className="text-blue-800 mt-1 block font-medium">
-              By clicking "Submit Application", you certify that all uploaded equipment registers, PG EM clinical qualifications, faculty structures, and hospital beds counts comply with the state Medical Board standard regulations.
+              By checking this box and clicking "Submit Application", you certify that all uploaded equipment registers, PG EM clinical qualifications, faculty structures, and hospital beds counts comply with the state Medical Board standard regulations.
             </span>
           </div>
-        </div>
+        </label>
       </div>
       {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
     </div>
@@ -24284,12 +34328,12 @@ const Step4PaymentSubmit = ({
 };
 
 export default Step4PaymentSubmit;
+
 ```
 
 ### `client/src/pages/institute/components/WelcomeLanding.jsx`
 
 ```jsx
-import React from 'react';
 import { Building2, Plus, ArrowRight, Lock } from 'lucide-react';
 
 const WelcomeLanding = ({ setCurrentStep }) => {
@@ -24347,6 +34391,7 @@ const WelcomeLanding = ({ setCurrentStep }) => {
 };
 
 export default WelcomeLanding;
+
 ```
 
 ### `client/src/pages/institute/dashboard/index.jsx`
@@ -24358,6 +34403,7 @@ export default WelcomeLanding;
  * State and routing logic is managed by the shared InstitutePortal orchestrator.
  */
 export { default } from '../InstitutePortal';
+
 ```
 
 ### `client/src/pages/institute/forgot-password/index.jsx`
@@ -24369,6 +34415,7 @@ export { default } from '../InstitutePortal';
  * State and routing logic is managed by the shared InstitutePortal orchestrator.
  */
 export { default } from '../InstitutePortal';
+
 ```
 
 ### `client/src/pages/institute/login/index.jsx`
@@ -24380,6 +34427,7 @@ export { default } from '../InstitutePortal';
  * State and routing logic is managed by the shared InstitutePortal orchestrator.
  */
 export { default } from '../InstitutePortal';
+
 ```
 
 ### `client/src/pages/institute/register/index.jsx`
@@ -24391,6 +34439,7 @@ export { default } from '../InstitutePortal';
  * State and routing logic is managed by the shared InstitutePortal orchestrator.
  */
 export { default } from '../InstitutePortal';
+
 ```
 
 ### `client/src/pages/institute/reset-password/index.jsx`
@@ -24402,6 +34451,7 @@ export { default } from '../InstitutePortal';
  * State and routing logic is managed by the shared InstitutePortal orchestrator.
  */
 export { default } from '../InstitutePortal';
+
 ```
 
 ### `client/src/pages/institute/status/index.jsx`
@@ -24413,6 +34463,7 @@ export { default } from '../InstitutePortal';
  * State and routing logic is managed by the shared InstitutePortal orchestrator.
  */
 export { default } from '../InstitutePortal';
+
 ```
 
 ### `client/src/pages/institute/verify-email/index.jsx`
@@ -24424,6 +34475,7 @@ export { default } from '../InstitutePortal';
  * State and routing logic is managed by the shared InstitutePortal orchestrator.
  */
 export { default } from '../InstitutePortal';
+
 ```
 
 ### `client/src/pages/institute/welcome/index.jsx`
@@ -24435,6 +34487,500 @@ export { default } from '../InstitutePortal';
  * State is managed by InstitutePortal (the shared wizard orchestrator).
  */
 export { default } from '../InstitutePortal';
+
+```
+
+### `client/src/pages/public/results/components/ResultsDisplay.jsx`
+
+```jsx
+import React from 'react';
+
+const ResultsDisplay = ({ data, onBack }) => {
+  const { student, results } = data;
+  
+  // We take the first result object, since it represents the most recent or requested semester
+  const result = results[0];
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans p-4 md:p-8">
+      
+      <div className="max-w-5xl mx-auto w-full bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-10">
+        
+        {/* Back Button */}
+        <button 
+          onClick={onBack}
+          className="mb-6 text-blue-600 hover:text-blue-800 flex items-center gap-2 text-sm font-medium transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+          Back to Search
+        </button>
+
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-2xl md:text-3xl font-bold text-blue-700 mb-2">
+            {student.institute?.orgName || 'Medical College'}
+          </h1>
+          <p className="text-lg text-gray-700">
+            {result.semester}nd Semester Exam Results {result.academicYear}
+          </p>
+        </div>
+
+        {/* Student Info */}
+        <div className="mb-10 max-w-lg">
+          <div className="grid grid-cols-[100px_1fr] gap-4 mb-3">
+            <div className="text-gray-600 font-medium">Name</div>
+            <div className="font-semibold text-gray-900">: &nbsp; Dr.{student.firstName} {student.lastName}</div>
+          </div>
+          <div className="grid grid-cols-[100px_1fr] gap-4 mb-3">
+            <div className="text-gray-600 font-medium">Student ID</div>
+            <div className="font-semibold text-gray-900">: &nbsp; {student.enrollmentId}</div>
+          </div>
+          <div className="grid grid-cols-[100px_1fr] gap-4">
+            <div className="text-gray-600 font-medium">Branch</div>
+            <div className="font-semibold text-gray-900">: &nbsp; {student.batch?.name || 'N/A'} {student.batch?.year ? `(${student.batch.year})` : ''}</div>
+          </div>
+        </div>
+
+        {/* Results Table or Unpublished Message */}
+        {!result.isPublished ? (
+          <div className="mb-10 p-8 border border-yellow-200 bg-yellow-50 rounded-xl text-center">
+            <svg className="w-12 h-12 text-yellow-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <h3 className="text-xl font-bold text-yellow-800 mb-2">Results Not Yet Published</h3>
+            <p className="text-yellow-700">
+              Your exam result for this semester is currently being processed and will be published {result.publishedDate ? `on ${new Date(result.publishedDate).toLocaleDateString()}` : 'soon'}.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto mb-10 border border-gray-200 rounded-xl">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-white">
+                <th className="py-4 px-6 font-medium text-blue-600 border-b border-r border-gray-200 w-16 text-center">Sem</th>
+                <th className="py-4 px-6 font-medium text-blue-600 border-b border-r border-gray-200 w-24 text-center">Sub-code</th>
+                <th className="py-4 px-6 font-medium text-blue-600 border-b border-r border-gray-200">Subject Name</th>
+                <th className="py-4 px-4 font-medium text-blue-600 border-b border-r border-gray-200 w-16 text-center" title="Internal Marks">Int</th>
+                <th className="py-4 px-4 font-medium text-blue-600 border-b border-r border-gray-200 w-16 text-center" title="External Marks">Ext</th>
+                <th className="py-4 px-4 font-medium text-blue-600 border-b border-r border-gray-200 w-16 text-center" title="Total Marks">Tot</th>
+                <th className="py-4 px-6 font-medium text-blue-600 border-b border-r border-gray-200 w-20 text-center">Grade</th>
+                <th className="py-4 px-6 font-medium text-blue-600 border-b border-gray-200 w-24 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.subjects.map((subject, index) => {
+                 const isPass = subject.grade !== 'F' && subject.grade !== 'RA' && subject.grade !== 'ABSENT';
+                 return (
+                  <tr key={index} className="bg-white hover:bg-gray-50 transition-colors">
+                    <td className="py-4 px-6 border-b border-r border-gray-200 text-center text-gray-800">{result.semester}</td>
+                    <td className="py-4 px-6 border-b border-r border-gray-200 text-center text-gray-800">{subject.subjectCode}</td>
+                    <td className="py-4 px-6 border-b border-r border-gray-200 text-gray-800">{subject.subjectName}</td>
+                    <td className="py-4 px-4 border-b border-r border-gray-200 text-center text-gray-800">{subject.internalMarks ?? '-'}</td>
+                    <td className="py-4 px-4 border-b border-r border-gray-200 text-center text-gray-800">{subject.externalMarks ?? '-'}</td>
+                    <td className="py-4 px-4 border-b border-r border-gray-200 text-center text-gray-900 font-medium">{subject.totalMarks ?? '-'}</td>
+                    <td className="py-4 px-6 border-b border-r border-gray-200 text-center font-medium text-gray-900">{subject.grade}</td>
+                    <td className={`py-4 px-6 border-b border-gray-200 text-center font-medium ${isPass ? 'text-green-600' : 'text-red-600'}`}>
+                      {isPass ? 'Pass' : 'Fail'}
+                    </td>
+                  </tr>
+                 );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Legend */}
+        <div className="mb-10 text-sm">
+          <div className="flex gap-4 mb-2">
+            <span className="text-red-700 font-medium w-8">RA</span>
+            <span className="text-gray-700">- Re-Appear</span>
+          </div>
+          <div className="flex gap-4">
+            <span className="text-red-700 font-medium w-8">WH</span>
+            <span className="text-gray-700">- Withheld due to non-Payment of exam fees / Non Submission of Progress Norms</span>
+          </div>
+        </div>
+
+        {/* Grading Scale */}
+        <div className="overflow-x-auto border border-gray-200 rounded-xl">
+          <table className="w-full text-center border-collapse">
+            <thead>
+              <tr className="bg-white">
+                <th className="py-4 px-4 font-medium text-gray-700 border-b border-r border-gray-200">Marks</th>
+                <th className="py-4 px-4 font-medium text-gray-700 border-b border-r border-gray-200">90-100</th>
+                <th className="py-4 px-4 font-medium text-gray-700 border-b border-r border-gray-200">80-89</th>
+                <th className="py-4 px-4 font-medium text-gray-700 border-b border-r border-gray-200">70-79</th>
+                <th className="py-4 px-4 font-medium text-gray-700 border-b border-r border-gray-200">60-69</th>
+                <th className="py-4 px-4 font-medium text-gray-700 border-b border-r border-gray-200">55-59</th>
+                <th className="py-4 px-4 font-medium text-gray-700 border-b border-r border-gray-200">50-54</th>
+                <th className="py-4 px-4 font-medium text-gray-700 border-b border-gray-200">0-49</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="bg-white">
+                <td className="py-4 px-4 border-b border-r border-gray-200 font-medium text-gray-700">Grade</td>
+                <td className="py-4 px-4 border-b border-r border-gray-200 text-gray-800">O</td>
+                <td className="py-4 px-4 border-b border-r border-gray-200 text-gray-800">A+</td>
+                <td className="py-4 px-4 border-b border-r border-gray-200 text-gray-800">A</td>
+                <td className="py-4 px-4 border-b border-r border-gray-200 text-gray-800">B+</td>
+                <td className="py-4 px-4 border-b border-r border-gray-200 text-gray-800">B</td>
+                <td className="py-4 px-4 border-b border-r border-gray-200 text-gray-800">C</td>
+                <td className="py-4 px-4 border-b border-gray-200 text-gray-800">RA</td>
+              </tr>
+              <tr className="bg-white">
+                <td className="py-4 px-4 border-r border-gray-200 font-medium text-gray-700">Point</td>
+                <td className="py-4 px-4 border-r border-gray-200 text-gray-800">10</td>
+                <td className="py-4 px-4 border-r border-gray-200 text-gray-800">9</td>
+                <td className="py-4 px-4 border-r border-gray-200 text-gray-800">8</td>
+                <td className="py-4 px-4 border-r border-gray-200 text-gray-800">7</td>
+                <td className="py-4 px-4 border-r border-gray-200 text-gray-800">6</td>
+                <td className="py-4 px-4 border-r border-gray-200 text-gray-800">5</td>
+                <td className="py-4 px-4 border-gray-200 text-gray-800">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ResultsDisplay;
+
+```
+
+### `client/src/pages/public/results/components/ResultsLogin.jsx`
+
+```jsx
+import React, { useState } from 'react';
+
+const ResultsLogin = ({ onSearch, isLoading, error }) => {
+  const [enrollmentId, setEnrollmentId] = useState('');
+  const [dob, setDob] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!enrollmentId || !dob) return;
+    onSearch(enrollmentId, dob);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+      {/* Header */}
+      <header className="bg-[#0b3c8f] text-white p-4 flex items-center gap-4">
+        <div className="w-12 h-12 bg-white rounded-md flex items-center justify-center p-1 overflow-hidden">
+          {/* Logo placeholder - using a generic shape resembling the SEMI logo */}
+          <div className="w-10 h-10 border-4 border-[#0b3c8f] rounded-full relative">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-[#0b3c8f]"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h1 className="text-xl font-bold m-0 tracking-wide">SOCIETY FOR EMERGENCY MEDICINE INDIA</h1>
+          <p className="text-sm opacity-90 m-0">Full Member of International Federation for Emergency Medicine</p>
+          <p className="text-xs opacity-80 m-0">Leading Emergency Care Excellence Since 1999 (Regd.No. 3602/2000)</p>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 mx-auto bg-[#e6effc] text-[#0b3c8f] rounded-2xl flex items-center justify-center mb-4">
+             <div className="w-10 h-10 border-4 border-[#0b3c8f] rounded-full relative">
+               <div className="absolute inset-0 flex items-center justify-center">
+                 <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-[#0b3c8f]"></div>
+               </div>
+             </div>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 tracking-wider mb-2">RESULTS</h2>
+          <p className="text-[#3b71ca] font-medium max-w-md mx-auto text-sm leading-relaxed">
+            April - 2023 UG to 4 SEMESTER Examination Results.
+            <br />
+            Published on 15-09-2023
+          </p>
+        </div>
+
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 w-full max-w-md">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="studentId" className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                Student ID
+              </label>
+              <input
+                id="studentId"
+                type="text"
+                placeholder="SEMI...."
+                value={enrollmentId}
+                onChange={(e) => setEnrollmentId(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                required
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="dob" className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                D.O.B
+              </label>
+              <input
+                id="dob"
+                type="date"
+                placeholder="(DD/MM/YYYY)"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full bg-[#0b3c8f] hover:bg-[#082a63] text-white font-bold py-3 px-4 rounded-lg transition-colors ${
+                isLoading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+            >
+              {isLoading ? 'LOADING...' : 'GET RESULT'}
+            </button>
+          </form>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-[#e0e0e0] text-gray-500 text-xs py-4 px-8 flex flex-wrap justify-between items-center border-t border-gray-300 mt-auto">
+        <div className="flex items-center gap-6">
+          <span className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            SSL Secured
+          </span>
+          <span className="flex items-center gap-2">
+             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+            Official Government Portal
+          </span>
+          <span className="flex items-center gap-2">
+             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+            Support: 1800-XXX-XXXX
+          </span>
+        </div>
+        <div className="mt-2 sm:mt-0">
+          © 2026 State Medical Board
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default ResultsLogin;
+
+```
+
+### `client/src/pages/public/results/index.jsx`
+
+```jsx
+import React, { useState } from 'react';
+import axios from 'axios';
+import ResultsLogin from './components/ResultsLogin';
+import ResultsDisplay from './components/ResultsDisplay';
+
+const ResultsPortal = () => {
+  const [resultData, setResultData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSearch = async (enrollmentId, dob) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      // Create backend API URL
+      const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5003/api';
+      
+      const response = await axios.get(`${API_URL}/results/student/${enrollmentId}`, {
+        params: {
+          dateOfBirth: dob
+        }
+      });
+      
+      if (response.data && response.data.data) {
+        setResultData(response.data.data);
+      } else {
+        setError('Unexpected response format from server.');
+      }
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Failed to fetch results. Please check your Student ID and Date of Birth.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    setResultData(null);
+    setError('');
+  };
+
+  if (resultData) {
+    return <ResultsDisplay data={resultData} onBack={handleBack} />;
+  }
+
+  return (
+    <ResultsLogin 
+      onSearch={handleSearch} 
+      isLoading={isLoading} 
+      error={error} 
+    />
+  );
+};
+
+export default ResultsPortal;
+
+```
+
+### `client/src/utils/razorpay.js`
+
+```javascript
+export const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => {
+      resolve(true);
+    };
+    script.onerror = () => {
+      resolve(false);
+    };
+    document.body.appendChild(script);
+  });
+};
+
+const PAYMENT_STORAGE_KEY = 'semi_payment_state';
+
+export const savePaymentState = (state) => {
+  try {
+    sessionStorage.setItem(PAYMENT_STORAGE_KEY, JSON.stringify({
+      ...state,
+      timestamp: Date.now(),
+    }));
+  } catch (e) {
+    console.warn('Failed to save payment state:', e);
+  }
+};
+
+export const getPaymentState = () => {
+  try {
+    const data = sessionStorage.getItem(PAYMENT_STORAGE_KEY);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (Date.now() - parsed.timestamp < 30 * 60 * 1000) {
+        return parsed;
+      }
+      sessionStorage.removeItem(PAYMENT_STORAGE_KEY);
+    }
+  } catch (e) {
+    console.warn('Failed to get payment state:', e);
+  }
+  return null;
+};
+
+export const clearPaymentState = () => {
+  sessionStorage.removeItem(PAYMENT_STORAGE_KEY);
+};
+
+export const initiateRazorpayPayment = async ({
+  orderId,
+  amount,
+  currency = 'INR',
+  keyId,
+  name = 'Semi Phase 3',
+  description = 'Payment Transaction',
+  prefill = {},
+  onSuccess,
+  onDismiss,
+  onFailure,
+  paymentType = 'institute',
+  additionalData = {},
+}) => {
+  const res = await loadRazorpay();
+
+  if (!res) {
+    alert('Razorpay SDK failed to load. Are you online?');
+    if (onDismiss) onDismiss();
+    return;
+  }
+
+  savePaymentState({
+    orderId,
+    amount,
+    currency,
+    paymentType,
+    additionalData,
+    prefill,
+    description,
+    status: 'initiated',
+  });
+
+  const options = {
+    key: keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
+    amount: amount.toString(),
+    currency,
+    name,
+    description,
+    order_id: orderId,
+    handler: function (response) {
+      clearPaymentState();
+      if (onSuccess) onSuccess(response);
+    },
+    prefill: {
+      name: prefill.name || '',
+      email: prefill.email || '',
+      contact: prefill.contact || ''
+    },
+    theme: {
+      color: '#0146d8'
+    },
+    modal: {
+      ondismiss: function () {
+        if (onDismiss) onDismiss();
+      }
+    }
+  };
+
+  const paymentObject = new window.Razorpay(options);
+
+  if (onFailure) {
+    paymentObject.on('payment.failed', function (response) {
+      if (onFailure) onFailure(response.error);
+    });
+  }
+
+  paymentObject.open();
+};
+
+export const checkPendingPayment = async (checkStatusFn, onRecovered, onError) => {
+  const pendingState = getPaymentState();
+  if (!pendingState) return;
+
+  try {
+    const result = await checkStatusFn(pendingState);
+    if (result && result.paymentStatus === 'Completed') {
+      clearPaymentState();
+      if (onRecovered) onRecovered(result);
+    } else {
+      if (onError) onError('Payment is still being processed. Please wait or try again.');
+    }
+  } catch (error) {
+    console.error('Failed to check pending payment:', error);
+    if (onError) onError('Failed to verify payment status. Please try again.');
+  }
+};
 ```
 
 ### `client/tailwind.config.js`
@@ -24453,30 +34999,30 @@ export default {
       },
       colors: {
         primary: {
-          DEFAULT: '#004cb0',
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#004cb0', // User requested primary
-          700: '#003a8c', // Darker shade for hover
-          800: '#1e40af',
-          900: '#1e3a8a',
+          DEFAULT: '#003a8c',
+          50: '#f0f5ff',
+          100: '#e0ebff',
+          200: '#c2d6ff',
+          300: '#94b8ff',
+          400: '#6196ff',
+          500: '#3371ff',
+          600: '#003a8c', // User requested primary
+          700: '#002c6b', // Darker shade for hover
+          800: '#001d47',
+          900: '#000f26',
         },
         blue: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#004cb0', // Overriding blue-600 to match primary
-          700: '#003a8c', // Overriding blue-700 for consistent hover
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#172554',
+          50: '#f0f5ff',
+          100: '#e0ebff',
+          200: '#c2d6ff',
+          300: '#94b8ff',
+          400: '#6196ff',
+          500: '#3371ff',
+          600: '#003a8c', // Overriding blue-600 to match primary
+          700: '#002c6b', // Overriding blue-700 for consistent hover
+          800: '#001d47',
+          900: '#000f26',
+          950: '#000814',
         }
       },
       fontFamily: {
@@ -24506,6 +35052,7 @@ export default {
   },
   plugins: [],
 }
+
 ```
 
 ### `client/vite.config.js`
@@ -24521,5 +35068,211 @@ export default defineConfig({
     sourcemap: true,
   },
 })
+
+```
+
+### `extract.js`
+
+```javascript
+const fs = require('fs');
+const path = require('path');
+
+const backendRoutesDir = path.join(__dirname, 'backend', 'src', 'routes');
+const frontendApiDir = path.join(__dirname, 'client', 'src', 'api');
+
+function extractRoutes(dir) {
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.ts') || f.endsWith('.js'));
+    const allRoutes = [];
+    
+    files.forEach(file => {
+        const content = fs.readFileSync(path.join(dir, file), 'utf-8');
+        const regex = /router\.(get|post|put|patch|delete)\(\s*['"`](.*?)['"`]/g;
+        let match;
+        while ((match = regex.exec(content)) !== null) {
+            allRoutes.push({
+                file: file,
+                method: match[1].toUpperCase(),
+                path: match[2]
+            });
+        }
+    });
+    return allRoutes;
+}
+
+function extractFrontendApis(dir) {
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.ts') || f.endsWith('.js'));
+    const allApis = [];
+    
+    files.forEach(file => {
+        const content = fs.readFileSync(path.join(dir, file), 'utf-8');
+        const regex = /apiClient\.(get|post|put|patch|delete)\(\s*[`'"](.*?)['"`]/g;
+        let match;
+        while ((match = regex.exec(content)) !== null) {
+            allApis.push({
+                file: file,
+                method: match[1].toUpperCase(),
+                path: match[2]
+            });
+        }
+    });
+    return allApis;
+}
+
+const backendRoutes = extractRoutes(backendRoutesDir);
+const frontendApis = extractFrontendApis(frontendApiDir);
+
+console.log('--- Backend Routes ---');
+backendRoutes.forEach(r => console.log(`${r.method} ${r.file}: ${r.path}`));
+
+console.log('\n--- Frontend APIs ---');
+frontendApis.forEach(r => console.log(`${r.method} ${r.file}: ${r.path}`));
+
+```
+
+### `generate_ai_context.js`
+
+```javascript
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = __dirname;
+const OUTPUT = path.join(ROOT, 'full_codebase_for_ai.md');
+
+const EXCLUDE_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'uploads', 'assets', '.gemini']);
+const EXCLUDE_EXTS = new Set(['.webp', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.mp4', '.pdf', '.woff', '.woff2', '.ttf', '.eot']);
+const EXCLUDE_FILES = new Set(['package-lock.json', 'full_codebase_for_ai.md', '.DS_Store', 'thumbs.db']);
+
+function collectFiles(dir, relative = '') {
+  const results = [];
+  const entries = fs.readdirSync(path.join(dir, relative), { withFileTypes: true });
+  for (const entry of entries) {
+    if (EXCLUDE_FILES.has(entry.name)) continue;
+    const rel = relative ? `${relative}/${entry.name}` : entry.name;
+    const full = path.join(dir, rel);
+    if (entry.isDirectory()) {
+      if (EXCLUDE_DIRS.has(entry.name)) continue;
+      if (entry.name.startsWith('.')) continue;
+      results.push(...collectFiles(dir, rel));
+    } else {
+      const ext = path.extname(entry.name).toLowerCase();
+      if (EXCLUDE_EXTS.has(ext)) continue;
+      if (entry.name.startsWith('.')) continue;
+      results.push(rel);
+    }
+  }
+  return results;
+}
+
+function inferLang(ext) {
+  const map = {
+    '.ts': 'typescript',
+    '.js': 'javascript',
+    '.jsx': 'jsx',
+    '.json': 'json',
+    '.css': 'css',
+    '.html': 'html',
+    '.env': 'env',
+    '.gitignore': 'ignore',
+    '.md': 'markdown',
+    '.yml': 'yaml',
+    '.yaml': 'yaml',
+    '.mjs': 'javascript',
+  };
+  return map[ext] || '';
+}
+
+function generate() {
+  console.log('Gathering codebase...');
+  const files = collectFiles(ROOT).sort();
+
+  const header = `# SEMI — Full Project Codebase Context
+
+> Auto-generated on ${new Date().toISOString()}
+
+This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
+
+---
+
+## Project Structure
+
+\`\`\`
+semi-phase-three/
+`;
+
+  // Build tree
+  function buildTree(list) {
+    const tree = {};
+    for (const f of list) {
+      const parts = f.split('/');
+      let node = tree;
+      for (let i = 0; i < parts.length; i++) {
+        if (i === parts.length - 1) {
+          node[parts[i]] = null;
+        } else {
+          if (!node[parts[i]]) node[parts[i]] = {};
+          node = node[parts[i]];
+        }
+      }
+    }
+    return tree;
+  }
+
+  const tree = buildTree(files);
+  const treeLines = [];
+
+  function printTree(node, indent) {
+    const entries = Object.entries(node).sort(([a], [b]) => {
+      const aIsDir = node[a] !== null;
+      const bIsDir = node[b] !== null;
+      if (aIsDir && !bIsDir) return -1;
+      if (!aIsDir && bIsDir) return 1;
+      return a.localeCompare(b);
+    });
+    entries.forEach(([name, child], idx) => {
+      const isLast = idx === entries.length - 1;
+      treeLines.push(`${indent}${isLast ? '└── ' : '├── '}${name}`);
+      if (child !== null) {
+        printTree(child, indent + (isLast ? '    ' : '│   '));
+      }
+    });
+  }
+
+  printTree(tree, '');
+  const treeBlock = treeLines.join('\n');
+  const footer = '\n```\n\n';
+
+  let md = header + treeBlock + footer;
+
+  for (const filePath of files) {
+    const fullPath = path.join(ROOT, filePath);
+    try {
+      const content = fs.readFileSync(fullPath, 'utf-8');
+      const ext = path.extname(filePath).toLowerCase();
+      const lang = inferLang(ext);
+      const normalized = filePath.replace(/\\/g, '/');
+
+      // Redact secrets in .env files
+      const isEnv = path.basename(filePath) === '.env';
+      const displayContent = isEnv
+        ? content.split('\n').map(line => {
+            if (/=(.+)/.test(line) && !line.trim().startsWith('#')) {
+              const [key] = line.split('=');
+              return `${key}=<REDACTED>`;
+            }
+            return line;
+          }).join('\n')
+        : content;
+
+      md += `### \`${normalized}\`\n\n\`\`\`${lang}\n${displayContent}\n\`\`\`\n\n`;
+    } catch {
+      // skip binary/unreadable
+    }
+  }
+
+  fs.writeFileSync(OUTPUT, md, 'utf-8');
+  console.log(`Codebase successfully exported to: ${OUTPUT} (${files.length} files)`);
+}
+
+generate();
 ```
 

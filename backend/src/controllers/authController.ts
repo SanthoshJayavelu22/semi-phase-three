@@ -16,6 +16,7 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(1, 'Password is required'),
+  portal: z.enum(['academy', 'institute']).optional(),
 });
 
 const resetPasswordSchema = z.object({
@@ -115,6 +116,23 @@ export const login = async (req: Request, res: Response) => {
 
     if (!user.isEmailVerified) {
       return sendError({ req, res, statusCode: 403, message: 'Please verify your email address before logging in.' });
+    }
+
+    if (validatedData.portal) {
+      const allowedRoles: Record<string, string[]> = {
+        academy: ['admin', 'super_admin', 'board'],
+        institute: ['institute'],
+      };
+      const allowed = allowedRoles[validatedData.portal] || [];
+      if (!allowed.includes(user.role)) {
+        const portalName = validatedData.portal.charAt(0).toUpperCase() + validatedData.portal.slice(1);
+        return sendError({
+          req,
+          res,
+          statusCode: 403,
+          message: `Access denied. ${portalName} portal is only for ${allowed.join(', ')} roles.`,
+        });
+      }
     }
 
     const accessToken = generateToken(user._id.toString(), 'access');

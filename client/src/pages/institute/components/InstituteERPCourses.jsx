@@ -146,7 +146,6 @@ const InstituteERPCourses = ({
       });
 
       setCourses(updatedCourses);
-      localStorage.setItem('semi_courses', JSON.stringify(updatedCourses));
       closeEditModal();
       
       setToast({ message: `Course "${editForm.courseName}" updated successfully!`, type: 'success' });
@@ -177,7 +176,6 @@ const InstituteERPCourses = ({
 
           const updatedCourses = courses.filter(c => c.id !== courseId && c._id !== courseId);
           setCourses(updatedCourses);
-          localStorage.setItem('semi_courses', JSON.stringify(updatedCourses));
           
           setToast({ message: `Course "${course.courseName}" deleted successfully!`, type: 'success' });
           
@@ -229,7 +227,6 @@ const InstituteERPCourses = ({
             return c;
           });
           setCourses(updatedCourses);
-          localStorage.setItem('semi_courses', JSON.stringify(updatedCourses));
           
           setToast({ message: `Course status updated to "${newStatus}"!`, type: 'success' });
         } catch (err) {

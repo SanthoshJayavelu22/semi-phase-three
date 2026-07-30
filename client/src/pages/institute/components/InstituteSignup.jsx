@@ -1,9 +1,19 @@
 import { useState } from 'react';
-import { Mail, Lock, UserPlus, ArrowLeft, ShieldAlert, Building2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, UserPlus, ArrowLeft, ShieldAlert, Building2, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrentStep }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+
+  const onSubmit = async (e) => {
+    setRegisterLoading(true);
+    try {
+      await handleRegisterSubmit(e);
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-xl mx-auto w-full bg-white rounded-3xl shadow-xl border border-gray-100 p-8 sm:p-10 text-left animate-in fade-in duration-200">
@@ -21,7 +31,7 @@ const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrent
         <p className="text-sm text-gray-500 mt-1">Register credentials to initiate onboarding</p>
       </div>
 
-      <form onSubmit={handleRegisterSubmit} className="space-y-5">
+      <form onSubmit={onSubmit} className="space-y-5">
         <div>
           <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Institute Name</label>
           <div className="relative">
@@ -125,10 +135,15 @@ const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrent
 
         <button
           type="submit"
-          className="w-full py-4 mt-2 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-colors shadow-md text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+          disabled={registerLoading}
+          className="w-full py-4 mt-2 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-colors shadow-md text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <UserPlus className="w-5 h-5" />
-          Initialize Registration
+          {registerLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <UserPlus className="w-5 h-5" />
+          )}
+          {registerLoading ? 'Registering...' : 'Initialize Registration'}
         </button>
       </form>
       

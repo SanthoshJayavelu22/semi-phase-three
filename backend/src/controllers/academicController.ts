@@ -71,6 +71,7 @@ const studentAddSchema = z.object({
   homeAddress: z.string().min(1, 'Home Address is required'),
   contactNumber: z.string().regex(/^[0-9]{10,15}$/, 'Must be a valid mobile number format'),
   email: z.string().email('Must be a valid email format'),
+  dateOfBirth: z.string().min(1, 'Date of Birth is required'),
   qualification: z.string().min(1, 'Qualification is mandatory'),
   mbbsQualification: z.string().min(1, 'MBBS Qualification is mandatory'),
   yearOfPassing: z.coerce.number().min(1900).max(2100, 'Invalid year of passing'),
@@ -84,7 +85,11 @@ const studentAddSchema = z.object({
   courseId: z.string().min(1, 'Course is required'),
   batchId: z.string().min(1, 'Batch is required'),
   courseDirector: z.string().min(1, 'Course Director is required'),
-  utrNumber: z.string().min(1, 'UTR Number is required'),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  razorpaySignature: z.string().optional(),
+  paymentMode: z.string().optional().default('Razorpay'),
+  paymentDate: z.string().optional(),
 });
 
 const studentUpdateSchema = z.object({
@@ -106,16 +111,21 @@ const studentUpdateSchema = z.object({
   courseId: z.string().min(1, 'Course is required').optional(),
   batchId: z.string().min(1, 'Batch is required').optional(),
   courseDirector: z.string().min(1, 'Course Director is required').optional(),
-  utrNumber: z.string().min(1, 'UTR Number is required').optional(),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  razorpaySignature: z.string().optional(),
 });
 
 const feeRecordSchema = z.object({
   semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   paymentMode: z.string().min(1, 'Payment Mode is required'),
-  utrNumber: z.string().min(1, 'UTR Number is required'),
+  utrNumber: z.string().optional(),
   paymentDate: z.string().transform((val) => new Date(val)),
   paymentPurpose: z.string().min(1, 'Payment Purpose is required'),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  razorpaySignature: z.string().optional(),
 });
 
 const remittanceSchema = z.object({
@@ -602,7 +612,7 @@ export const addStudent = async (req: Request, res: Response) => {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const requiredDocFields = [
       'passportPhoto', 'mbbsCertificate', 'medicalCouncilRegistrationCertificate',
-      'paymentReceipt', 'semiMembershipForm'
+      'semiMembershipForm'
     ];
 
     for (const field of requiredDocFields) {
@@ -648,6 +658,7 @@ export const addStudent = async (req: Request, res: Response) => {
       homeAddress: validatedData.homeAddress,
       contactNumber: validatedData.contactNumber,
       email: validatedData.email,
+      dateOfBirth: validatedData.dateOfBirth,
       qualification: validatedData.qualification,
       mbbsQualification: validatedData.mbbsQualification,
       yearOfPassing: validatedData.yearOfPassing,
@@ -659,13 +670,14 @@ export const addStudent = async (req: Request, res: Response) => {
       batch: batch._id,
       institute: institute._id,
       courseDirector: validatedData.courseDirector,
-      utrNumber: validatedData.utrNumber,
+      razorpayOrderId: validatedData.razorpayOrderId,
+      razorpayPaymentId: validatedData.razorpayPaymentId,
+      razorpaySignature: validatedData.razorpaySignature,
       documents: {
         passportPhotoUrl: getFileUrl(files['passportPhoto'][0].path),
         mbbsCertificateUrl: getFileUrl(files['mbbsCertificate'][0].path),
         medicalCouncilRegistrationCertificateUrl: getFileUrl(files['medicalCouncilRegistrationCertificate'][0].path),
         fmgeResultCopyUrl: files['fmgeResultCopy'] ? getFileUrl(files['fmgeResultCopy'][0].path) : undefined,
-        paymentReceiptUrl: getFileUrl(files['paymentReceipt'][0].path),
         semiMembershipFormUrl: getFileUrl(files['semiMembershipForm'][0].path),
       },
       remittedToAcademy: false,
@@ -674,6 +686,20 @@ export const addStudent = async (req: Request, res: Response) => {
 
     // Update batch active fellows count
     await Batch.findByIdAndUpdate(batch._id, { $inc: { activeFellows: 1 } });
+
+    // Create FeeRecord for enrollment fee
+    await FeeRecord.create({
+      student: student._id,
+      amount: 140000,
+      paymentMode: validatedData.paymentMode || 'Razorpay Online',
+      utrNumber: validatedData.razorpayPaymentId || 'razorpay-online',
+      paymentReceiptUrl: 'Online Verification',
+      paymentDate: validatedData.paymentDate ? new Date(validatedData.paymentDate) : new Date(),
+      paymentPurpose: 'Enrollment fee',
+      razorpayOrderId: validatedData.razorpayOrderId,
+      razorpayPaymentId: validatedData.razorpayPaymentId,
+      razorpaySignature: validatedData.razorpaySignature,
+    });
 
     return sendSuccess({
       req,
@@ -713,21 +739,18 @@ export const recordStudentFee = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found under this institute' });
     }
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    const isOnline = validatedData.paymentMode === 'Razorpay Online';
-    if (!isOnline && (!files || !files['paymentReceipt'] || files['paymentReceipt'].length === 0)) {
-      return sendError({ req, res, statusCode: 400, message: 'Payment Receipt Upload is mandatory' });
-    }
-
     const feeRecord = await FeeRecord.create({
       student: student._id,
       semesterNumber: validatedData.semesterNumber,
       amount: validatedData.amount,
-      paymentMode: validatedData.paymentMode,
-      utrNumber: validatedData.utrNumber,
-      paymentReceiptUrl: (!isOnline && files && files['paymentReceipt']) ? getFileUrl(files['paymentReceipt'][0].path) : 'Online Verification',
+      paymentMode: validatedData.paymentMode || 'Razorpay Online',
+      utrNumber: validatedData.razorpayPaymentId || validatedData.utrNumber,
+      paymentReceiptUrl: 'Online Verification',
       paymentDate: validatedData.paymentDate,
       paymentPurpose: validatedData.paymentPurpose,
+      razorpayOrderId: validatedData.razorpayOrderId,
+      razorpayPaymentId: validatedData.razorpayPaymentId,
+      razorpaySignature: validatedData.razorpaySignature,
     });
 
     return sendSuccess({
@@ -1263,7 +1286,9 @@ export const updateStudent = async (req: Request, res: Response) => {
     if (validatedData.isForeignGraduate !== undefined) student.isForeignGraduate = validatedData.isForeignGraduate;
     if (validatedData.fmgeClearanceStatus) student.fmgeClearanceStatus = validatedData.fmgeClearanceStatus;
     if (validatedData.courseDirector) student.courseDirector = validatedData.courseDirector;
-    if (validatedData.utrNumber) student.utrNumber = validatedData.utrNumber;
+    if (validatedData.razorpayOrderId) student.razorpayOrderId = validatedData.razorpayOrderId;
+    if (validatedData.razorpayPaymentId) student.razorpayPaymentId = validatedData.razorpayPaymentId;
+    if (validatedData.razorpaySignature) student.razorpaySignature = validatedData.razorpaySignature;
 
     // Handle files if uploaded
     if (req.files) {
@@ -1437,6 +1462,99 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
         paymentId: razorpay_payment_id, 
         orderId: razorpay_order_id,
         receiptNumber 
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getAcademicPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const paymentPurpose = req.query.paymentPurpose as string;
+
+    const feeRecord = await FeeRecord.findOne({
+      student: studentId as any,
+      paymentPurpose: paymentPurpose || 'Examination fee',
+    }).sort({ createdAt: -1 });
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment status retrieved successfully',
+      data: {
+        paymentStatus: feeRecord ? 'Completed' : 'Pending',
+        paymentId: feeRecord?.razorpayPaymentId || feeRecord?.utrNumber,
+        paymentDate: feeRecord?.paymentDate,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const verifyAcademicPayment = async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const studentId = req.query.studentId as string;
+    const purpose = req.query.purpose as string;
+
+    const existingFee = await FeeRecord.findOne({
+      student: studentId as any,
+      paymentPurpose: purpose || 'Examination fee',
+    });
+
+    if (existingFee) {
+      return sendSuccess({
+        req,
+        res,
+        message: 'Payment already recorded',
+        data: {
+          paymentStatus: 'Completed',
+          paymentId: existingFee.utrNumber,
+        },
+      });
+    }
+
+    if (isRazorpayConfigured && razorpayInstance) {
+      try {
+        const payment = await razorpayInstance.payments.fetch(orderId);
+        if (payment.status === 'captured') {
+          const feeRecord = await FeeRecord.create({
+            student: studentId as any,
+            amount: payment.amount / 100,
+            paymentMode: 'Razorpay Online',
+            utrNumber: payment.id,
+            paymentReceiptUrl: 'Online Verification',
+            paymentDate: new Date(),
+            paymentPurpose: purpose || 'Examination fee',
+            razorpayOrderId: payment.order_id,
+            razorpayPaymentId: payment.id,
+          });
+
+          return sendSuccess({
+            req,
+            res,
+            message: 'Payment verified successfully',
+            data: {
+              paymentStatus: 'Completed',
+              paymentId: payment.id,
+              feeRecord,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error verifying academic payment:', error);
+      }
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment pending verification',
+      data: {
+        paymentStatus: 'Pending',
       },
     });
   } catch (error: any) {
