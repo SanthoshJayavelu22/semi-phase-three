@@ -1,7 +1,18 @@
-import React, { useState } from 'react';
-import { CheckCircle2, Trash2, Check, ArrowRight, ArrowLeft } from 'lucide-react';
-import { initiateRazorpayPayment } from '../../../utils/razorpay';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Trash2, Check, ArrowRight, ArrowLeft, Loader2, CreditCard } from 'lucide-react';
+import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
+import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
+import Toast from '../../../Components/Toast';
 import academicService from '../../../api/academic';
+
+// ─── ACCEPTED FILE TYPES ──────────────────────────────────────────────────────
+const ACCEPTED_FILE_TYPES = {
+  images: '.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.tif,.heic,.heif,.svg',
+  documents: '.pdf,.doc,.docx,.rtf,.txt,.odt,.ods,.odp,.csv,.xls,.xlsx,.ppt,.pptx',
+  all: '.pdf,.doc,.docx,.rtf,.txt,.odt,.ods,.odp,.csv,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.tif,.heic,.heif,.svg'
+};
+
+const APPROVED_QUALIFICATIONS = ['MD Emergency Medicine', 'DNB Emergency Medicine', 'MEM (Emergency Medicine)'];
 
 const InstituteERPEnrollment = ({ 
   enrollForm, 
@@ -19,8 +30,25 @@ const InstituteERPEnrollment = ({
   const [wizardStep, setWizardStep] = useState(1);
   const [localError, setLocalError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [showPaymentChecker, setShowPaymentChecker] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [toast, setToast] = useState(null);
   const today = new Date().toISOString().split('T')[0];
   const currentYear = new Date().getFullYear();
+
+  // ─── Recover a pending enrollment payment on mount ──────────────────────────
+  useEffect(() => {
+    const checkPending = async () => {
+      const pendingState = getPaymentState();
+      if (pendingState && pendingState.paymentType === 'enrollment') {
+        setShowPaymentChecker(true);
+        setToast({ message: 'A payment was in progress. Checking its status...', type: 'info' });
+      }
+    };
+    checkPending();
+  }, []);
 
   // Local state to track "Is FMG Candidate?" matching screenshot dropdown
   const [isFmgSelected, setIsFmgSelected] = useState(enrollForm.studentCategory === 'FMG' ? 'Yes' : 'No');
@@ -80,14 +108,16 @@ const InstituteERPEnrollment = ({
   };
 
   // Helper to render file upload card
-  const renderUploadCard = (label, docKey) => {
+  const renderUploadCard = (label, docKey, accept = ACCEPTED_FILE_TYPES.all, required = false) => {
     const file = enrollDocs[docKey];
     const progress = enrollProgress[docKey];
 
     return (
       <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div className="min-w-0">
-          <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">{label}</span>
+          <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">
+            {label} {required && <span className="text-rose-500">*</span>}
+          </span>
           {file ? (
             <span className="text-xs text-emerald-600 font-bold mt-1 flex items-center gap-1.5 truncate">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
@@ -116,9 +146,19 @@ const InstituteERPEnrollment = ({
             Choose File
             <input 
               type="file" 
-              accept=".pdf,.png,.jpg,.jpeg" 
+              accept={accept} 
               className="hidden" 
-              onChange={(e) => handleEnrollDocUpload(docKey, e.target.files[0])} 
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  if (file.size > 10 * 1024 * 1024) {
+                    setToast({ message: `"${file.name}" exceeds the 10MB size limit.`, type: 'error' });
+                  } else {
+                    handleEnrollDocUpload(docKey, file);
+                  }
+                }
+                e.target.value = '';
+              }} 
             />
           </label>
         )}
@@ -226,6 +266,7 @@ const InstituteERPEnrollment = ({
   const handleSubmitIntercept = async (e) => {
     e.preventDefault();
     setLocalError(null);
+    setToast(null);
     const errors = validateStep(4);
     setFieldErrors(errors);
     const errorMessages = Object.values(errors);
@@ -234,17 +275,39 @@ const InstituteERPEnrollment = ({
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    
+    if (!APPROVED_QUALIFICATIONS.includes(enrollForm.qualification)) {
+      setLocalError(`🚨 Eligibility Rejection: "${enrollForm.qualification}" is not recognized for SEMI advanced fellowships.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Payment already verified (e.g. recovered from a pending state) — submit directly
+    if (paymentCompleted) {
+      await submitEnrollment(e);
+      return;
+    }
+
     try {
       // 1. Create Razorpay order (Using 1 INR for testing to avoid test limit errors)
       const orderRes = await academicService.createRazorpayOrder({ amount: 1, purpose: 'Student Enrollment' });
-      const orderData = orderRes.data || orderRes;
-      
+      const orderData = orderRes?.data?.data || orderRes?.data || orderRes;
+
       // 2. Initiate Payment
-      const finalOrderId = orderData.data?.orderId || orderData.orderId || orderData.id || orderData.data?.id;
+      const finalOrderId = orderData.orderId || orderData.id;
+      if (!finalOrderId) {
+        throw new Error('Failed to create payment order.');
+      }
+
+      setIsPaymentProcessing(true);
       initiateRazorpayPayment({
         orderId: finalOrderId,
-        amount: 1 * 100, // Razorpay takes amount in paise
+        amount: orderData.amount || 100, // Razorpay takes amount in paise
+        currency: orderData.currency || 'INR',
+        keyId: orderData.keyId,
+        name: 'SEMI Student Enrollment',
+        description: 'Enrollment Fee - ₹1,40,000',
+        paymentType: 'enrollment',
+        additionalData: { purpose: 'Student Enrollment' },
         prefill: {
           name: `${enrollForm.firstName} ${enrollForm.lastName}`,
           email: enrollForm.emailAddress,
@@ -252,37 +315,80 @@ const InstituteERPEnrollment = ({
         },
         onSuccess: async (response) => {
           try {
+            setToast({ message: '✅ Payment successful! Verifying...', type: 'info' });
             // Verify payment
             await academicService.verifyRazorpayPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             });
-            
+
             // Set payment data dynamically
             enrollForm.paymentMode = 'Razorpay';
             enrollForm.razorpayOrderId = response.razorpay_order_id;
             enrollForm.razorpayPaymentId = response.razorpay_payment_id;
             enrollForm.razorpaySignature = response.razorpay_signature;
             enrollForm.txnDate = new Date().toISOString().split('T')[0];
-            
+            clearPaymentState();
+            setPaymentCompleted(true);
+
             // Wait for enrollment form submission
             const success = await handleEnrollmentSubmit(e);
             if (success) {
               setWizardStep(1);
+              setPaymentCompleted(false);
+              setToast({ message: '🎉 Enrollment submitted successfully!', type: 'success' });
+            } else {
+              setToast({ message: '✅ Payment verified! Please review the errors and submit again.', type: 'success' });
             }
           } catch (err) {
             console.error(err);
-            setLocalError('Payment verification failed.');
+            setLocalError(err?.parsedMessage || err?.message || 'Payment verification failed.');
+            setToast({ message: '❌ Payment succeeded but verification failed. Please contact support.', type: 'error' });
+          } finally {
+            setIsPaymentProcessing(false);
+            setIsSubmitting(false);
           }
         },
         onDismiss: () => {
-          setLocalError('Payment was cancelled.');
+          setIsPaymentProcessing(false);
+          setIsSubmitting(false);
+          setShowPaymentChecker(true);
+          setToast({ message: 'Payment window closed. Checking payment status...', type: 'info' });
+        },
+        onFailure: (error) => {
+          console.error('Payment failed:', error);
+          setIsPaymentProcessing(false);
+          setIsSubmitting(false);
+          setShowPaymentChecker(true);
+          setToast({ message: `Payment failed: ${error?.description || 'Transaction unsuccessful.'}`, type: 'error' });
         }
       });
     } catch (err) {
       console.error(err);
-      setLocalError('Failed to initialize payment gateway.');
+      setIsPaymentProcessing(false);
+      setIsSubmitting(false);
+      setLocalError(err?.parsedMessage || err?.message || 'Failed to initialize payment gateway.');
+    }
+  };
+
+  // Submit the enrollment via the parent handler (no duplicate API call)
+  const submitEnrollment = async (e) => {
+    setIsSubmitting(true);
+    try {
+      const success = await handleEnrollmentSubmit(e);
+      if (success) {
+        setWizardStep(1);
+        setPaymentCompleted(false);
+        setToast({ message: '🎉 Enrollment submitted successfully!', type: 'success' });
+      } else {
+        setToast({ message: 'Enrollment could not be submitted. Please review the errors.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: err?.parsedMessage || err?.message || 'Failed to submit enrollment.', type: 'error' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -449,7 +555,7 @@ const InstituteERPEnrollment = ({
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Passport Photo *</label>
-                {renderUploadCard("Choose Passport Photo", 'photoDoc')}
+                {renderUploadCard("Choose Passport Photo", 'photoDoc', ACCEPTED_FILE_TYPES.images, true)}
               </div>
             </div>
           </div>
@@ -509,7 +615,7 @@ const InstituteERPEnrollment = ({
 
                 <div>
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">MBBS Degree Certificate Upload *</label>
-                  {renderUploadCard("Choose MBBS Certificate", 'marksCertificateDoc')}
+                  {renderUploadCard("Choose MBBS Certificate", 'marksCertificateDoc', ACCEPTED_FILE_TYPES.documents, true)}
                 </div>
               </div>
             </div>
@@ -545,7 +651,7 @@ const InstituteERPEnrollment = ({
 
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Medical Council Certificate Upload *</label>
-                {renderUploadCard("Choose Registration Certificate", 'medCouncilCertDoc')}
+                {renderUploadCard("Choose Registration Certificate", 'medCouncilCertDoc', ACCEPTED_FILE_TYPES.documents, true)}
               </div>
             </div>
 
@@ -584,7 +690,7 @@ const InstituteERPEnrollment = ({
               {isFmgSelected === 'Yes' && (
                 <div className="animate-in fade-in duration-150">
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">FMGE Pass Certificate Upload *</label>
-                  {renderUploadCard("Choose FMGE Result Copy", 'fmgeCertDoc')}
+                  {renderUploadCard("Choose FMGE Result Copy", 'fmgeCertDoc', ACCEPTED_FILE_TYPES.documents, true)}
                 </div>
               )}
             </div>
@@ -713,7 +819,7 @@ const InstituteERPEnrollment = ({
 
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">SEMI Membership Card Upload *</label>
-                {renderUploadCard("Choose Membership Card PDF", 'lifeMembershipCardDoc')}
+                {renderUploadCard("Choose Membership Card PDF", 'lifeMembershipCardDoc', ACCEPTED_FILE_TYPES.all, true)}
               </div>
             </div>
           </div>
@@ -788,12 +894,12 @@ const InstituteERPEnrollment = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Candidate Signature *</label>
-                  {renderUploadCard("Choose Signature File", 'studentSignatureDoc')}
+                  {renderUploadCard("Choose Signature File", 'studentSignatureDoc', ACCEPTED_FILE_TYPES.images, true)}
                 </div>
 
                 <div>
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">PG Degree Certificate / HOD Sign-off *</label>
-                  {renderUploadCard("Choose PG Certificate File", 'hodSignatureDoc')}
+                  {renderUploadCard("Choose PG Certificate File", 'hodSignatureDoc', ACCEPTED_FILE_TYPES.all, true)}
                 </div>
               </div>
             </div>
@@ -807,7 +913,8 @@ const InstituteERPEnrollment = ({
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 border border-slate-200 hover:bg-slate-55 text-slate-650 hover:text-slate-850 font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                disabled={isSubmitting || isPaymentProcessing}
+                className="px-5 py-2.5 border border-slate-200 hover:bg-slate-55 text-slate-650 hover:text-slate-850 font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
@@ -820,7 +927,8 @@ const InstituteERPEnrollment = ({
               <button
                 type="button"
                 onClick={handleNext}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer"
+                disabled={isSubmitting || isPaymentProcessing}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue
                 <ArrowRight className="w-4 h-4" />
@@ -828,14 +936,75 @@ const InstituteERPEnrollment = ({
             ) : (
               <button
                 type="submit"
-                className="px-10 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-md shadow-emerald-500/10 cursor-pointer"
+                disabled={isSubmitting || isPaymentProcessing}
+                className={`px-10 py-3 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-md flex items-center gap-2 ${
+                  isSubmitting || isPaymentProcessing
+                    ? 'bg-slate-400 cursor-not-allowed'
+                    : paymentCompleted
+                      ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/10 cursor-pointer'
+                      : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/10 cursor-pointer'
+                }`}
               >
-                Submit Application & Pay
+                {isPaymentProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing Payment...
+                  </>
+                ) : isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : paymentCompleted ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Submit Application
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    Pay & Enroll
+                  </>
+                )}
               </button>
             )}
           </div>
         </div>
       </form>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {showPaymentChecker && (
+        <PaymentStatusChecker
+          isOpen={showPaymentChecker}
+          paymentType="academic"
+          message="Verifying your enrollment payment..."
+          onComplete={(data) => {
+            const pendingState = getPaymentState();
+            setShowPaymentChecker(false);
+            setPaymentCompleted(true);
+            clearPaymentState();
+            setEnrollForm(prev => ({
+              ...prev,
+              razorpayPaymentId: data?.paymentId || prev.razorpayPaymentId,
+              razorpayOrderId: pendingState?.orderId || prev.razorpayOrderId,
+              paymentMode: 'Razorpay',
+              txnDate: new Date().toISOString().split('T')[0],
+            }));
+            setToast({ message: '✅ Payment verified! You can now submit your enrollment.', type: 'success' });
+          }}
+          onRetry={() => {
+            setShowPaymentChecker(false);
+            handleSubmitIntercept(new Event('submit'));
+          }}
+          onCancel={() => {
+            setShowPaymentChecker(false);
+            setIsSubmitting(false);
+            setIsPaymentProcessing(false);
+            setToast({ message: 'Payment verification cancelled. You can try again.', type: 'info' });
+          }}
+        />
+      )}
     </div>
   );
 };

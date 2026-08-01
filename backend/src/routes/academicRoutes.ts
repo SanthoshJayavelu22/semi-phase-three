@@ -75,6 +75,8 @@ router.post(
     { name: 'medicalCouncilRegistrationCertificate', maxCount: 1 },
     { name: 'fmgeResultCopy', maxCount: 1 },
     { name: 'semiMembershipForm', maxCount: 1 },
+    { name: 'studentSignature', maxCount: 1 },
+    { name: 'hodSignature', maxCount: 1 },
   ]),
   addStudent
 );
@@ -131,8 +133,9 @@ router.put(
     { name: 'mbbsCertificate', maxCount: 1 },
     { name: 'medicalCouncilRegistrationCertificate', maxCount: 1 },
     { name: 'fmgeResultCopy', maxCount: 1 },
-    { name: 'paymentReceipt', maxCount: 1 },
     { name: 'semiMembershipForm', maxCount: 1 },
+    { name: 'studentSignature', maxCount: 1 },
+    { name: 'hodSignature', maxCount: 1 },
   ]),
   updateStudent
 );

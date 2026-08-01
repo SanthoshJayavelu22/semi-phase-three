@@ -1,5 +1,7 @@
 import { Mail } from 'lucide-react';
 
+const loginUrl = `${window.location.origin}/institute/login`;
+
 const EmailVerificationSimulator = ({ user }) => {
   return (
     <div className="max-w-xl mx-auto w-full space-y-6 text-left animate-in fade-in duration-200">
@@ -19,7 +21,7 @@ const EmailVerificationSimulator = ({ user }) => {
         <div className="bg-blue-50/50 border border-blue-100/80 rounded-2xl p-6 text-xs text-blue-900 font-bold leading-relaxed space-y-4">
           <span className="text-[10px] uppercase font-black tracking-wider text-blue-600 block">Next Steps</span>
           <p className="text-left leading-relaxed text-blue-800 font-medium">
-            Please check your inbox for a verification email. Click the verify button in that email. Once verified, you can proceed to the login page: <a href="https://semi-phase-three.swiflare.com/institute/login" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-bold break-all hover:text-blue-700">https://semi-phase-three.swiflare.com/institute/login</a>
+            Please check your inbox for a verification email. Click the verify button in that email. Once verified, you can proceed to the login page: <a href={loginUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-bold break-all hover:text-blue-700">{loginUrl}</a>
           </p>
         </div>
 

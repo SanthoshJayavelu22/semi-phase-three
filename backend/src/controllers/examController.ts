@@ -16,7 +16,7 @@ const getFileUrl = (filePath: string) => {
   const normalized = filePath.replace(/\\/g, '/');
   const uploadsIndex = normalized.indexOf('uploads/');
   return uploadsIndex !== -1
-    ? `${process.env.BASE_URL || 'http://localhost:5000'}/${normalized.substring(uploadsIndex)}`
+    ? `${process.env.BASE_URL || 'http://localhost:5003'}/${normalized.substring(uploadsIndex)}`
     : filePath;
 };
 
@@ -27,7 +27,9 @@ const resolveInstitute = async (userId: string) =>
 /** Ensure the institute role user owns this application */
 const assertOwnership = async (application: any, userId: string) => {
   const institute = await Institute.findOne({ user: userId });
-  return institute && institute._id.toString() === application.institute.toString();
+  if (!institute) return false;
+  const appInstituteId = application.institute?._id || application.institute;
+  return institute._id.toString() === appInstituteId.toString();
 };
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
@@ -426,21 +428,25 @@ export const generateHallTickets = async (req: Request, res: Response) => {
       if (!owns) return sendError({ req, res, statusCode: 403, message: 'Unauthorized to access this application' });
     }
 
-    if (application.status !== 'SchedulePublished') {
+    const allowedStatuses = ['Approved', 'SchedulePublished'];
+    if (!allowedStatuses.includes(application.status)) {
       return sendError({
         req, res, statusCode: 400,
-        message: `Hall tickets can only be generated after the schedule is published. Current status: "${application.status}".`,
+        message: `Hall tickets can only be generated after the exam is approved and scheduled. Current status: "${application.status}".`,
       });
     }
 
-    if (!application.examVenue || !application.examCenter || !application.reportingTime || !application.scheduledDate) {
-      return sendError({ req, res, statusCode: 400, message: 'Exam schedule is incomplete. Venue, center, reporting time, and date are all required.' });
-    }
+    const instituteDoc = application.institute as any;
+    const courseDoc    = application.course    as any;
+    const batchDoc     = application.batch     as any;
+    const studentsArr  = application.students  as any[];
 
-    const instituteDoc   = application.institute as any;
-    const courseDoc      = application.course    as any;
-    const batchDoc       = application.batch     as any;
-    const studentsArr    = application.students  as any[];
+    // Resolve exam schedule — for Approved applications the board may not have
+    // published the full schedule yet, so fall back to institute details.
+    const examDate      = application.scheduledDate || new Date();
+    const examVenue     = application.examVenue     || `${instituteDoc.orgName} Examination Centre`;
+    const examCenter    = application.examCenter    || instituteDoc.orgName;
+    const reportingTime = application.reportingTime || '09:00 AM';
 
     // Idempotent: delete existing tickets for this application before regenerating
     await HallTicket.deleteMany({ examApplication: application._id });
@@ -471,10 +477,10 @@ export const generateHallTickets = async (req: Request, res: Response) => {
 
           // Exam details
           subjects:      application.subjects,
-          examDate:      application.scheduledDate,
-          examVenue:     application.examVenue,
-          examCenter:    application.examCenter,
-          reportingTime: application.reportingTime,
+          examDate:      examDate,
+          examVenue:     examVenue,
+          examCenter:    examCenter,
+          reportingTime: reportingTime,
         });
       })
     );

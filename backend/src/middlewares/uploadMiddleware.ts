@@ -26,10 +26,19 @@ if (isCloudinaryConfigured) {
 
   storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-      folder: 'semi_institutes',
-      allowed_formats: ['jpg', 'png', 'pdf'],
-    } as any,
+    params: (req, file) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const base = path
+        .basename(file.originalname, ext)
+        .replace(/[^a-zA-Z0-9_-]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 40) || 'file';
+      return {
+        folder: 'semi_institutes',
+        resource_type: 'auto',
+        public_id: `${base}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`,
+      };
+    },
   });
   console.log('Using Cloudinary for file uploads.');
 } else {
@@ -44,8 +53,13 @@ if (isCloudinaryConfigured) {
       cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+      const ext = path.extname(file.originalname).toLowerCase();
+      const base = path
+        .basename(file.originalname, ext)
+        .replace(/[^a-zA-Z0-9_-]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 40) || 'file';
+      cb(null, `${base}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
     }
   });
   console.log('Cloudinary not configured. Using local disk storage for file uploads.');

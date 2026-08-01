@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-07-29T10:24:40.824Z
+> Auto-generated on 2026-07-31T12:15:28.965Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -652,7 +652,7 @@ try {
 ### `backend/last_400_error.log`
 
 ```
-Email already exists
+This file format is not supported. Please upload a JPG, PNG, or PDF file.
 ```
 
 ### `backend/package.json`
@@ -4255,7 +4255,7 @@ const studentUpdateSchema = z.object({
   universityName: z.string().min(1, 'University Name is required').optional(),
   medicalCouncilRegistrationNumber: z.string().min(1, 'Medical Council Registration Number is required').optional(),
   isForeignGraduate: z.preprocess(
-    (val) => val === 'true' || val === true || val === 'false' || val === false,
+    (val) => val === 'true' || val === true,
     z.boolean()
   ).optional(),
   fmgeClearanceStatus: z.enum(['Cleared', 'Not Applicable', 'Failed']).optional(),
@@ -5670,8 +5670,12 @@ export const verifyAcademicPayment = async (req: Request, res: Response) => {
 
     if (isRazorpayConfigured && razorpayInstance) {
       try {
-        const payment = await razorpayInstance.payments.fetch(orderId);
-        if (payment.status === 'captured') {
+        const payments = await razorpayInstance.api.get({
+          url: '/payments',
+          data: { order_id: orderId },
+        });
+        const payment = payments?.items?.[0];
+        if (payment && payment.status === 'captured') {
           const feeRecord = await FeeRecord.create({
             student: studentId as any,
             amount: payment.amount / 100,
@@ -6747,7 +6751,7 @@ const getFileUrl = (filePath: string) => {
   const normalized = filePath.replace(/\\/g, '/');
   const uploadsIndex = normalized.indexOf('uploads/');
   return uploadsIndex !== -1
-    ? `${process.env.BASE_URL || 'http://localhost:5000'}/${normalized.substring(uploadsIndex)}`
+    ? `${process.env.BASE_URL || 'http://localhost:5003'}/${normalized.substring(uploadsIndex)}`
     : filePath;
 };
 
@@ -6758,7 +6762,9 @@ const resolveInstitute = async (userId: string) =>
 /** Ensure the institute role user owns this application */
 const assertOwnership = async (application: any, userId: string) => {
   const institute = await Institute.findOne({ user: userId });
-  return institute && institute._id.toString() === application.institute.toString();
+  if (!institute) return false;
+  const appInstituteId = application.institute?._id || application.institute;
+  return institute._id.toString() === appInstituteId.toString();
 };
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
@@ -7157,21 +7163,25 @@ export const generateHallTickets = async (req: Request, res: Response) => {
       if (!owns) return sendError({ req, res, statusCode: 403, message: 'Unauthorized to access this application' });
     }
 
-    if (application.status !== 'SchedulePublished') {
+    const allowedStatuses = ['Approved', 'SchedulePublished'];
+    if (!allowedStatuses.includes(application.status)) {
       return sendError({
         req, res, statusCode: 400,
-        message: `Hall tickets can only be generated after the schedule is published. Current status: "${application.status}".`,
+        message: `Hall tickets can only be generated after the exam is approved and scheduled. Current status: "${application.status}".`,
       });
     }
 
-    if (!application.examVenue || !application.examCenter || !application.reportingTime || !application.scheduledDate) {
-      return sendError({ req, res, statusCode: 400, message: 'Exam schedule is incomplete. Venue, center, reporting time, and date are all required.' });
-    }
+    const instituteDoc = application.institute as any;
+    const courseDoc    = application.course    as any;
+    const batchDoc     = application.batch     as any;
+    const studentsArr  = application.students  as any[];
 
-    const instituteDoc   = application.institute as any;
-    const courseDoc      = application.course    as any;
-    const batchDoc       = application.batch     as any;
-    const studentsArr    = application.students  as any[];
+    // Resolve exam schedule — for Approved applications the board may not have
+    // published the full schedule yet, so fall back to institute details.
+    const examDate      = application.scheduledDate || new Date();
+    const examVenue     = application.examVenue     || `${instituteDoc.orgName} Examination Centre`;
+    const examCenter    = application.examCenter    || instituteDoc.orgName;
+    const reportingTime = application.reportingTime || '09:00 AM';
 
     // Idempotent: delete existing tickets for this application before regenerating
     await HallTicket.deleteMany({ examApplication: application._id });
@@ -7202,10 +7212,10 @@ export const generateHallTickets = async (req: Request, res: Response) => {
 
           // Exam details
           subjects:      application.subjects,
-          examDate:      application.scheduledDate,
-          examVenue:     application.examVenue,
-          examCenter:    application.examCenter,
-          reportingTime: application.reportingTime,
+          examDate:      examDate,
+          examVenue:     examVenue,
+          examCenter:    examCenter,
+          reportingTime: reportingTime,
         });
       })
     );
@@ -7606,7 +7616,7 @@ export const applyInstitute = async (req: Request, res: Response) => {
       if (files && files[field] && files[field].length > 0 && files[field][0].path) {
         return getFileUrl(files[field][0].path);
       }
-      const baseUrl = (process.env.BASE_URL || 'https://semi-phase-three.swiflare.com').replace(/\/$/, '');
+      const baseUrl = (process.env.BASE_URL || 'http://localhost:5003').replace(/\/$/, '');
       return `${baseUrl}/uploads/mock_${field}.pdf`;
     };
 
@@ -8163,6 +8173,39 @@ export const checkPaymentAndUpdate = async (req: Request, res: Response) => {
       } catch (error) {
         console.error('Error fetching payment from Razorpay:', error);
       }
+    }
+
+    try {
+      const payments = await razorpayInstance.api.get({
+        url: '/payments',
+        data: { order_id: orderId },
+      });
+      const payment = payments?.items?.[0];
+      if (payment && payment.status === 'captured') {
+        institute.razorpayPaymentId = payment.id;
+        institute.paymentStatus = 'Completed';
+        institute.paymentCompletedAt = new Date();
+        institute.paymentAmount = payment.amount / 100;
+        await institute.save();
+
+        try {
+          await sendPaymentConfirmationEmail(institute, req.user);
+        } catch (emailErr: any) {
+          console.error('Payment confirmation email failed:', emailErr.message);
+        }
+
+        return sendSuccess({
+          req,
+          res,
+          message: 'Payment verified and completed',
+          data: {
+            paymentStatus: 'Completed',
+            razorpayPaymentId: institute.razorpayPaymentId,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching payment by order from Razorpay:', error);
     }
 
     return sendSuccess({
@@ -9689,6 +9732,26 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
     });
   }
 
+  // Multer / Cloudinary upload errors should be client errors, not 500s
+  if (
+    err.name === 'MulterError' ||
+    (err.code && typeof err.code === 'string' && err.code.startsWith('LIMIT_')) ||
+    typeof err.http_code === 'number'
+  ) {
+    let message;
+    if (err.name === 'MulterError') {
+      message = err.code === 'LIMIT_FILE_SIZE' ? 'File is too large. Maximum allowed size is 10MB.' : `Upload error: ${err.message}`;
+    } else {
+      const raw = err.message || '';
+      if (/unknown file format|format not allowed|not allowed/i.test(raw)) {
+        message = 'This file could not be uploaded. Please check the file and try again.';
+      } else {
+        message = err.message || 'Upload failed. Please check the file and try again.';
+      }
+    }
+    return sendError({ req, res, statusCode: 400, message, errors: [] });
+  }
+
   sendError({
     req,
     res,
@@ -9731,10 +9794,19 @@ if (isCloudinaryConfigured) {
 
   storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-      folder: 'semi_institutes',
-      allowed_formats: ['jpg', 'png', 'pdf'],
-    } as any,
+    params: (req, file) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const base = path
+        .basename(file.originalname, ext)
+        .replace(/[^a-zA-Z0-9_-]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 40) || 'file';
+      return {
+        folder: 'semi_institutes',
+        resource_type: 'auto',
+        public_id: `${base}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`,
+      };
+    },
   });
   console.log('Using Cloudinary for file uploads.');
 } else {
@@ -9749,8 +9821,13 @@ if (isCloudinaryConfigured) {
       cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+      const ext = path.extname(file.originalname).toLowerCase();
+      const base = path
+        .basename(file.originalname, ext)
+        .replace(/[^a-zA-Z0-9_-]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 40) || 'file';
+      cb(null, `${base}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
     }
   });
   console.log('Cloudinary not configured. Using local disk storage for file uploads.');
@@ -13713,7 +13790,7 @@ console.log('Done fixing React imports!');
     <link rel="icon" type="image/png" href="/src/assets/semi logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Society for Emergency Medicine India (SEMI) Portals." />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://semi-phase-three.swiflare.com https://backend.semi.org.in http://localhost:5000 http://127.0.0.1:5000 http://localhost:5003 http://127.0.0.1:5003; connect-src 'self' https://semi-phase-three.swiflare.com wss://semi-phase-three.swiflare.com https://backend.semi.org.in wss://backend.semi.org.in http://localhost:5000 ws://localhost:5000 http://127.0.0.1:5000 ws://127.0.0.1:5000 http://localhost:5003 ws://localhost:5003 http://127.0.0.1:5003 ws://127.0.0.1:5003 https://lumberjack.razorpay.com https://api.razorpay.com; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://semi-phase-three.swiflare.com https://backend.semi.org.in http://localhost:5000 http://127.0.0.1:5000 http://localhost:5003 http://127.0.0.1:5003; connect-src 'self' https://semi-phase-three.swiflare.com wss://semi-phase-three.swiflare.com https://backend.semi.org.in wss://backend.semi.org.in http://localhost:5000 ws://localhost:5000 http://127.0.0.1:5000 ws://127.0.0.1:5000 http://localhost:5003 ws://localhost:5003 http://127.0.0.1:5003 ws://127.0.0.1:5003 https://lumberjack.razorpay.com https://api.razorpay.com; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
@@ -22141,22 +22218,21 @@ import {
   ShieldCheck,
   User,
   Calendar,
-  Award
+  Award,
+  Filter,
+  Eye,
+  ChevronDown,
+  Search,
+  Users,
+  BarChart3,
+  ListChecks,
+  X
 } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import { academicService } from '../../../api/academic';
 
-/**
- * AcademyVerification - Redesigned with clearer UX
- * 
- * Flow: 
- * 1. Review student credentials (attendance + thesis)
- * 2. Approve/Reject thesis directly from the review panel
- * 3. One-click "Certify Eligibility" once all criteria are met
- * 4. Clear visual indicators for each step
- */
 const AcademyVerification = ({ 
   students, 
   onVerifyStudent,
@@ -22164,16 +22240,18 @@ const AcademyVerification = ({
   setSelectedStudentId,
   fetchBoardData
 }) => {
+  const [activeTab, setActiveTab] = useState('pending');
   const [internalSelectedId, setInternalSelectedId] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [showRejectionForm, setShowRejectionForm] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [isThesisLoading, setIsThesisLoading] = useState(false);
-
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterInstitute, setFilterInstitute] = useState('');
   const [filterCourse, setFilterCourse] = useState('');
   const [filterBatch, setFilterBatch] = useState('');
+  const [viewingStudent, setViewingStudent] = useState(null);
 
   const institutes = useMemo(() => [...new Set(students.map(s => s.institute).filter(Boolean))], [students]);
   const courses = useMemo(() => [...new Set(students.map(s => s.course).filter(Boolean))], [students]);
@@ -22182,49 +22260,93 @@ const AcademyVerification = ({
   const activeId = selectedStudentId !== undefined && selectedStudentId !== '' ? selectedStudentId : internalSelectedId;
   const setActiveId = setSelectedStudentId !== undefined ? setSelectedStudentId : setInternalSelectedId;
 
-  // Get pending students for review
-  const pendingStudents = useMemo(() => {
-    const list = [];
+  const allStudentRecords = useMemo(() => {
+    const records = [];
     students.forEach(s => {
-      if (filterInstitute && s.institute !== filterInstitute) return;
-      if (filterCourse && s.course !== filterCourse) return;
-      if (filterBatch && s.batch !== filterBatch) return;
-
       if (s.semesters && Array.isArray(s.semesters)) {
         s.semesters.forEach(sem => {
           const hasData = (sem.attendancePercentage !== undefined && sem.attendancePercentage > 0) || !!sem.thesisDocumentUrl;
-          const isPending = sem.eligibilityStatus === 'Pending' || !sem.eligibilityStatus;
-          if (hasData && isPending) {
-            list.push({
+          const status = sem.eligibilityStatus || 'Pending';
+          if (hasData || status !== 'Pending') {
+            records.push({
               ...s,
               semesterNumber: sem.semesterNumber,
-              attendancePercentage: sem.attendancePercentage,
-              thesisApproved: sem.thesisApproved,
-              thesisDocumentUrl: sem.thesisDocumentUrl,
-              eligibilityStatus: sem.eligibilityStatus || 'Pending'
+              attendancePercentage: sem.attendancePercentage || 0,
+              thesisApproved: sem.thesisApproved || false,
+              thesisDocumentUrl: sem.thesisDocumentUrl || '',
+              eligibilityStatus: status,
+              rejectionNotes: sem.rejectionNotes || '',
+              hasData: hasData
             });
           }
         });
       }
     });
-    return list;
-  }, [students, filterInstitute, filterCourse, filterBatch]);
+    return records;
+  }, [students]);
 
-  // Current selected student
-  const activeStudent = useMemo(() => {
-    const found = pendingStudents.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId);
-    if (found) return found;
-    return pendingStudents[0] || null;
-  }, [pendingStudents, activeId]);
-
-  // Auto-select first pending student
-  React.useEffect(() => {
-    if ((!activeId || !pendingStudents.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId)) && pendingStudents.length > 0) {
-      setActiveId(`${pendingStudents[0].enrollmentNo}_${pendingStudents[0].semesterNumber}`);
+  const filteredRecords = useMemo(() => {
+    let result = allStudentRecords;
+    
+    if (filterInstitute) {
+      result = result.filter(s => s.institute === filterInstitute);
     }
-  }, [pendingStudents, activeId, setActiveId]);
+    if (filterCourse) {
+      result = result.filter(s => s.course === filterCourse);
+    }
+    if (filterBatch) {
+      result = result.filter(s => s.batch === filterBatch);
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(s => 
+        s.fullName?.toLowerCase().includes(q) ||
+        s.enrollmentNo?.toLowerCase().includes(q) ||
+        s.institute?.toLowerCase().includes(q)
+      );
+    }
+    
+    return result;
+  }, [allStudentRecords, filterInstitute, filterCourse, filterBatch, searchQuery]);
 
-  // ─── HANDLERS ────────────────────────────────────────────────────────────────
+  const pendingRecords = useMemo(() => {
+    return filteredRecords.filter(s => s.eligibilityStatus === 'Pending' && s.hasData);
+  }, [filteredRecords]);
+
+  const approvedRecords = useMemo(() => {
+    return filteredRecords.filter(s => s.eligibilityStatus === 'Approved');
+  }, [filteredRecords]);
+
+  const rejectedRecords = useMemo(() => {
+    return filteredRecords.filter(s => s.eligibilityStatus === 'Rejected');
+  }, [filteredRecords]);
+
+  const currentRecords = useMemo(() => {
+    switch (activeTab) {
+      case 'pending': return pendingRecords;
+      case 'approved': return approvedRecords;
+      case 'rejected': return rejectedRecords;
+      case 'all': return filteredRecords;
+      default: return pendingRecords;
+    }
+  }, [activeTab, pendingRecords, approvedRecords, rejectedRecords, filteredRecords]);
+
+  const activeRecord = useMemo(() => {
+    if (!activeId) return currentRecords[0] || null;
+    return currentRecords.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId) || currentRecords[0] || null;
+  }, [currentRecords, activeId]);
+
+  React.useEffect(() => {
+    if (currentRecords.length > 0) {
+      const first = currentRecords[0];
+      const newId = `${first.enrollmentNo}_${first.semesterNumber}`;
+      if (!activeId || !currentRecords.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId)) {
+        setActiveId(newId);
+      }
+    } else {
+      setActiveId('');
+    }
+  }, [currentRecords, activeId, setActiveId]);
 
   const handleThesisToggle = async (student, newStatus) => {
     if (!student) return;
@@ -22252,7 +22374,6 @@ const AcademyVerification = ({
   const handleCertifyEligibility = (student) => {
     if (!student) return;
     
-    // Check if all criteria are met
     const isAttendanceOk = (student.attendancePercentage || 0) >= 75;
     const isThesisOk = !!student.thesisApproved;
     
@@ -22280,34 +22401,35 @@ const AcademyVerification = ({
 
   const handleRejectSubmit = (e) => {
     e.preventDefault();
-    if (!activeStudent) return;
+    if (!activeRecord) return;
     if (!rejectionNotes.trim()) {
       setToast({ message: 'Please enter auditor rejection notes before submitting.', type: 'warning' });
       return;
     }
-    onVerifyStudent(activeStudent.enrollmentNo, activeStudent.semesterNumber, 'Rejected', rejectionNotes);
+    onVerifyStudent(activeRecord.enrollmentNo, activeRecord.semesterNumber, 'Rejected', rejectionNotes);
     setRejectionNotes('');
     setShowRejectionForm(false);
   };
 
-  // ─── RENDER HELPERS ──────────────────────────────────────────────────────────
+  const handleViewStudent = (student) => {
+    setViewingStudent(student);
+  };
 
-  const getStatusBadge = (student) => {
-    if (!student) return { label: 'No Data', color: 'bg-slate-100 text-slate-500' };
-    const isAttendanceOk = (student.attendancePercentage || 0) >= 75;
-    const isThesisOk = !!student.thesisApproved;
-    const isEligible = isAttendanceOk && isThesisOk;
-
-    if (student.eligibilityStatus === 'Approved') {
-      return { label: 'Certified', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+  const getStatusBadge = (status, student) => {
+    if (status === 'Approved') {
+      return { label: 'Certified', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3.5 h-3.5" /> };
     }
-    if (student.eligibilityStatus === 'Rejected') {
-      return { label: 'Rejected', color: 'bg-rose-100 text-rose-700 border-rose-200' };
+    if (status === 'Rejected') {
+      return { label: 'Rejected', color: 'bg-rose-100 text-rose-700 border-rose-200', icon: <XCircle className="w-3.5 h-3.5" /> };
     }
-    if (isEligible) {
-      return { label: 'Ready to Certify', color: 'bg-blue-100 text-blue-700 border-blue-200' };
+    if (student) {
+      const isAttendanceOk = (student.attendancePercentage || 0) >= 75;
+      const isThesisOk = !!student.thesisApproved;
+      if (isAttendanceOk && isThesisOk) {
+        return { label: 'Ready to Certify', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: <ShieldCheck className="w-3.5 h-3.5" /> };
+      }
     }
-    return { label: 'Incomplete', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    return { label: 'Incomplete', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: <AlertCircle className="w-3.5 h-3.5" /> };
   };
 
   const getCriteriaStatus = (student) => {
@@ -22318,9 +22440,44 @@ const AcademyVerification = ({
     };
   };
 
+  const TabButton = ({ tab, label, count, icon: Icon }) => (
+    <button
+      onClick={() => setActiveTab(tab)}
+      className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+        activeTab === tab
+          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+          : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+      }`}
+    >
+      <Icon className="w-4 h-4" />
+      {label}
+      <span className={`ml-1 px-2 py-0.5 rounded-full text-[9px] ${
+        activeTab === tab 
+          ? 'bg-white/20 text-white' 
+          : 'bg-slate-100 text-slate-500'
+      }`}>
+        {count}
+      </span>
+    </button>
+  );
+
+  const StatusSummaryCard = ({ label, count, color, icon: Icon }) => (
+    <div className={`bg-white border rounded-2xl p-4 shadow-sm flex items-center justify-between ${color}`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color.replace('border', 'bg').replace('text', 'text')} bg-opacity-20`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div>
+          <span className="text-[10px] uppercase font-black text-slate-400 block">{label}</span>
+          <span className="text-2xl font-black text-slate-800">{count}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left">
-      {/* ─── HEADER ────────────────────────────────────────────────────────────── */}
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-gray-900 tracking-tight">Eligibility Verification</h2>
@@ -22328,58 +22485,116 @@ const AcademyVerification = ({
             Review attendance & thesis, then certify eligible candidates for board exams
           </span>
         </div>
-        <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2 flex items-center gap-2">
-          <UserCheck className="w-4.5 h-4.5 text-indigo-600" />
-          <span className="text-xs font-black text-indigo-900">{pendingStudents.length} Students Awaiting Review</span>
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2 flex items-center gap-2">
+            <UserCheck className="w-4.5 h-4.5 text-blue-600" />
+            <span className="text-xs font-black text-blue-900">{pendingRecords.length} Pending</span>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2 flex items-center gap-2">
+            <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600" />
+            <span className="text-xs font-black text-emerald-900">{approvedRecords.length} Approved</span>
+          </div>
+          <div className="bg-rose-50 border border-rose-100 rounded-xl px-4 py-2 flex items-center gap-2">
+            <XCircle className="w-4.5 h-4.5 text-rose-600" />
+            <span className="text-xs font-black text-rose-900">{rejectedRecords.length} Rejected</span>
+          </div>
         </div>
       </div>
 
-      {/* ─── FILTERS ───────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-        <select 
-          value={filterInstitute}
-          onChange={(e) => setFilterInstitute(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="">All Institutes</option>
-          {institutes.map(inst => <option key={inst} value={inst}>{inst}</option>)}
-        </select>
-        <select 
-          value={filterCourse}
-          onChange={(e) => setFilterCourse(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="">All Courses</option>
-          {courses.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select 
-          value={filterBatch}
-          onChange={(e) => setFilterBatch(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="">All Batches</option>
-          {batches.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatusSummaryCard 
+          label="Total Records" 
+          count={allStudentRecords.length} 
+          color="border-blue-100 text-blue-600"
+          icon={BarChart3}
+        />
+        <StatusSummaryCard 
+          label="Pending Review" 
+          count={pendingRecords.length} 
+          color="border-amber-100 text-amber-600"
+          icon={Clock}
+        />
+        <StatusSummaryCard 
+          label="Approved" 
+          count={approvedRecords.length} 
+          color="border-emerald-100 text-emerald-600"
+          icon={CheckCircle2}
+        />
+        <StatusSummaryCard 
+          label="Rejected" 
+          count={rejectedRecords.length} 
+          color="border-rose-100 text-rose-600"
+          icon={XCircle}
+        />
       </div>
 
-      {activeStudent ? (
+      <div className="flex flex-wrap items-center gap-2 bg-white p-3 rounded-2xl border border-gray-200 shadow-sm">
+        <TabButton tab="pending" label="Pending" count={pendingRecords.length} icon={Clock} />
+        <TabButton tab="approved" label="Approved" count={approvedRecords.length} icon={CheckCircle2} />
+        <TabButton tab="rejected" label="Rejected" count={rejectedRecords.length} icon={XCircle} />
+        <TabButton tab="all" label="All" count={filteredRecords.length} icon={ListChecks} />
+        
+        <div className="flex-1"></div>
+        
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all w-40"
+            />
+          </div>
+          <select
+            value={filterInstitute}
+            onChange={(e) => setFilterInstitute(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+          >
+            <option value="">All Institutes</option>
+            {institutes.map(inst => <option key={inst} value={inst}>{inst}</option>)}
+          </select>
+          <select
+            value={filterCourse}
+            onChange={(e) => setFilterCourse(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+          >
+            <option value="">All Courses</option>
+            {courses.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select
+            value={filterBatch}
+            onChange={(e) => setFilterBatch(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+          >
+            <option value="">All Batches</option>
+            {batches.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {currentRecords.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* ─── LEFT: Candidate Queue ────────────────────────────────────────── */}
-          <div className="lg:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm space-y-3 max-h-[70vh] overflow-y-auto">
+          <div className="lg:col-span-4 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm space-y-3 max-h-[70vh] overflow-y-auto">
             <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2 pb-2 border-b border-slate-100 flex items-center justify-between">
-              <span>Review Queue</span>
-              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[9px]">
-                {pendingStudents.length}
+              <span>
+                {activeTab === 'pending' ? 'Review Queue' : 
+                 activeTab === 'approved' ? 'Approved Candidates' : 
+                 activeTab === 'rejected' ? 'Rejected Candidates' : 'All Candidates'}
+              </span>
+              <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[9px]">
+                {currentRecords.length}
               </span>
             </h3>
             
-            {pendingStudents.length > 0 ? (
-              pendingStudents.map(s => {
-                const isActive = activeStudent?.enrollmentNo === s.enrollmentNo && activeStudent?.semesterNumber === s.semesterNumber;
-                const status = getStatusBadge(s);
+            {currentRecords.length > 0 ? (
+              currentRecords.map(s => {
+                const isActive = activeRecord?.enrollmentNo === s.enrollmentNo && activeRecord?.semesterNumber === s.semesterNumber;
+                const status = getStatusBadge(s.eligibilityStatus, s);
                 const criteria = getCriteriaStatus(s);
-                const isReady = criteria.attendance && criteria.thesis;
+                const isReady = criteria.attendance && criteria.thesis && s.eligibilityStatus === 'Pending';
                 
                 return (
                   <button
@@ -22391,7 +22606,7 @@ const AcademyVerification = ({
                     }}
                     className={`w-full p-3 rounded-2xl text-left transition-all duration-200 border-2 ${
                       isActive
-                        ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
+                        ? 'border-blue-500 bg-blue-50/50 shadow-sm'
                         : 'border-transparent hover:bg-slate-50/70 hover:border-slate-200'
                     }`}
                   >
@@ -22405,9 +22620,16 @@ const AcademyVerification = ({
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        {isReady ? (
+                        {s.eligibilityStatus === 'Pending' && isReady && (
                           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        ) : (
+                        )}
+                        {s.eligibilityStatus === 'Approved' && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        )}
+                        {s.eligibilityStatus === 'Rejected' && (
+                          <span className="w-2 h-2 rounded-full bg-rose-500" />
+                        )}
+                        {s.eligibilityStatus === 'Pending' && !isReady && (
                           <span className="w-2 h-2 rounded-full bg-amber-500" />
                         )}
                         <ChevronRight className={`w-3.5 h-3.5 text-slate-300 transition-transform ${isActive ? 'translate-x-0.5' : ''}`} />
@@ -22429,240 +22651,422 @@ const AcademyVerification = ({
               })
             ) : (
               <div className="py-8 text-center text-slate-400 font-medium">
-                <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 mb-2" />
-                All candidates reviewed!
+                <Inbox className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                No records in this category
               </div>
             )}
           </div>
 
-          {/* ─── RIGHT: Review Panel ─────────────────────────────────────────── */}
-          <div className="lg:col-span-9 bg-white border border-gray-200 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+          <div className="lg:col-span-8 bg-white border border-gray-200 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
             
-            {/* Student Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-sm">
-                    {activeStudent.fullName?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '??'}
-                  </div>
+            {activeRecord ? (
+              <>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
                   <div>
-                    <h3 className="text-lg font-black text-slate-900">{activeStudent.fullName}</h3>
-                    <span className="text-[10px] text-slate-400 font-semibold">
-                      {activeStudent.enrollmentNo} • {activeStudent.course} • Sem {activeStudent.semesterNumber}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-sm">
+                        {activeRecord.fullName?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '??'}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-slate-900">{activeRecord.fullName}</h3>
+                        <span className="text-[10px] text-slate-400 font-semibold">
+                          {activeRecord.enrollmentNo} • {activeRecord.course} • Sem {activeRecord.semesterNumber}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-black px-3 py-1 rounded-full border ${getStatusBadge(activeRecord.eligibilityStatus, activeRecord).color}`}>
+                      {getStatusBadge(activeRecord.eligibilityStatus, activeRecord).label}
                     </span>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-black px-3 py-1 rounded-full border ${getStatusBadge(activeStudent).color}`}>
-                  {getStatusBadge(activeStudent).label}
-                </span>
-              </div>
-            </div>
 
-            {/* ─── CRITERIA CHECKLIST ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              {/* Attendance Card */}
-              <div className={`rounded-2xl p-5 border-2 transition-all ${
-                (activeStudent.attendancePercentage || 0) >= 75 
-                  ? 'border-emerald-200 bg-emerald-50/30' 
-                  : 'border-amber-200 bg-amber-50/30'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      (activeStudent.attendancePercentage || 0) >= 75 
-                        ? 'bg-emerald-100 text-emerald-700' 
-                        : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      <Calendar className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-700">Attendance</h4>
-                      <span className={`text-sm font-black ${(activeStudent.attendancePercentage || 0) >= 75 ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {activeStudent.attendancePercentage || 0}%
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-medium ml-2">
-                        {activeStudent.attendancePercentage >= 75 ? '✓ Meets 75% requirement' : '⚠️ Below 75% requirement'}
-                      </span>
-                    </div>
-                  </div>
-                  {(activeStudent.attendancePercentage || 0) >= 75 ? (
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                  ) : (
-                    <XCircle className="w-6 h-6 text-amber-600" />
-                  )}
-                </div>
-              </div>
-
-              {/* Thesis Card */}
-              <div className={`rounded-2xl p-5 border-2 transition-all ${
-                activeStudent.thesisApproved 
-                  ? 'border-emerald-200 bg-emerald-50/30' 
-                  : 'border-amber-200 bg-amber-50/30'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      activeStudent.thesisApproved 
-                        ? 'bg-emerald-100 text-emerald-700' 
-                        : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-700">Thesis Submission</h4>
-                      <span className={`text-sm font-black ${activeStudent.thesisApproved ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {activeStudent.thesisApproved ? 'Approved' : 'Pending Review'}
-                      </span>
-                      {activeStudent.thesisDocumentUrl && (
-                        <a 
-                          href={getUploadUrl(activeStudent.thesisDocumentUrl)}
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="text-[10px] text-indigo-600 hover:underline font-medium ml-2 flex items-center gap-1"
-                        >
-                          <Download className="w-3 h-3" />
-                          View Document
-                        </a>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  <div className={`rounded-2xl p-5 border-2 transition-all ${
+                    (activeRecord.attendancePercentage || 0) >= 75 
+                      ? 'border-emerald-200 bg-emerald-50/30' 
+                      : 'border-amber-200 bg-amber-50/30'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          (activeRecord.attendancePercentage || 0) >= 75 
+                            ? 'bg-emerald-100 text-emerald-700' 
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          <Calendar className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-700">Attendance</h4>
+                          <span className={`text-sm font-black ${(activeRecord.attendancePercentage || 0) >= 75 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                            {activeRecord.attendancePercentage || 0}%
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium ml-2">
+                            {(activeRecord.attendancePercentage || 0) >= 75 ? '✓ Meets 75%' : '⚠️ Below 75%'}
+                          </span>
+                        </div>
+                      </div>
+                      {(activeRecord.attendancePercentage || 0) >= 75 ? (
+                        <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                      ) : (
+                        <XCircle className="w-6 h-6 text-amber-600" />
                       )}
                     </div>
                   </div>
-                  
-                  {/* Thesis Action Buttons */}
-                  <div className="flex items-center gap-1.5">
-                    {!activeStudent.thesisApproved && activeStudent.thesisDocumentUrl ? (
-                      <button
-                        onClick={() => handleThesisToggle(activeStudent, true)}
-                        disabled={isThesisLoading}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black rounded-lg transition-all disabled:opacity-50 cursor-pointer"
-                      >
-                        Approve Thesis
-                      </button>
-                    ) : activeStudent.thesisApproved ? (
-                      <button
-                        onClick={() => handleThesisToggle(activeStudent, false)}
-                        disabled={isThesisLoading}
-                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[9px] font-black rounded-lg transition-all disabled:opacity-50 cursor-pointer"
-                      >
-                        Revoke Approval
-                      </button>
-                    ) : (
-                      <span className="text-[9px] text-slate-400 font-semibold">No document uploaded</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* ─── ELIGIBILITY SUMMARY ────────────────────────────────────────── */}
-            <div className={`rounded-2xl p-5 border-2 ${
-              (activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved)
-                ? 'border-emerald-200 bg-emerald-50/20'
-                : 'border-amber-200 bg-amber-50/20'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    (activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved)
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-amber-100 text-amber-700'
+                  <div className={`rounded-2xl p-5 border-2 transition-all ${
+                    activeRecord.thesisApproved 
+                      ? 'border-emerald-200 bg-emerald-50/30' 
+                      : 'border-amber-200 bg-amber-50/30'
                   }`}>
-                    <ShieldCheck className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-slate-800">Eligibility Status</h4>
-                    <p className="text-xs text-slate-500 font-medium">
-                      {activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved
-                        ? 'All criteria met. Ready to certify for board exam.'
-                        : 'Some criteria not met. Review the checklist above.'}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          activeRecord.thesisApproved 
+                            ? 'bg-emerald-100 text-emerald-700' 
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-700">Thesis</h4>
+                          <span className={`text-sm font-black ${activeRecord.thesisApproved ? 'text-emerald-700' : 'text-amber-700'}`}>
+                            {activeRecord.thesisApproved ? 'Approved ✓' : 'Pending'}
+                          </span>
+                          {activeRecord.thesisDocumentUrl && (
+                            <a 
+                              href={getUploadUrl(activeRecord.thesisDocumentUrl)}
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-[10px] text-indigo-600 hover:underline font-medium ml-2 flex items-center gap-1"
+                            >
+                              <Download className="w-3 h-3" />
+                              View
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {activeRecord.eligibilityStatus === 'Pending' && (
+                        <div className="flex items-center gap-1.5">
+                          {!activeRecord.thesisApproved && activeRecord.thesisDocumentUrl ? (
+                            <button
+                              onClick={() => handleThesisToggle(activeRecord, true)}
+                              disabled={isThesisLoading}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                              Approve Thesis
+                            </button>
+                          ) : activeRecord.thesisApproved ? (
+                            <button
+                              onClick={() => handleThesisToggle(activeRecord, false)}
+                              disabled={isThesisLoading}
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-[9px] font-black rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                              Revoke
+                            </button>
+                          ) : (
+                            <span className="text-[9px] text-slate-400 font-semibold">No doc</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className={`text-xs font-black px-3 py-1 rounded-full border ${getStatusBadge(activeStudent).color}`}>
-                    {getStatusBadge(activeStudent).label}
-                  </span>
-                </div>
-              </div>
-            </div>
 
-            {/* ─── ACTION BUTTONS ─────────────────────────────────────────────── */}
-            {activeStudent.eligibilityStatus !== 'Approved' && activeStudent.eligibilityStatus !== 'Rejected' && (
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-3 text-xs text-slate-500">
-                  <Clock className="w-4 h-4 text-slate-400" />
-                  <span className="font-medium">Review all criteria before certifying</span>
+                <div className={`rounded-2xl p-5 border-2 ${
+                  activeRecord.eligibilityStatus === 'Approved'
+                    ? 'border-emerald-200 bg-emerald-50/20'
+                    : activeRecord.eligibilityStatus === 'Rejected'
+                    ? 'border-rose-200 bg-rose-50/20'
+                    : (activeRecord.attendancePercentage >= 75 && activeRecord.thesisApproved)
+                    ? 'border-emerald-200 bg-emerald-50/20'
+                    : 'border-amber-200 bg-amber-50/20'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        activeRecord.eligibilityStatus === 'Approved'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : activeRecord.eligibilityStatus === 'Rejected'
+                          ? 'bg-rose-100 text-rose-700'
+                          : (activeRecord.attendancePercentage >= 75 && activeRecord.thesisApproved)
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {activeRecord.eligibilityStatus === 'Approved' ? (
+                          <CheckCircle2 className="w-6 h-6" />
+                        ) : activeRecord.eligibilityStatus === 'Rejected' ? (
+                          <XCircle className="w-6 h-6" />
+                        ) : (activeRecord.attendancePercentage >= 75 && activeRecord.thesisApproved) ? (
+                          <ShieldCheck className="w-6 h-6" />
+                        ) : (
+                          <Clock className="w-6 h-6" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-800">Eligibility Status</h4>
+                        <p className="text-xs text-slate-500 font-medium">
+                          {activeRecord.eligibilityStatus === 'Approved'
+                            ? '✅ Student is certified eligible for board exam.'
+                            : activeRecord.eligibilityStatus === 'Rejected'
+                            ? '❌ Student has been rejected. See notes below.'
+                            : activeRecord.attendancePercentage >= 75 && activeRecord.thesisApproved
+                            ? 'All criteria met. Ready to certify for board exam.'
+                            : 'Some criteria not met. Review the checklist above.'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-xs font-black px-3 py-1 rounded-full border ${getStatusBadge(activeRecord.eligibilityStatus, activeRecord).color}`}>
+                        {getStatusBadge(activeRecord.eligibilityStatus, activeRecord).label}
+                      </span>
+                    </div>
+                  </div>
+                  {activeRecord.eligibilityStatus === 'Rejected' && activeRecord.rejectionNotes && (
+                    <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-medium">
+                      <span className="font-black block text-[9px] uppercase tracking-wider text-rose-600">Rejection Reason:</span>
+                      {activeRecord.rejectionNotes}
+                    </div>
+                  )}
+                  {activeRecord.eligibilityStatus === 'Approved' && (
+                    <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-medium">
+                      <span className="font-black block text-[9px] uppercase tracking-wider text-emerald-600">Certified On:</span>
+                      {new Date().toLocaleDateString()} by Board Member
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <button
-                    onClick={() => setShowRejectionForm(!showRejectionForm)}
-                    className="flex-1 sm:flex-none px-6 py-2.5 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => handleCertifyEligibility(activeStudent)}
-                    disabled={!(activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved)}
-                    className={`flex-1 sm:flex-none px-8 py-2.5 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-md flex items-center gap-2 ${
-                      (activeStudent.attendancePercentage >= 75 && activeStudent.thesisApproved)
-                        ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 cursor-pointer'
-                        : 'bg-slate-300 cursor-not-allowed'
-                    }`}
-                  >
-                    <Award className="w-4 h-4" />
-                    Certify Eligibility
-                  </button>
-                </div>
+
+                {activeRecord.eligibilityStatus === 'Pending' && (
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t border-gray-100">
+                    <div className="flex items-center gap-3 text-xs text-slate-500">
+                      <Clock className="w-4 h-4 text-slate-400" />
+                      <span className="font-medium">Review all criteria before certifying</span>
+                    </div>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <button
+                        onClick={() => setShowRejectionForm(!showRejectionForm)}
+                        className="flex-1 sm:flex-none px-6 py-2.5 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleCertifyEligibility(activeRecord)}
+                        disabled={!(activeRecord.attendancePercentage >= 75 && activeRecord.thesisApproved)}
+                        className={`flex-1 sm:flex-none px-8 py-2.5 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-md flex items-center gap-2 ${
+                          (activeRecord.attendancePercentage >= 75 && activeRecord.thesisApproved)
+                            ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 cursor-pointer'
+                            : 'bg-slate-300 cursor-not-allowed'
+                        }`}
+                      >
+                        <Award className="w-4 h-4" />
+                        Certify Eligibility
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {showRejectionForm && activeRecord.eligibilityStatus === 'Pending' && (
+                  <form onSubmit={handleRejectSubmit} className="space-y-4 border-t border-slate-100 pt-4 animate-in slide-in-from-top duration-200">
+                    <div>
+                      <label className="block text-[10px] uppercase font-black text-rose-600 tracking-wider mb-2">
+                        Rejection Reason <span className="text-rose-400">*</span>
+                      </label>
+                      <textarea
+                        required
+                        rows="3"
+                        value={rejectionNotes}
+                        onChange={(e) => setRejectionNotes(e.target.value)}
+                        placeholder="Provide detailed reason for rejection..."
+                        className="w-full px-4 py-3 bg-slate-50 border border-rose-200 focus:border-rose-500 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-rose-500/10 transition-all text-xs font-bold leading-relaxed"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => { setShowRejectionForm(false); setRejectionNotes(''); }}
+                        className="px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 rounded-xl font-bold text-xs uppercase transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-md text-xs uppercase transition-colors cursor-pointer"
+                      >
+                        Submit Rejection
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {activeRecord.eligibilityStatus !== 'Pending' && (
+                  <div className="flex justify-end pt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => handleViewStudent(activeRecord)}
+                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Full Profile
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="py-16 text-center text-slate-400 font-medium">
+                <Inbox className="w-12 h-12 mx-auto text-slate-300 mb-4 stroke-1 animate-pulse" />
+                <p className="text-base font-black text-slate-700">No records in this category</p>
+                <p className="text-xs text-slate-400 mt-1">Switch to another tab or adjust your filters.</p>
               </div>
             )}
-
-            {/* ─── REJECTION FORM ─────────────────────────────────────────────── */}
-            {showRejectionForm && (
-              <form onSubmit={handleRejectSubmit} className="space-y-4 border-t border-slate-100 pt-4 animate-in slide-in-from-top duration-200">
-                <div>
-                  <label className="block text-[10px] uppercase font-black text-rose-600 tracking-wider mb-2">
-                    Rejection Reason <span className="text-rose-400">*</span>
-                  </label>
-                  <textarea
-                    required
-                    rows="3"
-                    value={rejectionNotes}
-                    onChange={(e) => setRejectionNotes(e.target.value)}
-                    placeholder="Provide detailed reason for rejection..."
-                    className="w-full px-4 py-3 bg-slate-50 border border-rose-200 focus:border-rose-500 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-rose-500/10 transition-all text-xs font-bold leading-relaxed"
-                  />
-                </div>
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => { setShowRejectionForm(false); setRejectionNotes(''); }}
-                    className="px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 rounded-xl font-bold text-xs uppercase transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-md text-xs uppercase transition-colors cursor-pointer"
-                  >
-                    Submit Rejection
-                  </button>
-                </div>
-              </form>
-            )}
-
           </div>
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-3xl p-16 shadow-sm text-center">
           <Inbox className="w-12 h-12 mx-auto text-gray-300 mb-4 stroke-1 animate-pulse" />
-          <p className="text-base font-black text-slate-700">No Pending Candidate Verifications</p>
-          <p className="text-xs text-slate-400 mt-1">All registered students have been audited for exam eligibility.</p>
+          <p className="text-base font-black text-slate-700">No Student Records Found</p>
+          <p className="text-xs text-slate-400 mt-1">
+            {activeTab === 'pending' ? 'All students have been reviewed.' :
+             activeTab === 'approved' ? 'No students have been approved yet.' :
+             activeTab === 'rejected' ? 'No students have been rejected yet.' :
+             'No student records match your filters.'}
+          </p>
+          {activeTab !== 'pending' && (
+            <button
+              onClick={() => setActiveTab('pending')}
+              className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all"
+            >
+              Go to Pending Reviews
+            </button>
+          )}
         </div>
       )}
 
-      {/* ─── TOASTS ────────────────────────────────────────────────────────────── */}
+      {viewingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Student Profile</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {viewingStudent.fullName} · Sem {viewingStudent.semesterNumber}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingStudent(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-5 text-xs text-slate-600 text-left">
+              <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-5 space-y-3.5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Student Name</span>
+                    <span className="text-slate-800 font-bold text-sm">{viewingStudent.fullName}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrollment ID</span>
+                    <span className="text-slate-800 font-mono font-bold">{viewingStudent.enrollmentNo}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Course</span>
+                    <span className="text-slate-800 font-bold">{viewingStudent.course}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Batch</span>
+                    <span className="text-slate-800 font-bold">{viewingStudent.batch}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Institute</span>
+                    <span className="text-slate-800 font-bold">{viewingStudent.institute}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
+                    <span className="text-slate-800 font-bold">Semester {viewingStudent.semesterNumber}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Attendance</span>
+                    <span className={`font-bold ${(viewingStudent.attendancePercentage || 0) >= 75 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {viewingStudent.attendancePercentage || 0}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Thesis Status</span>
+                    <span className={`font-bold ${viewingStudent.thesisApproved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {viewingStudent.thesisApproved ? 'Approved ✓' : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+                <div className="border-t border-slate-100 pt-3">
+                  <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Eligibility Status</span>
+                  <span className={`inline-flex items-center gap-1.5 mt-1 px-3 py-1 rounded-full text-[10px] font-black border ${
+                    viewingStudent.eligibilityStatus === 'Approved'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : viewingStudent.eligibilityStatus === 'Rejected'
+                      ? 'bg-rose-50 border-rose-200 text-rose-700'
+                      : 'bg-amber-50 border-amber-200 text-amber-700'
+                  }`}>
+                    {viewingStudent.eligibilityStatus === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {viewingStudent.eligibilityStatus === 'Rejected' && <XCircle className="w-3.5 h-3.5" />}
+                    {viewingStudent.eligibilityStatus === 'Pending' && <Clock className="w-3.5 h-3.5" />}
+                    {viewingStudent.eligibilityStatus || 'Pending'}
+                  </span>
+                </div>
+                {viewingStudent.eligibilityStatus === 'Rejected' && viewingStudent.rejectionNotes && (
+                  <div className="border-t border-slate-100 pt-3">
+                    <span className="block text-[8px] uppercase font-black text-rose-600 tracking-wider">Rejection Reason</span>
+                    <p className="text-rose-800 font-semibold mt-1 bg-rose-50 p-2 rounded-xl border border-rose-100">
+                      {viewingStudent.rejectionNotes}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {viewingStudent.thesisDocumentUrl && (
+                <div>
+                  <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider mb-2">Thesis Document</span>
+                  <a
+                    href={getUploadUrl(viewingStudent.thesisDocumentUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold hover:bg-blue-100 transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Thesis
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
+              <button
+                type="button"
+                onClick={() => setViewingStudent(null)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <Toast 
           message={toast.message} 
@@ -24932,25 +25336,30 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         razorpaySignature: updatedStudent.razorpaySignature,
       };
 
-      await academicService.updateStudent(updatedStudent._id || updatedStudent.id, payload);
+      const docFiles = updatedStudent.docFiles || {};
+      const validFiles = Object.values(docFiles).filter(v => v instanceof File);
+      const hasFiles = validFiles.length > 0;
 
-      // If attendance or thesis was provided, also update academic metrics
-      if (updatedStudent.attendancePercentage !== undefined || updatedStudent.thesisDocument) {
-        const metricsPayload = {
-          attendancePercentage: Number(updatedStudent.attendancePercentage) || 0,
-          thesisApproved: updatedStudent.thesisApproved || false
-        };
-        if (updatedStudent.thesisDocument) {
-          metricsPayload.thesisDocument = updatedStudent.thesisDocument;
-        }
-        await academicService.updateAcademicMetrics(updatedStudent._id || updatedStudent.id, metricsPayload);
+      let sendPayload = payload;
+      if (hasFiles) {
+        sendPayload = new FormData();
+        Object.entries(payload).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '') sendPayload.append(k, v);
+        });
+        Object.entries(docFiles).forEach(([k, v]) => {
+          if (v instanceof File) sendPayload.append(k, v);
+        });
       }
+
+      await academicService.updateStudent(updatedStudent._id || updatedStudent.id, sendPayload);
 
       await fetchERPData();
       setSuccessBanner(`🎉 Fellow "${updatedStudent.fullName}" profile updated successfully!`);
     } catch (err) {
       console.error('Update student error:', err);
-      setErrorBanner(err.parsedMessage || err.message || 'Failed to update fellow details.');
+      const errorMsg = err.parsedMessage || err.response?.data?.message || err.message || 'Failed to update fellow details.';
+      setErrorBanner(errorMsg);
+      throw err;
     }
   }, [courses, batches, fetchERPData]);
 
@@ -25640,6 +26049,8 @@ export default ApplicationStatusPending;
 ```jsx
 import { Mail } from 'lucide-react';
 
+const loginUrl = `${window.location.origin}/institute/login`;
+
 const EmailVerificationSimulator = ({ user }) => {
   return (
     <div className="max-w-xl mx-auto w-full space-y-6 text-left animate-in fade-in duration-200">
@@ -25659,7 +26070,7 @@ const EmailVerificationSimulator = ({ user }) => {
         <div className="bg-blue-50/50 border border-blue-100/80 rounded-2xl p-6 text-xs text-blue-900 font-bold leading-relaxed space-y-4">
           <span className="text-[10px] uppercase font-black tracking-wider text-blue-600 block">Next Steps</span>
           <p className="text-left leading-relaxed text-blue-800 font-medium">
-            Please check your inbox for a verification email. Click the verify button in that email. Once verified, you can proceed to the login page: <a href="https://semi-phase-three.swiflare.com/institute/login" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-bold break-all hover:text-blue-700">https://semi-phase-three.swiflare.com/institute/login</a>
+            Please check your inbox for a verification email. Click the verify button in that email. Once verified, you can proceed to the login page: <a href={loginUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-bold break-all hover:text-blue-700">{loginUrl}</a>
           </p>
         </div>
 
@@ -29522,46 +29933,54 @@ export default InstituteERPFees;
 
 ```jsx
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Eye, Download, Ticket, X, CheckCircle2, XCircle, AlertTriangle, Printer, HelpCircle } from 'lucide-react';
+import { Search, Eye, Ticket, X, CheckCircle2, XCircle, AlertTriangle, Printer, HelpCircle, RefreshCw } from 'lucide-react';
 import examService from '../../../api/exams';
+import { getUploadUrl } from '../../../api/apiClient';
 
 const InstituteERPHallTicket = ({
   courses = [],
   batches = [],
-
   examApplications = [],
-  fetchERPData,
-  user
+  fetchERPData
 }) => {
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-  
-  // State for previewing ticket cards
-  const [viewingTickets, setViewingTickets] = useState(null); // Array of ticket objects
+
+  const [viewingTickets, setViewingTickets] = useState(null);
   const [viewingBatchInfo, setViewingBatchInfo] = useState(null);
-  
-  const [showDevPopup, setShowDevPopup] = useState(true);
 
   // Initialize selected values
   useEffect(() => {
     if (courses.length > 0 && !selectedCourseId) {
-      setTimeout(() => setSelectedCourseId(courses[0].id || courses[0]._id), 0);
+      setTimeout(() => setSelectedCourseId(courses[0]?.id || courses[0]?._id || ''), 0);
     }
   }, [courses, selectedCourseId]);
 
   useEffect(() => {
     if (batches.length > 0 && !selectedBatchId) {
-      setTimeout(() => setSelectedBatchId(batches[0].id || batches[0]._id), 0);
+      setTimeout(() => setSelectedBatchId(batches[0]?.id || batches[0]?._id || ''), 0);
     }
   }, [batches, selectedBatchId]);
 
-  // Prefix/institute info
-  const instituteName = user?.instituteName || 'Saraswathi Inst.';
+  // Filter applications that have schedule published
+  const filteredApps = useMemo(() => {
+    return examApplications.filter(app => {
+      if (app.status !== 'SchedulePublished' && app.status !== 'Approved') return false;
+
+      const batchName = app.batch?.year ? `Batch ${app.batch.year}` : app.batch?.name || '';
+      const courseName = app.course?.name || '';
+      const query = searchQuery.toLowerCase();
+
+      return batchName.toLowerCase().includes(query) ||
+             courseName.toLowerCase().includes(query);
+    });
+  }, [examApplications, searchQuery]);
 
   // Handle generating hall tickets
   const handleGenerate = async (e) => {
@@ -29571,11 +29990,6 @@ const InstituteERPHallTicket = ({
       return;
     }
 
-    setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    // Find the application that has schedule published for this course and batch
     const approvedApp = examApplications.find(app => 
       String(app.course?._id || app.course) === String(selectedCourseId) &&
       String(app.batch?._id || app.batch) === String(selectedBatchId) &&
@@ -29583,38 +29997,38 @@ const InstituteERPHallTicket = ({
     );
 
     if (!approvedApp) {
-      setErrorMsg("🚫 No approved and scheduled exam application found for the selected course and batch. Ensure the board has approved, scheduled, and published the exam schedule.");
-      setLoading(false);
+      setErrorMsg("No approved and scheduled exam application found for the selected course and batch.");
       return;
     }
+
+    setGenerating(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
 
     try {
       const response = await examService.generateHallTickets(approvedApp._id || approvedApp.id);
       const resData = response.data?.data || response.data || {};
       const tickets = resData.tickets || (Array.isArray(resData) ? resData : []);
-      
+
       if (fetchERPData) {
         await fetchERPData();
       }
 
-      setSuccessMsg(`🎉 Hall tickets generated successfully for ${tickets.length} candidates!`);
-      setTimeout(() => setSuccessMsg(null), 4000);
-      
-      // Open preview automatically
+      setSuccessMsg(`Hall tickets generated successfully for ${tickets.length} candidates!`);
+
       setViewingTickets(tickets);
       setViewingBatchInfo({
         batchName: approvedApp.batch?.year ? `Batch ${approvedApp.batch.year}` : approvedApp.batch?.name || 'Batch',
         courseName: approvedApp.course?.name || 'Course'
       });
-
     } catch (err) {
       setErrorMsg(err.parsedMessage || err.message || 'Failed to generate hall tickets.');
     } finally {
-      setLoading(false);
+      setGenerating(false);
     }
   };
 
-  // Handle viewing tickets from the table — uses listHallTickets (persisted)
+  // Handle viewing tickets from the table
   const handleViewTickets = async (app) => {
     setLoading(true);
     setErrorMsg(null);
@@ -29633,170 +30047,258 @@ const InstituteERPHallTicket = ({
     }
   };
 
-  // Filter applications that have had schedule published (or approved)
-  const filteredApps = useMemo(() => {
-    return examApplications.filter(app => {
-      if (app.status !== 'SchedulePublished' && app.status !== 'Approved') return false;
-
-      const batchName = app.batch?.year ? `Batch ${app.batch.year}` : app.batch?.name || '';
-      const courseName = app.course?.name || '';
-      const instName = app.institute?.orgName || '';
-      const query = searchQuery.toLowerCase();
-
-      return batchName.toLowerCase().includes(query) ||
-             courseName.toLowerCase().includes(query) ||
-             instName.toLowerCase().includes(query);
-    });
-  }, [examApplications, searchQuery]);
-
-  // Trigger browser print for hall tickets
-  const handlePrint = () => {
-    const printContent = document.getElementById('hall-tickets-print-area').innerHTML;
-
-    
-    // Create temporary styling for printing
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
+  // Generate printable HTML
+  const generatePrintHTML = (tickets, batchInfo) => {
+    const resolvePhoto = (photoUrl) => photoUrl ? getUploadUrl(photoUrl) : '';
+    let html = `
       <html>
         <head>
-          <title>SEMI Hall Tickets - ${viewingBatchInfo?.batchName}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
+          <title>SEMI Hall Tickets - ${batchInfo?.batchName}</title>
           <style>
+            body { font-family: Arial, sans-serif; padding: 20px; background: white; }
+            .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .ticket-card { 
+              border: 2px solid #1a365d; 
+              border-radius: 12px; 
+              overflow: hidden; 
+              page-break-inside: avoid;
+              break-inside: avoid;
+              margin-bottom: 20px;
+            }
+            .ticket-header { 
+              background: linear-gradient(135deg, #1a365d, #2b6cb0); 
+              color: white; 
+              padding: 12px 16px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .ticket-header h4 { margin: 0; font-size: 14px; }
+            .ticket-header .badge { 
+              background: rgba(255,255,255,0.2); 
+              padding: 2px 10px; 
+              border-radius: 4px; 
+              font-size: 10px;
+              border: 1px solid rgba(255,255,255,0.3);
+            }
+            .ticket-body { padding: 16px; display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+            .ticket-info { font-size: 12px; }
+            .ticket-info .label { color: #718096; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+            .ticket-info .value { font-weight: bold; color: #1a202c; margin-bottom: 6px; }
+            .photo-placeholder { 
+              width: 80px; 
+              height: 96px; 
+              background: #f7fafc; 
+              border: 1px solid #e2e8f0; 
+              border-radius: 8px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 32px;
+              color: #a0aec0;
+            }
+            .ticket-footer { 
+              background: #f7fafc; 
+              padding: 10px 16px; 
+              border-top: 1px solid #e2e8f0;
+              display: grid;
+              grid-template-columns: 2fr 1fr;
+              font-size: 10px;
+              color: #4a5568;
+            }
+            .ticket-footer .label { font-weight: bold; color: #a0aec0; text-transform: uppercase; font-size: 8px; }
             @media print {
-              .page-break { page-break-after: always; }
-              body { background: white; color: black; }
+              .no-print { display: none; }
+              .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+              .ticket-card { page-break-inside: avoid; break-inside: avoid; }
+            }
+            @media (max-width: 600px) {
+              .ticket-grid { grid-template-columns: 1fr; }
+              .ticket-body { grid-template-columns: 1fr; }
             }
           </style>
         </head>
-        <body class="p-8">
-          ${printContent}
-          <script>
-            window.onload = function() {
-              window.print();
-              window.close();
-            }
-          </script>
+        <body>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #1a365d; margin: 0;">SEMI Examination Hall Tickets</h2>
+            <p style="color: #4a5568; margin: 4px 0;">${batchInfo?.batchName} - ${batchInfo?.courseName}</p>
+            <p style="color: #718096; font-size: 12px; margin: 0;">Generated on ${new Date().toLocaleDateString()}</p>
+            <hr style="border: 1px solid #e2e8f0; margin: 16px 0;" />
+          </div>
+          <div class="ticket-grid">
+    `;
+
+    tickets.forEach((ticket) => {
+      const examDate = ticket.examDate ? new Date(ticket.examDate).toLocaleDateString('en-IN', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }) : 'TBD';
+
+      html += `
+        <div class="ticket-card">
+          <div class="ticket-header">
+            <h4>HALL TICKET</h4>
+            <span class="badge">OFFICIAL</span>
+          </div>
+          <div class="ticket-body">
+            <div class="ticket-info">
+              <div><span class="label">Candidate Name</span></div>
+              <div class="value">${ticket.studentName || 'N/A'}</div>
+              <div style="margin-top: 6px;"><span class="label">Enrollment ID</span></div>
+              <div class="value" style="color: #2b6cb0;">${ticket.enrollmentId || 'N/A'}</div>
+              <div style="margin-top: 6px;"><span class="label">Course Program</span></div>
+              <div class="value">${ticket.courseName || 'N/A'}</div>
+              <div style="margin-top: 6px;"><span class="label">Exam Date</span></div>
+              <div class="value">${examDate}</div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <div class="photo-placeholder">${ticket.photoUrl ? `<img src="${resolvePhoto(ticket.photoUrl)}" style="width:100%;height:100%;object-fit:cover;" />` : '👤'}</div>
+              <span style="font-size: 8px; color: #a0aec0; margin-top: 4px;">Photo verified</span>
+            </div>
+          </div>
+          <div class="ticket-footer">
+            <div>
+              <div><span class="label">Exam Center</span></div>
+              <div style="font-weight: bold;">${ticket.instituteName || 'N/A'}</div>
+              <div style="font-size: 9px; color: #718096;">${ticket.instituteAddress || ''}</div>
+            </div>
+            <div style="text-align: right;">
+              <div><span class="label">Ticket ID</span></div>
+              <div style="font-weight: bold; font-size: 10px;">${ticket.ticketId || 'N/A'}</div>
+              <div style="font-size: 9px; color: #718096;">${ticket.reportingTime || ''}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+          </div>
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #a0aec0; font-size: 10px;">
+            © ${new Date().getFullYear()} Society for Emergency Medicine India (SEMI) • This is a system-generated document
+          </div>
         </body>
       </html>
-    `);
+    `;
+
+    return html;
+  };
+
+  // Handle print
+  const handlePrint = () => {
+    if (!viewingTickets || viewingTickets.length === 0) {
+      setErrorMsg('No tickets to print.');
+      return;
+    }
+
+    const html = generatePrintHTML(viewingTickets, viewingBatchInfo);
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      setErrorMsg('Please allow popups to print hall tickets.');
+      return;
+    }
+    printWindow.document.write(html);
     printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
-      
-      {showDevPopup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-sm w-full p-6 text-center">
-            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8" />
-            </div>
-            <h3 className="text-xl font-black text-slate-800 mb-2">Under Development</h3>
-            <p className="text-sm text-slate-500 mb-6">This page is currently under development.</p>
-            <button
-              onClick={() => setShowDevPopup(false)}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider w-full cursor-pointer"
-            >
-              Acknowledge
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* Messages */}
+      {/* Success/Error Messages */}
       {successMsg && (
-        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-2xl text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-sm animate-in slide-in-from-top duration-200">
+        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-2xl text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-sm">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="p-4 bg-rose-50 border-l-4 border-rose-500 rounded-r-2xl text-xs font-bold text-rose-800 flex items-center gap-2 shadow-sm animate-in slide-in-from-top duration-200">
+        <div className="p-4 bg-rose-50 border-l-4 border-rose-500 rounded-r-2xl text-xs font-bold text-rose-800 flex items-center gap-2 shadow-sm">
           <XCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* 1. GENERATE HALL TICKET CARD PANEL */}
+      {/* Generate Hall Ticket Panel */}
       <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm max-w-4xl mx-auto space-y-6">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Hall Ticket</h2>
-          <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mt-1">Student Information</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Hall Ticket Generator</h2>
+          <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mt-1">Generate hall tickets for scheduled examinations</p>
         </div>
 
         <form onSubmit={handleGenerate} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
             {/* Batch Selector */}
             <div>
-              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Batch</label>
+              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Batch *</label>
               <select
                 value={selectedBatchId}
                 onChange={(e) => setSelectedBatchId(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                required
               >
-                {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                {batches.length === 0 && <option value="">No batches available</option>}
+                <option value="">Select Batch</option>
+                {batches.map(b => (
+                  <option key={b.id || b._id} value={b.id || b._id}>
+                    {b.name || `Batch ${b.year}`}
+                  </option>
+                ))}
               </select>
             </div>
 
             {/* Course Selector */}
             <div>
-              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course</label>
+              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course *</label>
               <select
                 value={selectedCourseId}
                 onChange={(e) => setSelectedCourseId(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                required
               >
-                {courses.map(c => <option key={c.id} value={c.id}>{c.courseName}</option>)}
-                {courses.length === 0 && <option value="">No courses available</option>}
+                <option value="">Select Course</option>
+                {courses.map(c => (
+                  <option key={c.id || c._id} value={c.id || c._id}>
+                    {c.courseName || c.name}
+                  </option>
+                ))}
               </select>
-            </div>
-
-            {/* Institute (Read Only) */}
-            <div className="md:col-span-2">
-              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Institute</label>
-              <input
-                type="text"
-                readOnly
-                value={instituteName}
-                className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-xs font-bold text-slate-500 cursor-not-allowed outline-none"
-              />
             </div>
           </div>
 
           <div className="flex justify-center pt-2">
             <button
               type="submit"
-              disabled={loading || batches.length === 0 || courses.length === 0}
-              className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all hover:scale-[1.01] flex items-center justify-center gap-2 shadow-lg shadow-blue-600/10 cursor-pointer"
+              disabled={generating || batches.length === 0 || courses.length === 0}
+              className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/10 cursor-pointer"
             >
-              {loading ? (
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              {generating ? (
+                <><RefreshCw className="w-4 h-4 animate-spin" /> Generating...</>
               ) : (
-                <Ticket className="w-4 h-4" />
+                <><Ticket className="w-4 h-4" /> Generate Hall Ticket</>
               )}
-              Generate Hall Ticket
             </button>
           </div>
         </form>
       </div>
 
-      {/* 2. HALL TICKET DOWNLOAD SECTION */}
+      {/* Hall Ticket List */}
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h3 className="text-base font-black text-slate-800 tracking-tight">Hall Ticket Download</h3>
-            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Approved batch examination schedules ready for download</p>
+            <h3 className="text-base font-black text-slate-800 tracking-tight">Generated Hall Tickets</h3>
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
+              {filteredApps.length} scheduled exam(s) ready
+            </p>
           </div>
 
-          {/* Search bar */}
           <div className="relative max-w-xs w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search Batches...."
+              placeholder="Search by batch or course..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
@@ -29804,49 +30306,59 @@ const InstituteERPHallTicket = ({
           </div>
         </div>
 
-        {/* Download Table */}
+        {/* Table */}
         <div className="overflow-x-auto border border-slate-100 rounded-2xl bg-white shadow-inner">
           <table className="w-full text-left border-collapse text-xs text-slate-500 font-semibold">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px]">
                 <th className="px-6 py-4 font-black w-16 text-center">#</th>
-                <th className="px-6 py-4 font-black">Batch Name</th>
+                <th className="px-6 py-4 font-black">Batch</th>
                 <th className="px-6 py-4 font-black">Course</th>
-                <th className="px-6 py-4 font-black">Institute</th>
                 <th className="px-6 py-4 font-black text-center">Students</th>
-                <th className="px-6 py-4 font-black text-center">Actions</th>
+                <th className="px-6 py-4 font-black text-center">Status</th>
+                <th className="px-6 py-4 font-black text-center w-32">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-600">
               {filteredApps.map((app, idx) => {
                 const serialNo = String(idx + 1).padStart(2, '0');
                 const batchText = app.batch?.year ? `Batch ${app.batch.year}` : app.batch?.name || 'Batch';
-                
+                const hasTickets = app.hallTicketsGenerated;
+
                 return (
                   <tr key={app._id || app.id} className="hover:bg-slate-50/30 transition-colors">
                     <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
                     <td className="px-6 py-4 font-bold text-slate-700">{batchText}</td>
                     <td className="px-6 py-4 font-bold text-slate-700">{app.course?.name || 'General Medicine'}</td>
-                    <td className="px-6 py-4 text-slate-500">{app.institute?.orgName || 'N/A'}</td>
                     <td className="px-6 py-4 text-center font-bold text-slate-700">{app.students?.length || 0}</td>
                     <td className="px-6 py-4 text-center">
+                      {hasTickets ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Generated
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black bg-amber-50 text-amber-700 border border-amber-200">
+                          <AlertTriangle className="w-3 h-3" />
+                          Not Generated
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleViewTickets(app)}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-blue-100"
-                          title="View Hall Tickets"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleViewTickets(app)} // Opens list preview to print/save
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-indigo-100"
-                          title="Download/Print Hall Tickets"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
+                        {hasTickets ? (
+                          <button
+                            type="button"
+                            onClick={() => handleViewTickets(app)}
+                            disabled={loading}
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100 cursor-pointer disabled:opacity-50"
+                            title="View Hall Tickets"
+                          >
+                            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        ) : (
+                          <span className="text-[9px] text-slate-400 font-medium">Generate first</span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -29856,8 +30368,8 @@ const InstituteERPHallTicket = ({
                 <tr>
                   <td colSpan="6" className="px-6 py-16 text-center text-slate-400 font-semibold space-y-2">
                     <Ticket className="w-8 h-8 mx-auto text-slate-300 stroke-1" />
-                    <p className="text-xs">No approved exam schedules found.</p>
-                    <p className="text-[10px] text-slate-400 font-medium">Verify your exam applications have been approved and scheduled by the Board.</p>
+                    <p className="text-xs">No scheduled exam applications found.</p>
+                    <p className="text-[10px] text-slate-400 font-medium">Wait for the Academic Board to approve and schedule exams.</p>
                   </td>
                 </tr>
               )}
@@ -29866,11 +30378,11 @@ const InstituteERPHallTicket = ({
         </div>
       </div>
 
-      {/* TICKETS PREVIEW & PRINT MODAL */}
-      {viewingTickets && (
+      {/* Tickets Preview Modal */}
+      {viewingTickets && viewingTickets.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-200 max-w-4xl w-full max-h-[90vh] flex flex-col scale-in-center">
-            
+          <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[90vh] flex flex-col scale-in-center">
+
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white rounded-t-3xl">
               <div className="flex items-center gap-3">
@@ -29878,9 +30390,9 @@ const InstituteERPHallTicket = ({
                   <Ticket className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-800">Generated Hall Tickets</h3>
+                  <h3 className="text-sm font-black text-slate-800">Hall Tickets</h3>
                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {viewingBatchInfo?.batchName} | {viewingBatchInfo?.courseName}
+                    {viewingBatchInfo?.batchName} | {viewingBatchInfo?.courseName} • {viewingTickets.length} tickets
                   </p>
                 </div>
               </div>
@@ -29891,102 +30403,106 @@ const InstituteERPHallTicket = ({
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  Print All Tickets
+                  Print All
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => setViewingTickets(null)}
-                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-150 rounded-xl transition-all"
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Modal Body / Scroll area */}
-            <div className="p-6 overflow-y-auto flex-grow space-y-6">
-              
-              <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-2">
-                <HelpCircle className="w-4.5 h-4.5 text-amber-600 flex-shrink-0" />
-                <span>You can distribute these tickets to students. Click "Print All Tickets" to generate printouts or save them as PDFs.</span>
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-grow">
+              <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-2 mb-6">
+                <HelpCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <span>You can distribute these tickets to students. Click "Print All" to generate printouts or save them as PDFs.</span>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {viewingTickets.map((ticket, index) => {
+                  const examDate = ticket.examDate ? new Date(ticket.examDate).toLocaleDateString('en-IN', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }) : 'TBD';
 
-              {/* Printable Tickets Area */}
-              <div id="hall-tickets-print-area" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {viewingTickets.map((ticket, index) => (
-                  <div 
-                    key={ticket.ticketId || index} 
-                    className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden text-slate-700 page-break flex flex-col justify-between"
-                    style={{ minHeight: '340px' }}
-                  >
-                    
-                    {/* Ticket Header */}
-                    <div className="bg-gradient-to-r from-blue-700 to-indigo-700 px-5 py-4 text-white flex justify-between items-center">
-                      <div className="text-left">
-                        <span className="text-[7px] uppercase font-black tracking-widest text-blue-200">Academic Examination Board</span>
-                        <h4 className="text-xs font-black tracking-tight leading-tight mt-0.5">SEMI HALL TICKET</h4>
+                  return (
+                    <div
+                      key={ticket.ticketId || index}
+                      className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden text-slate-700 flex flex-col"
+                    >
+                      {/* Ticket Header */}
+                      <div className="bg-gradient-to-r from-blue-700 to-indigo-700 px-5 py-4 text-white flex justify-between items-center">
+                        <div className="text-left">
+                          <span className="text-[7px] uppercase font-black tracking-widest text-blue-200">Academic Examination Board</span>
+                          <h4 className="text-xs font-black tracking-tight leading-tight mt-0.5">SEMI HALL TICKET</h4>
+                        </div>
+                        <div className="bg-white/10 px-2.5 py-0.5 rounded border border-white/20">
+                          <span className="font-mono text-[8px] font-black uppercase tracking-wider">OFFICIAL</span>
+                        </div>
                       </div>
-                      <div className="bg-white/10 px-2.5 py-0.5 rounded border border-white/20">
-                        <span className="font-mono text-[8px] font-black uppercase tracking-wider">OFFICIAL</span>
+
+                      {/* Ticket Body */}
+                      <div className="p-5 flex-grow grid grid-cols-3 gap-4 text-[10px] font-semibold text-left">
+                        <div className="col-span-2 space-y-3.5">
+                          <div>
+                            <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Candidate Name</span>
+                            <span className="text-slate-800 font-extrabold text-xs block truncate">{ticket.studentName || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Enrollment ID</span>
+                            <span className="text-indigo-600 font-mono font-black block text-xs">{ticket.enrollmentId || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Course Program</span>
+                            <span className="text-slate-800 font-bold block truncate">{ticket.courseName || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Exam Date</span>
+                            <span className="text-slate-800 font-extrabold block text-xs">{examDate}</span>
+                          </div>
+                        </div>
+
+                        <div className="col-span-1 flex flex-col items-center justify-center space-y-2 border-l border-slate-100 pl-4">
+                          <div className="w-20 h-24 bg-slate-100 border border-slate-200 rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
+                            {ticket.photoUrl ? (
+                              <img src={getUploadUrl(ticket.photoUrl)} alt="Photo" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-3xl text-slate-300">👤</span>
+                            )}
+                          </div>
+                          <span className="text-[7px] text-slate-400 font-bold text-center block leading-normal uppercase">Photo verified</span>
+                        </div>
+                      </div>
+
+                      {/* Ticket Footer */}
+                      <div className="bg-slate-50 border-t border-slate-100 px-5 py-3 text-left grid grid-cols-2 gap-2 text-[8px] font-semibold text-slate-500">
+                        <div>
+                          <span className="text-[7px] uppercase font-black text-slate-400 block tracking-wider">Exam Center</span>
+                          <span className="text-slate-700 font-bold block truncate">{ticket.instituteName || 'N/A'}</span>
+                          <span className="text-slate-400 block truncate leading-tight mt-0.5">{ticket.instituteAddress || ''}</span>
+                        </div>
+                        <div className="text-right flex flex-col justify-end items-end">
+                          <span className="text-[7px] uppercase font-black text-slate-400 block tracking-wider">Ticket ID</span>
+                          <span className="font-mono font-bold text-slate-600 block mt-0.5 truncate max-w-[120px]">{ticket.ticketId || 'N/A'}</span>
+                          <span className="text-slate-400 text-[8px]">Reporting: {ticket.reportingTime || ''}</span>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Ticket Details */}
-                    <div className="p-5 flex-grow grid grid-cols-3 gap-4 text-[10px] font-semibold text-left">
-                      {/* Left: Info */}
-                      <div className="col-span-2 space-y-3.5">
-                        <div>
-                          <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Candidate Name</span>
-                          <span className="text-slate-800 font-extrabold text-xs block truncate">{ticket.studentName}</span>
-                        </div>
-                        <div>
-                          <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Enrollment ID / Reg ID</span>
-                          <span className="text-indigo-600 font-mono font-black block text-xs">{ticket.enrollmentId}</span>
-                        </div>
-                        <div>
-                          <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Course Program</span>
-                          <span className="text-slate-800 font-bold block truncate">{ticket.courseName}</span>
-                        </div>
-                        <div>
-                          <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Scheduled Exam Date</span>
-                          <span className="text-slate-800 font-extrabold block">
-                            {new Date(ticket.examDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Right: Photo */}
-                      <div className="col-span-1 flex flex-col items-center justify-start space-y-2 border-l border-slate-100 pl-4">
-                        <div className="w-20 h-24 bg-slate-100 border border-slate-200 rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
-                          {ticket.photoUrl ? (
-                            <img src={ticket.photoUrl} alt="Photo" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-3xl text-slate-300">👤</span>
-                          )}
-                        </div>
-                        <span className="text-[7px] text-slate-400 font-bold text-center block leading-normal uppercase">Photo verified</span>
-                      </div>
-                    </div>
-
-                    {/* Ticket Footer / Center Info */}
-                    <div className="bg-slate-50 border-t border-slate-100 px-5 py-3 text-left grid grid-cols-2 gap-2 text-[8px] font-semibold text-slate-500">
-                      <div>
-                        <span className="text-[7px] uppercase font-black text-slate-400 block tracking-wider">Center of Examination</span>
-                        <span className="text-slate-700 font-bold block truncate">{ticket.instituteName}</span>
-                        <span className="text-slate-400 block truncate leading-tight mt-0.5">{ticket.instituteAddress}</span>
-                      </div>
-                      <div className="text-right flex flex-col justify-end items-end">
-                        <span className="text-[7px] uppercase font-black text-slate-400 block tracking-wider">Ticket ID</span>
-                        <span className="font-mono font-bold text-slate-600 block mt-0.5 truncate max-w-[120px]">{ticket.ticketId}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
-            
+
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end bg-white rounded-b-3xl">
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white rounded-b-3xl">
+              <span className="text-[10px] text-slate-400 font-medium">
+                {viewingTickets.length} ticket{viewingTickets.length > 1 ? 's' : ''} generated
+              </span>
               <button
                 type="button"
                 onClick={() => setViewingTickets(null)}
@@ -32735,10 +33251,19 @@ export default InstituteSignup;
 
 ```jsx
 import { useState } from 'react';
-import { X, Save, User, Mail, Phone, Book, Calendar, Shield, MapPin, Award, Building2, ExternalLink } from 'lucide-react';
+import { X, Save, User, Mail, Phone, Book, Calendar, Shield, MapPin, Award, Building2, ExternalLink, UploadCloud, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
-const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, batches }) => {
+const DOC_FIELDS = [
+  { key: 'passportPhoto', urlKey: 'passportPhotoUrl', label: 'Passport Photo (JPG/PNG)', icon: '📷', isImage: true },
+  { key: 'mbbsCertificate', urlKey: 'mbbsCertificateUrl', label: 'MBBS Degree Certificate (PDF/DOC)', icon: '📄', isImage: false },
+  { key: 'medicalCouncilRegistrationCertificate', urlKey: 'medicalCouncilRegistrationCertificateUrl', label: 'Medical Council Certificate (PDF)', icon: '📜', isImage: false },
+  { key: 'fmgeResultCopy', urlKey: 'fmgeResultCopyUrl', label: 'FMGE Screening Result (PDF)', icon: '📝', isImage: false },
+  { key: 'paymentReceipt', urlKey: 'paymentReceiptUrl', label: 'Payment Receipt (PDF/JPG)', icon: '💳', isImage: false },
+  { key: 'semiMembershipForm', urlKey: 'semiMembershipFormUrl', label: 'SEMI Membership Form (PDF/DOC)', icon: '🗳️', isImage: false },
+];
+
+const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses = [], batches = [] }) => {
   const getDocUrl = (filename) => {
     if (!filename) return '#';
     return getUploadUrl(filename);
@@ -32765,10 +33290,24 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
   });
 
   const [error, setError] = useState(null);
+  const [docFiles, setDocFiles] = useState({});
+  const [docPreviews, setDocPreviews] = useState({});
   const [prevStudent, setPrevStudent] = useState(student);
+
+  // ─── Loading & Success States ──────────────────────────────────────────────
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   if (student !== prevStudent) {
     setPrevStudent(student);
+    Object.values(docPreviews).forEach(url => URL.revokeObjectURL(url));
+    setDocPreviews({});
+    setDocFiles({});
+    setError(null);
+    setShowSuccess(false);
+    setIsSubmitting(false);
+
     if (student) {
       setFormData({
         fullName: student.fullName || '',
@@ -32789,57 +33328,137 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
         homeAddress: student.homeAddress || '',
         courseDirector: student.courseDirector || '',
       });
-      setError(null);
     }
   }
 
+  const handleDocChange = (field, file) => {
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError(`File "${file.name}" is too large. Maximum size is 10MB.`);
+        return;
+      }
+
+      setDocFiles(prev => ({ ...prev, [field]: file }));
+      setDocPreviews(prev => {
+        if (prev[field]) URL.revokeObjectURL(prev[field]);
+        const next = { ...prev };
+        if (file.type.startsWith('image/')) {
+          next[field] = URL.createObjectURL(file);
+        } else {
+          next[field] = null;
+        }
+        return next;
+      });
+      setError(null);
+    } else {
+      setDocFiles(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+      setDocPreviews(prev => {
+        if (prev[field]) URL.revokeObjectURL(prev[field]);
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
   if (!isOpen || !student) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ─── Validation ────────────────────────────────────────────────────────────
     if (!formData.fullName || !formData.email || !formData.phone || !formData.enrollmentNo) {
       setError('Please fill in all mandatory fields.');
       return;
     }
+
     const phoneRegex = /^\d{10}$/;
-    if (!phoneRegex.test(formData.phone.replace(/\D/g, ''))) {
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    if (!phoneRegex.test(cleanPhone)) {
       setError('Phone Number must be a valid 10-digit number.');
       return;
     }
-    if (formData.phone.includes('-')) {
-      setError('Contact Number cannot be negative.');
-      return;
-    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError('Invalid email format.');
       return;
     }
-    onSave({
-      ...student,
-      ...formData
-    });
-    onClose();
+
+    // ─── Submit ────────────────────────────────────────────────────────────────
+    setIsSubmitting(true);
+    setError(null);
+    setShowSuccess(false);
+
+    try {
+      await onSave({
+        ...student,
+        ...formData,
+        phone: cleanPhone,
+        docFiles
+      });
+
+      // ─── Show Success ───────────────────────────────────────────────────────
+      setSuccessMessage(`✅ ${formData.fullName}'s profile updated successfully!`);
+      setShowSuccess(true);
+
+      // Close after a brief delay to show the success message
+      setTimeout(() => {
+        setShowSuccess(false);
+        onClose();
+      }, 2000);
+
+    } catch (err) {
+      const errorMsg = err?.parsedMessage || err?.message || 'Failed to update student. Please try again.';
+      setError(errorMsg);
+      setIsSubmitting(false);
+    }
   };
+
+  // ─── Success Overlay ──────────────────────────────────────────────────────
+  if (showSuccess) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+        <div className="bg-white rounded-3xl shadow-2xl border border-emerald-100 max-w-md w-full p-8 text-center scale-in-center animate-in zoom-in-95 duration-200">
+          <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-100">
+            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+          </div>
+          <h3 className="text-xl font-black text-slate-800">Update Successful!</h3>
+          <p className="text-sm text-slate-500 mt-2 font-medium">{successMessage}</p>
+          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-emerald-600 font-bold">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Closing...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
       <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-3xl w-full flex flex-col overflow-hidden max-h-[90vh] scale-in-center animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
               <User className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-black text-slate-800">Edit Fellow Details</h3>
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Update student profile, academic metrics & documents</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                {isSubmitting ? 'Saving changes...' : 'Update student profile, academic metrics & documents'}
+              </p>
             </div>
           </div>
-          <button 
+          <button
             type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+            disabled={isSubmitting}
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-5 h-5" />
           </button>
@@ -32848,8 +33467,9 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
           {error && (
-            <div className="p-3.5 bg-rose-50 border-l-4 border-rose-500 rounded-r-xl text-xs font-bold text-rose-800">
-              {error}
+            <div className="p-3.5 bg-rose-50 border-l-4 border-rose-500 rounded-r-xl text-xs font-bold text-rose-800 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
@@ -32857,7 +33477,6 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
           <div className="space-y-4">
             <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-1.5 mb-3">Basic Profile</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {/* Full Name */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Fellow Full Name *</label>
                 <div className="relative">
@@ -32868,12 +33487,12 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                     placeholder="Dr. Name Here"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              {/* Enrollment ID */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Application ID / Enrollment No *</label>
                 <div className="relative">
@@ -32884,12 +33503,12 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.enrollmentNo}
                     onChange={(e) => setFormData({ ...formData, enrollmentNo: e.target.value })}
                     placeholder="SEMI0012"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              {/* Email */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Email Address *</label>
                 <div className="relative">
@@ -32900,12 +33519,12 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="doctor@example.com"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              {/* Phone */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Phone Number *</label>
                 <div className="relative">
@@ -32916,7 +33535,8 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="+91 99999 88888"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -32927,7 +33547,6 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
           <div className="space-y-4 pt-2">
             <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-1.5 mb-3">Academic & Registration Info</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {/* Qualification */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Accredited Qualification *</label>
                 <div className="relative">
@@ -32935,7 +33554,8 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                   <select
                     value={formData.qualification}
                     onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <option value="MD Emergency Medicine">MD Emergency Medicine</option>
                     <option value="DNB Emergency Medicine">DNB Emergency Medicine</option>
@@ -32944,7 +33564,6 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                 </div>
               </div>
 
-              {/* MBBS Qualification */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">MBBS Qualification *</label>
                 <div className="relative">
@@ -32955,12 +33574,12 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.mbbsQualification}
                     onChange={(e) => setFormData({ ...formData, mbbsQualification: e.target.value })}
                     placeholder="MBBS"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              {/* Graduation Year */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">MBBS Passing Year *</label>
                 <div className="relative">
@@ -32971,12 +33590,12 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.graduationYear}
                     onChange={(e) => setFormData({ ...formData, graduationYear: e.target.value })}
                     placeholder="2025"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              {/* University Name */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">University Name *</label>
                 <div className="relative">
@@ -32987,12 +33606,12 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.universityName}
                     onChange={(e) => setFormData({ ...formData, universityName: e.target.value })}
                     placeholder="University of Health Sciences"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              {/* Medical Council Registration Number */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Medical Council Registration Number *</label>
                 <div className="relative">
@@ -33003,13 +33622,13 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.medicalCouncilRegistrationNumber}
                     onChange={(e) => setFormData({ ...formData, medicalCouncilRegistrationNumber: e.target.value })}
                     placeholder="MCI-12345"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              {/* Home Address */}
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Home Address *</label>
                 <div className="relative">
                   <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
@@ -33019,7 +33638,8 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.homeAddress}
                     onChange={(e) => setFormData({ ...formData, homeAddress: e.target.value })}
                     placeholder="123, Doctor Lane, Medical City"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 resize-none"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 resize-none disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -33030,7 +33650,6 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
           <div className="space-y-4 pt-2">
             <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-1.5 mb-3">Foreign Graduate Details</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-center">
-              {/* Checkbox */}
               <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100/50 transition-colors h-[46px]">
                 <input
                   type="checkbox"
@@ -33038,27 +33657,28 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                   checked={formData.isForeignGraduate}
                   onChange={(e) => {
                     const checked = e.target.checked;
-                    setFormData({ 
-                      ...formData, 
+                    setFormData({
+                      ...formData,
                       isForeignGraduate: checked,
                       fmgeClearanceStatus: checked ? 'Cleared' : 'Not Applicable'
                     });
                   }}
-                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                  disabled={isSubmitting}
+                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer disabled:opacity-50"
                 />
                 <label htmlFor="isForeignGraduate" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
                   Is Foreign Graduate
                 </label>
               </div>
 
-              {/* FMGE Clearance Status */}
               {formData.isForeignGraduate && (
                 <div>
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">FMGE Clearance Status *</label>
                   <select
                     value={formData.fmgeClearanceStatus}
                     onChange={(e) => setFormData({ ...formData, fmgeClearanceStatus: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <option value="Cleared">Cleared</option>
                     <option value="Failed">Failed</option>
@@ -33073,13 +33693,13 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
           <div className="space-y-4 pt-2">
             <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-1.5 mb-3">Program & Billing Details</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {/* Course */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Course *</label>
                 <select
                   value={formData.courseName}
                   onChange={(e) => setFormData({ ...formData, courseName: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {courses.map(c => (
                     <option key={c.id || c._id} value={c.courseName}>{c.courseName}</option>
@@ -33087,13 +33707,13 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                 </select>
               </div>
 
-              {/* Batch */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Batch *</label>
                 <select
                   value={formData.batchName}
                   onChange={(e) => setFormData({ ...formData, batchName: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {batches.map(b => (
                     <option key={b.id || b._id} value={b.name}>{b.name}</option>
@@ -33101,7 +33721,6 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                 </select>
               </div>
 
-              {/* Course Director */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Course Director *</label>
                 <div className="relative">
@@ -33112,25 +33731,25 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                     value={formData.courseDirector}
                     onChange={(e) => setFormData({ ...formData, courseDirector: e.target.value })}
                     placeholder="Dr. Director Name"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                    disabled={isSubmitting}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              {/* Enrollment Status */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Enrollment Status *</label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <option value="Active">Active</option>
                   <option value="Completed">Completed</option>
                 </select>
               </div>
 
-              {/* Admission Date */}
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">Admission Date *</label>
                 <input
@@ -33138,124 +33757,114 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses, 
                   required
                   value={formData.admissionDate}
                   onChange={(e) => setFormData({ ...formData, admissionDate: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
           </div>
 
           {/* Section 5: Attached Credentials Documents */}
-          {student.documents && Object.keys(student.documents).some(key => student.documents[key]) && (
-            <div className="space-y-4 pt-2">
-              <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-1.5 mb-3">Submitted Credentials (View Only)</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-semibold">
-                {student.documents.passportPhotoUrl && (
-                  <a 
-                    href={getDocUrl(student.documents.passportPhotoUrl)} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-all"
-                  >
-                    <span className="text-base">📷</span>
-                    <span className="truncate">Candidate Passport Photo</span>
-                    <ExternalLink className="w-3.5 h-3.5 ml-auto text-slate-400" />
-                  </a>
-                )}
-                {student.documents.mbbsCertificateUrl && (
-                  <a 
-                    href={getDocUrl(student.documents.mbbsCertificateUrl)} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-all"
-                  >
-                    <span className="text-base">📄</span>
-                    <span className="truncate">MBBS Degree Certificate</span>
-                    <ExternalLink className="w-3.5 h-3.5 ml-auto text-slate-400" />
-                  </a>
-                )}
-                {student.documents.medicalCouncilRegistrationCertificateUrl && (
-                  <a 
-                    href={getDocUrl(student.documents.medicalCouncilRegistrationCertificateUrl)} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-all"
-                  >
-                    <span className="text-base">📜</span>
-                    <span className="truncate">Medical Council Certificate</span>
-                    <ExternalLink className="w-3.5 h-3.5 ml-auto text-slate-400" />
-                  </a>
-                )}
-                {student.documents.fmgeResultCopyUrl && (
-                  <a 
-                    href={getDocUrl(student.documents.fmgeResultCopyUrl)} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-all"
-                  >
-                    <span className="text-base">📝</span>
-                    <span className="truncate">FMGE Screening Result</span>
-                    <ExternalLink className="w-3.5 h-3.5 ml-auto text-slate-400" />
-                  </a>
-                )}
-                {student.documents.paymentReceiptUrl && (
-                  <a 
-                    href={getDocUrl(student.documents.paymentReceiptUrl)} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-all"
-                  >
-                    <span className="text-base">💳</span>
-                    <span className="truncate">Enrollment Payment Receipt</span>
-                    <ExternalLink className="w-3.5 h-3.5 ml-auto text-slate-400" />
-                  </a>
-                )}
-                {student.documents.semiMembershipFormUrl && (
-                  <a 
-                    href={getDocUrl(student.documents.semiMembershipFormUrl)} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-all"
-                  >
-                    <span className="text-base">🗳️</span>
-                    <span className="truncate">SEMI Membership Form</span>
-                    <ExternalLink className="w-3.5 h-3.5 ml-auto text-slate-400" />
-                  </a>
-                )}
-                {student.documents.thesisDocumentUrl && (
-                  <a 
-                    href={getDocUrl(student.documents.thesisDocumentUrl)} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-all"
-                  >
-                    <span className="text-base">📑</span>
-                    <span className="truncate">Thesis Document</span>
-                    <ExternalLink className="w-3.5 h-3.5 ml-auto text-slate-400" />
-                  </a>
-                )}
-              </div>
+          <div className="space-y-4 pt-2">
+            <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-1.5 mb-3">Uploaded Credentials & Photo (Select a file to replace)</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {DOC_FIELDS.map(({ key, urlKey, label, icon, isImage }) => {
+                const currentUrl = student.documents?.[urlKey];
+                const preview = docPreviews[key];
+                return (
+                  <div key={key} className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/60 space-y-2.5">
+                    <div className="flex items-center gap-3">
+                      {isImage ? (
+                        <div className="w-12 h-12 rounded-lg bg-white border border-slate-200 overflow-hidden flex-shrink-0">
+                          {preview ? (
+                            <img src={preview} alt={label} className="w-full h-full object-cover" />
+                          ) : currentUrl ? (
+                            <img src={getDocUrl(currentUrl)} alt={label} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="w-full h-full flex items-center justify-center text-lg">{icon}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-lg flex-shrink-0">{icon}</div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 truncate">{label}</span>
+                        {currentUrl ? (
+                          <a
+                            href={getDocUrl(currentUrl)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] text-blue-600 font-bold hover:underline flex items-center gap-0.5 mt-0.5"
+                          >
+                            View current file <ExternalLink className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Not uploaded</span>
+                        )}
+                      </div>
+                    </div>
+                    <label className={`flex items-center gap-2 w-full px-3 py-2 bg-white border border-dashed border-slate-300 hover:border-blue-400 rounded-lg transition-all cursor-pointer ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <UploadCloud className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-[10px] font-bold text-slate-600">
+                        {docFiles[key] ? `Selected: ${docFiles[key].name}` : 'Choose file to upload'}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.rtf,.txt,.odt,.ods,.odp,.csv,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.tif,.heic,.heif,.svg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/gif,image/webp"
+                        onChange={(e) => {
+                          const file = e.target.files[0] || null;
+                          handleDocChange(key, file);
+                          e.target.value = '';
+                        }}
+                        className="hidden"
+                        disabled={isSubmitting}
+                      />
+                    </label>
+                    {docFiles[key] && (
+                      <button
+                        type="button"
+                        onClick={() => handleDocChange(key, null)}
+                        className="text-[10px] text-rose-500 font-bold hover:underline"
+                        disabled={isSubmitting}
+                      >
+                        Remove selection
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </form>
+          </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10"
-          >
-            <Save className="w-4 h-4" />
-            Save Changes
-          </button>
-        </div>
+          {/* Form Actions */}
+          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4 mt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-5 py-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-blue-500/10"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

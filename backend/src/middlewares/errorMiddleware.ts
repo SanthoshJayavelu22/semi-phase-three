@@ -31,6 +31,26 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
     });
   }
 
+  // Multer / Cloudinary upload errors should be client errors, not 500s
+  if (
+    err.name === 'MulterError' ||
+    (err.code && typeof err.code === 'string' && err.code.startsWith('LIMIT_')) ||
+    typeof err.http_code === 'number'
+  ) {
+    let message;
+    if (err.name === 'MulterError') {
+      message = err.code === 'LIMIT_FILE_SIZE' ? 'File is too large. Maximum allowed size is 10MB.' : `Upload error: ${err.message}`;
+    } else {
+      const raw = err.message || '';
+      if (/unknown file format|format not allowed|not allowed/i.test(raw)) {
+        message = 'This file could not be uploaded. Please check the file and try again.';
+      } else {
+        message = err.message || 'Upload failed. Please check the file and try again.';
+      }
+    }
+    return sendError({ req, res, statusCode: 400, message, errors: [] });
+  }
+
   sendError({
     req,
     res,

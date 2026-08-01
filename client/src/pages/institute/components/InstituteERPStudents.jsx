@@ -453,17 +453,6 @@ const InstituteERPStudents = ({
                           <span className="truncate">FMGE Screening Result Copy</span>
                         </a>
                       )}
-                      {selectedStudentForView.documents.paymentReceiptUrl && (
-                        <a 
-                          href={getDocUrl(selectedStudentForView.documents.paymentReceiptUrl)} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-colors"
-                        >
-                          <span className="text-lg">💳</span>
-                          <span className="truncate">Enrollment Payment Receipt</span>
-                        </a>
-                      )}
                       {selectedStudentForView.documents.semiMembershipFormUrl && (
                         <a 
                           href={getDocUrl(selectedStudentForView.documents.semiMembershipFormUrl)} 
@@ -473,6 +462,28 @@ const InstituteERPStudents = ({
                         >
                           <span className="text-lg">🗳️</span>
                           <span className="truncate">SEMI Membership Form</span>
+                        </a>
+                      )}
+                      {selectedStudentForView.documents.studentSignatureUrl && (
+                        <a 
+                          href={getDocUrl(selectedStudentForView.documents.studentSignatureUrl)} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-colors"
+                        >
+                          <span className="text-lg">✍️</span>
+                          <span className="truncate">Student Signature</span>
+                        </a>
+                      )}
+                      {selectedStudentForView.documents.hodSignatureUrl && (
+                        <a 
+                          href={getDocUrl(selectedStudentForView.documents.hodSignatureUrl)} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-colors"
+                        >
+                          <span className="text-lg">🎓</span>
+                          <span className="truncate">PG Degree Certificate / HOD Confirmation</span>
                         </a>
                       )}
                     </div>

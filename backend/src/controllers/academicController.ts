@@ -104,7 +104,7 @@ const studentUpdateSchema = z.object({
   universityName: z.string().min(1, 'University Name is required').optional(),
   medicalCouncilRegistrationNumber: z.string().min(1, 'Medical Council Registration Number is required').optional(),
   isForeignGraduate: z.preprocess(
-    (val) => val === 'true' || val === true || val === 'false' || val === false,
+    (val) => val === 'true' || val === true,
     z.boolean()
   ).optional(),
   fmgeClearanceStatus: z.enum(['Cleared', 'Not Applicable', 'Failed']).optional(),
@@ -679,6 +679,8 @@ export const addStudent = async (req: Request, res: Response) => {
         medicalCouncilRegistrationCertificateUrl: getFileUrl(files['medicalCouncilRegistrationCertificate'][0].path),
         fmgeResultCopyUrl: files['fmgeResultCopy'] ? getFileUrl(files['fmgeResultCopy'][0].path) : undefined,
         semiMembershipFormUrl: getFileUrl(files['semiMembershipForm'][0].path),
+        studentSignatureUrl: files['studentSignature'] ? getFileUrl(files['studentSignature'][0].path) : undefined,
+        hodSignatureUrl: files['hodSignature'] ? getFileUrl(files['hodSignature'][0].path) : undefined,
       },
       remittedToAcademy: false,
       semesters,
@@ -1295,7 +1297,7 @@ export const updateStudent = async (req: Request, res: Response) => {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       const docFields = [
         'passportPhoto', 'mbbsCertificate', 'medicalCouncilRegistrationCertificate',
-        'fmgeResultCopy', 'paymentReceipt', 'semiMembershipForm'
+        'fmgeResultCopy', 'semiMembershipForm', 'studentSignature', 'hodSignature'
       ];
       
       const newDocs: any = { ...student.documents };
@@ -1519,8 +1521,12 @@ export const verifyAcademicPayment = async (req: Request, res: Response) => {
 
     if (isRazorpayConfigured && razorpayInstance) {
       try {
-        const payment = await razorpayInstance.payments.fetch(orderId);
-        if (payment.status === 'captured') {
+        const payments = await razorpayInstance.api.get({
+          url: '/payments',
+          data: { order_id: orderId },
+        });
+        const payment = payments?.items?.[0];
+        if (payment && payment.status === 'captured') {
           const feeRecord = await FeeRecord.create({
             student: studentId as any,
             amount: payment.amount / 100,

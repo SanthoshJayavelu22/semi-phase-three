@@ -1718,11 +1718,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
 
-    const missingDocs = [];
-    if (!enrollDocs.photoDoc) missingDocs.push('Candidate Photo');
-    if (!enrollDocs.marksCertificateDoc) missingDocs.push('Marks Certificate');
-    if (!enrollDocs.medCouncilCertDoc) missingDocs.push('Medical Council Certificate');
-    if (!enrollDocs.studentSignatureDoc) missingDocs.push('Student Signature');
+      const missingDocs = [];
+      if (!enrollDocs.photoDoc) missingDocs.push('Candidate Photo');
+      if (!enrollDocs.marksCertificateDoc) missingDocs.push('Marks Certificate');
+      if (!enrollDocs.medCouncilCertDoc) missingDocs.push('Medical Council Certificate');
+      if (!enrollDocs.lifeMembershipCardDoc) missingDocs.push('SEMI Membership Card/Form');
+      if (!enrollDocs.studentSignatureDoc) missingDocs.push('Student Signature');
+      if (!enrollDocs.hodSignatureDoc) missingDocs.push('PG Degree Certificate / HOD Confirmation');
 
     if (missingDocs.length > 0) {
       setErrorBanner(`Missing Mandatory Uploads: ${missingDocs.join(', ')}.`);
@@ -1764,21 +1766,18 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       studentFormData.append('paymentDate', enrollForm.txnDate || new Date().toISOString().split('T')[0]);
 
       const appendEnrollFile = (backendKey, fileState) => {
-        if (fileState) {
-          const actualFile = fileState.fileObj || fileState;
-          if (actualFile instanceof File) {
-            studentFormData.append(backendKey, actualFile);
-          } else {
-            const mockBlob = new Blob(['Simulated student document for ' + backendKey], { type: 'application/pdf' });
-            studentFormData.append(backendKey, mockBlob, fileState.name || `${backendKey}.pdf`);
-          }
+        const actualFile = fileState?.fileObj || fileState;
+        if (actualFile instanceof File) {
+          studentFormData.append(backendKey, actualFile);
         }
       };
 
       appendEnrollFile('passportPhoto', enrollDocs.photoDoc);
       appendEnrollFile('mbbsCertificate', enrollDocs.marksCertificateDoc);
       appendEnrollFile('medicalCouncilRegistrationCertificate', enrollDocs.medCouncilCertDoc);
-      appendEnrollFile('semiMembershipForm', enrollDocs.studentSignatureDoc || enrollDocs.lifeMembershipCardDoc);
+      appendEnrollFile('semiMembershipForm', enrollDocs.lifeMembershipCardDoc);
+      appendEnrollFile('studentSignature', enrollDocs.studentSignatureDoc);
+      appendEnrollFile('hodSignature', enrollDocs.hodSignatureDoc);
       if (enrollDocs.fmgeCertDoc) {
         appendEnrollFile('fmgeResultCopy', enrollDocs.fmgeCertDoc);
       }
@@ -1945,25 +1944,30 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         razorpaySignature: updatedStudent.razorpaySignature,
       };
 
-      await academicService.updateStudent(updatedStudent._id || updatedStudent.id, payload);
+      const docFiles = updatedStudent.docFiles || {};
+      const validFiles = Object.values(docFiles).filter(v => v instanceof File);
+      const hasFiles = validFiles.length > 0;
 
-      // If attendance or thesis was provided, also update academic metrics
-      if (updatedStudent.attendancePercentage !== undefined || updatedStudent.thesisDocument) {
-        const metricsPayload = {
-          attendancePercentage: Number(updatedStudent.attendancePercentage) || 0,
-          thesisApproved: updatedStudent.thesisApproved || false
-        };
-        if (updatedStudent.thesisDocument) {
-          metricsPayload.thesisDocument = updatedStudent.thesisDocument;
-        }
-        await academicService.updateAcademicMetrics(updatedStudent._id || updatedStudent.id, metricsPayload);
+      let sendPayload = payload;
+      if (hasFiles) {
+        sendPayload = new FormData();
+        Object.entries(payload).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '') sendPayload.append(k, v);
+        });
+        Object.entries(docFiles).forEach(([k, v]) => {
+          if (v instanceof File) sendPayload.append(k, v);
+        });
       }
+
+      await academicService.updateStudent(updatedStudent._id || updatedStudent.id, sendPayload);
 
       await fetchERPData();
       setSuccessBanner(`🎉 Fellow "${updatedStudent.fullName}" profile updated successfully!`);
     } catch (err) {
       console.error('Update student error:', err);
-      setErrorBanner(err.parsedMessage || err.message || 'Failed to update fellow details.');
+      const errorMsg = err.parsedMessage || err.response?.data?.message || err.message || 'Failed to update fellow details.';
+      setErrorBanner(errorMsg);
+      throw err;
     }
   }, [courses, batches, fetchERPData]);
 

@@ -28,6 +28,8 @@ export interface IStudent extends Document {
     medicalCouncilRegistrationCertificateUrl: string;
     fmgeResultCopyUrl?: string;
     semiMembershipFormUrl: string;
+    studentSignatureUrl?: string;
+    hodSignatureUrl?: string;
   };
   remittedToAcademy: boolean;
   remittanceRecord?: mongoose.Types.ObjectId;
@@ -136,6 +138,8 @@ const studentSchema: Schema = new Schema(
       medicalCouncilRegistrationCertificateUrl: { type: String, required: true },
       fmgeResultCopyUrl: { type: String },
       semiMembershipFormUrl: { type: String, required: true },
+      studentSignatureUrl: { type: String },
+      hodSignatureUrl: { type: String },
     },
     remittedToAcademy: {
       type: Boolean,

@@ -72,7 +72,7 @@ export const applyInstitute = async (req: Request, res: Response) => {
       if (files && files[field] && files[field].length > 0 && files[field][0].path) {
         return getFileUrl(files[field][0].path);
       }
-      const baseUrl = (process.env.BASE_URL || 'https://semi-phase-three.swiflare.com').replace(/\/$/, '');
+      const baseUrl = (process.env.BASE_URL || 'http://localhost:5003').replace(/\/$/, '');
       return `${baseUrl}/uploads/mock_${field}.pdf`;
     };
 
@@ -629,6 +629,39 @@ export const checkPaymentAndUpdate = async (req: Request, res: Response) => {
       } catch (error) {
         console.error('Error fetching payment from Razorpay:', error);
       }
+    }
+
+    try {
+      const payments = await razorpayInstance.api.get({
+        url: '/payments',
+        data: { order_id: orderId },
+      });
+      const payment = payments?.items?.[0];
+      if (payment && payment.status === 'captured') {
+        institute.razorpayPaymentId = payment.id;
+        institute.paymentStatus = 'Completed';
+        institute.paymentCompletedAt = new Date();
+        institute.paymentAmount = payment.amount / 100;
+        await institute.save();
+
+        try {
+          await sendPaymentConfirmationEmail(institute, req.user);
+        } catch (emailErr: any) {
+          console.error('Payment confirmation email failed:', emailErr.message);
+        }
+
+        return sendSuccess({
+          req,
+          res,
+          message: 'Payment verified and completed',
+          data: {
+            paymentStatus: 'Completed',
+            razorpayPaymentId: institute.razorpayPaymentId,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching payment by order from Razorpay:', error);
     }
 
     return sendSuccess({
