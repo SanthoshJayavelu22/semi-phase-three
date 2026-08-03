@@ -130,8 +130,14 @@ const feeRecordSchema = z.object({
 
 const remittanceSchema = z.object({
   totalAmount: z.coerce.number().min(0.01, 'Total Amount must be greater than 0'),
-  utrNumber: z.string().min(1, 'Transaction ID / UTR is required'),
-  paymentDate: z.string().transform((val) => new Date(val)),
+  paymentPurpose: z.string().optional().default('Student Fellowship Fee Remittance'),
+  remarks: z.string().optional().default(''),
+  utrNumber: z.string().optional(),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  razorpaySignature: z.string().optional(),
+  paymentMode: z.string().optional().default('Razorpay Online'),
+  paymentDate: z.string().optional().transform((val) => (val ? new Date(val) : new Date())),
   studentIds: z.preprocess(
     (val) => (typeof val === 'string' ? JSON.parse(val) : val),
     z.array(z.string()).optional()
@@ -374,13 +380,16 @@ export const createBatch = async (req: Request, res: Response) => {
     // Generate batch name if not provided
     const batchName = validatedData.name || `Batch ${validatedData.year}-${String.fromCharCode(65 + (await Batch.countDocuments({ course: course._id })))}`;
 
+    // Authoritative batch capacity fixed by Academic Board (defaulting to institute's approvedSeats / seatsRequested)
+    const boardFixedSeats = institute.approvedSeats || institute.seatsRequested || 5;
+
     const newBatch = await Batch.create({
       institute: institute._id,
       course: course._id,
       year: validatedData.year,
       name: batchName,
       startDate: validatedData.startDate ? new Date(validatedData.startDate) : new Date(`${validatedData.year}-01-10`),
-      seats: validatedData.seats || 5,
+      seats: boardFixedSeats,
       activeFellows: 0,
       status: 'Active',
     });
@@ -840,9 +849,20 @@ export const recordRemittance = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
     }
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    if (!files || !files['paymentReceipt'] || files['paymentReceipt'].length === 0) {
-      return sendError({ req, res, statusCode: 400, message: 'Payment Receipt is mandatory' });
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const paymentReceiptFile = files && files['paymentReceipt'] && files['paymentReceipt'].length > 0 ? files['paymentReceipt'][0] : null;
+
+    if (validatedData.razorpayPaymentId && validatedData.razorpayOrderId && validatedData.razorpaySignature) {
+      if (isRazorpayConfigured && razorpayInstance && !validatedData.razorpayOrderId.startsWith('order_mock_')) {
+        const generated_signature = crypto
+          .createHmac('sha256', keySecret as string)
+          .update(validatedData.razorpayOrderId + '|' + validatedData.razorpayPaymentId)
+          .digest('hex');
+
+        if (generated_signature !== validatedData.razorpaySignature) {
+          return sendError({ req, res, statusCode: 400, message: 'Remittance Razorpay payment verification failed. Invalid signature.' });
+        }
+      }
     }
 
     let studentIdsToRemit = validatedData.studentIds;
@@ -874,9 +894,15 @@ export const recordRemittance = async (req: Request, res: Response) => {
     const remittance = await Remittance.create({
       institute: institute._id,
       totalAmount: validatedData.totalAmount,
-      utrNumber: validatedData.utrNumber,
-      paymentDate: validatedData.paymentDate,
-      paymentReceiptUrl: getFileUrl(files['paymentReceipt'][0].path),
+      paymentPurpose: validatedData.paymentPurpose || 'Student Fellowship Fee Remittance',
+      remarks: validatedData.remarks || '',
+      utrNumber: validatedData.razorpayPaymentId || validatedData.utrNumber || `REM-${Date.now()}`,
+      razorpayOrderId: validatedData.razorpayOrderId || '',
+      razorpayPaymentId: validatedData.razorpayPaymentId || '',
+      razorpaySignature: validatedData.razorpaySignature || '',
+      paymentMode: validatedData.paymentMode || 'Razorpay Online',
+      paymentDate: validatedData.paymentDate || new Date(),
+      paymentReceiptUrl: paymentReceiptFile ? getFileUrl(paymentReceiptFile.path) : 'Razorpay Verified',
       students: studentIdsToRemit,
     });
 

@@ -158,8 +158,10 @@ export const academicService = {
    * @param {string} studentId
    * @param {string} purpose
    */
-  verifyOrderStatus: (orderId, studentId, purpose) =>
-    apiClient.get(`/academic/payment/verify-order/${orderId}`, { params: { studentId, purpose } }),
+  // ─── REMITTANCE API ──────────────────────────────────────────────────────────
+  getPayableRemittance: () => apiClient.get('/academic/remittance/payable'),
+  getRemittances: () => apiClient.get('/academic/remittance'),
+  submitRemittance: (data) => apiClient.post('/academic/remittance', data),
 };
 
 export default academicService;

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle } from 'lucide-react';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
@@ -328,6 +328,52 @@ const InstituteERPCourses = ({
                 <option value="Weeks">Weeks</option>
               </select>
             </div>
+
+          </div>
+
+          {/* Dynamic Practical Exams Creator */}
+          <div className="space-y-4 pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500">Practical Examinations</label>
+              <button 
+                type="button" 
+                onClick={() => setCourseForm({...courseForm, practicalExams: [...(courseForm.practicalExams || []), '']})}
+                className="text-[10px] bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold hover:bg-purple-100 transition-colors uppercase tracking-wider flex items-center gap-1"
+              >
+                + Add Practical Exam
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(courseForm.practicalExams || []).map((prac, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder={`Practical Exam ${idx + 1} Name`}
+                    value={prac}
+                    onChange={(e) => {
+                      const newPracs = [...(courseForm.practicalExams || [])];
+                      newPracs[idx] = e.target.value;
+                      setCourseForm({...courseForm, practicalExams: newPracs, practicalExamName: newPracs[0] || courseForm.practicalExamName});
+                    }}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-purple-500 transition-all text-xs font-semibold"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newPracs = [...(courseForm.practicalExams || [])];
+                      newPracs.splice(idx, 1);
+                      setCourseForm({...courseForm, practicalExams: newPracs});
+                    }}
+                    className="p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-xl transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {(!courseForm.practicalExams || courseForm.practicalExams.length === 0) && (
+              <p className="text-[11px] text-gray-400 italic">No practical exams added yet. Click "+ Add Practical Exam" to define custom practical exam modules.</p>
+            )}
           </div>
 
           <div className="space-y-4">

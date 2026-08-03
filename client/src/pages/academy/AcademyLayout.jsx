@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Outlet, useNavigate,  Navigate } from 'react-router-dom';
 
 import instituteService from '../../api/institutes';
 import academicService from '../../api/academic';

@@ -9,7 +9,8 @@ import {
    BarChart3 ,
    Globe,           // For Publish Results
   RefreshCw,       // For Publishing Details
-  Award            // For Revaluation
+  Award,           // For Revaluation
+  CreditCard       // For Remittance Audit
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { id: 'students',      path: '/academy/students',      label: 'Students list',             Icon: Users },
   { id: 'eligibility',   path: '/academy/eligibility',   label: 'Exam Eligibility',          Icon: ClipboardList },
   { id: 'verification',  path: '/academy/verification',  label: 'Eligibility Verification',  Icon: UserCheck },
+  { id: 'remittance',    path: '/academy/remittance',    label: 'Fee Remittance Audit',      Icon: CreditCard },
   { id: 'marks',         path: '/academy/marks',         label: 'Marks Updating',            Icon: FileSpreadsheet },
     { id: 'student-marks', path: '/academy/student-marks', label: 'Student Marks',             Icon: BarChart3 },
       { id: 'publish-results',  path: '/academy/publish-results',  label: 'Result Publishing',         Icon: Globe },

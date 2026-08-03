@@ -5,6 +5,7 @@ import { randomUUID as uuidv4 } from 'crypto';
 import path from 'path';
 import { connectDB } from './config/db';
 import { seedSuperAdmin } from './config/seed';
+import { Batch } from './models/batchModel';
 import userRoutes from './routes/userRoutes';
 import healthRoutes from './routes/healthRoutes';
 import authRoutes from './routes/authRoutes';
@@ -24,6 +25,7 @@ dotenv.config();
 const initApp = async () => {
   await connectDB();
   await seedSuperAdmin();
+  await Batch.syncIndexes().catch((err) => console.log('Batch index sync:', err.message));
 };
 initApp();
 

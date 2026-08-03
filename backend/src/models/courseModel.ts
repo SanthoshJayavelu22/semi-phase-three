@@ -10,6 +10,8 @@ export interface ICourse extends Document {
   courseDuration?: string;
   durationType?: string;
   subjects?: string[];
+  practicalExamName?: string;
+  practicalExams?: string[];
   examinationFee?: string;
   status?: 'Active' | 'Inactive' | 'Pending';
 }
@@ -54,6 +56,14 @@ const courseSchema: Schema = new Schema(
       default: 'Years',
     },
     subjects: {
+      type: [String],
+      default: [],
+    },
+    practicalExamName: {
+      type: String,
+      default: 'Clinical OSCE & Practical Station Exam',
+    },
+    practicalExams: {
       type: [String],
       default: [],
     },

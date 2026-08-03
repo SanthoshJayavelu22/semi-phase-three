@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-07-31T12:15:28.965Z
+> Auto-generated on 2026-08-01T09:49:28.436Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -652,7 +652,7 @@ try {
 ### `backend/last_400_error.log`
 
 ```
-This file format is not supported. Please upload a JPG, PNG, or PDF file.
+An exam application already exists for one or more selected students in this batch and semester.
 ```
 
 ### `backend/package.json`
@@ -4830,6 +4830,8 @@ export const addStudent = async (req: Request, res: Response) => {
         medicalCouncilRegistrationCertificateUrl: getFileUrl(files['medicalCouncilRegistrationCertificate'][0].path),
         fmgeResultCopyUrl: files['fmgeResultCopy'] ? getFileUrl(files['fmgeResultCopy'][0].path) : undefined,
         semiMembershipFormUrl: getFileUrl(files['semiMembershipForm'][0].path),
+        studentSignatureUrl: files['studentSignature'] ? getFileUrl(files['studentSignature'][0].path) : undefined,
+        hodSignatureUrl: files['hodSignature'] ? getFileUrl(files['hodSignature'][0].path) : undefined,
       },
       remittedToAcademy: false,
       semesters,
@@ -5446,7 +5448,7 @@ export const updateStudent = async (req: Request, res: Response) => {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       const docFields = [
         'passportPhoto', 'mbbsCertificate', 'medicalCouncilRegistrationCertificate',
-        'fmgeResultCopy', 'paymentReceipt', 'semiMembershipForm'
+        'fmgeResultCopy', 'semiMembershipForm', 'studentSignature', 'hodSignature'
       ];
       
       const newDocs: any = { ...student.documents };
@@ -11131,6 +11133,8 @@ export interface IStudent extends Document {
     medicalCouncilRegistrationCertificateUrl: string;
     fmgeResultCopyUrl?: string;
     semiMembershipFormUrl: string;
+    studentSignatureUrl?: string;
+    hodSignatureUrl?: string;
   };
   remittedToAcademy: boolean;
   remittanceRecord?: mongoose.Types.ObjectId;
@@ -11239,6 +11243,8 @@ const studentSchema: Schema = new Schema(
       medicalCouncilRegistrationCertificateUrl: { type: String, required: true },
       fmgeResultCopyUrl: { type: String },
       semiMembershipFormUrl: { type: String, required: true },
+      studentSignatureUrl: { type: String },
+      hodSignatureUrl: { type: String },
     },
     remittedToAcademy: {
       type: Boolean,
@@ -11413,6 +11419,8 @@ router.post(
     { name: 'medicalCouncilRegistrationCertificate', maxCount: 1 },
     { name: 'fmgeResultCopy', maxCount: 1 },
     { name: 'semiMembershipForm', maxCount: 1 },
+    { name: 'studentSignature', maxCount: 1 },
+    { name: 'hodSignature', maxCount: 1 },
   ]),
   addStudent
 );
@@ -11469,8 +11477,9 @@ router.put(
     { name: 'mbbsCertificate', maxCount: 1 },
     { name: 'medicalCouncilRegistrationCertificate', maxCount: 1 },
     { name: 'fmgeResultCopy', maxCount: 1 },
-    { name: 'paymentReceipt', maxCount: 1 },
     { name: 'semiMembershipForm', maxCount: 1 },
+    { name: 'studentSignature', maxCount: 1 },
+    { name: 'hodSignature', maxCount: 1 },
   ]),
   updateStudent
 );
@@ -15486,7 +15495,7 @@ export default EmailVerificationPage;
 
 ```jsx
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Outlet, useNavigate,  Navigate } from 'react-router-dom';
 
 import instituteService from '../../api/institutes';
 import academicService from '../../api/academic';
@@ -23791,6 +23800,7 @@ const InstitutePortal = () => {
           enrollmentNo: s.enrollmentId,
           admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
           status: s.remittedToAcademy ? 'Completed' : 'Active',
+          remittedToAcademy: s.remittedToAcademy || false,
           attendancePercentage: s.attendancePercentage || 0,
           thesisApproved: s.thesisApproved || false,
           courseId: s.course?._id || s.course,
@@ -25109,11 +25119,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
 
-    const missingDocs = [];
-    if (!enrollDocs.photoDoc) missingDocs.push('Candidate Photo');
-    if (!enrollDocs.marksCertificateDoc) missingDocs.push('Marks Certificate');
-    if (!enrollDocs.medCouncilCertDoc) missingDocs.push('Medical Council Certificate');
-    if (!enrollDocs.studentSignatureDoc) missingDocs.push('Student Signature');
+      const missingDocs = [];
+      if (!enrollDocs.photoDoc) missingDocs.push('Candidate Photo');
+      if (!enrollDocs.marksCertificateDoc) missingDocs.push('Marks Certificate');
+      if (!enrollDocs.medCouncilCertDoc) missingDocs.push('Medical Council Certificate');
+      if (!enrollDocs.lifeMembershipCardDoc) missingDocs.push('SEMI Membership Card/Form');
+      if (!enrollDocs.studentSignatureDoc) missingDocs.push('Student Signature');
+      if (!enrollDocs.hodSignatureDoc) missingDocs.push('PG Degree Certificate / HOD Confirmation');
 
     if (missingDocs.length > 0) {
       setErrorBanner(`Missing Mandatory Uploads: ${missingDocs.join(', ')}.`);
@@ -25155,21 +25167,18 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       studentFormData.append('paymentDate', enrollForm.txnDate || new Date().toISOString().split('T')[0]);
 
       const appendEnrollFile = (backendKey, fileState) => {
-        if (fileState) {
-          const actualFile = fileState.fileObj || fileState;
-          if (actualFile instanceof File) {
-            studentFormData.append(backendKey, actualFile);
-          } else {
-            const mockBlob = new Blob(['Simulated student document for ' + backendKey], { type: 'application/pdf' });
-            studentFormData.append(backendKey, mockBlob, fileState.name || `${backendKey}.pdf`);
-          }
+        const actualFile = fileState?.fileObj || fileState;
+        if (actualFile instanceof File) {
+          studentFormData.append(backendKey, actualFile);
         }
       };
 
       appendEnrollFile('passportPhoto', enrollDocs.photoDoc);
       appendEnrollFile('mbbsCertificate', enrollDocs.marksCertificateDoc);
       appendEnrollFile('medicalCouncilRegistrationCertificate', enrollDocs.medCouncilCertDoc);
-      appendEnrollFile('semiMembershipForm', enrollDocs.studentSignatureDoc || enrollDocs.lifeMembershipCardDoc);
+      appendEnrollFile('semiMembershipForm', enrollDocs.lifeMembershipCardDoc);
+      appendEnrollFile('studentSignature', enrollDocs.studentSignatureDoc);
+      appendEnrollFile('hodSignature', enrollDocs.hodSignatureDoc);
       if (enrollDocs.fmgeCertDoc) {
         appendEnrollFile('fmgeResultCopy', enrollDocs.fmgeCertDoc);
       }
@@ -26480,7 +26489,7 @@ export default InstituteERPBatches;
 ### `client/src/pages/institute/components/InstituteERPCourses.jsx`
 
 ```jsx
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle } from 'lucide-react';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
@@ -27570,10 +27579,21 @@ export default InstituteERPDashboard;
 ### `client/src/pages/institute/components/InstituteERPEnrollment.jsx`
 
 ```jsx
-import React, { useState } from 'react';
-import { CheckCircle2, Trash2, Check, ArrowRight, ArrowLeft } from 'lucide-react';
-import { initiateRazorpayPayment } from '../../../utils/razorpay';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Trash2, Check, ArrowRight, ArrowLeft, Loader2, CreditCard } from 'lucide-react';
+import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
+import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
+import Toast from '../../../Components/Toast';
 import academicService from '../../../api/academic';
+
+// ─── ACCEPTED FILE TYPES ──────────────────────────────────────────────────────
+const ACCEPTED_FILE_TYPES = {
+  images: '.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.tif,.heic,.heif,.svg',
+  documents: '.pdf,.doc,.docx,.rtf,.txt,.odt,.ods,.odp,.csv,.xls,.xlsx,.ppt,.pptx',
+  all: '.pdf,.doc,.docx,.rtf,.txt,.odt,.ods,.odp,.csv,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.tif,.heic,.heif,.svg'
+};
+
+const APPROVED_QUALIFICATIONS = ['MD Emergency Medicine', 'DNB Emergency Medicine', 'MEM (Emergency Medicine)'];
 
 const InstituteERPEnrollment = ({ 
   enrollForm, 
@@ -27591,8 +27611,25 @@ const InstituteERPEnrollment = ({
   const [wizardStep, setWizardStep] = useState(1);
   const [localError, setLocalError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [showPaymentChecker, setShowPaymentChecker] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [toast, setToast] = useState(null);
   const today = new Date().toISOString().split('T')[0];
   const currentYear = new Date().getFullYear();
+
+  // ─── Recover a pending enrollment payment on mount ──────────────────────────
+  useEffect(() => {
+    const checkPending = async () => {
+      const pendingState = getPaymentState();
+      if (pendingState && pendingState.paymentType === 'enrollment') {
+        setShowPaymentChecker(true);
+        setToast({ message: 'A payment was in progress. Checking its status...', type: 'info' });
+      }
+    };
+    checkPending();
+  }, []);
 
   // Local state to track "Is FMG Candidate?" matching screenshot dropdown
   const [isFmgSelected, setIsFmgSelected] = useState(enrollForm.studentCategory === 'FMG' ? 'Yes' : 'No');
@@ -27652,14 +27689,16 @@ const InstituteERPEnrollment = ({
   };
 
   // Helper to render file upload card
-  const renderUploadCard = (label, docKey) => {
+  const renderUploadCard = (label, docKey, accept = ACCEPTED_FILE_TYPES.all, required = false) => {
     const file = enrollDocs[docKey];
     const progress = enrollProgress[docKey];
 
     return (
       <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div className="min-w-0">
-          <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">{label}</span>
+          <span className="text-[10px] uppercase font-black tracking-wider text-slate-400 block">
+            {label} {required && <span className="text-rose-500">*</span>}
+          </span>
           {file ? (
             <span className="text-xs text-emerald-600 font-bold mt-1 flex items-center gap-1.5 truncate">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
@@ -27688,9 +27727,19 @@ const InstituteERPEnrollment = ({
             Choose File
             <input 
               type="file" 
-              accept=".pdf,.png,.jpg,.jpeg" 
+              accept={accept} 
               className="hidden" 
-              onChange={(e) => handleEnrollDocUpload(docKey, e.target.files[0])} 
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  if (file.size > 10 * 1024 * 1024) {
+                    setToast({ message: `"${file.name}" exceeds the 10MB size limit.`, type: 'error' });
+                  } else {
+                    handleEnrollDocUpload(docKey, file);
+                  }
+                }
+                e.target.value = '';
+              }} 
             />
           </label>
         )}
@@ -27798,6 +27847,7 @@ const InstituteERPEnrollment = ({
   const handleSubmitIntercept = async (e) => {
     e.preventDefault();
     setLocalError(null);
+    setToast(null);
     const errors = validateStep(4);
     setFieldErrors(errors);
     const errorMessages = Object.values(errors);
@@ -27806,17 +27856,39 @@ const InstituteERPEnrollment = ({
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    
+    if (!APPROVED_QUALIFICATIONS.includes(enrollForm.qualification)) {
+      setLocalError(`🚨 Eligibility Rejection: "${enrollForm.qualification}" is not recognized for SEMI advanced fellowships.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Payment already verified (e.g. recovered from a pending state) — submit directly
+    if (paymentCompleted) {
+      await submitEnrollment(e);
+      return;
+    }
+
     try {
       // 1. Create Razorpay order (Using 1 INR for testing to avoid test limit errors)
       const orderRes = await academicService.createRazorpayOrder({ amount: 1, purpose: 'Student Enrollment' });
-      const orderData = orderRes.data || orderRes;
-      
+      const orderData = orderRes?.data?.data || orderRes?.data || orderRes;
+
       // 2. Initiate Payment
-      const finalOrderId = orderData.data?.orderId || orderData.orderId || orderData.id || orderData.data?.id;
+      const finalOrderId = orderData.orderId || orderData.id;
+      if (!finalOrderId) {
+        throw new Error('Failed to create payment order.');
+      }
+
+      setIsPaymentProcessing(true);
       initiateRazorpayPayment({
         orderId: finalOrderId,
-        amount: 1 * 100, // Razorpay takes amount in paise
+        amount: orderData.amount || 100, // Razorpay takes amount in paise
+        currency: orderData.currency || 'INR',
+        keyId: orderData.keyId,
+        name: 'SEMI Student Enrollment',
+        description: 'Enrollment Fee - ₹1,40,000',
+        paymentType: 'enrollment',
+        additionalData: { purpose: 'Student Enrollment' },
         prefill: {
           name: `${enrollForm.firstName} ${enrollForm.lastName}`,
           email: enrollForm.emailAddress,
@@ -27824,37 +27896,80 @@ const InstituteERPEnrollment = ({
         },
         onSuccess: async (response) => {
           try {
+            setToast({ message: '✅ Payment successful! Verifying...', type: 'info' });
             // Verify payment
             await academicService.verifyRazorpayPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             });
-            
+
             // Set payment data dynamically
             enrollForm.paymentMode = 'Razorpay';
             enrollForm.razorpayOrderId = response.razorpay_order_id;
             enrollForm.razorpayPaymentId = response.razorpay_payment_id;
             enrollForm.razorpaySignature = response.razorpay_signature;
             enrollForm.txnDate = new Date().toISOString().split('T')[0];
-            
+            clearPaymentState();
+            setPaymentCompleted(true);
+
             // Wait for enrollment form submission
             const success = await handleEnrollmentSubmit(e);
             if (success) {
               setWizardStep(1);
+              setPaymentCompleted(false);
+              setToast({ message: '🎉 Enrollment submitted successfully!', type: 'success' });
+            } else {
+              setToast({ message: '✅ Payment verified! Please review the errors and submit again.', type: 'success' });
             }
           } catch (err) {
             console.error(err);
-            setLocalError('Payment verification failed.');
+            setLocalError(err?.parsedMessage || err?.message || 'Payment verification failed.');
+            setToast({ message: '❌ Payment succeeded but verification failed. Please contact support.', type: 'error' });
+          } finally {
+            setIsPaymentProcessing(false);
+            setIsSubmitting(false);
           }
         },
         onDismiss: () => {
-          setLocalError('Payment was cancelled.');
+          setIsPaymentProcessing(false);
+          setIsSubmitting(false);
+          setShowPaymentChecker(true);
+          setToast({ message: 'Payment window closed. Checking payment status...', type: 'info' });
+        },
+        onFailure: (error) => {
+          console.error('Payment failed:', error);
+          setIsPaymentProcessing(false);
+          setIsSubmitting(false);
+          setShowPaymentChecker(true);
+          setToast({ message: `Payment failed: ${error?.description || 'Transaction unsuccessful.'}`, type: 'error' });
         }
       });
     } catch (err) {
       console.error(err);
-      setLocalError('Failed to initialize payment gateway.');
+      setIsPaymentProcessing(false);
+      setIsSubmitting(false);
+      setLocalError(err?.parsedMessage || err?.message || 'Failed to initialize payment gateway.');
+    }
+  };
+
+  // Submit the enrollment via the parent handler (no duplicate API call)
+  const submitEnrollment = async (e) => {
+    setIsSubmitting(true);
+    try {
+      const success = await handleEnrollmentSubmit(e);
+      if (success) {
+        setWizardStep(1);
+        setPaymentCompleted(false);
+        setToast({ message: '🎉 Enrollment submitted successfully!', type: 'success' });
+      } else {
+        setToast({ message: 'Enrollment could not be submitted. Please review the errors.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: err?.parsedMessage || err?.message || 'Failed to submit enrollment.', type: 'error' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -28021,7 +28136,7 @@ const InstituteERPEnrollment = ({
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Passport Photo *</label>
-                {renderUploadCard("Choose Passport Photo", 'photoDoc')}
+                {renderUploadCard("Choose Passport Photo", 'photoDoc', ACCEPTED_FILE_TYPES.images, true)}
               </div>
             </div>
           </div>
@@ -28081,7 +28196,7 @@ const InstituteERPEnrollment = ({
 
                 <div>
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">MBBS Degree Certificate Upload *</label>
-                  {renderUploadCard("Choose MBBS Certificate", 'marksCertificateDoc')}
+                  {renderUploadCard("Choose MBBS Certificate", 'marksCertificateDoc', ACCEPTED_FILE_TYPES.documents, true)}
                 </div>
               </div>
             </div>
@@ -28117,7 +28232,7 @@ const InstituteERPEnrollment = ({
 
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Medical Council Certificate Upload *</label>
-                {renderUploadCard("Choose Registration Certificate", 'medCouncilCertDoc')}
+                {renderUploadCard("Choose Registration Certificate", 'medCouncilCertDoc', ACCEPTED_FILE_TYPES.documents, true)}
               </div>
             </div>
 
@@ -28156,7 +28271,7 @@ const InstituteERPEnrollment = ({
               {isFmgSelected === 'Yes' && (
                 <div className="animate-in fade-in duration-150">
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">FMGE Pass Certificate Upload *</label>
-                  {renderUploadCard("Choose FMGE Result Copy", 'fmgeCertDoc')}
+                  {renderUploadCard("Choose FMGE Result Copy", 'fmgeCertDoc', ACCEPTED_FILE_TYPES.documents, true)}
                 </div>
               )}
             </div>
@@ -28285,7 +28400,7 @@ const InstituteERPEnrollment = ({
 
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">SEMI Membership Card Upload *</label>
-                {renderUploadCard("Choose Membership Card PDF", 'lifeMembershipCardDoc')}
+                {renderUploadCard("Choose Membership Card PDF", 'lifeMembershipCardDoc', ACCEPTED_FILE_TYPES.all, true)}
               </div>
             </div>
           </div>
@@ -28360,12 +28475,12 @@ const InstituteERPEnrollment = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Candidate Signature *</label>
-                  {renderUploadCard("Choose Signature File", 'studentSignatureDoc')}
+                  {renderUploadCard("Choose Signature File", 'studentSignatureDoc', ACCEPTED_FILE_TYPES.images, true)}
                 </div>
 
                 <div>
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">PG Degree Certificate / HOD Sign-off *</label>
-                  {renderUploadCard("Choose PG Certificate File", 'hodSignatureDoc')}
+                  {renderUploadCard("Choose PG Certificate File", 'hodSignatureDoc', ACCEPTED_FILE_TYPES.all, true)}
                 </div>
               </div>
             </div>
@@ -28379,7 +28494,8 @@ const InstituteERPEnrollment = ({
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 border border-slate-200 hover:bg-slate-55 text-slate-650 hover:text-slate-850 font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                disabled={isSubmitting || isPaymentProcessing}
+                className="px-5 py-2.5 border border-slate-200 hover:bg-slate-55 text-slate-650 hover:text-slate-850 font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
@@ -28392,7 +28508,8 @@ const InstituteERPEnrollment = ({
               <button
                 type="button"
                 onClick={handleNext}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer"
+                disabled={isSubmitting || isPaymentProcessing}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue
                 <ArrowRight className="w-4 h-4" />
@@ -28400,14 +28517,75 @@ const InstituteERPEnrollment = ({
             ) : (
               <button
                 type="submit"
-                className="px-10 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-md shadow-emerald-500/10 cursor-pointer"
+                disabled={isSubmitting || isPaymentProcessing}
+                className={`px-10 py-3 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-md flex items-center gap-2 ${
+                  isSubmitting || isPaymentProcessing
+                    ? 'bg-slate-400 cursor-not-allowed'
+                    : paymentCompleted
+                      ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/10 cursor-pointer'
+                      : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/10 cursor-pointer'
+                }`}
               >
-                Submit Application & Pay
+                {isPaymentProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing Payment...
+                  </>
+                ) : isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : paymentCompleted ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Submit Application
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    Pay & Enroll
+                  </>
+                )}
               </button>
             )}
           </div>
         </div>
       </form>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {showPaymentChecker && (
+        <PaymentStatusChecker
+          isOpen={showPaymentChecker}
+          paymentType="academic"
+          message="Verifying your enrollment payment..."
+          onComplete={(data) => {
+            const pendingState = getPaymentState();
+            setShowPaymentChecker(false);
+            setPaymentCompleted(true);
+            clearPaymentState();
+            setEnrollForm(prev => ({
+              ...prev,
+              razorpayPaymentId: data?.paymentId || prev.razorpayPaymentId,
+              razorpayOrderId: pendingState?.orderId || prev.razorpayOrderId,
+              paymentMode: 'Razorpay',
+              txnDate: new Date().toISOString().split('T')[0],
+            }));
+            setToast({ message: '✅ Payment verified! You can now submit your enrollment.', type: 'success' });
+          }}
+          onRetry={() => {
+            setShowPaymentChecker(false);
+            handleSubmitIntercept(new Event('submit'));
+          }}
+          onCancel={() => {
+            setShowPaymentChecker(false);
+            setIsSubmitting(false);
+            setIsPaymentProcessing(false);
+            setToast({ message: 'Payment verification cancelled. You can try again.', type: 'info' });
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -28419,7 +28597,7 @@ export default InstituteERPEnrollment;
 ### `client/src/pages/institute/components/InstituteERPExams.jsx`
 
 ```jsx
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check } from 'lucide-react';
 import examService from '../../../api/exams';
 import academicService from '../../../api/academic';
@@ -32717,113 +32895,115 @@ const InstituteERPStudents = ({
         )}
       </div>
 
-      {/* VIEW DETAILS MODAL - same as before, but ensure student._id is used */}
+      {/* VIEW DETAILS MODAL */}
       {selectedStudentForView && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full overflow-hidden flex flex-col scale-in-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-4xl w-full overflow-hidden flex flex-col scale-in-center max-h-[90vh]">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-                  <User className="w-5 h-5" />
+            <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-blue-600/10 text-blue-600 flex items-center justify-center shadow-inner">
+                  <User className="w-6 h-6 stroke-[2.5]" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-800">Fellow Profile Dossier</h3>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Accredited Candidate Record</p>
+                  <h3 className="text-base font-black text-slate-800 tracking-tight">Fellow Profile Dossier</h3>
+                  <p className="text-xs font-bold text-slate-400 tracking-wide uppercase">Accredited Candidate Record</p>
                 </div>
               </div>
               <button 
                 type="button"
                 onClick={() => setSelectedStudentForView(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-all cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 stroke-[2.5]" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-6 text-left text-xs text-slate-600 max-h-[75vh] overflow-y-auto">
+            <div className="p-8 space-y-7 text-left text-sm text-slate-600 overflow-y-auto">
               {/* Header profile block */}
-              <div className="flex items-center gap-4 border-b border-slate-50 pb-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xl font-black shadow-md border border-white">
+              <div className="flex items-center gap-5 border-b border-slate-100 pb-6">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-blue-500/20 border-2 border-white">
                   {selectedStudentForView.fullName ? selectedStudentForView.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'DR'}
                 </div>
                 <div>
-                  <span className="text-lg font-black text-slate-800 block leading-tight">{selectedStudentForView.fullName}</span>
-                  <div className="flex gap-2 items-center mt-1.5">
-                    <span className="px-2.5 py-0.5 rounded-full text-[9px] uppercase font-bold bg-green-50 text-green-700 border border-green-100">
+                  <span className="text-2xl font-black text-slate-900 block leading-tight">{selectedStudentForView.fullName}</span>
+                  <div className="flex flex-wrap gap-2.5 items-center mt-2">
+                    <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-sm">
                       {selectedStudentForView.status || 'Active'}
                     </span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60 font-mono tracking-tight">
                       ID: {selectedStudentForView.enrollmentNo || selectedStudentForView.enrollmentId || `SEMI00${selectedStudentForView.id}`}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Grid sections - rest of the modal content remains the same as original */}
-              <div className="space-y-5">
+              {/* Grid sections */}
+              <div className="space-y-7">
                 {/* 1. Academic & Course Assignment */}
                 <div>
-                  <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-50 pb-1.5 mb-2.5">Academic & Program Details</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <h4 className="text-xs uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-2 mb-4">
+                    Academic & Program Details
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-5 gap-x-6">
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Assigned Course</span>
-                      <span className="text-slate-800 font-bold">{selectedStudentForView.courseName || 'General Medicine'}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Assigned Course</span>
+                      <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.courseName || 'General Medicine'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Academic Batch</span>
-                      <span className="text-slate-800 font-bold">{selectedStudentForView.batchName || 'Batch 2026-A'}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Academic Batch</span>
+                      <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.batchName || 'Batch 2026-A'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Admission Date</span>
-                      <span className="text-slate-800 font-bold">{selectedStudentForView.admissionDate}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Admission Date</span>
+                      <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.admissionDate}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Accredited Degree</span>
-                      <span className="text-slate-800 font-bold">{selectedStudentForView.qualification}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Accredited Degree</span>
+                      <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.qualification}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">MBBS Qualification</span>
-                      <span className="text-slate-800 font-bold">{selectedStudentForView.mbbsQualification || 'N/A'}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">MBBS Qualification</span>
+                      <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.mbbsQualification || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Passing Year</span>
-                      <span className="text-slate-800 font-bold">{selectedStudentForView.graduationYear}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Passing Year</span>
+                      <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.graduationYear}</span>
                     </div>
                     <div className="col-span-2">
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">University Name</span>
-                      <span className="text-slate-800 font-bold">{selectedStudentForView.universityName || 'N/A'}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">University Name</span>
+                      <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.universityName || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Med Council Reg No</span>
-                      <span className="text-slate-800 font-bold font-mono">{selectedStudentForView.medicalCouncilRegistrationNumber || 'N/A'}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Med Council Reg No</span>
+                      <span className="text-slate-900 font-black font-mono text-sm">{selectedStudentForView.medicalCouncilRegistrationNumber || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* 2. Personal & Contact Details */}
                 <div>
-                  <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-50 pb-1.5 mb-2.5">Contact & Registration Details</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <h4 className="text-xs uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-2 mb-4">Contact & Registration Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-6">
+                    <div className="flex items-center gap-3 bg-slate-50/60 p-3.5 rounded-2xl border border-slate-100">
+                      <Mail className="w-5 h-5 text-blue-500 flex-shrink-0" />
                       <div>
-                        <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Email Address</span>
-                        <span className="text-slate-800 font-bold break-all">{selectedStudentForView.email}</span>
+                        <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider">Email Address</span>
+                        <span className="text-slate-900 font-extrabold text-sm break-all">{selectedStudentForView.email}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <div className="flex items-center gap-3 bg-slate-50/60 p-3.5 rounded-2xl border border-slate-100">
+                      <Phone className="w-5 h-5 text-blue-500 flex-shrink-0" />
                       <div>
-                        <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Contact Number</span>
-                        <span className="text-slate-800 font-bold">{selectedStudentForView.phone}</span>
+                        <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider">Contact Number</span>
+                        <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.phone}</span>
                       </div>
                     </div>
-                    <div className="col-span-2 flex items-start gap-2 border-t border-slate-50 pt-2.5">
+                    <div className="md:col-span-2 flex items-start gap-3 bg-slate-50/60 p-3.5 rounded-2xl border border-slate-100">
                       <div>
-                        <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Home Address</span>
-                        <span className="text-slate-800 font-bold">{selectedStudentForView.homeAddress || 'N/A'}</span>
+                        <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider">Home Address</span>
+                        <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.homeAddress || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
@@ -32831,36 +33011,36 @@ const InstituteERPStudents = ({
 
                 {/* 3. Program Metrics & Financials */}
                 <div>
-                  <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-50 pb-1.5 mb-2.5">Internal Progress & Fee Remittance</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <h4 className="text-xs uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-2 mb-4">Internal Progress & Fee Remittance</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-5 gap-x-6">
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Course Director</span>
-                      <span className="text-slate-800 font-bold">{selectedStudentForView.courseDirector || 'N/A'}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Course Director</span>
+                      <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.courseDirector || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Razorpay Payment ID</span>
-                      <span className="text-indigo-600 font-mono font-black">{selectedStudentForView.razorpayPaymentId || 'N/A'}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Razorpay Payment ID</span>
+                      <span className="text-blue-600 font-mono font-black text-sm">{selectedStudentForView.razorpayPaymentId || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Foreign Graduate Status</span>
-                      <span className="text-slate-800 font-bold">{selectedStudentForView.isForeignGraduate ? `Yes (FMGE: ${selectedStudentForView.fmgeClearanceStatus})` : 'No'}</span>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Foreign Graduate Status</span>
+                      <span className="text-slate-900 font-extrabold text-sm">{selectedStudentForView.isForeignGraduate ? `Yes (FMGE: ${selectedStudentForView.fmgeClearanceStatus})` : 'No'}</span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Attendance Percentage</span>
-                      <span className={`font-extrabold ${(selectedStudentForView.attendancePercentage || 0) >= 75 ? 'text-slate-800' : 'text-rose-600'}`}>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Attendance Percentage</span>
+                      <span className={`text-sm font-black ${(selectedStudentForView.attendancePercentage || 0) >= 75 ? 'text-slate-900' : 'text-rose-600'}`}>
                         {selectedStudentForView.attendancePercentage || 0}%
                       </span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Thesis Review Status</span>
-                      <span className={`font-bold ${selectedStudentForView.thesisApproved ? 'text-emerald-700' : 'text-slate-500'}`}>
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Thesis Review Status</span>
+                      <span className={`text-sm font-extrabold ${selectedStudentForView.thesisApproved ? 'text-emerald-700' : 'text-slate-500'}`}>
                         {selectedStudentForView.thesisApproved ? 'Approved by Board' : 'Evaluation Pending'}
                       </span>
                     </div>
                     <div>
-                      <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Academy Fee Status</span>
-                      <span className={`font-bold ${selectedStudentForView.status === 'Completed' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {selectedStudentForView.status === 'Completed' ? 'Remitted' : 'Remittance Pending'}
+                      <span className="block text-xs uppercase font-bold text-slate-400 tracking-wider mb-0.5">Student Fee Status</span>
+                      <span className={`text-sm font-black ${selectedStudentForView.razorpayPaymentId || selectedStudentForView.status === 'Completed' || selectedStudentForView.remittedToAcademy ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {selectedStudentForView.razorpayPaymentId || selectedStudentForView.status === 'Completed' || selectedStudentForView.remittedToAcademy ? 'Paid & Enrolled' : 'Payment Pending'}
                       </span>
                     </div>
                   </div>
@@ -32869,17 +33049,17 @@ const InstituteERPStudents = ({
                 {/* 4. Submitted Documents */}
                 {selectedStudentForView.documents && Object.keys(selectedStudentForView.documents).length > 0 && (
                   <div>
-                    <h4 className="text-[10px] uppercase font-black tracking-widest text-slate-400 border-b border-slate-50 pb-1.5 mb-2.5">Uploaded Credentials Documents</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-semibold">
+                    <h4 className="text-xs uppercase font-black tracking-widest text-slate-400 border-b border-slate-100 pb-2 mb-4">Uploaded Credentials Documents</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-bold">
                       {selectedStudentForView.documents.passportPhotoUrl && (
                         <a 
                           href={getDocUrl(selectedStudentForView.documents.passportPhotoUrl)} 
                           target="_blank" 
                           rel="noreferrer" 
-                          className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-colors"
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
                         >
-                          <span className="text-lg">📷</span>
-                          <span className="truncate">Candidate Passport Photo</span>
+                          <span className="text-xl">📷</span>
+                          <span className="truncate text-slate-700 group-hover:text-blue-700">Candidate Passport Photo</span>
                         </a>
                       )}
                       {selectedStudentForView.documents.mbbsCertificateUrl && (
@@ -32887,10 +33067,10 @@ const InstituteERPStudents = ({
                           href={getDocUrl(selectedStudentForView.documents.mbbsCertificateUrl)} 
                           target="_blank" 
                           rel="noreferrer" 
-                          className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-colors"
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
                         >
-                          <span className="text-lg">📄</span>
-                          <span className="truncate">MBBS Degree Certificate</span>
+                          <span className="text-xl">📄</span>
+                          <span className="truncate text-slate-700 group-hover:text-blue-700">MBBS Degree Certificate</span>
                         </a>
                       )}
                       {selectedStudentForView.documents.medicalCouncilRegistrationCertificateUrl && (
@@ -32898,10 +33078,10 @@ const InstituteERPStudents = ({
                           href={getDocUrl(selectedStudentForView.documents.medicalCouncilRegistrationCertificateUrl)} 
                           target="_blank" 
                           rel="noreferrer" 
-                          className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-colors"
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
                         >
-                          <span className="text-lg">📜</span>
-                          <span className="truncate">Medical Council Certificate</span>
+                          <span className="text-xl">📜</span>
+                          <span className="truncate text-slate-700 group-hover:text-blue-700">Medical Council Certificate</span>
                         </a>
                       )}
                       {selectedStudentForView.documents.fmgeResultCopyUrl && (
@@ -32909,21 +33089,10 @@ const InstituteERPStudents = ({
                           href={getDocUrl(selectedStudentForView.documents.fmgeResultCopyUrl)} 
                           target="_blank" 
                           rel="noreferrer" 
-                          className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-colors"
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
                         >
-                          <span className="text-lg">📝</span>
-                          <span className="truncate">FMGE Screening Result Copy</span>
-                        </a>
-                      )}
-                      {selectedStudentForView.documents.paymentReceiptUrl && (
-                        <a 
-                          href={getDocUrl(selectedStudentForView.documents.paymentReceiptUrl)} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-colors"
-                        >
-                          <span className="text-lg">💳</span>
-                          <span className="truncate">Enrollment Payment Receipt</span>
+                          <span className="text-xl">📝</span>
+                          <span className="truncate text-slate-700 group-hover:text-blue-700">FMGE Screening Result Copy</span>
                         </a>
                       )}
                       {selectedStudentForView.documents.semiMembershipFormUrl && (
@@ -32931,10 +33100,32 @@ const InstituteERPStudents = ({
                           href={getDocUrl(selectedStudentForView.documents.semiMembershipFormUrl)} 
                           target="_blank" 
                           rel="noreferrer" 
-                          className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl hover:bg-blue-50/50 hover:text-blue-600 transition-colors"
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
                         >
-                          <span className="text-lg">🗳️</span>
-                          <span className="truncate">SEMI Membership Form</span>
+                          <span className="text-xl">🗳️</span>
+                          <span className="truncate text-slate-700 group-hover:text-blue-700">SEMI Membership Form</span>
+                        </a>
+                      )}
+                      {selectedStudentForView.documents.studentSignatureUrl && (
+                        <a 
+                          href={getDocUrl(selectedStudentForView.documents.studentSignatureUrl)} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
+                        >
+                          <span className="text-xl">✍️</span>
+                          <span className="truncate text-slate-700 group-hover:text-blue-700">Student Signature</span>
+                        </a>
+                      )}
+                      {selectedStudentForView.documents.hodSignatureUrl && (
+                        <a 
+                          href={getDocUrl(selectedStudentForView.documents.hodSignatureUrl)} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
+                        >
+                          <span className="text-xl">🎓</span>
+                          <span className="truncate text-slate-700 group-hover:text-blue-700">PG Degree Certificate / HOD Confirmation</span>
                         </a>
                       )}
                     </div>
@@ -32944,11 +33135,11 @@ const InstituteERPStudents = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
+            <div className="px-8 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/70">
               <button
                 type="button"
                 onClick={() => setSelectedStudentForView(null)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm hover:scale-[1.01] cursor-pointer"
               >
                 Close Profile
               </button>
@@ -33259,8 +33450,9 @@ const DOC_FIELDS = [
   { key: 'mbbsCertificate', urlKey: 'mbbsCertificateUrl', label: 'MBBS Degree Certificate (PDF/DOC)', icon: '📄', isImage: false },
   { key: 'medicalCouncilRegistrationCertificate', urlKey: 'medicalCouncilRegistrationCertificateUrl', label: 'Medical Council Certificate (PDF)', icon: '📜', isImage: false },
   { key: 'fmgeResultCopy', urlKey: 'fmgeResultCopyUrl', label: 'FMGE Screening Result (PDF)', icon: '📝', isImage: false },
-  { key: 'paymentReceipt', urlKey: 'paymentReceiptUrl', label: 'Payment Receipt (PDF/JPG)', icon: '💳', isImage: false },
   { key: 'semiMembershipForm', urlKey: 'semiMembershipFormUrl', label: 'SEMI Membership Form (PDF/DOC)', icon: '🗳️', isImage: false },
+  { key: 'studentSignature', urlKey: 'studentSignatureUrl', label: 'Student Signature (JPG/PNG)', icon: '✍️', isImage: true },
+  { key: 'hodSignature', urlKey: 'hodSignatureUrl', label: 'PG Degree / HOD Confirmation (PDF)', icon: '🎓', isImage: false },
 ];
 
 const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses = [], batches = [] }) => {
@@ -35102,7 +35294,7 @@ export { default } from '../InstitutePortal';
 ### `client/src/pages/public/results/components/ResultsDisplay.jsx`
 
 ```jsx
-import React from 'react';
+
 
 const ResultsDisplay = ({ data, onBack }) => {
   const { student, results } = data;
@@ -35262,7 +35454,7 @@ export default ResultsDisplay;
 ### `client/src/pages/public/results/components/ResultsLogin.jsx`
 
 ```jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const ResultsLogin = ({ onSearch, isLoading, error }) => {
   const [enrollmentId, setEnrollmentId] = useState('');

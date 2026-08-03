@@ -47,6 +47,7 @@ export interface IInstitute extends Document {
   razorpaySignature?: string;
   paymentCompletedAt?: Date;
   paymentAmount?: number;
+  approvedSeats?: number;
 }
 
 const instituteSchema: Schema = new Schema(
@@ -138,6 +139,10 @@ const instituteSchema: Schema = new Schema(
     },
     paymentAmount: {
       type: Number,
+    },
+    approvedSeats: {
+      type: Number,
+      default: 5,
     }
   },
   {

@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 const ResultsDisplay = ({ data, onBack }) => {
   const { student, results } = data;

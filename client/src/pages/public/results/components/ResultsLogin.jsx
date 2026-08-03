@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const ResultsLogin = ({ onSearch, isLoading, error }) => {
   const [enrollmentId, setEnrollmentId] = useState('');

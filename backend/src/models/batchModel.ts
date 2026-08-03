@@ -56,7 +56,7 @@ const batchSchema: Schema = new Schema(
   }
 );
 
-// Unique batch year per course
-batchSchema.index({ course: 1, year: 1 }, { unique: true });
+// Unique batch name per course (allows multiple batches like Batch 2026-A, Batch 2026-B in the same year)
+batchSchema.index({ course: 1, name: 1 }, { unique: true });
 
 export const Batch = mongoose.model<IBatch>('Batch', batchSchema);

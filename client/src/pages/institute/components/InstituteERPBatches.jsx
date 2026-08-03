@@ -149,12 +149,19 @@ const InstituteERPBatches = ({
             </div>
 
             <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Intake Capacity (Seats) *</label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500">
+                  Intake Capacity (Seats) *
+                </label>
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  Board Authorized
+                </span>
+              </div>
               <input
                 type="number"
                 min="1"
                 required
-                placeholder="Intake limit"
+                placeholder="Intake limit (Fixed by Board)"
                 value={editingBatch ? editForm.seats : newBatch.seats}
                 onChange={(e) => {
                   if (editingBatch) {
@@ -165,6 +172,9 @@ const InstituteERPBatches = ({
                 }}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
               />
+              <p className="text-[10px] text-gray-400 mt-1 italic">
+                Seat quotas are fixed during institute onboarding approval by the Academic Board.
+              </p>
             </div>
 
             <button

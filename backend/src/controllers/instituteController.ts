@@ -407,7 +407,7 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
 export const reviewApplication = async (req: Request, res: Response) => {
   try {
     const { instituteId } = req.params;
-    const { status, remarks } = req.body;
+    const { status, remarks, approvedSeats } = req.body;
 
     if (!['Approved', 'Rejected'].includes(status)) {
       return sendError({ req, res, statusCode: 400, message: 'Status must be Approved or Rejected' });
@@ -430,6 +430,9 @@ export const reviewApplication = async (req: Request, res: Response) => {
 
     institute.status = status;
     institute.remarks = remarks || '';
+    if (approvedSeats !== undefined && !isNaN(Number(approvedSeats))) {
+      institute.approvedSeats = Number(approvedSeats);
+    }
     await institute.save();
 
     // Fetch the user related to the institute

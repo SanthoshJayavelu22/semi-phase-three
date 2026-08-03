@@ -3,9 +3,15 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IRemittance extends Document {
   institute: mongoose.Types.ObjectId;
   totalAmount: number;
-  utrNumber: string;
+  paymentPurpose?: string;
+  remarks?: string;
+  utrNumber?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  paymentMode?: string;
   paymentDate: Date;
-  paymentReceiptUrl: string;
+  paymentReceiptUrl?: string;
   students: mongoose.Types.ObjectId[];
 }
 
@@ -20,17 +26,41 @@ const remittanceSchema: Schema = new Schema(
       type: Number,
       required: true,
     },
+    paymentPurpose: {
+      type: String,
+      default: 'Annual Fellowship Accreditation Remittance',
+    },
+    remarks: {
+      type: String,
+      default: '',
+    },
     utrNumber: {
       type: String,
-      required: true,
+      default: '',
+    },
+    razorpayOrderId: {
+      type: String,
+      default: '',
+    },
+    razorpayPaymentId: {
+      type: String,
+      default: '',
+    },
+    razorpaySignature: {
+      type: String,
+      default: '',
+    },
+    paymentMode: {
+      type: String,
+      default: 'Razorpay Online',
     },
     paymentDate: {
       type: Date,
-      required: true,
+      default: Date.now,
     },
     paymentReceiptUrl: {
       type: String,
-      required: true,
+      default: '',
     },
     students: [
       {

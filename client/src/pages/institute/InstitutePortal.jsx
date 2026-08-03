@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import InstitutionalLayout from './InstitutionalLayout';
@@ -274,6 +274,7 @@ const InstitutePortal = () => {
     courseDuration: '',
     durationType: '',
     subjects: [],
+    practicalExamName: '',
     examinationFee: '',
   });
 
@@ -349,6 +350,8 @@ const InstitutePortal = () => {
           courseDuration: c.courseDuration || '2',
           durationType: c.durationType || 'Years',
           subjects: c.subjects || [],
+          practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
+          practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
           totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
           courseFee: c.courseFee || '0',
           registrationFee: c.registrationFee || '0',
@@ -400,6 +403,7 @@ const InstitutePortal = () => {
           enrollmentNo: s.enrollmentId,
           admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
           status: s.remittedToAcademy ? 'Completed' : 'Active',
+          remittedToAcademy: s.remittedToAcademy || false,
           attendancePercentage: s.attendancePercentage || 0,
           thesisApproved: s.thesisApproved || false,
           courseId: s.course?._id || s.course,
@@ -1623,6 +1627,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         courseDuration: courseForm.courseDuration,
         durationType: courseForm.durationType,
         subjects: courseForm.subjects,
+        practicalExamName: courseForm.practicalExamName || 'Clinical OSCE & Practical Station Exam',
+        practicalExams: courseForm.practicalExams || [],
         examinationFee: courseForm.examinationFee,
         description: `${courseForm.courseType} - ${courseForm.programCategory}`
       });
@@ -1638,6 +1644,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         courseDuration: '',
         durationType: '',
         subjects: [],
+        practicalExamName: '',
+        practicalExams: [],
         examinationFee: ''
       });
     } catch (err) {
