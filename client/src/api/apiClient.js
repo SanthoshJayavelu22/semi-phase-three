@@ -49,6 +49,25 @@ const addRefreshSubscriber = (cb) => {
   refreshSubscribers.push(cb);
 };
 
+// Clear every auth token so the user is forced to log in again
+const clearStoredSession = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('semi_token');
+  localStorage.removeItem('semi_institute_token');
+  localStorage.removeItem('semi_board_token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('semi_refreshToken');
+  localStorage.removeItem('semi_board_user');
+};
+
+// Hard-redirect to the correct portal login page
+const redirectToLogin = () => {
+  if (typeof window === 'undefined') return;
+  window.location.href = window.location.pathname.startsWith('/institute')
+    ? '/institute/login'
+    : '/academy/login';
+};
+
 // Request interceptor to automatically add Authorization header
 apiClient.interceptors.request.use(
   (config) => {
@@ -80,6 +99,15 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // A request retried with a freshly refreshed token that STILL 401s means the
+    // user account no longer exists (deleted / DB re-seeded) or the token is dead.
+    // Refresh succeeded but protect() couldn't find the user — force re-login.
+    if (error.response?.status === 401 && originalRequest?._retry) {
+      clearStoredSession();
+      redirectToLogin();
+      return Promise.reject(error);
+    }
+
     // Check if error is 401 and we haven't already retried this request
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Skip refresh for auth endpoints to avoid loops
@@ -146,21 +174,8 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
         // Clear tokens if refresh fails to force logout
-        localStorage.removeItem('token');
-        localStorage.removeItem('semi_token');
-        localStorage.removeItem('semi_institute_token');
-        localStorage.removeItem('semi_board_token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('semi_refreshToken');
-        localStorage.removeItem('semi_board_user');
-        // Redirect to login if in browser
-        if (typeof window !== 'undefined') {
-          if (window.location.pathname.startsWith('/institute')) {
-            window.location.href = '/institute/login';
-          } else {
-            window.location.href = '/academy/login';
-          }
-        }
+        clearStoredSession();
+        redirectToLogin();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

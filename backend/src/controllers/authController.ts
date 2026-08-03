@@ -171,6 +171,12 @@ export const refreshToken = async (req: Request, res: Response) => {
 
 
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'refresh_secret') as any;
+
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return sendError({ req, res, statusCode: 401, message: 'User account no longer exists' });
+    }
+
     const accessToken = generateToken(decoded.id, 'access');
 
     return sendSuccess({ req, res, message: 'Token refreshed', data: { accessToken } });

@@ -21,6 +21,7 @@ function extractRoutes(dir) {
         }
     });
     return allRoutes;
+    
 }
 
 function extractFrontendApis(dir) {

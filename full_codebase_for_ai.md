@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-08-01T09:49:28.436Z
+> Auto-generated on 2026-07-31T12:15:28.965Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -23,6 +23,7 @@ semi-phase-three/
 │   │   │   ├── examController.ts
 │   │   │   ├── healthController.ts
 │   │   │   ├── instituteController.ts
+│   │   │   ├── marksController.ts
 │   │   │   ├── marksheetController.ts
 │   │   │   ├── paymentController.ts
 │   │   │   ├── resultController.ts
@@ -55,6 +56,7 @@ semi-phase-three/
 │   │   │   ├── healthRoutes.ts
 │   │   │   ├── instituteRoutes.ts
 │   │   │   ├── marksheetRoutes.ts
+│   │   │   ├── marksRoutes.ts
 │   │   │   ├── paymentRoutes.ts
 │   │   │   ├── resultRoutes.ts
 │   │   │   ├── revaluationRoutes.ts
@@ -100,7 +102,9 @@ semi-phase-three/
 │   │   │   ├── auth.js
 │   │   │   ├── certificates.js
 │   │   │   ├── exams.js
+│   │   │   ├── fees.js
 │   │   │   ├── institutes.js
+│   │   │   ├── marks.js
 │   │   │   ├── marksheets.js
 │   │   │   ├── results.js
 │   │   │   ├── revaluation.js
@@ -645,7 +649,8 @@ try {
 ### `backend/ecosystem.config.js`
 
 ```javascript
-��m o d u l e . e x p o r t s   =   {   a p p s :   [ {   n a m e :   ' s e m i - b a c k e n d ' ,   s c r i p t :   ' . / d i s t / i n d e x . j s ' ,   i n s t a n c e s :   ' m a x ' ,   e x e c _ m o d e :   ' c l u s t e r ' ,   e n v _ p r o d u c t i o n :   {   N O D E _ E N V :   ' p r o d u c t i o n '   }   } ]   } ;  
+��m o d u l e . e x p o r t s   =   {   a p p s :   [ {   n a m e :   ' s e m i - b a c k e n d ' ,   s c r i p t :   ' . / d i s t / i n d e x . j s ' ,   i n s t a n c e s :   ' m a x ' ,   e x e c _ m o d e :   ' c l u s t e r ' ,   e n v _ p r o d u c t i o n :   {   N O D E _ E N V :   ' p r o d u c t i o n '   }   } ]   } ; 
+ 
  
 ```
 
@@ -5896,6 +5901,12 @@ export const refreshToken = async (req: Request, res: Response) => {
 
 
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'refresh_secret') as any;
+
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return sendError({ req, res, statusCode: 401, message: 'User account no longer exists' });
+    }
+
     const accessToken = generateToken(decoded.id, 'access');
 
     return sendSuccess({ req, res, message: 'Token refreshed', data: { accessToken } });
@@ -8288,6 +8299,861 @@ export const debugPaymentStatus = async (req: Request, res: Response) => {
             
 ```
 
+### `backend/src/controllers/marksController.ts`
+
+```typescript
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { Student } from '../models/studentModel';
+import { Course } from '../models/courseModel';
+import { Institute } from '../models/instituteModel';
+import { Result } from '../models/resultModel';
+import { sendSuccess, sendError } from '../utils/responseFormatter';
+
+// ─── Zod Schemas ──────────────────────────────────────────────────────────────
+
+const updateMarksSchema = z.object({
+  semesterNumber: z.coerce.number().min(1, 'Semester number is required'),
+  subjects: z
+    .array(
+      z.object({
+        subjectCode: z.string().min(1, 'Subject code is required'),
+        subjectName: z.string().min(1, 'Subject name is required'),
+        marksObtained: z.number().nullable().optional(),
+        isAbsent: z.boolean().default(false),
+        totalMarks: z.number().default(100),
+      })
+    )
+    .min(1, 'At least one subject is required'),
+});
+
+const bulkUpdateMarksSchema = z.object({
+  semesterNumber: z.coerce.number().min(1),
+  students: z
+    .array(
+      z.object({
+        studentId: z.string().min(1),
+        subjects: z
+          .array(
+            z.object({
+              subjectCode: z.string().min(1),
+              subjectName: z.string().min(1),
+              marksObtained: z.number().nullable().optional(),
+              isAbsent: z.boolean().default(false),
+              totalMarks: z.number().default(100),
+            })
+          )
+          .min(1),
+      })
+    )
+    .min(1),
+});
+
+// ─── Helper Functions ─────────────────────────────────────────────────────────
+
+const calculateGrade = (marks: number | null, totalMarks: number = 100): string => {
+  if (marks === null) return 'ABSENT';
+  const percentage = (marks / totalMarks) * 100;
+  if (percentage >= 90) return 'O';
+  if (percentage >= 80) return 'A+';
+  if (percentage >= 70) return 'A';
+  if (percentage >= 60) return 'B+';
+  if (percentage >= 50) return 'B';
+  if (percentage >= 40) return 'C';
+  if (percentage >= 35) return 'D';
+  return 'F';
+};
+
+const getGradePoints = (marks: number | null, totalMarks: number = 100): number => {
+  if (marks === null) return 0;
+  const percentage = (marks / totalMarks) * 100;
+  if (percentage >= 90) return 10;
+  if (percentage >= 80) return 9;
+  if (percentage >= 70) return 8;
+  if (percentage >= 60) return 7;
+  if (percentage >= 50) return 6;
+  if (percentage >= 40) return 5;
+  if (percentage >= 35) return 4;
+  return 0;
+};
+
+const getInstituteId = async (userId: string) => {
+  const institute = await Institute.findOne({ user: userId, status: 'Approved' });
+  return institute?._id || null;
+};
+
+const buildDefaultMarks = (courseSubjects: string[]) => {
+  return courseSubjects.map((sub) => ({
+    subjectCode: sub.substring(0, 6).toUpperCase(),
+    subjectName: sub,
+    marksObtained: null,
+    totalMarks: 100,
+    isAbsent: false,
+    grade: '',
+  }));
+};
+
+const getSubjectsForCourse = async (courseId: any) => {
+  try {
+    const course = await Course.findById(courseId);
+    return course?.subjects?.length ? course.subjects : [];
+  } catch {
+    return [];
+  }
+};
+
+// ─── Get All Students with Marks ─────────────────────────────────────────────
+
+export const getStudentsWithMarks = async (req: Request, res: Response) => {
+  try {
+    const { courseId, batchId, instituteId, search, semesterNumber } = req.query;
+    const query: any = {};
+
+    // Institute access control
+    if (req.user.role === 'institute') {
+      const instituteIdForUser = await getInstituteId(req.user._id);
+      if (!instituteIdForUser) {
+        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute is not approved.' });
+      }
+      query.institute = instituteIdForUser;
+    } else if (instituteId) {
+      query.institute = instituteId;
+    }
+
+    if (courseId) query.course = courseId;
+    if (batchId) query.batch = batchId;
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { enrollmentId: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const students = await Student.find(query)
+      .populate('course', 'name subjects')
+      .populate('batch', 'year name')
+      .populate('institute', 'orgName')
+      .sort({ createdAt: -1 });
+
+    const formattedStudents = await Promise.all(
+      students.map(async (student) => {
+        const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
+
+        const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
+
+        if (semesterRecord) {
+          return {
+            id: student._id,
+            _id: student._id,
+            enrollmentId: student.enrollmentId,
+            fullName: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+            firstName: student.firstName,
+            lastName: student.lastName,
+            email: student.email,
+            contactNumber: student.contactNumber,
+            course: student.course,
+            batch: student.batch,
+            institute: student.institute,
+            semesterNumber: semNum,
+            attendancePercentage: semesterRecord.attendancePercentage || 0,
+            thesisApproved: semesterRecord.thesisApproved || false,
+            eligibilityStatus: semesterRecord.eligibilityStatus || 'Pending',
+            marks: semesterRecord.marks || [],
+            documents: student.documents || {},
+            remittedToAcademy: student.remittedToAcademy || false,
+          };
+        }
+
+        // No semester record yet - seed default subjects from the course
+        const courseSubjects = await getSubjectsForCourse(student.course);
+
+        return {
+          id: student._id,
+          _id: student._id,
+          enrollmentId: student.enrollmentId,
+          fullName: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          contactNumber: student.contactNumber,
+          course: student.course,
+          batch: student.batch,
+          institute: student.institute,
+          semesterNumber: semNum,
+          attendancePercentage: 0,
+          thesisApproved: false,
+          eligibilityStatus: 'Pending',
+          marks: buildDefaultMarks(courseSubjects),
+          documents: student.documents || {},
+          remittedToAcademy: student.remittedToAcademy || false,
+        };
+      })
+    );
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Students with marks retrieved successfully',
+      data: formattedStudents,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Get Single Student with Marks ──────────────────────────────────────────
+
+export const getStudentMarks = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const { semesterNumber } = req.query;
+
+    const query: any = { _id: studentId };
+
+    if (req.user.role === 'institute') {
+      const instituteIdForUser = await getInstituteId(req.user._id);
+      if (!instituteIdForUser) {
+        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute is not approved.' });
+      }
+      query.institute = instituteIdForUser;
+    }
+
+    const student = await Student.findOne(query)
+      .populate('course', 'name subjects')
+      .populate('batch', 'year name');
+
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+    }
+
+    const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
+    const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
+
+    let marks = semesterRecord?.marks || [];
+    if (!semesterRecord) {
+      const courseSubjects = await getSubjectsForCourse(student.course);
+      marks = buildDefaultMarks(courseSubjects);
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Student marks retrieved successfully',
+      data: {
+        id: student._id,
+        _id: student._id,
+        enrollmentId: student.enrollmentId,
+        fullName: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
+        contactNumber: student.contactNumber,
+        course: student.course,
+        batch: student.batch,
+        institute: student.institute,
+        semesterNumber: semNum,
+        attendancePercentage: semesterRecord?.attendancePercentage || 0,
+        thesisApproved: semesterRecord?.thesisApproved || false,
+        eligibilityStatus: semesterRecord?.eligibilityStatus || 'Pending',
+        marks,
+        documents: student.documents || {},
+        remittedToAcademy: student.remittedToAcademy || false,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Update Student Marks ────────────────────────────────────────────────────
+
+export const updateStudentMarks = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const validatedData = updateMarksSchema.parse(req.body);
+
+    const query: any = { _id: studentId };
+
+    if (req.user.role === 'institute') {
+      const instituteIdForUser = await getInstituteId(req.user._id);
+      if (!instituteIdForUser) {
+        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute is not approved.' });
+      }
+      query.institute = instituteIdForUser;
+    }
+
+    const student = await Student.findOne(query);
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+    }
+
+    const semNum = validatedData.semesterNumber;
+    let semesterIndex = student.semesters.findIndex((s) => s.semesterNumber === semNum);
+
+    if (semesterIndex === -1) {
+      student.semesters.push({
+        semesterNumber: semNum,
+        attendancePercentage: 0,
+        thesisApproved: false,
+        eligibilityStatus: 'Pending',
+        marks: [],
+      });
+      semesterIndex = student.semesters.length - 1;
+    }
+
+    const semester = student.semesters[semesterIndex];
+    if (!semester.marks) {
+      semester.marks = [];
+    }
+
+    for (const subject of validatedData.subjects) {
+      const marksData = {
+        subjectCode: subject.subjectCode,
+        subjectName: subject.subjectName,
+        marksObtained: subject.isAbsent ? null : subject.marksObtained ?? null,
+        totalMarks: subject.totalMarks || 100,
+        isAbsent: subject.isAbsent || false,
+        grade: subject.isAbsent ? 'ABSENT' : calculateGrade(subject.marksObtained ?? null, subject.totalMarks || 100),
+        updatedBy: req.user._id,
+        updatedAt: new Date(),
+      };
+
+      const existingIndex = semester.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
+      if (existingIndex !== -1) {
+        semester.marks[existingIndex] = marksData;
+      } else {
+        semester.marks.push(marksData);
+      }
+    }
+
+    // Only the semesters array is modified — validate just that path so
+    // pre-existing incomplete student documents (e.g. missing homeAddress)
+    // don't block saving marks.
+    await student.save({ validateModifiedOnly: true });
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Student marks updated successfully',
+      data: {
+        id: student._id,
+        _id: student._id,
+        enrollmentId: student.enrollmentId,
+        fullName: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+        semesterNumber: semNum,
+        marks: semester.marks,
+        attendancePercentage: semester.attendancePercentage || 0,
+        thesisApproved: semester.thesisApproved || false,
+        eligibilityStatus: semester.eligibilityStatus || 'Pending',
+      },
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return sendError({ req, res, statusCode: 400, message: 'Validation failed', errors: error.issues });
+    }
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Bulk Update Marks ──────────────────────────────────────────────────────
+
+export const bulkUpdateMarks = async (req: Request, res: Response) => {
+  try {
+    const validatedData = bulkUpdateMarksSchema.parse(req.body);
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    for (const studentData of validatedData.students) {
+      try {
+        const student = await Student.findById(studentData.studentId);
+        if (!student) {
+          errors.push({ studentId: studentData.studentId, error: 'Student not found' });
+          continue;
+        }
+
+        const semNum = validatedData.semesterNumber;
+        let semesterIndex = student.semesters.findIndex((s) => s.semesterNumber === semNum);
+
+        if (semesterIndex === -1) {
+          student.semesters.push({
+            semesterNumber: semNum,
+            attendancePercentage: 0,
+            thesisApproved: false,
+            eligibilityStatus: 'Pending',
+            marks: [],
+          });
+          semesterIndex = student.semesters.length - 1;
+        }
+
+        const semester = student.semesters[semesterIndex];
+        if (!semester.marks) {
+          semester.marks = [];
+        }
+
+        for (const subject of studentData.subjects) {
+          const marksData = {
+            subjectCode: subject.subjectCode,
+            subjectName: subject.subjectName,
+            marksObtained: subject.isAbsent ? null : subject.marksObtained ?? null,
+            totalMarks: subject.totalMarks || 100,
+            isAbsent: subject.isAbsent || false,
+            grade: subject.isAbsent ? 'ABSENT' : calculateGrade(subject.marksObtained ?? null, subject.totalMarks || 100),
+            updatedBy: req.user._id,
+            updatedAt: new Date(),
+          };
+
+          const existingIndex = semester.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
+          if (existingIndex !== -1) {
+            semester.marks[existingIndex] = marksData;
+          } else {
+            semester.marks.push(marksData);
+          }
+        }
+
+        // Only the semesters array is modified — validate just that path so
+        // pre-existing incomplete student documents don't block saving marks.
+        await student.save({ validateModifiedOnly: true });
+        results.push({
+          studentId: studentData.studentId,
+          name: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+          status: 'success',
+        });
+      } catch (err: any) {
+        errors.push({ studentId: studentData.studentId, error: err.message });
+      }
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: `Updated ${results.length} students, ${errors.length} failed`,
+      data: { results, errors },
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return sendError({ req, res, statusCode: 400, message: 'Validation failed', errors: error.issues });
+    }
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Get Course Subjects ─────────────────────────────────────────────────────
+
+export const getCourseSubjects = async (req: Request, res: Response) => {
+  try {
+    const { courseId } = req.params;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return sendError({ req, res, statusCode: 404, message: 'Course not found' });
+    }
+
+    const subjects = course.subjects || [];
+    const subjectList = subjects.map((name: string, index: number) => ({
+      code: `${name.substring(0, 6).toUpperCase()}${index + 1}`,
+      name,
+    }));
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Course subjects retrieved successfully',
+      data: subjectList,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Result Generation from Marks ────────────────────────────────────────────
+
+const generateResultsFromMarksSchema = z.object({
+  semesterNumber: z.coerce.number().min(1),
+  batchId: z.string().min(1),
+  courseId: z.string().min(1),
+  academicYear: z.string().min(1),
+  examDate: z.string().optional(),
+  publishDate: z.string().optional(),
+  publishTime: z.string().optional(),
+  selectedStudentIds: z.array(z.string()).optional(),
+});
+
+export const generateResultsFromMarks = async (req: Request, res: Response) => {
+  try {
+    const validatedData = generateResultsFromMarksSchema.parse(req.body);
+    const userId = req.user._id;
+
+    // Find all students for this batch/course with marks
+    const query: any = {
+      batch: validatedData.batchId,
+      course: validatedData.courseId,
+    };
+
+    if (validatedData.selectedStudentIds && validatedData.selectedStudentIds.length > 0) {
+      query._id = { $in: validatedData.selectedStudentIds };
+    }
+
+    const students = await Student.find(query)
+      .populate('course', 'name subjects')
+      .populate('batch', 'year name');
+
+    if (students.length === 0) {
+      return sendError({ req, res, statusCode: 404, message: 'No students found for this batch and course.' });
+    }
+
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    for (const student of students) {
+      try {
+        // Find the semester record
+        const semesterRecord = student.semesters.find(
+          (s: any) => s.semesterNumber === validatedData.semesterNumber
+        );
+
+        if (!semesterRecord || !semesterRecord.marks || semesterRecord.marks.length === 0) {
+          errors.push({
+            studentId: student._id,
+            name: `${student.firstName} ${student.lastName}`,
+            reason: 'No marks found for this semester',
+          });
+          continue;
+        }
+
+        // Check if all subjects have marks or are marked absent
+        const allMarked = semesterRecord.marks.every(
+          (m: any) => m.isAbsent === true || m.marksObtained !== null
+        );
+
+        if (!allMarked) {
+          errors.push({
+            studentId: student._id,
+            name: `${student.firstName} ${student.lastName}`,
+            reason: 'Some subjects are not marked (missing marks)',
+          });
+          continue;
+        }
+
+        // Build result subjects
+        const subjects = semesterRecord.marks.map((m: any) => {
+          const marksObtained = m.isAbsent ? 0 : (m.marksObtained || 0);
+          const totalMarks = m.totalMarks || 100;
+          const grade = m.isAbsent ? 'ABSENT' : calculateGrade(marksObtained, totalMarks);
+
+          return {
+            subjectCode: m.subjectCode,
+            subjectName: m.subjectName,
+            internalMarks: Math.floor(marksObtained * 0.4),
+            externalMarks: Math.ceil(marksObtained * 0.6),
+            totalMarks: marksObtained,
+            grade,
+            credits: 3,
+            gradePoints: getGradePoints(marksObtained),
+            isRevaluationApplied: false,
+            isRevaluationCompleted: false,
+          };
+        });
+
+        // Calculate overall metrics
+        const totalMarks = subjects.reduce((sum: number, s: any) => sum + (s.totalMarks || 0), 0);
+        const maxMarks = subjects.length * 100;
+        const percentage = maxMarks > 0 ? (totalMarks / maxMarks) * 100 : 0;
+        const totalCredits = subjects.reduce((sum: number, s: any) => sum + (s.credits || 0), 0);
+
+        const gradePoints = subjects.map((s: any) => s.gradePoints || 0);
+        const sgpa = subjects.length > 0 ? gradePoints.reduce((a: number, b: number) => a + b, 0) / subjects.length : 0;
+
+        let division = 'Fail';
+        let resultStatus = 'FAIL';
+        if (percentage >= 60) {
+          division = 'First';
+          resultStatus = 'PASS';
+        } else if (percentage >= 50) {
+          division = 'Second';
+          resultStatus = 'PASS';
+        } else if (percentage >= 40) {
+          division = 'Third';
+          resultStatus = 'PASS';
+        } else if (percentage >= 35) {
+          division = 'Pass';
+          resultStatus = 'PASS';
+        }
+
+        // Check if result already exists
+        const existingResult = await Result.findOne({
+          student: student._id,
+          academicYear: validatedData.academicYear,
+          semester: validatedData.semesterNumber,
+        });
+
+        if (existingResult) {
+          const previousSubjects = existingResult.subjects;
+          existingResult.subjects = subjects as any;
+          existingResult.totalMarks = totalMarks;
+          existingResult.totalCredits = totalCredits;
+          existingResult.percentage = parseFloat(percentage.toFixed(2));
+          existingResult.cgpa = parseFloat(sgpa.toFixed(2));
+          existingResult.sgpa = parseFloat(sgpa.toFixed(2));
+          existingResult.division = division as any;
+          existingResult.resultStatus = resultStatus as any;
+          existingResult.auditHistory.push({
+            action: 'UPDATED',
+            previousData: { subjects: previousSubjects },
+            newData: { subjects },
+            performedBy: userId,
+            timestamp: new Date(),
+          });
+          await existingResult.save();
+          results.push(existingResult);
+        } else {
+          // Create new result
+          const newResult = await Result.create({
+            student: student._id,
+            academicYear: validatedData.academicYear,
+            semester: validatedData.semesterNumber,
+            subjects: subjects as any,
+            totalMarks,
+            totalCredits,
+            percentage: parseFloat(percentage.toFixed(2)),
+            cgpa: parseFloat(sgpa.toFixed(2)),
+            sgpa: parseFloat(sgpa.toFixed(2)),
+            division: division as any,
+            resultStatus: resultStatus as any,
+            isPublished: false,
+            auditHistory: [
+              {
+                action: 'CREATED',
+                performedBy: userId,
+                timestamp: new Date(),
+              },
+            ],
+          });
+          results.push(newResult);
+        }
+      } catch (err: any) {
+        errors.push({
+          studentId: student._id,
+          name: `${student.firstName} ${student.lastName}`,
+          reason: err.message,
+        });
+      }
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: `Generated ${results.length} results, ${errors.length} errors`,
+      data: {
+        totalStudents: students.length,
+        generated: results.length,
+        errors: errors.length,
+        results,
+        errorDetails: errors,
+      },
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return sendError({ req, res, statusCode: 400, message: 'Validation failed', errors: error.issues });
+    }
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Publish Results ──────────────────────────────────────────────────────────
+
+const publishResultsSchema = z.object({
+  semesterNumber: z.coerce.number().min(1),
+  batchId: z.string().min(1),
+  courseId: z.string().min(1),
+  academicYear: z.string().min(1),
+  publishDate: z.string().transform((val) => new Date(val)),
+  publishTime: z.string().min(1),
+  selectedStudentIds: z.array(z.string()).optional(),
+  sendNotifications: z.boolean().default(false),
+});
+
+export const publishResults = async (req: Request, res: Response) => {
+  try {
+    const validatedData = publishResultsSchema.parse(req.body);
+    const userId = req.user._id;
+
+    // Resolve student IDs for this batch/course (Result model stores student ref only)
+    const studentQuery: any = {
+      batch: validatedData.batchId,
+      course: validatedData.courseId,
+    };
+
+    if (validatedData.selectedStudentIds && validatedData.selectedStudentIds.length > 0) {
+      studentQuery._id = { $in: validatedData.selectedStudentIds };
+    }
+
+    const students = await Student.find(studentQuery, '_id firstName lastName enrollmentId');
+    if (students.length === 0) {
+      return sendError({ req, res, statusCode: 404, message: 'No students found for this batch and course.' });
+    }
+
+    const studentIds = students.map((s) => s._id);
+
+    const results = await Result.find({
+      student: { $in: studentIds },
+      semester: validatedData.semesterNumber,
+      academicYear: validatedData.academicYear,
+    }).populate('student');
+
+    if (results.length === 0) {
+      return sendError({ req, res, statusCode: 404, message: 'No results found to publish.' });
+    }
+
+    let publishedCount = 0;
+    let skippedCount = 0;
+    const publishedResults: any[] = [];
+
+    for (const result of results) {
+      if (result.isPublished) {
+        skippedCount++;
+        continue;
+      }
+
+      result.isPublished = true;
+      result.publishedDate = validatedData.publishDate;
+
+      const deadline = new Date(validatedData.publishDate);
+      deadline.setDate(deadline.getDate() + 10);
+      result.revaluationDeadline = deadline;
+      result.isRevaluationActive = true;
+
+      result.auditHistory.push({
+        action: 'PUBLISHED',
+        performedBy: userId,
+        timestamp: new Date(),
+      });
+
+      await result.save();
+      publishedCount++;
+      publishedResults.push(result);
+    }
+
+    // Generate certificates for passed students
+    if (validatedData.sendNotifications) {
+      for (const result of publishedResults) {
+        if (result.resultStatus === 'PASS') {
+          // Generate provisional certificate
+          // This would call the certificate generation service
+          console.log(`[MOCK] Generating provisional certificate for student: ${result.student}`);
+        }
+      }
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: `Published ${publishedCount} results, ${skippedCount} already published`,
+      data: {
+        publishedCount,
+        skippedCount,
+        totalResults: results.length,
+        publishedResults,
+        publishDate: validatedData.publishDate,
+        publishTime: validatedData.publishTime,
+        notificationsSent: validatedData.sendNotifications,
+      },
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return sendError({ req, res, statusCode: 400, message: 'Validation failed', errors: error.issues });
+    }
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Get Publication Status ──────────────────────────────────────────────────
+
+export const getPublicationStatus = async (req: Request, res: Response) => {
+  try {
+    const { batchId, courseId, semesterNumber } = req.query;
+
+    const query: any = {};
+    if (batchId) query.batch = batchId;
+    if (courseId) query.course = courseId;
+
+    const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
+
+    // Get all students with marks status
+    const students = await Student.find(query)
+      .populate('course', 'name')
+      .populate('batch', 'year name');
+
+    const studentIds = students.map((s) => s._id);
+
+    // Which students already have a Result for this semester
+    const existingResults = await Result.find({
+      student: { $in: studentIds },
+      semester: semNum,
+    }).select('student isPublished');
+
+    const resultMap = new Map();
+    for (const r of existingResults) {
+      resultMap.set(String(r.student), r);
+    }
+
+    const statusData = students.map((student) => {
+      const semesterRecord = student.semesters.find(
+        (s: any) => s.semesterNumber === semNum
+      );
+
+      const hasMarks = semesterRecord?.marks && semesterRecord.marks.length > 0;
+      const allMarked = semesterRecord?.marks
+        ? semesterRecord.marks.every(
+            (m: any) => m.isAbsent === true || m.marksObtained !== null
+          )
+        : false;
+
+      const resultRecord = resultMap.get(String(student._id));
+      const resultExists = !!resultRecord;
+      const isPublished = resultExists && resultRecord.isPublished;
+
+      return {
+        studentId: student._id,
+        name: `${student.firstName} ${student.lastName}`,
+        enrollmentId: student.enrollmentId,
+        hasMarks: hasMarks || false,
+        allMarked: hasMarks ? allMarked : false,
+        resultExists,
+        isPublished,
+        status: isPublished
+          ? 'Published'
+          : hasMarks && allMarked
+            ? 'Ready'
+            : hasMarks
+              ? 'Partial'
+              : 'No Marks',
+        student,
+      };
+    });
+
+    const total = statusData.length;
+    const ready = statusData.filter((s) => s.status === 'Ready').length;
+    const partial = statusData.filter((s) => s.status === 'Partial').length;
+    const noMarks = statusData.filter((s) => s.status === 'No Marks').length;
+    const published = statusData.filter((s) => s.status === 'Published').length;
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Publication status retrieved successfully',
+      data: {
+        summary: { total, ready, partial, noMarks, published },
+        students: statusData,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+```
+
 ### `backend/src/controllers/marksheetController.ts`
 
 ```typescript
@@ -8575,6 +9441,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { Result } from '../models/resultModel';
 import { Student } from '../models/studentModel';
+import { Institute } from '../models/instituteModel';
 import { Marksheet } from '../models/marksheetModel';
 import resultService from '../services/resultService';
 import pdfGeneratorService from '../services/pdfGeneratorService';
@@ -8588,6 +9455,16 @@ export const getAllResults = async (req: Request, res: Response) => {
     const { page = '1', limit = '20', academicYear, semester, resultStatus, isPublished, studentId, search } = req.query;
 
     const query: any = {};
+
+    // Institute users should only see results for their own students
+    if (req.user.role === 'institute') {
+      const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
+      if (!institute) {
+        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute is not approved.' });
+      }
+      const studentIds = await Student.find({ institute: institute._id }).distinct('_id');
+      query.student = { $in: studentIds };
+    }
 
     if (academicYear) query.academicYear = academicYear;
     if (semester) query.semester = parseInt(semester as string);
@@ -9113,11 +9990,14 @@ export const getStudentResultHistory = async (req: Request, res: Response) => {
 
 ```typescript
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { z } from 'zod';
 import { RevaluationRequest } from '../models/revaluationRequestModel';
 import { RevaluationResult } from '../models/revaluationResultModel';
 import { Result } from '../models/resultModel';
 import { Student } from '../models/studentModel';
+import { Institute } from '../models/instituteModel';
+import { FeeRecord } from '../models/feeRecordModel';
 import revaluationService from '../services/revaluationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import {
@@ -9136,6 +10016,17 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found' });
     }
 
+    // Institute users may only request revaluation for their own students
+    if (req.user.role === 'institute') {
+      const institute = await Institute.findOne({ user: req.user._id });
+      if (!institute) {
+        return sendError({ req, res, statusCode: 403, message: 'Institute not found for this account' });
+      }
+      if (student.institute.toString() !== institute._id.toString()) {
+        return sendError({ req, res, statusCode: 403, message: 'Student does not belong to your institute' });
+      }
+    }
+
     const result = await Result.findById(validatedData.result);
     if (!result) {
       return sendError({ req, res, statusCode: 404, message: 'Result not found' });
@@ -9145,6 +10036,15 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 400, message: 'Revaluation period has expired' });
     }
 
+    const absentSubjects = validatedData.subjects.filter((subject: any) => {
+      const resultSubject = result.subjects.find((s: any) => s.subjectCode === subject.subjectCode);
+      return resultSubject?.grade === 'ABSENT';
+    });
+
+    if (absentSubjects.length > 0) {
+      return sendError({ req, res, statusCode: 400, message: 'Revaluation cannot be applied for subjects with ABSENT grade' });
+    }
+
     const existingRequest = await RevaluationRequest.findOne({
       student: validatedData.student,
       result: validatedData.result,
@@ -9152,7 +10052,24 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
     });
 
     if (existingRequest) {
-      return sendError({ req, res, statusCode: 400, message: 'Revaluation request already exists for this result' });
+      return sendError({ req, res, statusCode: 400, message: 'A revaluation request already exists for this result' });
+    }
+
+    // Institute users must have paid the revaluation fee first
+    let paymentId: string | undefined;
+    let paymentDate: Date | undefined;
+    if (req.user.role === 'institute') {
+      const feeRecord = await FeeRecord.findOne({
+        student: validatedData.student,
+        paymentPurpose: 'Revaluation fee',
+        semesterNumber: validatedData.semester,
+      }).sort({ createdAt: -1 });
+
+      if (!feeRecord) {
+        return sendError({ req, res, statusCode: 400, message: 'Revaluation fee payment is required before submitting a request' });
+      }
+      paymentId = feeRecord.razorpayPaymentId || feeRecord.utrNumber || undefined;
+      paymentDate = feeRecord.paymentDate;
     }
 
     const requestData: any = {
@@ -9170,6 +10087,12 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
         },
       ],
     };
+
+    if (paymentId) {
+      requestData.paymentStatus = 'PAID';
+      requestData.paymentId = paymentId;
+      requestData.paymentDate = paymentDate;
+    }
 
     const revaluationRequest = await RevaluationRequest.create(requestData);
 
@@ -9192,13 +10115,68 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
 
 export const getAllRevaluationRequests = async (req: Request, res: Response) => {
   try {
-    const { page = '1', limit = '20', status, institute, academicYear, semester, fromDate, toDate } = req.query;
+    const {
+      page = '1',
+      limit = '20',
+      status,
+      institute,
+      academicYear,
+      semester,
+      courseId,
+      batchId,
+      studentId,
+      search,
+      fromDate,
+      toDate,
+    } = req.query;
 
     const query: any = {};
+
+    // Role-based filtering: institute users only see their own requests
+    if (req.user.role === 'institute') {
+      const instituteDoc = await Institute.findOne({ user: req.user._id });
+      if (!instituteDoc) {
+        return sendError({ req, res, statusCode: 403, message: 'Institute not found for this account' });
+      }
+      query.institute = instituteDoc._id;
+    } else if (institute) {
+      query.institute = institute;
+    }
+
     if (status) query.status = status;
-    if (institute) query.institute = institute;
     if (academicYear) query.academicYear = academicYear;
     if (semester) query.semester = parseInt(semester as string);
+    if (studentId) query.student = studentId;
+
+    // Course, batch and search filtering via student lookup
+    if (courseId || batchId || search) {
+      const idSets: any[] = [];
+
+      if (courseId || batchId) {
+        const studentQuery: any = {};
+        if (courseId) studentQuery.course = courseId;
+        if (batchId) studentQuery.batch = batchId;
+        const students = await Student.find(studentQuery).select('_id');
+        idSets.push(students.map((s) => s._id));
+      }
+
+      if (search) {
+        const students = await Student.find({
+          $or: [
+            { firstName: { $regex: search as string, $options: 'i' } },
+            { lastName: { $regex: search as string, $options: 'i' } },
+            { enrollmentId: { $regex: search as string, $options: 'i' } },
+          ],
+        }).select('_id');
+        idSets.push(students.map((s) => s._id));
+      }
+
+      let studentIds = idSets[0];
+      for (const set of idSets.slice(1)) {
+        studentIds = studentIds.filter((id: any) => set.some((other: any) => other.toString() === id.toString()));
+      }
+      query.student = { $in: studentIds };
+    }
 
     if (fromDate || toDate) {
       query.submittedDate = {};
@@ -9210,9 +10188,10 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
       page: parseInt(page as string),
       limit: parseInt(limit as string),
       populate: [
-        { path: 'student', select: 'firstName lastName enrollmentId email' },
+        { path: 'student', select: 'firstName lastName enrollmentId email course batch' },
         { path: 'institute', select: 'orgName' },
-        { path: 'result', select: 'academicYear semester totalMarks percentage' },
+        { path: 'result', select: 'academicYear semester totalMarks percentage resultStatus' },
+        { path: 'assignedEvaluator', select: 'name email' },
       ],
       sort: { submittedDate: -1 } as any,
     };
@@ -9225,17 +10204,121 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
   }
 };
 
+// ─── Get Eligible Students for Revaluation (Institute) ──────────────────────
+export const getEligibleStudents = async (req: Request, res: Response) => {
+  try {
+    const { courseId, batchId, semester } = req.query;
+
+    if (!courseId || !batchId || !semester) {
+      return sendError({ req, res, statusCode: 400, message: 'Course, batch, and semester are required' });
+    }
+
+    const institute = await Institute.findOne({ user: req.user._id });
+    if (!institute) {
+      return sendError({ req, res, statusCode: 403, message: 'Institute not found' });
+    }
+
+    const studentFilter: any = {
+      institute: institute._id,
+      course: courseId,
+      batch: batchId,
+    };
+    const students = await Student.find(studentFilter).populate('course', 'name');
+
+    const semNum = parseInt(semester as string);
+    const eligibleStudents: any[] = [];
+
+    for (const student of students) {
+      const result = await Result.findOne({
+        student: student._id,
+        semester: semNum,
+        isPublished: true,
+      });
+
+      if (!result) continue;
+
+      if (!result.isRevaluationActive || (result.revaluationDeadline && new Date() > result.revaluationDeadline)) {
+        continue;
+      }
+
+      const existingRequest = await RevaluationRequest.findOne({
+        student: student._id,
+        result: result._id,
+        status: { $in: ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS'] },
+      });
+
+      if (existingRequest) continue;
+
+      const allSubjects = result.subjects.map((subject: any) => {
+        const isAbsent = subject.grade === 'ABSENT';
+        const marks = subject.totalMarks || 0;
+        return {
+          subjectCode: subject.subjectCode,
+          subjectName: subject.subjectName,
+          originalMarks: marks,
+          originalGrade: subject.grade || 'F',
+          internalMarks: subject.internalMarks || 0,
+          externalMarks: subject.externalMarks || 0,
+          isAbsent,
+          isEligible: !isAbsent,
+          revaluationReason: '',
+        };
+      });
+
+      const eligibleSubjects = allSubjects.filter((subject: any) => subject.isEligible);
+
+      if (eligibleSubjects.length === 0) continue;
+
+      const feePerSubject = 500;
+      const totalFee = eligibleSubjects.length * feePerSubject;
+
+      eligibleStudents.push({
+        studentId: student._id,
+        enrollmentId: student.enrollmentId,
+        name: `${student.firstName} ${student.lastName}`,
+        course: student.course,
+        instituteId: institute._id,
+        resultId: result._id,
+        semester: semNum,
+        academicYear: result.academicYear,
+        subjects: eligibleSubjects,
+        allSubjects,
+        feePerSubject,
+        totalFee,
+        submittedDate: new Date(),
+      });
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Eligible students retrieved successfully',
+      data: eligibleStudents,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
 export const getRevaluationRequestById = async (req: Request, res: Response) => {
   try {
     const request = await RevaluationRequest.findById(req.params.id)
-      .populate('student', 'firstName lastName enrollmentId email')
+      .populate('student', 'firstName lastName enrollmentId email course batch')
       .populate('institute', 'orgName')
-      .populate('result', 'academicYear semester totalMarks percentage')
+      .populate('result', 'academicYear semester totalMarks percentage subjects resultStatus')
       .populate('assignedEvaluator', 'name email')
       .populate('revaluationResults');
 
     if (!request) {
       return sendError({ req, res, statusCode: 404, message: 'Revaluation request not found' });
+    }
+
+    // Role-based access control
+    if (req.user.role === 'institute') {
+      const institute = await Institute.findOne({ user: req.user._id });
+      if (!institute || institute._id.toString() !== request.institute.toString()) {
+        return sendError({ req, res, statusCode: 403, message: 'Unauthorized to view this request' });
+      }
     }
 
     return sendSuccess({ req, res, message: 'Revaluation request retrieved successfully', data: request });
@@ -9267,7 +10350,15 @@ export const updateRequestStatus = async (req: Request, res: Response) => {
     }
 
     if (validatedData.assignedEvaluator) {
-      request.assignedEvaluator = validatedData.assignedEvaluator as any;
+      if (mongoose.Types.ObjectId.isValid(validatedData.assignedEvaluator)) {
+        request.assignedEvaluator = validatedData.assignedEvaluator as any;
+      } else {
+        request.adminComments.push({
+          comment: `Assigned evaluator: ${validatedData.assignedEvaluator}`,
+          commentedBy: userId,
+          timestamp: new Date(),
+        });
+      }
     }
 
     if (validatedData.status === 'ASSIGNED' && validatedData.assignedEvaluator) {
@@ -9382,6 +10473,107 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
     }
 
     return sendSuccess({ req, res, message: 'Revaluation result approved successfully', data: revalResult });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Institute Revaluation Summary ───────────────────────────────────────────
+export const getInstituteSummary = async (req: Request, res: Response) => {
+  try {
+    const institute = await Institute.findOne({ user: req.user._id });
+    if (!institute) {
+      return sendError({ req, res, statusCode: 403, message: 'Institute not found' });
+    }
+
+    const requests = await RevaluationRequest.find({ institute: institute._id });
+
+    const summary = {
+      total: requests.length,
+      pending: requests.filter((r) => r.status === 'PENDING').length,
+      underReview: requests.filter((r) => r.status === 'UNDER_REVIEW').length,
+      assigned: requests.filter((r) => r.status === 'ASSIGNED').length,
+      inProgress: requests.filter((r) => r.status === 'IN_PROGRESS').length,
+      completed: requests.filter((r) => r.status === 'COMPLETED').length,
+      rejected: requests.filter((r) => r.status === 'REJECTED').length,
+      cancelled: requests.filter((r) => r.status === 'CANCELLED').length,
+      changed: requests.filter((r) => r.finalResult === 'CHANGED').length,
+      unchanged: requests.filter((r) => r.finalResult === 'UNCHANGED').length,
+      totalFee: requests.reduce((sum, r) => sum + (r.totalFee || 0), 0),
+    };
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Institute revaluation summary retrieved',
+      data: summary,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Academy Revaluation Summary ─────────────────────────────────────────────
+export const getAcademySummary = async (req: Request, res: Response) => {
+  try {
+    const { academicYear, semester } = req.query;
+
+    const query: any = {};
+    if (academicYear) query.academicYear = academicYear;
+    if (semester) query.semester = parseInt(semester as string);
+
+    const requests = await RevaluationRequest.find(query);
+
+    const summary = {
+      total: requests.length,
+      pending: requests.filter((r) => r.status === 'PENDING').length,
+      underReview: requests.filter((r) => r.status === 'UNDER_REVIEW').length,
+      assigned: requests.filter((r) => r.status === 'ASSIGNED').length,
+      inProgress: requests.filter((r) => r.status === 'IN_PROGRESS').length,
+      completed: requests.filter((r) => r.status === 'COMPLETED').length,
+      rejected: requests.filter((r) => r.status === 'REJECTED').length,
+      cancelled: requests.filter((r) => r.status === 'CANCELLED').length,
+      changed: requests.filter((r) => r.finalResult === 'CHANGED').length,
+      unchanged: requests.filter((r) => r.finalResult === 'UNCHANGED').length,
+      totalFee: requests.reduce((sum, r) => sum + (r.totalFee || 0), 0),
+      subjectsCount: requests.reduce((sum, r) => sum + (r.subjects?.length || 0), 0),
+    };
+
+    const instituteStats = await RevaluationRequest.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: '$institute',
+          count: { $sum: 1 },
+          pending: { $sum: { $cond: [{ $eq: ['$status', 'PENDING'] }, 1, 0] } },
+          completed: { $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] } },
+        },
+      },
+      {
+        $lookup: {
+          from: 'institutes',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'institute',
+        },
+      },
+      { $unwind: { path: '$institute', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          instituteName: '$institute.orgName',
+          count: 1,
+          pending: 1,
+          completed: 1,
+        },
+      },
+    ]);
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Academy revaluation summary retrieved',
+      data: { ...summary, instituteStats },
+    });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
@@ -9536,6 +10728,7 @@ import revaluationRoutes from './routes/revaluationRoutes';
 import marksheetRoutes from './routes/marksheetRoutes';
 import certificateRoutes from './routes/certificateRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import marksRoutes from './routes/marksRoutes';
 import { notFound, errorHandler } from './middlewares/errorMiddleware';
 
 dotenv.config();
@@ -9624,6 +10817,7 @@ app.use('/api/results', resultRoutes);
 app.use('/api/revaluation', revaluationRoutes);
 app.use('/api/marksheets', marksheetRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/marks', marksRoutes);
 app.use('/api', paymentRoutes);
 
 // Basic Route
@@ -11144,6 +12338,16 @@ export interface IStudent extends Document {
     thesisDocumentUrl?: string;
     thesisApproved: boolean;
     eligibilityStatus: 'Pending' | 'Approved' | 'Rejected';
+    marks?: {
+      subjectCode: string;
+      subjectName: string;
+      marksObtained: number | null;
+      totalMarks: number;
+      isAbsent: boolean;
+      grade: string;
+      updatedBy?: mongoose.Types.ObjectId;
+      updatedAt?: Date;
+    }[];
   }[];
 }
 
@@ -11266,6 +12470,18 @@ const studentSchema: Schema = new Schema(
           enum: ['Pending', 'Approved', 'Rejected'], 
           default: 'Pending' 
         },
+        marks: [
+          {
+            subjectCode: { type: String, required: true },
+            subjectName: { type: String, required: true },
+            marksObtained: { type: Number, default: null },
+            totalMarks: { type: Number, default: 100 },
+            isAbsent: { type: Boolean, default: false },
+            grade: { type: String, default: '' },
+            updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+            updatedAt: { type: Date, default: Date.now },
+          },
+        ],
       }
     ],
   },
@@ -11730,6 +12946,96 @@ export default router;
 
 ```
 
+### `backend/src/routes/marksRoutes.ts`
+
+```typescript
+import express from 'express';
+import { protect, authorize } from '../middlewares/authMiddleware';
+import {
+  getStudentsWithMarks,
+  getStudentMarks,
+  updateStudentMarks,
+  bulkUpdateMarks,
+  getCourseSubjects,
+  generateResultsFromMarks,
+  publishResults,
+  getPublicationStatus,
+} from '../controllers/marksController';
+
+const router = express.Router();
+
+// ─── Routes ──────────────────────────────────────────────────────────────────
+
+// Get all students with marks (with filters)
+router.get(
+  '/students',
+  protect,
+  authorize('admin', 'super_admin', 'board', 'institute'),
+  getStudentsWithMarks
+);
+
+// Get course subjects
+router.get(
+  '/courses/:courseId/subjects',
+  protect,
+  authorize('admin', 'super_admin', 'board', 'institute'),
+  getCourseSubjects
+);
+
+// Get a single student's marks
+router.get(
+  '/students/:studentId',
+  protect,
+  authorize('admin', 'super_admin', 'board', 'institute'),
+  getStudentMarks
+);
+
+// Update a single student's marks
+router.put(
+  '/students/:studentId',
+  protect,
+  authorize('admin', 'super_admin', 'board'),
+  updateStudentMarks
+);
+
+// Bulk update marks for multiple students
+router.post(
+  '/students/bulk',
+  protect,
+  authorize('admin', 'super_admin', 'board'),
+  bulkUpdateMarks
+);
+
+// ─── Result Generation & Publishing Routes ──────────────────────────────────
+
+// Generate results from marks
+router.post(
+  '/generate-results',
+  protect,
+  authorize('admin', 'super_admin', 'board'),
+  generateResultsFromMarks
+);
+
+// Publish results
+router.post(
+  '/publish-results',
+  protect,
+  authorize('admin', 'super_admin', 'board'),
+  publishResults
+);
+
+// Get publication status
+router.get(
+  '/publication-status',
+  protect,
+  authorize('admin', 'super_admin', 'board'),
+  getPublicationStatus
+);
+
+export default router;
+
+```
+
 ### `backend/src/routes/marksheetRoutes.ts`
 
 ```typescript
@@ -11835,6 +13141,15 @@ router.get('/debug/create-dummy', async (req, res) => {
   try {
     const Student = require('../models/studentModel').default;
     const Result = require('../models/resultModel').default;
+    const Course = require('../models/courseModel').default;
+    const Batch = require('../models/batchModel').default;
+    const Institute = require('../models/instituteModel').default;
+
+    // Reuse an existing course/batch/institute if available so the dummy
+    // student satisfies all required schema fields.
+    const course = await Course.findOne({});
+    const batch = await Batch.findOne({});
+    const institute = await Institute.findOne({});
     
     let student = await Student.findOne({ enrollmentId: 'SEMI-2026-9487' });
     if (!student) {
@@ -11844,9 +13159,43 @@ router.get('/debug/create-dummy', async (req, res) => {
         lastName: 'User',
         email: 'test9487@example.com',
         dateOfBirth: new Date('2026-07-21'),
+        homeAddress: '123 Test Street, Test City',
+        contactNumber: '9876543210',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2025,
+        universityName: 'Test University',
+        medicalCouncilRegistrationNumber: 'MC-TEST9487',
+        isForeignGraduate: false,
+        fmgeClearanceStatus: 'Not Applicable',
+        course: course?._id,
+        batch: batch?._id,
+        institute: institute?._id,
+        courseDirector: 'Dr. Test Director',
+        documents: {
+          passportPhotoUrl: 'http://example.com/photo.jpg',
+          mbbsCertificateUrl: 'http://example.com/mbbs.pdf',
+          medicalCouncilRegistrationCertificateUrl: 'http://example.com/registration.pdf',
+          semiMembershipFormUrl: 'http://example.com/membership.pdf',
+        },
+        remittedToAcademy: false,
+        semesters: [{ semesterNumber: 1, attendancePercentage: 0, thesisApproved: false, eligibilityStatus: 'Pending' }],
       });
     } else {
       student.dateOfBirth = new Date('2026-07-21');
+      if (!student.homeAddress) student.homeAddress = '123 Test Street, Test City';
+      if (!student.contactNumber) student.contactNumber = '9876543210';
+      if (!student.qualification) student.qualification = 'MBBS';
+      if (!student.mbbsQualification) student.mbbsQualification = 'MBBS Degree';
+      if (!student.yearOfPassing) student.yearOfPassing = 2025;
+      if (!student.universityName) student.universityName = 'Test University';
+      if (!student.medicalCouncilRegistrationNumber) student.medicalCouncilRegistrationNumber = 'MC-TEST9487';
+      if (student.isForeignGraduate === undefined) student.isForeignGraduate = false;
+      if (!student.fmgeClearanceStatus) student.fmgeClearanceStatus = 'Not Applicable';
+      if (!student.course) student.course = course?._id;
+      if (!student.batch) student.batch = batch?._id;
+      if (!student.institute) student.institute = institute?._id;
+      if (!student.courseDirector) student.courseDirector = 'Dr. Test Director';
       await student.save();
     }
     
@@ -11887,12 +13236,22 @@ import {
   approveRevaluationResult,
   getRevaluationStatistics,
   deleteRevaluationRequest,
+  getEligibleStudents,
+  getInstituteSummary,
+  getAcademySummary,
 } from '../controllers/revaluationController';
 import { protect, authorize } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 
 router.use(protect);
+
+// ─── Institute Routes ──────────────────────────────────────────────────────
+router.get('/institute/summary', authorize('institute'), getInstituteSummary);
+router.get('/institute/eligible-students', authorize('institute'), getEligibleStudents);
+
+// ─── Academy Routes ────────────────────────────────────────────────────────
+router.get('/academy/summary', authorize('admin', 'super_admin', 'board'), getAcademySummary);
 
 // Revaluation request CRUD
 router.get('/requests', getAllRevaluationRequests);
@@ -14679,6 +16038,25 @@ const addRefreshSubscriber = (cb) => {
   refreshSubscribers.push(cb);
 };
 
+// Clear every auth token so the user is forced to log in again
+const clearStoredSession = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('semi_token');
+  localStorage.removeItem('semi_institute_token');
+  localStorage.removeItem('semi_board_token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('semi_refreshToken');
+  localStorage.removeItem('semi_board_user');
+};
+
+// Hard-redirect to the correct portal login page
+const redirectToLogin = () => {
+  if (typeof window === 'undefined') return;
+  window.location.href = window.location.pathname.startsWith('/institute')
+    ? '/institute/login'
+    : '/academy/login';
+};
+
 // Request interceptor to automatically add Authorization header
 apiClient.interceptors.request.use(
   (config) => {
@@ -14710,6 +16088,15 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // A request retried with a freshly refreshed token that STILL 401s means the
+    // user account no longer exists (deleted / DB re-seeded) or the token is dead.
+    // Refresh succeeded but protect() couldn't find the user — force re-login.
+    if (error.response?.status === 401 && originalRequest?._retry) {
+      clearStoredSession();
+      redirectToLogin();
+      return Promise.reject(error);
+    }
+
     // Check if error is 401 and we haven't already retried this request
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Skip refresh for auth endpoints to avoid loops
@@ -14776,21 +16163,8 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
         // Clear tokens if refresh fails to force logout
-        localStorage.removeItem('token');
-        localStorage.removeItem('semi_token');
-        localStorage.removeItem('semi_institute_token');
-        localStorage.removeItem('semi_board_token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('semi_refreshToken');
-        localStorage.removeItem('semi_board_user');
-        // Redirect to login if in browser
-        if (typeof window !== 'undefined') {
-          if (window.location.pathname.startsWith('/institute')) {
-            window.location.href = '/institute/login';
-          } else {
-            window.location.href = '/academy/login';
-          }
-        }
+        clearStoredSession();
+        redirectToLogin();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -14969,6 +16343,21 @@ export default examService;
 
 ```
 
+### `client/src/api/fees.js`
+
+```javascript
+import apiClient from './apiClient.js';
+
+export const feeService = {
+  payStudentFees: (studentId, feeData) => apiClient.post(`/academic/students/${studentId}/fees`, feeData),
+  getFeeRecords: () => apiClient.get('/academic/fees'),
+  getFeeRecordsByStudent: (studentId) => apiClient.get(`/academic/students/${studentId}/fees`),
+};
+
+export default feeService;
+
+```
+
 ### `client/src/api/institutes.js`
 
 ```javascript
@@ -15100,6 +16489,45 @@ export const instituteService = {
 export default instituteService;
 ```
 
+### `client/src/api/marks.js`
+
+```javascript
+import apiClient from './apiClient.js';
+
+export const marksService = {
+  // Get all students with marks
+  getStudentsWithMarks: (params) => apiClient.get('/marks/students', { params }),
+
+  // Get a single student's marks
+  getStudentMarks: (studentId, semesterNumber) =>
+    apiClient.get(`/marks/students/${studentId}`, { params: { semesterNumber } }),
+
+  // Update a single student's marks
+  updateStudentMarks: (studentId, data) =>
+    apiClient.put(`/marks/students/${studentId}`, data),
+
+  // Bulk update marks
+  bulkUpdateMarks: (data) =>
+    apiClient.post('/marks/students/bulk', data),
+
+  // Get course subjects
+  getCourseSubjects: (courseId) =>
+    apiClient.get(`/marks/courses/${courseId}/subjects`),
+
+  // Generate results from marks
+  generateResults: (data) => apiClient.post('/marks/generate-results', data),
+
+  // Publish results
+  publishResults: (data) => apiClient.post('/marks/publish-results', data),
+
+  // Get publication status
+  getPublicationStatus: (params) => apiClient.get('/marks/publication-status', { params }),
+};
+
+export default marksService;
+
+```
+
 ### `client/src/api/marksheets.js`
 
 ```javascript
@@ -15166,19 +16594,26 @@ export default resultService;
 import apiClient from './apiClient.js';
 
 export const revaluationService = {
-  // Revaluation request CRUD
+  // ─── Revaluation Request CRUD ──────────────────────────────────────────────
   getAllRevaluationRequests: (params) => apiClient.get('/revaluation/requests', { params }),
   getRevaluationRequestById: (id) => apiClient.get(`/revaluation/requests/${id}`),
   createRevaluationRequest: (data) => apiClient.post('/revaluation/requests', data),
   updateRequestStatus: (id, statusData) => apiClient.put(`/revaluation/requests/${id}/status`, statusData),
   deleteRevaluationRequest: (id) => apiClient.delete(`/revaluation/requests/${id}`),
 
-  // Revaluation result routes
+  // ─── Institute Specific ─────────────────────────────────────────────────────
+  getInstituteSummary: () => apiClient.get('/revaluation/institute/summary'),
+  getEligibleStudents: (params) => apiClient.get('/revaluation/institute/eligible-students', { params }),
+
+  // ─── Academy Specific ──────────────────────────────────────────────────────
+  getAcademySummary: (params) => apiClient.get('/revaluation/academy/summary', { params }),
+
+  // ─── Revaluation Result Routes ─────────────────────────────────────────────
   getRevaluationResults: (id) => apiClient.get(`/revaluation/requests/${id}/results`),
   addRevaluationResult: (id, resultData) => apiClient.post(`/revaluation/requests/${id}/results`, resultData),
-  approveRevaluationResult: (id) => apiClient.put(`/revaluation/results/${id}/approve`),
+  approveRevaluationResult: (id, data) => apiClient.put(`/revaluation/results/${id}/approve`, data),
 
-  // Statistics
+  // ─── Statistics ─────────────────────────────────────────────────────────────
   getRevaluationStatistics: (params) => apiClient.get('/revaluation/statistics', { params }),
 };
 
@@ -15495,7 +16930,7 @@ export default EmailVerificationPage;
 
 ```jsx
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Outlet, useNavigate,  Navigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 import instituteService from '../../api/institutes';
 import academicService from '../../api/academic';
@@ -15864,6 +17299,7 @@ export default function AcademyLayout() {
   const handleLogout = useCallback(() => {
     setBoardUser(null);
     localStorage.removeItem('semi_board_user');
+    localStorage.removeItem('semi_board_token');
     localStorage.removeItem('token');
     localStorage.removeItem('semi_token');
     localStorage.removeItem('refreshToken');
@@ -18334,350 +19770,408 @@ export default AcademyLogin;
 ### `client/src/pages/academy/components/AcademyMarksUpdating.jsx`
 
 ```jsx
-import { useState, useMemo, useEffect } from 'react';
-import academicService from '../../../api/academic';
-import resultService from '../../../api/results';
-import { 
-  Search, 
-  User, 
-  GraduationCap, 
-  Building2, 
-  BookOpen, 
-  Plus, 
-  Save, 
-  Edit2, 
-  Trash2, 
-  CheckCircle2, 
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  Search,
+  User,
+  GraduationCap,
+  BookOpen,
+  Save,
+  Trash2,
+  CheckCircle2,
   XCircle,
-  FileSpreadsheet,
-  Download,
-  Printer,
   RefreshCw,
   Award,
+  Users,
+  Calendar,
+  AlertCircle,
+  FileSpreadsheet,
+  Plus,
+  Loader2,
   TrendingUp,
   TrendingDown,
   Minus,
-  Users
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
+import marksService from '../../../api/marks';
 
 const AcademyMarksUpdating = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedSemester, setSelectedSemester] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('All');
   const [selectedCourse, setSelectedCourse] = useState('All');
   const [selectedInstitute, setSelectedInstitute] = useState('All');
-  
-  const [subjects, setSubjects] = useState([
-    { id: 1, name: 'Anatomy', marksObtained: 87, totalMarks: 100, percentage: 87 },
-    { id: 2, name: 'Physiology', marksObtained: 76, totalMarks: 100, percentage: 76 },
-    { id: 3, name: 'Emergency Medicine', marksObtained: 92, totalMarks: 100, percentage: 92 },
-    { id: 4, name: 'Pharmacology', marksObtained: 68, totalMarks: 100, percentage: 68 },
-  ]);
-  
-  const [newSubjectName, setNewSubjectName] = useState('');
-  const [newSubjectMarks, setNewSubjectMarks] = useState('');
-  const [editingSubjectId, setEditingSubjectId] = useState(null);
-  const [editMarks, setEditMarks] = useState('');
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
-  
-
-  const [activeTab, setActiveTab] = useState('marks'); // 'marks' | 'details'
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableSemesters] = useState([1, 2, 3, 4, 5, 6]);
+  const [editingCell, setEditingCell] = useState(null); // { subjectCode, field }
+  const [editValue, setEditValue] = useState('');
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
-  const [students, setStudents] = useState([]);
+  const fetchStudents = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (selectedBatch !== 'All') params.batchId = selectedBatch;
+      if (selectedCourse !== 'All') params.courseId = selectedCourse;
+      if (selectedInstitute !== 'All') params.instituteId = selectedInstitute;
+      if (searchQuery) params.search = searchQuery;
+      if (selectedSemester) params.semesterNumber = selectedSemester;
+
+      const res = await marksService.getStudentsWithMarks(params);
+      const data = res.data?.data || res.data || [];
+      setStudents(data);
+    } catch (err) {
+      console.error('Error fetching students:', err);
+      setToast({ message: err.parsedMessage || 'Failed to load students.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedBatch, selectedCourse, selectedInstitute, searchQuery, selectedSemester]);
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const res = await academicService.listStudents();
-        const fetchedStudents = res.data?.data || res.data || [];
-        
-        const formattedStudents = fetchedStudents.map(s => ({
-          id: s._id,
-          name: `${s.firstName} ${s.lastName}`,
-          enrollmentId: s.enrollmentId,
-          batch: s.batch?.name || (typeof s.batch === 'string' ? s.batch : 'Unknown Batch'),
-          course: s.course?.name || (typeof s.course === 'string' ? s.course : 'Unknown Course'),
-          institute: s.institute?.orgName || (typeof s.institute === 'string' ? s.institute : 'Unknown Institute'),
-          email: s.email,
-          phone: s.contactNumber,
-          attendance: s.semesters?.[0]?.attendancePercentage || 0,
-          thesisStatus: s.semesters?.[0]?.thesisApproved ? 'Approved' : 'Pending',
-          overallPercentage: 0
-        }));
-        
-        setStudents(formattedStudents);
-      } catch (err) {
-        console.error('Error fetching students:', err);
-        setToast({ message: 'Failed to load students.', type: 'danger' });
-      }
+    const id = setTimeout(() => fetchStudents(), 0);
+    return () => clearTimeout(id);
+  }, [fetchStudents]);
+
+  // Refresh selected student's marks when semester changes
+  useEffect(() => {
+    if (!selectedStudent?._id) return;
+    let cancelled = false;
+    marksService
+      .getStudentMarks(selectedStudent._id, selectedSemester)
+      .then((res) => {
+        if (cancelled) return;
+        const data = res.data?.data || res.data;
+        if (data) setSelectedStudent(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
     };
-    fetchStudents();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSemester]);
 
-  // ─── Computed ──────────────────────────────────────────────────────────────
-  const batches = useMemo(() => {
-    const unique = new Set(students.map(s => s.batch));
-    return ['All', ...unique];
+  // ─── Derived Data ──────────────────────────────────────────────────────────
+  const batchOptions = useMemo(() => {
+    const seen = new Map();
+    students.forEach((s) => {
+      const b = s.batch;
+      if (!b) return;
+      const id = b._id || b.id;
+      if (!seen.has(id)) seen.set(id, b.name || `Batch ${b.year}`);
+    });
+    return [{ id: 'All', label: 'All Batches' }, ...Array.from(seen, ([id, label]) => ({ id, label }))];
   }, [students]);
 
-  const courses = useMemo(() => {
-    const unique = new Set(students.map(s => s.course));
-    return ['All', ...unique];
+  const courseOptions = useMemo(() => {
+    const seen = new Map();
+    students.forEach((s) => {
+      const c = s.course;
+      if (!c) return;
+      const id = c._id || c.id;
+      if (!seen.has(id)) seen.set(id, c.name);
+    });
+    return [{ id: 'All', label: 'All Courses' }, ...Array.from(seen, ([id, label]) => ({ id, label }))];
   }, [students]);
 
-  const institutes = useMemo(() => {
-    const unique = new Set(students.map(s => s.institute));
-    return ['All', ...unique];
+  const instituteOptions = useMemo(() => {
+    const seen = new Map();
+    students.forEach((s) => {
+      const inst = s.institute;
+      if (!inst) return;
+      const id = inst._id || inst.id;
+      if (!seen.has(id)) seen.set(id, inst.orgName);
+    });
+    return [{ id: 'All', label: 'All Institutes' }, ...Array.from(seen, ([id, label]) => ({ id, label }))];
   }, [students]);
 
   const filteredStudents = useMemo(() => {
-    return students.filter(s => {
-      const matchSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.enrollmentId.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchBatch = selectedBatch === 'All' || s.batch === selectedBatch;
-      const matchCourse = selectedCourse === 'All' || s.course === selectedCourse;
-      const matchInstitute = selectedInstitute === 'All' || s.institute === selectedInstitute;
+    return students.filter((s) => {
+      const matchSearch =
+        !searchQuery ||
+        s.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.enrollmentId?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchBatch = selectedBatch === 'All' || String(s.batch?._id || s.batch?.id) === selectedBatch;
+      const matchCourse = selectedCourse === 'All' || String(s.course?._id || s.course?.id) === selectedCourse;
+      const matchInstitute =
+        selectedInstitute === 'All' || String(s.institute?._id || s.institute?.id) === selectedInstitute;
       return matchSearch && matchBatch && matchCourse && matchInstitute;
     });
   }, [students, searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
 
-  const overallMarks = useMemo(() => {
-    if (!subjects.length) return { obtained: 0, total: 0, percentage: 0 };
-    const obtained = subjects.reduce((sum, s) => sum + s.marksObtained, 0);
-    const total = subjects.reduce((sum, s) => sum + s.totalMarks, 0);
-    return { obtained, total, percentage: total > 0 ? Math.round((obtained / total) * 100) : 0 };
-  }, [subjects]);
-
-  // ─── Handlers ──────────────────────────────────────────────────────────────
-  const handleSelectStudent = async (student) => {
+  // ─── Student Selection ─────────────────────────────────────────────────────
+  const handleSelectStudent = useCallback(async (student) => {
     setSelectedStudent(student);
-    setSubjects([]); // clear while loading
-    
-    try {
-      const res = await resultService.getResultByStudent(student.enrollmentId);
-      const resultData = res.data?.data || res.data;
-      if (resultData && resultData.subjects) {
-        const mappedSubjects = resultData.subjects.map((sub, index) => ({
-          id: sub._id || Date.now() + index,
-          name: sub.subjectName,
-          marksObtained: (sub.internalMarks || 0) + (sub.externalMarks || 0),
-          totalMarks: sub.totalMarks || 100,
-          percentage: (((sub.internalMarks || 0) + (sub.externalMarks || 0)) / (sub.totalMarks || 100)) * 100
-        }));
-        setSubjects(mappedSubjects);
-      }
-    } catch (err) {
-      if (err.response?.status !== 404) {
-        setToast({ message: 'Error fetching student results.', type: 'danger' });
-      }
-    }
-  };
+    setEditingCell(null);
+    setEditValue('');
 
-  const handleAddSubject = () => {
-    if (!newSubjectName.trim()) {
-      setToast({ message: 'Please enter a subject name.', type: 'warning' });
-      return;
+    if (student.course?._id) {
+      try {
+        const res = await marksService.getCourseSubjects(student.course._id);
+        const subjects = res.data?.data || [];
+        // Seed marks from course subjects if the student has none saved yet
+        if (subjects.length > 0 && (!student.marks || student.marks.length === 0)) {
+          const seeded = subjects.map((s) => ({
+            subjectCode: s.code,
+            subjectName: s.name,
+            marksObtained: null,
+            totalMarks: 100,
+            isAbsent: null,
+            grade: '',
+          }));
+          setSelectedStudent({ ...student, marks: seeded });
+        }
+      } catch (err) {
+        console.error('Error fetching course subjects:', err);
+      }
     }
-    const marks = parseFloat(newSubjectMarks);
-    if (isNaN(marks) || marks < 0 || marks > 100) {
-      setToast({ message: 'Please enter valid marks between 0 and 100.', type: 'warning' });
-      return;
-    }
-    
+  }, []);
+
+  // ─── Marks Handlers ──────────────────────────────────────────────────────
+  const handleMarksChange = useCallback(
+    (subjectCode, value) => {
+      if (!selectedStudent) return;
+
+      const updatedMarks = selectedStudent.marks.map((m) => {
+        if (m.subjectCode !== subjectCode) return m;
+        const numVal = value === '' || value === null ? null : parseFloat(value);
+        return { ...m, marksObtained: numVal, isAbsent: numVal === null ? null : false };
+      });
+
+      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
+    },
+    [selectedStudent]
+  );
+
+  const handleStatusToggle = useCallback(
+    (subjectCode) => {
+      if (!selectedStudent) return;
+
+      const updatedMarks = selectedStudent.marks.map((m) => {
+        if (m.subjectCode !== subjectCode) return m;
+        let newIsAbsent;
+        if (m.isAbsent === true) newIsAbsent = null;
+        else if (m.isAbsent === false) newIsAbsent = true;
+        else newIsAbsent = false;
+        return { ...m, isAbsent: newIsAbsent, marksObtained: newIsAbsent === true ? null : m.marksObtained };
+      });
+
+      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
+    },
+    [selectedStudent]
+  );
+
+  const handleAddSubject = useCallback(() => {
+    if (!selectedStudent) return;
     const newSubject = {
-      id: Date.now(),
-      name: newSubjectName.trim(),
-      marksObtained: marks,
+      subjectCode: `SUB-${Date.now()}`,
+      subjectName: 'New Subject',
+      marksObtained: null,
       totalMarks: 100,
-      percentage: marks
+      isAbsent: null,
+      grade: '',
     };
-    
-    setSubjects([...subjects, newSubject]);
-    setNewSubjectName('');
-    setNewSubjectMarks('');
-    setToast({ message: `Subject "${newSubjectName}" added successfully!`, type: 'success' });
-  };
-
-  const handleDeleteSubject = (id) => {
-    setConfirmConfig({
-      title: 'Delete Subject',
-      message: 'Are you sure you want to remove this subject and its marks?',
-      type: 'danger',
-      confirmText: 'Delete',
-      onConfirm: () => {
-        setConfirmConfig(null);
-        setSubjects(subjects.filter(s => s.id !== id));
-        setToast({ message: 'Subject removed successfully.', type: 'success' });
-      }
+    setSelectedStudent({
+      ...selectedStudent,
+      marks: [...(selectedStudent.marks || []), newSubject],
     });
-  };
+  }, [selectedStudent]);
 
-  const handleEditMarks = (id) => {
-    setEditingSubjectId(id);
-    const subject = subjects.find(s => s.id === id);
-    setEditMarks(subject ? String(subject.marksObtained) : '');
-  };
+  const handleRemoveSubject = useCallback(
+    (subjectCode) => {
+      if (!selectedStudent) return;
+      setConfirmConfig({
+        title: 'Remove Subject',
+        message: 'Are you sure you want to remove this subject?',
+        type: 'danger',
+        confirmText: 'Remove',
+        onConfirm: () => {
+          setConfirmConfig(null);
+          setSelectedStudent({
+            ...selectedStudent,
+            marks: selectedStudent.marks.filter((m) => m.subjectCode !== subjectCode),
+          });
+          setToast({ message: 'Subject removed successfully.', type: 'success' });
+        },
+      });
+    },
+    [selectedStudent]
+  );
 
-  const handleSaveMarks = (id) => {
-    const marks = parseFloat(editMarks);
-    if (isNaN(marks) || marks < 0 || marks > 100) {
-      setToast({ message: 'Please enter valid marks between 0 and 100.', type: 'warning' });
-      return;
+  // ─── Start Editing ──────────────────────────────────────────────────────
+  const startEditing = useCallback((subjectCode, field, currentValue) => {
+    setEditingCell({ subjectCode, field });
+    setEditValue(currentValue !== null && currentValue !== undefined ? String(currentValue) : '');
+  }, []);
+
+  const finishEditing = useCallback(() => {
+    if (!editingCell) return;
+    const { subjectCode, field } = editingCell;
+
+    if (field === 'marksObtained') {
+      handleMarksChange(subjectCode, editValue === '' ? null : editValue);
     }
-    
-    setSubjects(subjects.map(s => 
-      s.id === id 
-        ? { ...s, marksObtained: marks, percentage: marks }
-        : s
-    ));
-    setEditingSubjectId(null);
-    setEditMarks('');
-    setToast({ message: 'Marks updated successfully!', type: 'success' });
-  };
 
-  const handleCancelEdit = () => {
-    setEditingSubjectId(null);
-    setEditMarks('');
-  };
+    setEditingCell(null);
+    setEditValue('');
+  }, [editingCell, editValue, handleMarksChange]);
 
-  const handleSubmitAll = async () => {
+  // ─── Save Marks ────────────────────────────────────────────────────────────
+  const handleSaveMarks = useCallback(async () => {
     if (!selectedStudent) {
       setToast({ message: 'Please select a student first.', type: 'warning' });
       return;
     }
-    if (!subjects.length) {
-      setToast({ message: 'No subjects to submit. Please add at least one subject.', type: 'warning' });
+
+    const marks = selectedStudent.marks || [];
+    if (marks.length === 0) {
+      setToast({ message: 'No subjects to save.', type: 'warning' });
       return;
     }
 
-    setConfirmConfig({
-      title: 'Submit Marks',
-      message: `Are you sure you want to submit marks for ${selectedStudent.name}?\nTotal Subjects: ${subjects.length}\nOverall Percentage: ${overallMarks.percentage}%`,
-      type: 'success',
-      confirmText: 'Submit All',
-      onConfirm: async () => {
-        setConfirmConfig(null);
-        setIsSubmitting(true);
-        
-        try {
-          const payload = {
-            student: selectedStudent.id,
-            academicYear: new Date().getFullYear().toString(),
-            semester: 1,
-            subjects: subjects.map(s => ({
-              subjectCode: s.id.toString(),
-              subjectName: s.name,
-              internalMarks: Math.floor(s.marksObtained / 2),
-              externalMarks: Math.ceil(s.marksObtained / 2),
-              totalMarks: s.totalMarks,
-              grade: s.percentage >= 80 ? 'A+' : s.percentage >= 60 ? 'B' : s.percentage >= 50 ? 'C' : 'F',
-              credits: 3,
-            })),
-            totalMarks: overallMarks.obtained,
-            totalCredits: subjects.length * 3,
-            percentage: overallMarks.percentage,
-            cgpa: parseFloat((overallMarks.percentage / 10).toFixed(2)),
-            sgpa: parseFloat((overallMarks.percentage / 10).toFixed(2)),
-            division: overallMarks.percentage >= 60 ? 'First' : 'Second',
-            resultStatus: overallMarks.percentage >= 50 ? 'PASS' : 'FAIL',
-          };
-          
-          await resultService.createResult(payload);
-          
-          setToast({ 
-            message: `✅ All marks submitted successfully for ${selectedStudent.name}!`, 
-            type: 'success' 
-          });
-        } catch (error) {
-          console.error(error);
-          setToast({ message: 'Failed to submit marks.', type: 'danger' });
-        } finally {
-          setIsSubmitting(false);
-        }
+    const emptySubjects = marks.filter(
+      (m) => !m.isAbsent && (m.marksObtained === null || m.marksObtained === undefined || m.marksObtained === '')
+    );
+    if (emptySubjects.length > 0) {
+      setToast({
+        message: `Cannot save — ${emptySubjects.length} subject(s) have no marks entered.`,
+        type: 'warning',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        semesterNumber: selectedSemester,
+        subjects: marks.map((m) => ({
+          subjectCode: m.subjectCode,
+          subjectName: m.subjectName,
+          marksObtained: m.isAbsent === true ? null : m.marksObtained,
+          isAbsent: m.isAbsent === true,
+          totalMarks: m.totalMarks || 100,
+        })),
+      };
+
+      await marksService.updateStudentMarks(selectedStudent._id, payload);
+
+      await fetchStudents();
+
+      const updatedRes = await marksService.getStudentMarks(selectedStudent._id, selectedSemester);
+      const updatedData = updatedRes.data?.data || updatedRes.data;
+      if (updatedData) {
+        setSelectedStudent(updatedData);
       }
-    });
+
+      setToast({ message: 'Marks saved successfully!', type: 'success' });
+    } catch (err) {
+      console.error('Error saving marks:', err);
+      setToast({ message: err.parsedMessage || 'Failed to save marks.', type: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [selectedStudent, selectedSemester, fetchStudents]);
+
+  // ─── Render Helpers ──────────────────────────────────────────────────────
+  const getGrade = (marks, total = 100) => {
+    if (marks === null || marks === undefined) return '';
+    const percentage = (marks / total) * 100;
+    if (percentage >= 90) return 'O';
+    if (percentage >= 80) return 'A+';
+    if (percentage >= 70) return 'A';
+    if (percentage >= 60) return 'B+';
+    if (percentage >= 50) return 'B';
+    if (percentage >= 40) return 'C';
+    if (percentage >= 35) return 'D';
+    return 'F';
   };
 
-  const handleExport = () => {
-    setToast({ message: '📊 Marks data exported successfully!', type: 'success' });
+  const getGradeColor = (grade) => {
+    const map = {
+      O: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      'A+': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      A: 'bg-blue-100 text-blue-800 border-blue-200',
+      'B+': 'bg-blue-100 text-blue-800 border-blue-200',
+      B: 'bg-amber-100 text-amber-800 border-amber-200',
+      C: 'bg-amber-100 text-amber-800 border-amber-200',
+      D: 'bg-rose-100 text-rose-800 border-rose-200',
+      F: 'bg-rose-100 text-rose-800 border-rose-200',
+      ABSENT: 'bg-rose-100 text-rose-800 border-rose-200',
+    };
+    return map[grade] || 'bg-slate-100 text-slate-600 border-slate-200';
   };
 
-  const handlePrint = () => {
-    window.print();
+  const getStatusIcon = (marks) => {
+    if (marks === null || marks === undefined) return <XCircle className="w-5 h-5 text-rose-500" />;
+    if (marks >= 80) return <TrendingUp className="w-5 h-5 text-emerald-600" />;
+    if (marks >= 60) return <Minus className="w-5 h-5 text-amber-500" />;
+    return <TrendingDown className="w-5 h-5 text-rose-500" />;
   };
 
-  // ─── Render Helpers ────────────────────────────────────────────────────────
-  const getStatusColor = (percentage) => {
-    if (percentage >= 80) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-    if (percentage >= 60) return 'text-amber-600 bg-amber-50 border-amber-200';
-    return 'text-rose-600 bg-rose-50 border-rose-200';
+  const calculateOverall = (marks) => {
+    if (!marks || marks.length === 0) return { obtained: 0, total: 0, percentage: 0, count: 0 };
+    const validMarks = marks.filter((m) => !m.isAbsent && m.marksObtained !== null);
+    const obtained = validMarks.reduce((sum, m) => sum + (m.marksObtained || 0), 0);
+    const total = validMarks.reduce((sum, m) => sum + (m.totalMarks || 100), 0);
+    const count = validMarks.length;
+    return { obtained, total, percentage: total > 0 ? Math.round((obtained / total) * 100) : 0, count };
   };
 
-  const getStatusIcon = (percentage) => {
-    if (percentage >= 80) return <TrendingUp className="w-3.5 h-3.5" />;
-    if (percentage >= 60) return <Minus className="w-3.5 h-3.5" />;
-    return <TrendingDown className="w-3.5 h-3.5" />;
-  };
+  const overall = selectedStudent
+    ? calculateOverall(selectedStudent.marks)
+    : { obtained: 0, total: 0, percentage: 0, count: 0 };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+    <div className="space-y-5 animate-in fade-in duration-300 text-left font-sans">
       {/* ─── Page Header ─────────────────────────────────────────────────────── */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
             <FileSpreadsheet className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">Marks Updating</h2>
-            <p className="text-xs text-slate-400 font-semibold mt-1">Enter and manage student examination marks</p>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Marks Management</h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Enter and manage student examination marks •{' '}
+              <span className="font-bold text-blue-600">{students.length}</span> students
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleExport}
-            className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all cursor-pointer"
+            onClick={() => {
+              fetchStudents();
+              setToast({ message: 'Data refreshed!', type: 'success' });
+            }}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5"
           >
-            <Download className="w-3.5 h-3.5" />
-            Export
-          </button>
-          <button
-            onClick={handlePrint}
-            className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-slate-100 transition-all cursor-pointer"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            Print
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
           </button>
         </div>
       </div>
 
       {/* ─── Messages ────────────────────────────────────────────────────────── */}
-      {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* ─── Main Grid ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* ─── LEFT PANEL: Student Selection ────────────────────────────────── */}
-        <div className="lg:col-span-4 space-y-4">
+        <div className="lg:col-span-4 space-y-3">
           {/* Filters */}
-          <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <Users className="w-4 h-4" />
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-600" />
               Student Registry
             </h3>
-            
+
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -18685,7 +20179,7 @@ const AcademyMarksUpdating = () => {
                 placeholder="Search by name or ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
               />
             </div>
 
@@ -18693,455 +20187,480 @@ const AcademyMarksUpdating = () => {
               <select
                 value={selectedBatch}
                 onChange={(e) => setSelectedBatch(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
               >
-                {batches.map(b => <option key={b} value={b}>{b}</option>)}
+                {batchOptions.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label}
+                  </option>
+                ))}
               </select>
               <select
                 value={selectedCourse}
                 onChange={(e) => setSelectedCourse(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer"
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
               >
-                {courses.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <select
-                value={selectedInstitute}
-                onChange={(e) => setSelectedInstitute(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all cursor-pointer col-span-2"
-              >
-                {institutes.map(i => <option key={i} value={i}>{i}</option>)}
+                {courseOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
               </select>
             </div>
 
-            <div className="text-[10px] text-slate-400 font-semibold">
+            <div>
+              <select
+                value={selectedInstitute}
+                onChange={(e) => setSelectedInstitute(e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
+              >
+                {instituteOptions.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium">
               {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} found
             </div>
           </div>
 
+          {/* Semester Selector */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-2.5">
+              Select Semester
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {availableSemesters.map((sem) => (
+                <button
+                  key={sem}
+                  onClick={() => setSelectedSemester(sem)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    selectedSemester === sem
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Sem {sem}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Student List */}
-          <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden max-h-[500px] overflow-y-auto">
-            {filteredStudents.map((student) => (
-              <button
-                key={student.id}
-                onClick={() => handleSelectStudent(student)}
-                className={`w-full p-4 text-left border-b border-slate-50 hover:bg-slate-50/70 transition-all group ${
-                  selectedStudent?.id === student.id 
-                    ? 'bg-blue-50/50 border-l-4 border-l-blue-600' 
-                    : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 ${
-                    selectedStudent?.id === student.id
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-black text-slate-800 truncate">{student.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9px] font-mono font-bold text-slate-400">{student.enrollmentId}</span>
-                      <span className="text-[9px] font-bold text-slate-400">•</span>
-                      <span className="text-[9px] font-bold text-slate-400">{student.batch}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
-                        student.attendance >= 75 
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}>
-                        {student.attendance}% Attendance
-                      </span>
-                      <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
-                        student.thesisStatus === 'Approved'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}>
-                        {student.thesisStatus}
-                      </span>
-                    </div>
-                  </div>
-                  {selectedStudent?.id === student.id && (
-                    <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                  )}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="max-h-[420px] overflow-y-auto">
+              {loading ? (
+                <div className="p-8 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" />
+                  <p className="text-xs text-slate-500 mt-2 font-medium">Loading students...</p>
                 </div>
-              </button>
-            ))}
-            {filteredStudents.length === 0 && (
-              <div className="p-8 text-center text-slate-400 text-xs font-medium">
-                No students found matching your filters.
-              </div>
-            )}
+              ) : filteredStudents.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500 font-medium">No students found.</p>
+                </div>
+              ) : (
+                filteredStudents.map((student) => {
+                  const isSelected = selectedStudent?._id === student._id;
+                  const hasMarks = student.marks && student.marks.length > 0;
+                  const allEntered = student.marks?.every((m) => m.isAbsent === true || m.marksObtained !== null);
+
+                  return (
+                    <button
+                      key={student._id}
+                      onClick={() => handleSelectStudent(student)}
+                      className={`w-full p-4 text-left border-b border-slate-100 hover:bg-slate-50 transition-all ${
+                        isSelected ? 'bg-blue-50/60 border-l-4 border-l-blue-600' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {student.fullName?.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() || '??'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-slate-800 truncate">{student.fullName}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs font-mono font-bold text-blue-600">{student.enrollmentId}</span>
+                            <span className="text-xs text-slate-400">•</span>
+                            <span className="text-xs font-medium text-slate-500">{student.batch?.year || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            {hasMarks && allEntered ? (
+                              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                ✓ Complete
+                              </span>
+                            ) : hasMarks ? (
+                              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                                ⚠ Partial
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                                ✗ No Marks
+                              </span>
+                            )}
+                            <span className="text-xs text-slate-400">•</span>
+                            <span className="text-xs font-medium text-slate-500">{student.course?.name || 'N/A'}</span>
+                          </div>
+                        </div>
+                        {isSelected && <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" />}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
 
         {/* ─── RIGHT PANEL: Marks Entry ─────────────────────────────────────── */}
-        <div className="lg:col-span-8 space-y-4">
+        <div className="lg:col-span-8 space-y-3">
           {selectedStudent ? (
             <>
               {/* Student Info Card */}
-              <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xl font-black shadow-md flex-shrink-0">
-                      {selectedStudent.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      {selectedStudent.fullName?.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() || '??'}
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-slate-800">{selectedStudent.name}</h3>
-                      <div className="flex flex-wrap items-center gap-3 mt-1 text-xs">
-                        <span className="font-mono font-bold text-blue-600">{selectedStudent.enrollmentId}</span>
+                      <h3 className="text-lg font-black text-slate-800">{selectedStudent.fullName}</h3>
+                      <div className="flex flex-wrap items-center gap-3 mt-1 text-sm">
+                        <span className="font-mono font-bold text-blue-600 text-sm">{selectedStudent.enrollmentId}</span>
                         <span className="text-slate-300">|</span>
-                        <span className="flex items-center gap-1 text-slate-500">
+                        <span className="flex items-center gap-1.5 text-slate-600 font-medium">
                           <GraduationCap className="w-3.5 h-3.5" />
-                          {selectedStudent.batch}
+                          {selectedStudent.course?.name || 'N/A'}
                         </span>
                         <span className="text-slate-300">|</span>
-                        <span className="flex items-center gap-1 text-slate-500">
-                          <Building2 className="w-3.5 h-3.5" />
-                          {selectedStudent.institute}
+                        <span className="flex items-center gap-1.5 text-slate-600 font-medium">
+                          <Calendar className="w-3.5 h-3.5" />
+                          Semester {selectedSemester}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                  <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200">
                     <Award className="w-4 h-4 text-blue-600" />
-                    <span className="text-xs font-bold text-slate-700">Overall: </span>
-                    <span className={`text-sm font-black ${overallMarks.percentage >= 75 ? 'text-emerald-600' : overallMarks.percentage >= 60 ? 'text-amber-600' : 'text-rose-600'}`}>
-                      {overallMarks.percentage}%
+                    <span className="text-xs font-bold text-slate-700">Overall:</span>
+                    <span
+                      className={`text-lg font-black ${
+                        overall.percentage >= 75
+                          ? 'text-emerald-600'
+                          : overall.percentage >= 60
+                            ? 'text-amber-600'
+                            : 'text-rose-600'
+                      }`}
+                    >
+                      {overall.count > 0 ? `${overall.percentage}%` : 'N/A'}
                     </span>
+                    {overall.count > 0 && (
+                      <span className="text-xs text-slate-500">
+                        ({overall.obtained}/{overall.total})
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-100">
                   <div className="bg-slate-50 rounded-xl p-3 text-center">
-                    <span className="text-[9px] uppercase font-black text-slate-400">Subjects</span>
-                    <p className="text-sm font-black text-slate-800">{subjects.length}</p>
+                    <span className="text-xs uppercase font-bold text-slate-500">Subjects</span>
+                    <p className="text-lg font-black text-slate-800">{selectedStudent.marks?.length || 0}</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 text-center">
-                    <span className="text-[9px] uppercase font-black text-slate-400">Total Marks</span>
-                    <p className="text-sm font-black text-slate-800">{overallMarks.obtained}/{overallMarks.total}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl p-3 text-center">
-                    <span className="text-[9px] uppercase font-black text-slate-400">Attendance</span>
-                    <p className={`text-sm font-black ${selectedStudent.attendance >= 75 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                      {selectedStudent.attendance}%
+                    <span className="text-xs uppercase font-bold text-slate-500">Scored</span>
+                    <p className="text-lg font-black text-slate-800">
+                      {overall.obtained}/{overall.total}
                     </p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 text-center">
-                    <span className="text-[9px] uppercase font-black text-slate-400">Thesis</span>
-                    <p className={`text-sm font-black ${selectedStudent.thesisStatus === 'Approved' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                      {selectedStudent.thesisStatus}
+                    <span className="text-xs uppercase font-bold text-slate-500">Attendance</span>
+                    <p
+                      className={`text-lg font-black ${
+                        selectedStudent.attendancePercentage >= 75 ? 'text-emerald-600' : 'text-amber-600'
+                      }`}
+                    >
+                      {selectedStudent.attendancePercentage || 0}%
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <span className="text-xs uppercase font-bold text-slate-500">Thesis</span>
+                    <p
+                      className={`text-lg font-black ${
+                        selectedStudent.thesisApproved ? 'text-emerald-600' : 'text-amber-600'
+                      }`}
+                    >
+                      {selectedStudent.thesisApproved ? 'Approved' : 'Pending'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Tabs */}
-              <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-                <div className="border-b border-slate-100 px-6 pt-4 flex gap-1">
-                  <button
-                    onClick={() => setActiveTab('marks')}
-                    className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-xl transition-all ${
-                      activeTab === 'marks'
-                        ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <BookOpen className="w-3.5 h-3.5 inline mr-1.5" />
-                    Marks Entry
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('details')}
-                    className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider rounded-t-xl transition-all ${
-                      activeTab === 'details'
-                        ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <User className="w-3.5 h-3.5 inline mr-1.5" />
-                    Student Details
-                  </button>
+              {/* ─── Marks Table ──────────────────────────────────────────────── */}
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
+                  <div className="flex items-center gap-2.5">
+                    <BookOpen className="w-4 h-4 text-blue-600" />
+                    <h4 className="text-sm font-bold text-slate-700">Marks Entry - Semester {selectedSemester}</h4>
+                    <span className="text-xs text-slate-400">|</span>
+                    <span className="text-xs font-medium text-slate-500">
+                      {selectedStudent.marks?.length || 0} subjects
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleAddSubject}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add Subject
+                    </button>
+                    <button
+                      onClick={handleSaveMarks}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm"
+                    >
+                      {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      Save Marks
+                    </button>
+                  </div>
                 </div>
 
-                {/* ─── TAB: Marks Entry ──────────────────────────────────────── */}
-                {activeTab === 'marks' && (
-                  <div className="p-6 space-y-6">
-                    {/* Subject Table */}
-                    <div className="overflow-x-auto border border-slate-100 rounded-2xl">
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-100">
-                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
-                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Subject</th>
-                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Marks Obtained</th>
-                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
-                            <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-24">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50 bg-white">
-                          {subjects.map((subject, idx) => (
-                            <tr key={subject.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-400">
-                                {String(idx + 1).padStart(2, '0')}
-                              </td>
-                              <td className="px-4 py-3.5 font-bold text-slate-800">
-                                {subject.name}
-                              </td>
-                              <td className="px-4 py-3.5 text-center">
-                                {editingSubjectId === subject.id ? (
-                                  <div className="flex items-center justify-center gap-2">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      value={editMarks}
-                                      onChange={(e) => setEditMarks(e.target.value)}
-                                      className="w-16 px-2 py-1 bg-white border border-blue-300 rounded-lg text-center text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      autoFocus
-                                    />
-                                    <span className="text-slate-400 font-bold">/ 100</span>
-                                  </div>
-                                ) : (
-                                  <span className="font-bold text-slate-800">
-                                    {subject.marksObtained} / {subject.totalMarks}
+                <div className="overflow-x-auto p-1">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100/70 border-b border-slate-200">
+                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-12 text-center">
+                          #
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider">Subject</th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-44 text-center">
+                          Marks Obtained
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-28 text-center">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-24 text-center">
+                          Grade
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-20 text-center">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {(selectedStudent.marks || []).map((subject, idx) => {
+                        const grade = subject.isAbsent === true
+                          ? 'ABSENT'
+                          : getGrade(subject.marksObtained, subject.totalMarks || 100);
+                        const isEditing = editingCell?.subjectCode === subject.subjectCode;
+                        const isAbsent = subject.isAbsent === true;
+                        const isUnmarked = subject.isAbsent === null || subject.isAbsent === undefined;
+
+                        // Status badge colors: Present = Green (emerald), Absent = Red (rose), Unmarked = Gray
+                        const statusColor = isAbsent
+                          ? 'bg-rose-100 border-rose-300 text-rose-700 hover:bg-rose-200'
+                          : isUnmarked
+                            ? 'bg-slate-100 border-slate-300 text-slate-500 hover:bg-slate-200'
+                            : 'bg-emerald-100 border-emerald-300 text-emerald-700 hover:bg-emerald-200';
+
+                        return (
+                          <tr
+                            key={subject.subjectCode || idx}
+                            className={`hover:bg-slate-50/70 transition-colors ${isAbsent ? 'bg-rose-50/40' : ''}`}
+                          >
+                            <td className="px-4 py-3.5 text-center font-bold text-slate-400 text-sm">
+                              {String(idx + 1).padStart(2, '0')}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <div>
+                                <span className="text-sm font-bold text-slate-800">{subject.subjectName}</span>
+                                <span className="ml-2.5 text-xs font-mono text-slate-400">{subject.subjectCode}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              {isEditing && editingCell?.field === 'marksObtained' ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={subject.totalMarks || 100}
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onBlur={finishEditing}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') finishEditing();
+                                    }}
+                                    autoFocus
+                                    className="w-20 px-2.5 py-1.5 border-2 border-blue-500 rounded-xl text-center text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                                  />
+                                  <span className="text-xs text-slate-400 font-bold">/ {subject.totalMarks || 100}</span>
+                                </div>
+                              ) : (
+                                <div
+                                  className={`flex items-center gap-2.5 cursor-pointer group ${isAbsent ? 'opacity-60' : ''}`}
+                                  onClick={() =>
+                                    !isAbsent && startEditing(subject.subjectCode, 'marksObtained', subject.marksObtained)
+                                  }
+                                >
+                                  <span
+                                    className={`text-sm font-bold ${
+                                      isAbsent ? 'text-slate-400' : 'text-slate-800'
+                                    }`}
+                                  >
+                                    {isAbsent || subject.marksObtained === null ? '—' : subject.marksObtained}
                                   </span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3.5 text-center">
-                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStatusColor(subject.percentage)}`}>
-                                  {getStatusIcon(subject.percentage)}
-                                  {subject.percentage}%
-                                </span>
-                              </td>
-                              <td className="px-4 py-3.5 text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  {editingSubjectId === subject.id ? (
-                                    <>
-                                      <button
-                                        onClick={() => handleSaveMarks(subject.id)}
-                                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                                        title="Save"
-                                      >
-                                        <CheckCircle2 className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={handleCancelEdit}
-                                        className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-all"
-                                        title="Cancel"
-                                      >
-                                        <XCircle className="w-4 h-4" />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <button
-                                        onClick={() => handleEditMarks(subject.id)}
-                                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                        title="Edit Marks"
-                                      >
-                                        <Edit2 className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteSubject(subject.id)}
-                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                                        title="Delete Subject"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
-                                    </>
+                                  <span className="text-xs text-slate-400 font-bold">/ {subject.totalMarks || 100}</span>
+                                  {!isAbsent && (
+                                    <span className="text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      (click to edit)
+                                    </span>
                                   )}
                                 </div>
-                              </td>
-                            </tr>
-                          ))}
-                          {subjects.length === 0 && (
-                            <tr>
-                              <td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-xs font-medium">
-                                No subjects added yet. Add a subject below.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                        {/* Summary Row */}
-                        {subjects.length > 0 && (
-                          <tfoot>
-                            <tr className="bg-slate-50 border-t border-slate-200">
-                              <td colSpan="2" className="px-4 py-3 font-black text-xs text-slate-700">
-                                Total / Overall
-                              </td>
-                              <td className="px-4 py-3 text-center font-black text-sm text-slate-800">
-                                {overallMarks.obtained} / {overallMarks.total}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black border ${getStatusColor(overallMarks.percentage)}`}>
-                                  {getStatusIcon(overallMarks.percentage)}
-                                  {overallMarks.percentage}%
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 text-center">
+                              <button
+                                onClick={() => handleStatusToggle(subject.subjectCode)}
+                                title="Click to cycle: NOT MARKED → PRESENT → ABSENT"
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${statusColor}`}
+                              >
+                                {isAbsent ? 'ABSENT' : isUnmarked ? 'NOT MARKED' : 'PRESENT'}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3.5 text-center">
+                              {subject.isAbsent ? (
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${getGradeColor('ABSENT')}`}
+                                >
+                                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                                  ABSENT
                                 </span>
-                              </td>
-                              <td className="px-4 py-3 text-center"></td>
-                            </tr>
-                          </tfoot>
-                        )}
-                      </table>
-                    </div>
-
-                    {/* Add Subject Row */}
-                    <div className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-3">
-                      <div className="flex-1 w-full">
-                        <input
-                          type="text"
-                          placeholder="Enter subject name..."
-                          value={newSubjectName}
-                          onChange={(e) => setNewSubjectName(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all"
-                        />
-                      </div>
-                      <div className="w-full sm:w-24">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          placeholder="Marks"
-                          value={newSubjectMarks}
-                          onChange={(e) => setNewSubjectMarks(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all text-center"
-                        />
-                      </div>
-                      <button
-                        onClick={handleAddSubject}
-                        className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md shadow-blue-500/10 cursor-pointer whitespace-nowrap"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Subject
-                      </button>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="flex justify-end pt-2 border-t border-slate-100">
-                      <button
-                        onClick={handleSubmitAll}
-                        disabled={isSubmitting || subjects.length === 0}
-                        className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/10 cursor-pointer"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            Submitting...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="w-4 h-4" />
-                            Submit All Marks
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* ─── TAB: Student Details ──────────────────────────────────── */}
-                {activeTab === 'details' && (
-                  <div className="p-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider border-b border-slate-100 pb-2">
-                          Personal Information
-                        </h4>
-                        <div className="space-y-3">
-                          <div>
-                            <span className="text-[9px] uppercase font-black text-slate-400 block">Full Name</span>
-                            <span className="text-sm font-bold text-slate-800">{selectedStudent.name}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-black text-slate-400 block">Enrollment ID</span>
-                            <span className="text-sm font-mono font-bold text-blue-600">{selectedStudent.enrollmentId}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-black text-slate-400 block">Email Address</span>
-                            <span className="text-sm font-semibold text-slate-700">{selectedStudent.email}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-black text-slate-400 block">Contact Number</span>
-                            <span className="text-sm font-semibold text-slate-700">{selectedStudent.phone}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider border-b border-slate-100 pb-2">
-                          Academic Information
-                        </h4>
-                        <div className="space-y-3">
-                          <div>
-                            <span className="text-[9px] uppercase font-black text-slate-400 block">Institute</span>
-                            <span className="text-sm font-bold text-slate-800">{selectedStudent.institute}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-black text-slate-400 block">Course</span>
-                            <span className="text-sm font-bold text-slate-800">{selectedStudent.course}</span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] uppercase font-black text-slate-400 block">Batch</span>
-                            <span className="text-sm font-bold text-slate-800">{selectedStudent.batch}</span>
-                          </div>
-                          <div className="flex items-center gap-4 pt-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] uppercase font-black text-slate-400">Attendance:</span>
-                              <span className={`text-sm font-black ${selectedStudent.attendance >= 75 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                {selectedStudent.attendance}%
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] uppercase font-black text-slate-400">Thesis:</span>
-                              <span className={`text-sm font-black ${selectedStudent.thesisStatus === 'Approved' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                {selectedStudent.thesisStatus}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Subject Summary */}
-                    <div className="border-t border-slate-100 pt-4">
-                      <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3">
-                        Marks Summary ({subjects.length} Subjects)
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {subjects.map(subject => (
-                          <div key={subject.id} className="bg-slate-50 rounded-xl p-3 text-center">
-                            <span className="text-[9px] font-bold text-slate-500 block truncate">{subject.name}</span>
-                            <span className={`text-sm font-black ${subject.percentage >= 75 ? 'text-emerald-600' : subject.percentage >= 60 ? 'text-amber-600' : 'text-rose-600'}`}>
-                              {subject.marksObtained}%
+                              ) : grade ? (
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${getGradeColor(grade)}`}
+                                >
+                                  {getStatusIcon(subject.marksObtained)}
+                                  {grade}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400 font-medium">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 text-center">
+                              <button
+                                onClick={() => handleRemoveSubject(subject.subjectCode)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                title="Remove Subject"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {(selectedStudent.marks || []).length === 0 && (
+                        <tr>
+                          <td colSpan="6" className="px-5 py-12 text-center">
+                            <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                            <p className="text-base font-medium text-slate-500">No subjects added yet.</p>
+                            <p className="text-sm text-slate-400 mt-1">Click "Add Subject" to begin entering marks.</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                    {(selectedStudent.marks || []).length > 0 && (
+                      <tfoot>
+                        <tr className="bg-slate-100/70 border-t-2 border-slate-200">
+                          <td colSpan="2" className="px-4 py-3.5 font-black text-sm text-slate-700">
+                            Total / Overall
+                          </td>
+                          <td className="px-4 py-3.5 text-center font-black text-lg text-slate-800">
+                            {overall.obtained} / {overall.total}
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-black border ${
+                                overall.percentage >= 75
+                                  ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
+                                  : overall.percentage >= 60
+                                    ? 'bg-amber-100 border-amber-200 text-amber-700'
+                                    : 'bg-rose-100 border-rose-200 text-rose-700'
+                              }`}
+                            >
+                              {getStatusIcon(overall.percentage)}
+                              {overall.count > 0 ? `${overall.percentage}%` : 'N/A'}
                             </span>
-                          </div>
-                        ))}
-                        {subjects.length === 0 && (
-                          <div className="col-span-4 text-center text-slate-400 text-xs py-4">
-                            No subjects recorded yet.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                          </td>
+                          <td colSpan="2" className="px-4 py-3.5 text-center"></td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
+
+              {/* ─── Quick Actions ────────────────────────────────────────────── */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-3 justify-between">
+                <div className="flex items-center gap-2.5 text-xs text-slate-600">
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                  <span className="font-medium">
+                    <span className="font-bold text-emerald-700">PRESENT</span> = Green •
+                    <span className="font-bold text-rose-700 ml-1">ABSENT</span> = Red
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const updatedMarks = (selectedStudent.marks || []).map((m) => ({
+                        ...m,
+                        isAbsent: false,
+                      }));
+                      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
+                      setToast({ message: 'All subjects set to PRESENT', type: 'success' });
+                    }}
+                    className="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold rounded-xl text-xs transition-all border border-emerald-200"
+                  >
+                    Set All Present
+                  </button>
+                  <button
+                    onClick={() => {
+                      const updatedMarks = (selectedStudent.marks || []).map((m) => ({
+                        ...m,
+                        isAbsent: true,
+                        marksObtained: null,
+                      }));
+                      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
+                      setToast({ message: 'All subjects set to ABSENT', type: 'info' });
+                    }}
+                    className="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl text-xs transition-all border border-rose-200"
+                  >
+                    Set All Absent
+                  </button>
+                </div>
               </div>
             </>
           ) : (
             // ─── Empty State ──────────────────────────────────────────────────
-            <div className="bg-white border border-slate-100 rounded-2xl p-12 shadow-sm text-center">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="w-10 h-10 text-slate-300" />
+            <div className="bg-white border border-slate-200 rounded-2xl p-12 shadow-sm text-center">
+              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="w-10 h-10 text-slate-400" />
               </div>
-              <h3 className="text-lg font-black text-slate-700">Select a Student</h3>
-              <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto">
+              <h3 className="text-xl font-black text-slate-700">Select a Student</h3>
+              <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
                 Choose a student from the list on the left to view and update their marks.
               </p>
-              <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-slate-400">
-                <span className="bg-slate-100 px-3 py-1 rounded-full">📊 {students.length} Students</span>
-                <span className="bg-slate-100 px-3 py-1 rounded-full">📚 {batches.length - 1} Batches</span>
+              <div className="mt-4 flex items-center justify-center gap-3 text-xs text-slate-500">
+                <span className="bg-slate-100 px-3.5 py-1.5 rounded-xl font-bold">📊 {students.length} Students</span>
+                <span className="bg-slate-100 px-3.5 py-1.5 rounded-xl font-bold">📚 {batchOptions.length - 1} Batches</span>
               </div>
             </div>
           )}
@@ -19165,6 +20684,7 @@ const AcademyMarksUpdating = () => {
 };
 
 export default AcademyMarksUpdating;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyPublishDetails.jsx`
@@ -19194,11 +20714,7 @@ export default function AcademyPublishDetails() {
 ### `client/src/pages/academy/components/AcademyPublishResults.jsx`
 
 ```jsx
-import { useState, useMemo, useEffect } from 'react';
-import academicService from '../../../api/academic';
-import instituteService from '../../../api/institutes';
-import examService from '../../../api/exams';
-import resultService from '../../../api/results';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Calendar,
   Clock,
@@ -19209,628 +20725,977 @@ import {
   Users,
   FileSpreadsheet,
   RefreshCw,
-  Eye,
-  ChevronDown,
   Globe,
-  ShieldCheck,
-  Bell,
-  CalendarDays,
   Mail,
-  BarChart3,
-  X
+  X,
+  Printer,
+  Download,
+  Loader2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
+import marksService from '../../../api/marks';
+import academicService from '../../../api/academic';
+import instituteService from '../../../api/institutes';
+
+// ─── Step Indicator (module-level, presentational) ──────────────────────────
+const StepIndicator = ({ current, total, labels, onStepChange }) => (
+  <div className="flex items-center justify-center gap-0 mb-8">
+    {Array.from({ length: total }, (_, i) => i + 1).map((num, idx) => {
+      const isActive = current === num;
+      const isCompleted = current > num;
+      const isClickable = num < current;
+
+      return (
+        <div key={num} className="flex items-center">
+          {idx > 0 && (
+            <div
+              className={`w-12 h-0.5 sm:w-20 ${
+                isCompleted ? 'bg-blue-500' : 'bg-slate-200'
+              }`}
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => isClickable && onStepChange(num)}
+            disabled={!isClickable}
+            className={`flex flex-col items-center gap-1.5 px-2 py-1 rounded-xl transition-all ${
+              isActive ? 'scale-105' : ''
+            } ${!isClickable ? 'opacity-60 cursor-default' : 'hover:bg-slate-50'}`}
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all shadow-sm ${
+                isCompleted || isActive
+                  ? 'bg-blue-600 text-white shadow-blue-500/30'
+                  : 'bg-slate-100 text-slate-400'
+              } ${isActive ? 'ring-4 ring-blue-100' : ''}`}
+            >
+              {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : num}
+            </div>
+            <span
+              className={`text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${
+                isActive || isCompleted ? 'text-blue-700' : 'text-slate-400'
+              }`}
+            >
+              {labels[idx]}
+            </span>
+          </button>
+        </div>
+      );
+    })}
+  </div>
+);
 
 const AcademyPublishResults = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
+  const [step, setStep] = useState(1); // 1: Select, 2: Review, 3: Publish
   const [selectedInstitute, setSelectedInstitute] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
-  const [selectedExam, setSelectedExam] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
   const [publishDate, setPublishDate] = useState('');
   const [publishTime, setPublishTime] = useState('');
   const [publishAMPM, setPublishAMPM] = useState('AM');
   const [includeAllStudents, setIncludeAllStudents] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sendNotifications, setSendNotifications] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
-  const [showPreview, setShowPreview] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // ─── Data State ──────────────────────────────────────────────────────────────
+  const [institutes, setInstitutes] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [publicationStatus, setPublicationStatus] = useState(null);
+  const [generatedResults, setGeneratedResults] = useState(null);
+  const [publishResult, setPublishResult] = useState(null);
+
+  const itemsPerPage = 10;
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
-  const [institutes, setInstitutes] = useState([]);
-  const [exams, setExams] = useState([]);
-  const [batches, setBatches] = useState([]);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [instRes, examRes, batchRes] = await Promise.all([
+        const [instRes, courseRes, batchRes] = await Promise.all([
           instituteService.listApplications().catch(() => ({ data: { data: [] } })),
-          examService.listExamApplications().catch(() => ({ data: { data: [] } })),
-          academicService.getBatches().catch(() => ({ data: { data: [] } }))
+          academicService.getCourses().catch(() => ({ data: { data: [] } })),
+          academicService.getBatches().catch((err) => {
+            console.warn('Failed to fetch batches from API:', err);
+            setToast({
+              message: err.parsedMessage || err.message || 'Failed to load batches',
+              type: 'error',
+            });
+            return { data: { data: [] } };
+          }),
         ]);
 
-        const instData = instRes.data?.data || [];
-        const examData = examRes.data?.data || [];
-        const batchData = batchRes.data?.data || [];
-
-        setInstitutes(instData.map(i => ({ id: i._id, name: i.orgName || i.organizationName || 'Institute' })));
-        setExams(examData.map(e => ({ id: e._id, name: e.title || e.name || 'Exam' })));
-        setBatches(batchData.map(b => ({ id: b._id, name: b.name, students: b.students?.length || 0 })));
-      } catch (err) {
-        setToast({ message: 'Error loading dropdown data', type: 'danger' });
+        setInstitutes((instRes.data?.data || []).map((i) => ({ id: i._id, name: i.orgName || i.name })));
+        setCourses((courseRes.data?.data || []).map((c) => ({ id: c._id, name: c.name })));
+        setBatches((batchRes.data?.data || []).map((b) => ({ id: b._id, name: b.name, course: b.course?._id || b.course })));
+      } catch {
+        setToast({ message: 'Error loading data', type: 'error' });
       }
     };
     fetchData();
   }, []);
 
-  // ─── Computed ──────────────────────────────────────────────────────────────
-  const filteredBatches = useMemo(() => {
-    if (!selectedInstitute) return [];
-    return batches;
-  }, [selectedInstitute, batches]);
+  // ─── Fetch Publication Status ───────────────────────────────────────────────
+  const fetchPublicationStatus = useCallback(async () => {
+    if (!selectedBatch || !selectedCourse || !selectedSemester) return;
 
-  const totalStudents = useMemo(() => {
-    if (includeAllStudents) {
-      return batches.reduce((sum, b) => sum + (b.students || 0), 0);
+    try {
+      const res = await marksService.getPublicationStatus({
+        batchId: selectedBatch,
+        courseId: selectedCourse,
+        semesterNumber: selectedSemester,
+      });
+      const data = res.data?.data || res.data;
+      setPublicationStatus(data);
+    } catch {
+      setToast({ message: 'Failed to load publication status', type: 'error' });
     }
-    return selectedStudents.length;
-  }, [includeAllStudents, selectedStudents, batches]);
+  }, [selectedBatch, selectedCourse, selectedSemester]);
+
+  useEffect(() => {
+    if (selectedBatch && selectedCourse && selectedSemester) {
+      const timer = setTimeout(() => {
+        fetchPublicationStatus();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedBatch, selectedCourse, selectedSemester, fetchPublicationStatus]);
+
+  // ─── Derived Data ──────────────────────────────────────────────────────────
+  const filteredBatches = useMemo(() => {
+    if (!selectedCourse) return [];
+    return batches.filter((b) => {
+      const courseId = b.course?._id || b.course;
+      return String(courseId) === String(selectedCourse);
+    });
+  }, [batches, selectedCourse]);
+
+  const statusSummary = useMemo(() => {
+    if (!publicationStatus) return { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0 };
+    return publicationStatus.summary || { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0 };
+  }, [publicationStatus]);
+
+  const studentList = useMemo(() => {
+    if (!publicationStatus) return [];
+    return publicationStatus.students || [];
+  }, [publicationStatus]);
+
+  const filteredStudents = useMemo(() => {
+    if (includeAllStudents) return studentList;
+    return studentList.filter((s) => selectedStudents.includes(s.studentId));
+  }, [studentList, includeAllStudents, selectedStudents]);
+
+  const paginatedStudents = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredStudents.slice(start, start + itemsPerPage);
+  }, [filteredStudents, currentPage]);
+
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage) || 1;
+
+  const readyCount = studentList.filter((s) => s.status === 'Ready').length;
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
-  const handleSubmit = () => {
-    // Validate required fields
-    if (!selectedInstitute) {
-      setToast({ message: 'Please select an institution.', type: 'warning' });
+  const handleGenerateResults = async () => {
+    if (readyCount === 0) {
+      setToast({ message: 'No students are ready for result generation.', type: 'warning' });
       return;
     }
-    if (!selectedBatch) {
-      setToast({ message: 'Please select a batch.', type: 'warning' });
+
+    setConfirmConfig({
+      title: 'Generate Results from Marks',
+      message: `This will generate results for ${readyCount} student(s) who have complete marks.\nStudents with missing marks will be skipped.`,
+      type: 'info',
+      confirmText: 'Generate Now',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setIsGenerating(true);
+
+        try {
+          const payload = {
+            semesterNumber: parseInt(selectedSemester),
+            batchId: selectedBatch,
+            courseId: selectedCourse,
+            academicYear: selectedAcademicYear || new Date().getFullYear().toString(),
+            selectedStudentIds: !includeAllStudents ? selectedStudents : undefined,
+          };
+
+          const res = await marksService.generateResults(payload);
+          const data = res.data?.data || res.data;
+
+          setGeneratedResults(data);
+          setStep(2);
+
+          setToast({
+            message: `✅ Generated ${data.generated} results, ${data.errors} errors`,
+            type: data.errors > 0 ? 'warning' : 'success',
+          });
+
+          await fetchPublicationStatus();
+        } catch (err) {
+          setToast({ message: err.parsedMessage || 'Failed to generate results', type: 'error' });
+        } finally {
+          setIsGenerating(false);
+        }
+      },
+    });
+  };
+
+  const handlePublishResults = async () => {
+    if (!publishDate || !publishTime) {
+      setToast({ message: 'Please select a publish date and time.', type: 'warning' });
       return;
     }
-    if (!selectedExam) {
-      setToast({ message: 'Please select an exam.', type: 'warning' });
-      return;
-    }
-    if (!publishDate) {
-      setToast({ message: 'Please select a publish date.', type: 'warning' });
-      return;
-    }
-    if (!publishTime) {
-      setToast({ message: 'Please select a publish time.', type: 'warning' });
+
+    const readyToPublish = studentList.filter((s) => s.status === 'Ready').length;
+    if (readyToPublish === 0) {
+      setToast({ message: 'No results ready to publish.', type: 'warning' });
       return;
     }
 
     setConfirmConfig({
       title: 'Publish Results',
-      message: `Are you sure you want to publish results for:\n\n• Institution: ${institutes.find(i => String(i.id) === String(selectedInstitute))?.name}\n• Exam: ${exams.find(e => String(e.id) === String(selectedExam))?.name}\n• Students: ${totalStudents}\n• Publish Date: ${new Date(publishDate).toLocaleDateString()}\n• Publish Time: ${publishTime} ${publishAMPM}`,
+      message: `Are you sure you want to publish results for ${readyToPublish} student(s)?\n\n• Date: ${new Date(publishDate).toLocaleDateString()}\n• Time: ${publishTime} ${publishAMPM}\n• Notifications: ${sendNotifications ? 'Yes' : 'No'}`,
       type: 'success',
-      confirmText: 'Yes, Publish Now',
+      confirmText: 'Publish Now',
       onConfirm: async () => {
         setConfirmConfig(null);
-        setIsSubmitting(true);
-        
+        setIsPublishing(true);
+
         try {
-          // Since there is no bulk publish endpoint that accepts batch/exam ID, we just simulate the UI flow
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        } catch (error) {
-          console.error(error);
-        }
-        
-        setIsSubmitting(false);
+          const payload = {
+            semesterNumber: parseInt(selectedSemester),
+            batchId: selectedBatch,
+            courseId: selectedCourse,
+            academicYear: selectedAcademicYear || new Date().getFullYear().toString(),
+            publishDate,
+            publishTime: `${publishTime} ${publishAMPM}`,
+            selectedStudentIds: !includeAllStudents ? selectedStudents : undefined,
+            sendNotifications,
+          };
 
-        // Alternate Flow: Missing marks -> Block
-        // Simulating that if Batch 2023-B (id 4) is selected, there are missing marks
-        if (Number(selectedBatch) === 4) {
+          const res = await marksService.publishResults(payload);
+          const data = res.data?.data || res.data;
+
+          setPublishResult(data);
+          setStep(3);
+
           setToast({
-            message: `❌ Cannot publish results. Missing marks detected for 2 students in ${getBatchName(selectedBatch)}. Please upload marks before publishing.`,
-            type: 'error'
+            message: `✅ Published ${data.publishedCount} results successfully!`,
+            type: 'success',
           });
-          return;
+
+          await fetchPublicationStatus();
+        } catch (err) {
+          setToast({ message: err.parsedMessage || 'Failed to publish results', type: 'error' });
+        } finally {
+          setIsPublishing(false);
         }
-
-        setToast({
-          message: `✅ Results published successfully! ${totalStudents} student${totalStudents > 1 ? 's' : ''} will see results on ${new Date(publishDate).toLocaleDateString()} at ${publishTime} ${publishAMPM}`,
-          type: 'success'
-        });
-
-        // Reset form after success
-        setTimeout(() => {
-          setSelectedInstitute('');
-          setSelectedBatch('');
-          setSelectedExam('');
-          setPublishDate('');
-          setPublishTime('');
-          setPublishAMPM('AM');
-          setIncludeAllStudents(true);
-          setSelectedStudents([]);
-        }, 3000);
-      }
+      },
     });
   };
 
-  const handlePreview = () => {
-    if (!selectedInstitute || !selectedBatch || !selectedExam) {
-      setToast({ message: 'Please select institution, batch, and exam to preview.', type: 'warning' });
-      return;
+  const handleReset = () => {
+    setStep(1);
+    setGeneratedResults(null);
+    setPublishResult(null);
+    setSelectedInstitute('');
+    setSelectedCourse('');
+    setSelectedBatch('');
+    setSelectedSemester('');
+    setSelectedAcademicYear('');
+    setPublishDate('');
+    setPublishTime('');
+    setSelectedStudents([]);
+    setIncludeAllStudents(true);
+    setCurrentPage(1);
+  };
+
+  const handleSelectStudent = (studentId) => {
+    setSelectedStudents((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSelectAllStudents = () => {
+    const readyStudentIds = studentList.filter((s) => s.status === 'Ready').map((s) => s.studentId);
+    if (selectedStudents.length === readyStudentIds.length) {
+      setSelectedStudents([]);
+    } else {
+      setSelectedStudents(readyStudentIds);
     }
-    setShowPreview(true);
   };
 
-  const handleSendNotification = () => {
-    setToast({
-      message: `📧 Notification emails sent to ${totalStudents} students and ${institutes.filter(i => String(i.id) === String(selectedInstitute)).length} institute(s)!`,
-      type: 'success'
-    });
+  // ─── Render Helpers ──────────────────────────────────────────────────────
+  const getStatusBadge = (status) => {
+    const map = {
+      Ready: { label: '✅ Ready', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+      Partial: { label: '⚠️ Partial', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+      'No Marks': { label: '❌ No Marks', color: 'bg-rose-100 text-rose-700 border-rose-200' },
+      Published: { label: '📄 Published', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    };
+    return map[status] || map['No Marks'];
   };
 
-  // ─── Render Helpers ────────────────────────────────────────────────────────
-  const getInstituteName = (id) => {
-    const inst = institutes.find(i => String(i.id) === String(id));
-    return inst ? inst.name : '';
+  const getStatusIcon = (status) => {
+    if (status === 'Ready') return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
+    if (status === 'Partial') return <AlertCircle className="w-4 h-4 text-amber-600" />;
+    if (status === 'Published') return <CheckCircle2 className="w-4 h-4 text-blue-600" />;
+    return <X className="w-4 h-4 text-rose-600" />;
   };
 
-  const getExamName = (id) => {
-    const exam = exams.find(e => String(e.id) === String(id));
-    return exam ? exam.name : '';
-  };
+  // ─── Step 1: Select & Review ──────────────────────────────────────────────
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Institute */}
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+            Institute <span className="text-rose-500">*</span>
+          </label>
+          <div className="relative">
+            <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <select
+              value={selectedInstitute}
+              onChange={(e) => setSelectedInstitute(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="">Select Institute</option>
+              {institutes.map((inst) => (
+                <option key={inst.id} value={inst.id}>{inst.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-  const getBatchName = (id) => {
-    const batch = batches.find(b => String(b.id) === String(id));
-    return batch ? batch.name : '';
-  };
+        {/* Course */}
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+            Course <span className="text-rose-500">*</span>
+          </label>
+          <div className="relative">
+            <FileSpreadsheet className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <select
+              value={selectedCourse}
+              onChange={(e) => {
+                setSelectedCourse(e.target.value);
+                setSelectedBatch('');
+              }}
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="">Select Course</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Batch */}
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+            Batch <span className="text-rose-500">*</span>
+          </label>
+          <div className="relative">
+            <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <select
+              value={selectedBatch}
+              onChange={(e) => setSelectedBatch(e.target.value)}
+              disabled={!selectedCourse}
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <option value="">{selectedCourse ? 'Select Batch' : 'Select Course first'}</option>
+              {filteredBatches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Semester */}
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+            Semester <span className="text-rose-500">*</span>
+          </label>
+          <select
+            value={selectedSemester}
+            onChange={(e) => setSelectedSemester(e.target.value)}
+            disabled={!selectedBatch}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50"
+          >
+            <option value="">Select Semester</option>
+            {[1, 2, 3, 4, 5, 6].map((sem) => (
+              <option key={sem} value={sem}>Semester {sem}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Academic Year */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+            Academic Year
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. 2024-25"
+            value={selectedAcademicYear}
+            onChange={(e) => setSelectedAcademicYear(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+          />
+        </div>
+        <div className="flex items-end justify-end gap-3">
+          <button
+            onClick={() => {
+              setSelectedAcademicYear(new Date().getFullYear().toString());
+              setPublishDate(new Date().toISOString().split('T')[0]);
+            }}
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all"
+          >
+            Set Current Year
+          </button>
+          <button
+            onClick={fetchPublicationStatus}
+            disabled={!selectedBatch || !selectedCourse || !selectedSemester}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Check Status
+          </button>
+        </div>
+      </div>
+
+      {/* Status Summary */}
+      {publicationStatus && (
+        <div className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-slate-400" />
+              <span className="text-sm font-bold text-slate-700">Total: {statusSummary.total}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm font-bold text-emerald-700">Ready: {statusSummary.ready}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600" />
+              <span className="text-sm font-bold text-amber-700">Partial: {statusSummary.partial}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <X className="w-4 h-4 text-rose-600" />
+              <span className="text-sm font-bold text-rose-700">No Marks: {statusSummary.noMarks}</span>
+            </div>
+            {statusSummary.published > 0 && (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-bold text-blue-700">Published: {statusSummary.published}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Student List with Status */}
+      {studentList.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-4">
+              <h4 className="text-sm font-bold text-slate-700">Students</h4>
+              <span className="text-xs text-slate-400">{studentList.length} total</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeAllStudents}
+                  onChange={() => setIncludeAllStudents(!includeAllStudents)}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                All Students
+              </label>
+              {!includeAllStudents && (
+                <button
+                  onClick={handleSelectAllStudents}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700"
+                >
+                  Select Ready Students
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50/70 border-b border-slate-200">
+                  {!includeAllStudents && (
+                    <th className="px-4 py-3 text-center w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.length === studentList.filter((s) => s.status === 'Ready').length && studentList.filter((s) => s.status === 'Ready').length > 0}
+                        onChange={handleSelectAllStudents}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </th>
+                  )}
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student Name</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Enrollment ID</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {paginatedStudents.map((s, idx) => {
+                  const status = getStatusBadge(s.status);
+                  const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
+
+                  return (
+                    <tr key={s.studentId} className="hover:bg-slate-50/50 transition-colors">
+                      {!includeAllStudents && (
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedStudents.includes(s.studentId)}
+                            onChange={() => handleSelectStudent(s.studentId)}
+                            disabled={s.status !== 'Ready'}
+                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40"
+                          />
+                        </td>
+                      )}
+                      <td className="px-4 py-3 text-center font-mono font-bold text-slate-400">
+                        {String(globalIdx).padStart(2, '0')}
+                      </td>
+                      <td className="px-4 py-3 font-bold text-slate-800">{s.name}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-blue-600">{s.enrollmentId}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${status.color}`}
+                        >
+                          {getStatusIcon(s.status)}
+                          {status.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {paginatedStudents.length === 0 && (
+                  <tr>
+                    <td colSpan={!includeAllStudents ? 5 : 4} className="px-4 py-8 text-center text-slate-400 text-sm font-medium">
+                      No students found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-medium">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
+                  {currentPage} / {totalPages}
+                </div>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <button
+          onClick={handleReset}
+          className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+        >
+          Reset
+        </button>
+        <button
+          onClick={handleGenerateResults}
+          disabled={isGenerating || readyCount === 0}
+          className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-blue-500/10"
+        >
+          {isGenerating ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+          ) : (
+            <><FileText className="w-4 h-4" /> Generate Results ({readyCount})</>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ─── Step 2: Review Results ──────────────────────────────────────────────
+  const renderStep2 = () => (
+    <div className="space-y-6">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-start gap-4">
+        <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 flex-shrink-0">
+          <CheckCircle2 className="w-5 h-5" />
+        </div>
+        <div>
+          <h4 className="text-sm font-black text-emerald-800">Results Generated Successfully</h4>
+          <p className="text-xs text-emerald-700 font-medium mt-0.5">
+            Generated {generatedResults?.generated || 0} results, {generatedResults?.errors || 0} errors
+          </p>
+          {generatedResults?.errors > 0 && (
+            <div className="mt-2 text-xs text-amber-700 bg-amber-50/80 p-2 rounded-xl border border-amber-200">
+              <span className="font-bold">⚠️ {generatedResults.errors} students were skipped:</span>
+              {generatedResults.errorDetails?.slice(0, 3).map((err, i) => (
+                <div key={i} className="mt-0.5">{err.name}: {err.reason}</div>
+              ))}
+              {generatedResults.errors > 3 && (
+                <div className="text-slate-500 text-[10px]">+ {generatedResults.errors - 3} more</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Publication Schedule */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <h4 className="text-sm font-black text-slate-700 mb-4">Publication Schedule</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+              Publish Date <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="date"
+                value={publishDate}
+                onChange={(e) => setPublishDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+              Publish Time <span className="text-rose-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  placeholder="10"
+                  value={publishTime}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (val >= 1 && val <= 12) {
+                      setPublishTime(e.target.value);
+                    } else if (e.target.value === '') {
+                      setPublishTime('');
+                    }
+                  }}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                />
+              </div>
+              <select
+                value={publishAMPM}
+                onChange={(e) => setPublishAMPM(e.target.value)}
+                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-600">
+              <input
+                type="checkbox"
+                checked={sendNotifications}
+                onChange={(e) => setSendNotifications(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="flex items-center gap-1.5">
+                <Mail className="w-4 h-4" />
+                Send Notifications
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="bg-slate-50/70 border border-slate-200 rounded-2xl p-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Total Students</span>
+            <span className="text-xl font-black text-slate-800">{generatedResults?.totalStudents || 0}</span>
+          </div>
+          <div className="text-center">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Generated</span>
+            <span className="text-xl font-black text-emerald-600">{generatedResults?.generated || 0}</span>
+          </div>
+          <div className="text-center">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Errors</span>
+            <span className={`text-xl font-black ${generatedResults?.errors > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+              {generatedResults?.errors || 0}
+            </span>
+          </div>
+          <div className="text-center">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Ready to Publish</span>
+            <span className="text-xl font-black text-blue-600">{generatedResults?.generated || 0}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex justify-between gap-3 pt-4 border-t border-slate-100">
+        <button
+          onClick={() => setStep(1)}
+          className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back
+        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setStep(1);
+              setGeneratedResults(null);
+            }}
+            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+          >
+            Regenerate
+          </button>
+          <button
+            onClick={handlePublishResults}
+            disabled={isPublishing || !publishDate || !publishTime}
+            className="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-500/10"
+          >
+            {isPublishing ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Publishing...</>
+            ) : (
+              <><Send className="w-4 h-4" /> Publish Results</>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ─── Step 3: Publication Complete ──────────────────────────────────────────
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center">
+        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+        </div>
+        <h3 className="text-xl font-black text-emerald-800">🎉 Results Published Successfully!</h3>
+        <p className="text-sm text-emerald-700 font-medium mt-2">
+          {publishResult?.publishedCount} results published, {publishResult?.skippedCount} already published
+        </p>
+        <div className="mt-3 flex items-center justify-center gap-4 text-xs text-emerald-700">
+          <span>📅 {publishDate ? new Date(publishDate).toLocaleDateString() : 'N/A'}</span>
+          <span>⏰ {publishTime} {publishAMPM}</span>
+          <span>📧 {sendNotifications ? 'Notifications Sent' : 'No Notifications'}</span>
+        </div>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+          <span className="text-[10px] uppercase font-black text-slate-400 block">Published</span>
+          <span className="text-2xl font-black text-emerald-600">{publishResult?.publishedCount || 0}</span>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+          <span className="text-[10px] uppercase font-black text-slate-400 block">Skipped</span>
+          <span className="text-2xl font-black text-amber-600">{publishResult?.skippedCount || 0}</span>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+          <span className="text-[10px] uppercase font-black text-slate-400 block">Total</span>
+          <span className="text-2xl font-black text-slate-800">{publishResult?.totalResults || 0}</span>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+          <span className="text-[10px] uppercase font-black text-slate-400 block">Notifications</span>
+          <span className="text-2xl font-black text-blue-600">{sendNotifications ? '✅ Sent' : '⏸️ Off'}</span>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <h4 className="text-sm font-black text-slate-700 mb-4">Quick Actions</h4>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => {
+              setStep(1);
+              setGeneratedResults(null);
+              setPublishResult(null);
+            }}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            New Publication
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print Report
+          </button>
+          <button
+            onClick={() => setToast({ message: '📊 Publication report exported successfully!', type: 'success' })}
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export Report
+          </button>
+        </div>
+      </div>
+
+      {/* Generated Results Preview */}
+      {publishResult?.publishedResults?.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-slate-200 bg-slate-50/50">
+            <h4 className="text-sm font-bold text-slate-700">Published Results</h4>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50/70 border-b border-slate-200">
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Percentage</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Certificate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {publishResult.publishedResults.slice(0, 5).map((r, idx) => (
+                  <tr key={r._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 text-center font-mono font-bold text-slate-400">
+                      {String(idx + 1).padStart(2, '0')}
+                    </td>
+                    <td className="px-4 py-3 font-bold text-slate-800">
+                      {r.student?.firstName} {r.student?.lastName}
+                      <span className="ml-2 text-[10px] font-mono text-slate-400">{r.student?.enrollmentId}</span>
+                    </td>
+                    <td className="px-4 py-3 font-bold text-slate-800">{r.percentage}%</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                        r.resultStatus === 'PASS'
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-rose-50 border-rose-200 text-rose-700'
+                      }`}>
+                        {r.resultStatus === 'PASS' ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <X className="w-3.5 h-3.5" />
+                        )}
+                        {r.resultStatus}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {r.resultStatus === 'PASS' ? (
+                        <span className="text-emerald-600 font-bold text-[10px]">✅ Generated</span>
+                      ) : (
+                        <span className="text-slate-400 text-[10px]">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleReset}
+          className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+        >
+          Start New Publication
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+
       {/* ─── Page Header ─────────────────────────────────────────────────────── */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
             <Globe className="w-6 h-6" />
           </div>
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Publish Results</h2>
-            <p className="text-xs text-slate-400 font-semibold mt-1">Schedule and publish examination results to institutes and students</p>
+            <p className="text-xs text-slate-400 font-semibold mt-1">
+              {step === 1 && 'Select students and generate results from marks'}
+              {step === 2 && 'Review generated results and schedule publication'}
+              {step === 3 && 'Publication complete'}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handlePreview}
-            className="px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-blue-100 transition-all cursor-pointer"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Preview
-          </button>
-          <button
-            onClick={handleSendNotification}
-            className="px-4 py-2 bg-purple-50 border border-purple-200 text-purple-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-purple-100 transition-all cursor-pointer"
-          >
-            <Mail className="w-3.5 h-3.5" />
-            Notify
-          </button>
-        </div>
-      </div>
-
-      {/* ─── Main Form ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        
-        {/* ─── Left: Form Panel ──────────────────────────────────────────────── */}
-        <div className="lg:col-span-3 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-6">
-          <div>
-            <h3 className="text-base font-black text-slate-800 tracking-tight">Publish Results</h3>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">Schedule result publication date and time</p>
-          </div>
-
-          {/* Institution Selection */}
-          <div className="space-y-1.5">
-            <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
-              Institution <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <select
-                value={selectedInstitute}
-                onChange={(e) => {
-                  setSelectedInstitute(e.target.value);
-                  setSelectedBatch('');
-                }}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer appearance-none"
-              >
-                <option value="">Select Institution</option>
-                {institutes.map(inst => (
-                  <option key={inst.id} value={inst.id}>{inst.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Exam Selection */}
-          <div className="space-y-1.5">
-            <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
-              Exam <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <FileSpreadsheet className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <select
-                value={selectedExam}
-                onChange={(e) => setSelectedExam(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer appearance-none"
-              >
-                <option value="">Select Exam</option>
-                {exams.map(exam => (
-                  <option key={exam.id} value={exam.id}>{exam.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Batch Selection */}
-          <div className="space-y-1.5">
-            <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
-              Batch <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <select
-                value={selectedBatch}
-                onChange={(e) => setSelectedBatch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer appearance-none"
-                disabled={!selectedInstitute}
-              >
-                <option value="">{selectedInstitute ? 'Select Batch' : 'Select Institution first'}</option>
-                {filteredBatches.map(batch => (
-                  <option key={batch.id} value={batch.id}>
-                    {batch.name} ({batch.students} students)
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            </div>
-            {selectedInstitute && filteredBatches.length === 0 && (
-              <p className="text-[10px] text-amber-600 font-semibold mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                No batches available for this institution.
-              </p>
-            )}
-          </div>
-
-          {/* Student Selection */}
-          <div className="space-y-2 pt-1">
-            <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
-              Students
-            </label>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={includeAllStudents}
-                  onChange={() => setIncludeAllStudents(true)}
-                  className="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                />
-                <span className="text-xs font-bold text-slate-700">All Students</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={!includeAllStudents}
-                  onChange={() => setIncludeAllStudents(false)}
-                  className="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                />
-                <span className="text-xs font-bold text-slate-700">Select Specific</span>
-              </label>
-            </div>
-            {!includeAllStudents && (
-              <div className="mt-2 animate-in slide-in-from-top duration-200">
-                <select
-                  multiple
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all min-h-[100px]"
-                >
-                  <option value="1">Dr. Aarav Sharma (SEMI-2026-1001)</option>
-                  <option value="2">Dr. Priya Nair (SEMI-2026-1002)</option>
-                  <option value="3">Dr. Rahul Verma (SEMI-2026-1003)</option>
-                  <option value="4">Dr. Neha Patel (SEMI-2026-1004)</option>
-                </select>
-                <p className="text-[10px] text-slate-400 font-medium mt-1">Hold Ctrl/Cmd to select multiple students</p>
-              </div>
-            )}
-          </div>
-
-          {/* Publish Date & Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div className="space-y-1.5">
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
-                Publish Date <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="date"
-                  value={publishDate}
-                  onChange={(e) => setPublishDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-500">
-                Publish Time <span className="text-rose-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="number"
-                    min="1"
-                    max="12"
-                    placeholder="10"
-                    value={publishTime}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      if (val >= 1 && val <= 12) {
-                        setPublishTime(e.target.value);
-                      } else if (e.target.value === '') {
-                        setPublishTime('');
-                      }
-                    }}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                  />
-                </div>
-                <select
-                  value={publishAMPM}
-                  onChange={(e) => setPublishAMPM(e.target.value)}
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer"
-                >
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Info Box */}
-          <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <span className="text-xs font-extrabold text-indigo-900 block">Publication Notice</span>
-              <p className="text-[11px] text-indigo-800 font-medium leading-relaxed mt-0.5">
-                Results will be visible to institutes and students at the selected date and time.
-                A notification email will be sent to all stakeholders.
-              </p>
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end pt-2 border-t border-slate-100">
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20 cursor-pointer"
-            >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Publishing...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Publish Results
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* ─── Right: Summary Panel ───────────────────────────────────────────── */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Summary Card */}
-          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
-            <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Publication Summary
-            </h4>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-[11px] font-semibold text-slate-500">Institution</span>
-                <span className="text-xs font-bold text-slate-800 text-right max-w-[180px] truncate">
-                  {selectedInstitute ? getInstituteName(selectedInstitute) : '—'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-[11px] font-semibold text-slate-500">Exam</span>
-                <span className="text-xs font-bold text-slate-800">
-                  {selectedExam ? getExamName(selectedExam) : '—'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-[11px] font-semibold text-slate-500">Batch</span>
-                <span className="text-xs font-bold text-slate-800">
-                  {selectedBatch ? getBatchName(selectedBatch) : '—'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-[11px] font-semibold text-slate-500">Students</span>
-                <span className="text-xs font-bold text-indigo-600">
-                  {totalStudents} student{totalStudents !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-[11px] font-semibold text-slate-500">Publish Date</span>
-                <span className="text-xs font-bold text-slate-800">
-                  {publishDate ? new Date(publishDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-1.5">
-                <span className="text-[11px] font-semibold text-slate-500">Publish Time</span>
-                <span className="text-xs font-bold text-slate-800">
-                  {publishTime ? `${publishTime} ${publishAMPM}` : '—'}
-                </span>
-              </div>
-            </div>
-
-            {/* Status Indicator */}
-            <div className={`mt-4 p-3 rounded-xl border ${publishDate && publishTime ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-              <div className="flex items-center gap-2">
-                {publishDate && publishTime ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span className="text-[10px] font-black text-emerald-700">Ready to publish</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="w-4 h-4 text-amber-600" />
-                    <span className="text-[10px] font-black text-amber-700">Please complete all required fields</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-            <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3">Quick Actions</h4>
-            <div className="space-y-2">
-              <button
-                onClick={handlePreview}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-blue-300 rounded-xl text-[10px] font-bold text-slate-600 hover:text-blue-600 transition-all flex items-center justify-center gap-2"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                Preview Results
-              </button>
-              <button
-                onClick={handleSendNotification}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-purple-300 rounded-xl text-[10px] font-bold text-slate-600 hover:text-purple-600 transition-all flex items-center justify-center gap-2"
-              >
-                <Mail className="w-3.5 h-3.5" />
-                Send Notifications
-              </button>
-            </div>
+          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+            <span className="text-[10px] font-black text-slate-400">Step</span>
+            <span className="text-sm font-black text-blue-600">{step}/3</span>
           </div>
         </div>
       </div>
 
-      {/* ─── Preview Modal ────────────────────────────────────────────────────── */}
-      {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-                  <Eye className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-800">Result Preview</h3>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {getExamName(selectedExam)} • {getBatchName(selectedBatch)}
-                  </p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                onClick={() => setShowPreview(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-1 space-y-6">
-              {/* Publication Details */}
-              <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3">
-                <Bell className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-xs font-extrabold text-indigo-900 block">Publication Schedule</span>
-                  <p className="text-[11px] text-indigo-800 font-medium mt-0.5">
-                    Results will be published on {publishDate ? new Date(publishDate).toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : '—'} at {publishTime} {publishAMPM}
-                  </p>
-                </div>
-              </div>
-
-              {/* Results Table Preview */}
-              <div>
-                <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3">Student Results ({totalStudents} students)</h4>
-                <div className="overflow-x-auto border border-slate-100 rounded-2xl">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-50/70 border-b border-slate-100">
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Student Name</th>
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 bg-white">
-                      {[
-                        { name: 'Dr. Aarav Sharma', id: 'SEMI-2026-1001', percentage: 87 },
-                        { name: 'Dr. Priya Nair', id: 'SEMI-2026-1002', percentage: 76 },
-                        { name: 'Dr. Rahul Verma', id: 'SEMI-2026-1003', percentage: 76 },
-                        { name: 'Dr. Neha Patel', id: 'SEMI-2026-1004', percentage: 84 },
-                        { name: 'Dr. Karan Malhotra', id: 'SEMI-2026-1005', percentage: 62 },
-                      ].slice(0, 5).map((student, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-4 py-2.5 text-center font-mono font-bold text-slate-400">
-                            {String(idx + 1).padStart(2, '0')}
-                          </td>
-                          <td className="px-4 py-2.5 font-bold text-slate-700">
-                            {student.name}
-                            <span className="ml-2 text-[9px] font-mono font-bold text-slate-400">{student.id}</span>
-                          </td>
-                          <td className="px-4 py-2.5 text-center">
-                            <span className={`font-black ${student.percentage >= 75 ? 'text-emerald-600' : student.percentage >= 60 ? 'text-amber-600' : 'text-rose-600'}`}>
-                              {student.percentage}%
-                            </span>
-                          </td>
-                          <td className="px-4 py-2.5 text-center">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${student.percentage >= 75 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : student.percentage >= 60 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
-                              {student.percentage >= 75 ? 'Passed' : student.percentage >= 60 ? 'Eligible' : 'Needs Improvement'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {totalStudents > 5 && (
-                  <p className="text-[10px] text-slate-400 font-medium mt-2 text-center">
-                    + {totalStudents - 5} more student{totalStudents - 5 > 1 ? 's' : ''}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
-                <CalendarDays className="w-4 h-4" />
-                {publishDate ? `Scheduled for ${new Date(publishDate).toLocaleDateString()}` : 'Not scheduled'}
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPreview(false)}
-                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Toast ────────────────────────────────────────────────────────────── */}
+      {/* ─── Messages ────────────────────────────────────────────────────────── */}
       {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
+
+      {/* ─── Main Content ───────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <StepIndicator
+          current={step}
+          total={3}
+          labels={['Select & Review', 'Schedule', 'Publish']}
+          onStepChange={setStep}
+        />
+
+        {step === 1 && renderStep1()}
+        {step === 2 && renderStep2()}
+        {step === 3 && renderStep3()}
+      </div>
 
       {/* ─── Confirmation Modal ──────────────────────────────────────────────── */}
       {confirmConfig && (
@@ -19849,6 +21714,7 @@ const AcademyPublishResults = () => {
 };
 
 export default AcademyPublishResults;
+
 ```
 
 ### `client/src/pages/academy/components/AcademyPublishingDetails.jsx`
@@ -20714,265 +22580,1148 @@ export default AcademyRejectionModal;
 ### `client/src/pages/academy/components/AcademyRevaluation.jsx`
 
 ```jsx
-import { useState, useEffect } from 'react';
-import { Award, Search, Filter, Edit3, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  Award,
+  Search,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  FileText,
+  TrendingUp,
+  Minus,
+  RefreshCw,
+  X,
+  Check,
+  UserCheck,
+  ClipboardList,
+  FilePlus2,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
+import Toast from '../../../Components/Toast';
+import ConfirmModal from '../../../Components/ConfirmModal';
 import revaluationService from '../../../api/revaluation';
 
-export default function AcademyRevaluation() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [updatedMarks, setUpdatedMarks] = useState('');
-  const [evaluatorNotes, setEvaluatorNotes] = useState('');
+const STATUS_OPTIONS = [
+  'PENDING',
+  'UNDER_REVIEW',
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'REJECTED',
+  'CANCELLED',
+];
 
-  // Data for incoming revaluation requests
+const GRADE_OPTIONS = ['O', 'A+', 'A', 'B+', 'B', 'C', 'D', 'F', 'ABSENT'];
+
+const AcademyRevaluation = () => {
+  // ─── State ──────────────────────────────────────────────────────────────────
   const [requests, setRequests] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [summary, setSummary] = useState(null);
 
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        setIsLoading(true);
-        const res = await revaluationService.getAllRevaluationRequests();
-        const data = res.data?.data || res.data || [];
-        // Map to UI model
-        const mappedData = data.map(req => ({
-          id: req._id,
-          reqId: req.requestNumber || req._id.toString().substring(0, 8),
-          studentName: req.student?.firstName ? `${req.student.firstName} ${req.student.lastName}` : 'Unknown Student',
-          enrollmentId: req.student?.enrollmentId || 'Unknown ID',
-          institute: req.student?.institute?.orgName || 'Unknown Institute',
-          subject: req.subject?.name || req.subjectCode || 'Unknown Subject',
-          oldMarks: req.originalMarks || 0,
-          status: req.status === 'PENDING' ? 'Pending Review' : req.status === 'EVALUATED' ? 'Under Evaluation' : req.status === 'APPROVED' ? 'Completed' : 'Pending Review',
-          date: new Date(req.createdAt).toISOString().split('T')[0],
-          newMarks: req.revaluationMarks || null
-        }));
-        setRequests(mappedData);
-      } catch (err) {
-        console.error('Error fetching revaluation requests:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchRequests();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [instituteFilter, setInstituteFilter] = useState('All');
+  const [semesterFilter, setSemesterFilter] = useState('All');
+  const [academicYearFilter, setAcademicYearFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [toast, setToast] = useState(null);
+  const [viewingRequest, setViewingRequest] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [statusModal, setStatusModal] = useState(null);
+  const [resultModal, setResultModal] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+
+  const itemsPerPage = 10;
+
+  // ─── Data Fetching ──────────────────────────────────────────────────────────
+  const fetchSummary = useCallback(async () => {
+    try {
+      const res = await revaluationService.getAcademySummary();
+      const data = res.data?.data || res.data || {};
+      setSummary(data);
+    } catch (err) {
+      console.error('Error fetching summary:', err);
+      setToast({ message: err.parsedMessage || 'Failed to load summary', type: 'error' });
+    }
   }, []);
 
-  const filteredRequests = requests.filter(req => 
-    req.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    req.reqId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    req.institute.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchRequests = useCallback(async () => {
+    try {
+      const res = await revaluationService.getAllRevaluationRequests({ limit: 10000 });
+      const data = res.data?.data || res.data || {};
+      const list = data.requests || data.results || data;
+      setRequests(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('Error fetching requests:', err);
+      setToast({ message: err.parsedMessage || 'Failed to load revaluation requests', type: 'error' });
+    }
+  }, []);
 
-  const openUpdateModal = (req) => {
-    setSelectedRequest(req);
-    setUpdatedMarks(req.newMarks ? req.newMarks.toString() : '');
-    setEvaluatorNotes('');
-    setShowUpdateModal(true);
+  const fetchData = useCallback(async () => {
+    try {
+      await Promise.all([fetchSummary(), fetchRequests()]);
+    } catch (err) {
+      console.error('Error fetching revaluation data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchSummary, fetchRequests]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchData(), 0);
+    return () => clearTimeout(timer);
+  }, [fetchData]);
+
+  // ─── Computed Values ──────────────────────────────────────────────────────
+  const institutes = useMemo(() => {
+    const stats = summary?.instituteStats || [];
+    return stats
+      .filter((s) => s.instituteName)
+      .map((s) => ({ _id: s._id, name: s.instituteName, count: s.count || 0 }));
+  }, [summary]);
+
+  const academicYears = useMemo(() => {
+    const set = new Set();
+    requests.forEach((r) => {
+      if (r.academicYear) set.add(r.academicYear);
+    });
+    return [...set].sort().reverse();
+  }, [requests]);
+
+  const semesters = useMemo(() => {
+    const set = new Set();
+    requests.forEach((r) => {
+      if (r.semester) set.add(r.semester);
+    });
+    return [...set].sort((a, b) => a - b);
+  }, [requests]);
+
+  const filteredRequests = useMemo(() => {
+    let filtered = [...requests];
+
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter((r) => r.status === statusFilter);
+    }
+
+    if (instituteFilter !== 'All') {
+      filtered = filtered.filter((r) => String(r.institute?._id || r.institute) === String(instituteFilter));
+    }
+
+    if (semesterFilter !== 'All') {
+      filtered = filtered.filter((r) => String(r.semester) === String(semesterFilter));
+    }
+
+    if (academicYearFilter !== 'All') {
+      filtered = filtered.filter((r) => r.academicYear === academicYearFilter);
+    }
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((r) => {
+        const student = r.student;
+        const name = student ? `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase() : '';
+        const enrollmentId = student?.enrollmentId?.toLowerCase() || '';
+        const instituteName = r.institute?.orgName?.toLowerCase() || '';
+        return (
+          name.includes(q) ||
+          enrollmentId.includes(q) ||
+          instituteName.includes(q) ||
+          (r.requestId || '').toLowerCase().includes(q)
+        );
+      });
+    }
+
+    return filtered;
+  }, [requests, statusFilter, instituteFilter, semesterFilter, academicYearFilter, searchQuery]);
+
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredRequests.slice(start, start + itemsPerPage);
+  }, [filteredRequests, currentPage]);
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const handleUpdateMarks = async () => {
+  const getStatusBadge = (status) => {
+    const map = {
+      PENDING: { label: 'Pending', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: <Clock className="w-3.5 h-3.5" /> },
+      UNDER_REVIEW: { label: 'Under Review', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <Loader2 className="w-3.5 h-3.5 animate-spin" /> },
+      ASSIGNED: { label: 'Assigned', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: <UserCheck className="w-3.5 h-3.5" /> },
+      IN_PROGRESS: { label: 'In Progress', color: 'bg-purple-50 text-purple-700 border-purple-200', icon: <Loader2 className="w-3.5 h-3.5 animate-spin" /> },
+      COMPLETED: { label: 'Completed', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+      REJECTED: { label: 'Rejected', color: 'bg-rose-50 text-rose-700 border-rose-200', icon: <XCircle className="w-3.5 h-3.5" /> },
+      CANCELLED: { label: 'Cancelled', color: 'bg-slate-50 text-slate-500 border-slate-200', icon: <X className="w-3.5 h-3.5" /> },
+    };
+    return map[status] || map.PENDING;
+  };
+
+  const getResultBadge = (finalResult) => {
+    if (finalResult === 'CHANGED') {
+      return { label: 'Marks Changed', color: 'text-emerald-600', icon: <TrendingUp className="w-3.5 h-3.5" /> };
+    }
+    if (finalResult === 'UNCHANGED') {
+      return { label: 'No Change', color: 'text-amber-600', icon: <Minus className="w-3.5 h-3.5" /> };
+    }
+    return { label: 'Pending', color: 'text-slate-400', icon: <Clock className="w-3.5 h-3.5" /> };
+  };
+
+  const canAddResult = (request) => ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS'].includes(request.status);
+  const canUpdateStatus = (request) => !['COMPLETED', 'REJECTED', 'CANCELLED'].includes(request.status);
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+  const handleViewRequest = async (request) => {
+    setIsDetailOpen(true);
+    setViewingRequest(request);
+    setDetailLoading(true);
     try {
-      await revaluationService.addRevaluationResult(selectedRequest.id, {
-        marks: parseInt(updatedMarks, 10),
-        evaluatorNotes
-      });
-      
-      setRequests(requests.map(req => 
-        req.id === selectedRequest.id 
-          ? { ...req, status: 'Completed', newMarks: parseInt(updatedMarks, 10) } 
-          : req
-      ));
-      setShowUpdateModal(false);
-      alert(`Results updated and republished for ${selectedRequest.studentName}`);
+      const res = await revaluationService.getRevaluationRequestById(request._id);
+      setViewingRequest(res.data?.data || res.data);
     } catch (err) {
-      alert('Failed to update marks.');
+      console.error('Error fetching request details:', err);
+      setToast({ message: err.parsedMessage || 'Failed to load request details', type: 'error' });
+    } finally {
+      setDetailLoading(false);
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
-            <Award className="w-6 h-6 text-amber-500" />
+  const handleRefresh = () => {
+    fetchData();
+    setToast({ message: 'Data refreshed!', type: 'success' });
+  };
+
+  const openStatusModal = (request) => {
+    setStatusModal({ request, status: request.status, comments: '', assignedEvaluator: '' });
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!statusModal) return;
+    const { request, status, comments, assignedEvaluator } = statusModal;
+
+    const payload = { status };
+    if (comments.trim()) payload.comments = comments.trim();
+    if (status === 'ASSIGNED') {
+      if (!assignedEvaluator.trim()) {
+        setToast({ message: 'Please enter an evaluator name to assign this request', type: 'warning' });
+        return;
+      }
+      payload.assignedEvaluator = assignedEvaluator.trim();
+    }
+
+    setConfirmConfig({
+      title: 'Update Request Status',
+      message: `Are you sure you want to change the status of request ${request.requestId || request._id} to "${status}"?\n${status === 'COMPLETED' ? '\nCompleting will process and republish revaluation results to the student result.' : ''}`,
+      type: status === 'REJECTED' || status === 'CANCELLED' ? 'warning' : 'info',
+      confirmText: 'Update Status',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setSubmitting(true);
+        try {
+          await revaluationService.updateRequestStatus(request._id, payload);
+          setToast({ message: 'Request status updated successfully', type: 'success' });
+          setStatusModal(null);
+          await fetchData();
+        } catch (err) {
+          console.error('Error updating status:', err);
+          setToast({ message: err.parsedMessage || 'Failed to update request status', type: 'error' });
+        } finally {
+          setSubmitting(false);
+        }
+      },
+    });
+  };
+
+  const openResultModal = (request) => {
+    const firstSubject = request.subjects?.[0];
+    setResultModal({
+      request,
+      subjectCode: firstSubject?.subjectCode || '',
+      subjectName: firstSubject?.subjectName || '',
+      revisedTotalMarks: '',
+      revisedGrade: '',
+      evaluatorComments: '',
+      isFinal: true,
+    });
+  };
+
+  const handleSubjectChange = (subjectCode) => {
+    const subject = resultModal.request.subjects.find((s) => s.subjectCode === subjectCode);
+    setResultModal((prev) => ({
+      ...prev,
+      subjectCode,
+      subjectName: subject?.subjectName || '',
+    }));
+  };
+
+  const handleSubmitResult = async () => {
+    if (!resultModal) return;
+    const { request, subjectCode, revisedTotalMarks, revisedGrade, evaluatorComments, isFinal } = resultModal;
+
+    if (!subjectCode) {
+      setToast({ message: 'Please select a subject', type: 'warning' });
+      return;
+    }
+    if (revisedTotalMarks === '' || Number.isNaN(Number(revisedTotalMarks))) {
+      setToast({ message: 'Please enter revised total marks', type: 'warning' });
+      return;
+    }
+    if (!revisedGrade) {
+      setToast({ message: 'Please select a revised grade', type: 'warning' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        subjectCode,
+        subjectName: resultModal.subjectName,
+        revisedTotalMarks: Number(revisedTotalMarks),
+        revisedGrade,
+        isFinal,
+      };
+      if (evaluatorComments.trim()) payload.evaluatorComments = evaluatorComments.trim();
+
+      await revaluationService.addRevaluationResult(request._id, payload);
+
+      setToast({ message: 'Revaluation result added successfully', type: 'success' });
+      setResultModal(null);
+      await fetchData();
+      if (isDetailOpen) await handleViewRequest(request);
+    } catch (err) {
+      console.error('Error adding revaluation result:', err);
+      setToast({ message: err.parsedMessage || 'Failed to add revaluation result', type: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleApproveResult = (revalResult) => {
+    setConfirmConfig({
+      title: 'Approve Revaluation Result',
+      message: `Approve the final revaluation result for ${revalResult.subjectName || 'this subject'}?\n\nOnce approved, the student's result will be updated and republished with the revised marks.`,
+      type: 'success',
+      confirmText: 'Approve & Republish',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setSubmitting(true);
+        try {
+          await revaluationService.approveRevaluationResult(revalResult._id, { isFinal: true, comments: revalResult.evaluatorComments });
+          setToast({ message: 'Revaluation result approved and published', type: 'success' });
+          if (viewingRequest) await handleViewRequest(viewingRequest);
+          await fetchData();
+        } catch (err) {
+          console.error('Error approving result:', err);
+          setToast({ message: err.parsedMessage || 'Failed to approve revaluation result', type: 'error' });
+        } finally {
+          setSubmitting(false);
+        }
+      },
+    });
+  };
+
+  // ─── Render Helpers ──────────────────────────────────────────────────────
+  const renderSummaryCards = () => {
+    const cards = [
+      { label: 'Total Requests', value: summary?.total || 0, color: 'text-blue-700', bg: 'bg-blue-50/60 border-blue-100' },
+      { label: 'Pending', value: summary?.pending || 0, color: 'text-amber-600', bg: 'bg-amber-50/60 border-amber-100' },
+      { label: 'Under Review', value: summary?.underReview || 0, color: 'text-blue-600', bg: 'bg-blue-50/60 border-blue-100' },
+      { label: 'In Progress', value: summary?.inProgress || 0, color: 'text-purple-600', bg: 'bg-purple-50/60 border-purple-100' },
+      { label: 'Completed', value: summary?.completed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50/60 border-emerald-100' },
+      { label: 'Marks Changed', value: summary?.changed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50/60 border-emerald-100' },
+      { label: 'No Change', value: summary?.unchanged || 0, color: 'text-amber-600', bg: 'bg-amber-50/60 border-amber-100' },
+      { label: 'Subjects Count', value: summary?.subjectsCount || 0, color: 'text-indigo-600', bg: 'bg-indigo-50/60 border-indigo-100' },
+    ];
+
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+        {cards.map((card) => (
+          <div key={card.label} className={`${card.bg} border rounded-2xl p-4 text-center`}>
+            <span className={`block text-2xl font-black ${card.color}`}>{card.value}</span>
+            <span className="block text-[9px] uppercase font-black text-slate-500 tracking-wider mt-1">{card.label}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderInstituteStats = () => {
+    const stats = summary?.instituteStats || [];
+    if (stats.length === 0) return null;
+
+    return (
+      <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <Users className="w-4.5 h-4.5" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-800">Revaluation Exam</h2>
-            <p className="text-sm text-slate-500 mt-1">Manage student revaluation requests and update marks.</p>
+            <h3 className="text-base font-black text-slate-800 tracking-tight">Institute Breakdown</h3>
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Requests by institute</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <div className="bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl text-center">
-            <span className="block text-xl font-black text-slate-800">{requests.filter(r => r.status !== 'Completed').length}</span>
-            <span className="block text-[10px] uppercase font-bold text-slate-500 tracking-wider">Pending</span>
-          </div>
-          <div className="bg-emerald-50 border border-emerald-100 px-4 py-2 rounded-xl text-center">
-            <span className="block text-xl font-black text-emerald-700">{requests.filter(r => r.status === 'Completed').length}</span>
-            <span className="block text-[10px] uppercase font-bold text-emerald-600 tracking-wider">Completed</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        {/* Toolbar */}
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/50">
-          <div className="relative w-full sm:w-96">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Search by student, ID, or institute..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all bg-white"
-            />
-          </div>
-          <button className="flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors bg-white w-full sm:w-auto">
-            <Filter className="w-4 h-4" />
-            Filter By Status
-          </button>
-        </div>
-
-        {/* Data Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Request Details</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Student & Institute</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Subject & Marks</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              <tr className="bg-slate-50/70 border-b border-slate-100">
+                <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Institute</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Pending</th>
+                <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Completed</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredRequests.length > 0 ? (
-                filteredRequests.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-800">{req.reqId}</span>
-                        <span className="text-xs text-slate-500">{req.date}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-800">{req.studentName}</span>
-                        <span className="text-xs text-slate-500">{req.institute}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-slate-600 truncate max-w-[200px]" title={req.subject}>{req.subject}</span>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs font-bold text-slate-400 line-through">{req.oldMarks}</span>
-                          {req.newMarks && (
-                            <span className="text-xs font-bold text-emerald-600">→ {req.newMarks}</span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
-                        req.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' : 
-                        req.status === 'Under Evaluation' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {req.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {req.status !== 'Completed' ? (
-                        <button 
-                          onClick={() => openUpdateModal(req)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 rounded-lg text-xs font-bold transition-colors"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          Update Marks
-                        </button>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-bold">
-                          <CheckCircle className="w-4 h-4" />
-                          Republished
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
-                    <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-sm">No revaluation requests found.</p>
-                  </td>
+            <tbody className="divide-y divide-slate-50 bg-white">
+              {stats.map((stat, idx) => (
+                <tr key={stat._id || idx} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 font-bold text-slate-800">{stat.instituteName || 'Unknown Institute'}</td>
+                  <td className="px-4 py-3 text-center font-bold text-blue-600">{stat.count || 0}</td>
+                  <td className="px-4 py-3 text-center font-bold text-amber-600">{stat.pending || 0}</td>
+                  <td className="px-4 py-3 text-center font-bold text-emerald-600">{stat.completed || 0}</td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
       </div>
+    );
+  };
 
-      {/* Update Marks Modal */}
-      {showUpdateModal && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <h3 className="text-2xl font-black text-slate-800 mb-2">Update Results</h3>
-            <p className="text-sm text-slate-500 mb-6">Enter the revised marks for {selectedRequest.studentName}.</p>
-            
-            <div className="space-y-4 mb-6">
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <span className="block text-xs font-bold text-slate-500 uppercase mb-1">Subject</span>
-                <span className="block text-sm font-bold text-slate-800">{selectedRequest.subject}</span>
-                <div className="mt-2 text-sm text-slate-600">
-                  Original Marks: <strong className="text-slate-800">{selectedRequest.oldMarks}</strong>
+  const renderFilters = () => (
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="relative col-span-2 md:col-span-1">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search student, ID, institute..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+        />
+      </div>
+
+      <div>
+        <select
+          value={instituteFilter}
+          onChange={(e) => {
+            setInstituteFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+        >
+          <option value="All">All Institutes</option>
+          {institutes.map((inst) => (
+            <option key={inst._id} value={inst._id}>
+              {inst.name} ({inst.count})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+        >
+          <option value="All">All Status</option>
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>{getStatusBadge(s).label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <select
+          value={semesterFilter}
+          onChange={(e) => {
+            setSemesterFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+        >
+          <option value="All">All Semesters</option>
+          {semesters.map((sem) => (
+            <option key={sem} value={sem}>Semester {sem}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <select
+          value={academicYearFilter}
+          onChange={(e) => {
+            setAcademicYearFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+        >
+          <option value="All">All Years</option>
+          {academicYears.map((year) => (
+            <option key={year} value={year}>{year}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
+  const renderRequestsTable = () => (
+    <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+      <table className="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr className="bg-slate-50/70 border-b border-slate-100">
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Request ID</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Institute</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Subjects</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Fee</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-32">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50 bg-white">
+          {paginatedRequests.map((request, idx) => {
+            const statusBadge = getStatusBadge(request.status);
+            const resultBadge = getResultBadge(request.finalResult);
+            const student = request.student;
+            const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
+
+            return (
+              <tr key={request._id} className="hover:bg-slate-50/50 transition-colors">
+                <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-400">
+                  {String(globalIdx).padStart(2, '0')}
+                </td>
+                <td className="px-4 py-3.5">
+                  <span className="font-mono font-bold text-blue-600 block">
+                    {request.requestId || request._id.toString().substring(0, 8).toUpperCase()}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 text-[9px] font-bold ${resultBadge.color}`}>
+                    {resultBadge.icon}
+                    {resultBadge.label}
+                  </span>
+                </td>
+                <td className="px-4 py-3.5">
+                  <div>
+                    <span className="font-bold text-slate-800 block">
+                      {student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'Unknown'}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {student?.enrollmentId || 'N/A'}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-4 py-3.5">
+                  <span className="font-bold text-slate-700 block max-w-[140px] truncate" title={request.institute?.orgName}>
+                    {request.institute?.orgName || 'Unknown'}
+                  </span>
+                </td>
+                <td className="px-4 py-3.5 text-center font-bold text-slate-700">
+                  Sem {request.semester || 'N/A'}
+                </td>
+                <td className="px-4 py-3.5 text-center font-bold text-slate-700">
+                  {request.subjects?.length || 0}
+                </td>
+                <td className="px-4 py-3.5 text-center font-bold text-slate-800">
+                  ₹{request.totalFee?.toLocaleString() || 0}
+                </td>
+                <td className="px-4 py-3.5 text-center">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${statusBadge.color}`}>
+                    {statusBadge.icon}
+                    {statusBadge.label}
+                  </span>
+                </td>
+                <td className="px-4 py-3.5">
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      onClick={() => handleViewRequest(request)}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    {canUpdateStatus(request) && (
+                      <button
+                        onClick={() => openStatusModal(request)}
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer"
+                        title="Update Status"
+                      >
+                        <ClipboardList className="w-4 h-4" />
+                      </button>
+                    )}
+                    {canAddResult(request) && (
+                      <button
+                        onClick={() => openResultModal(request)}
+                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
+                        title="Add Result"
+                      >
+                        <FilePlus2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+          {filteredRequests.length === 0 && (
+            <tr>
+              <td colSpan="9" className="px-4 py-12 text-center text-slate-400">
+                <Award className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                <p className="text-sm font-bold text-slate-500">No revaluation requests found</p>
+                <p className="text-xs text-slate-400 mt-1">Try adjusting the filters above</p>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderPagination = () => (
+    <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
+      <span className="text-[10px] text-slate-400 font-semibold">
+        Showing {filteredRequests.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1} to{' '}
+        {Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length}
+      </span>
+      <div className="flex gap-1">
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
+        <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
+          {currentPage} / {totalPages}
+        </div>
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+
+  // ─── Main Render ───────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
+          <p className="text-sm text-slate-500 mt-4 font-medium">Loading revaluation data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+
+      {/* ─── Page Header ─────────────────────────────────────────────────────── */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+            <Award className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Revaluation Management</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">
+              Review, assign and evaluate revaluation requests from institutes
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-50 border border-slate-200 hover:bg-white hover:border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-800 transition-all cursor-pointer self-start md:self-auto"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+        </button>
+      </div>
+
+      {/* ─── Toast ───────────────────────────────────────────────────────────── */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* ─── Summary Cards ───────────────────────────────────────────────────── */}
+      {renderSummaryCards()}
+
+      {/* ─── Institute Breakdown ─────────────────────────────────────────────── */}
+      {renderInstituteStats()}
+
+      {/* ─── Requests ────────────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h3 className="text-base font-black text-slate-800 tracking-tight">Revaluation Requests</h3>
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
+              {filteredRequests.length} of {requests.length} requests
+            </p>
+          </div>
+        </div>
+
+        {renderFilters()}
+
+        <div className="mt-5">
+          {renderRequestsTable()}
+          {totalPages > 1 && renderPagination()}
+        </div>
+      </div>
+
+      {/* ─── Request Detail Modal ───────────────────────────────────────────── */}
+      {isDetailOpen && viewingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Revaluation Request Details</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {viewingRequest.requestId || viewingRequest._id}
+                  </p>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Revised Marks *</label>
-                <input 
-                  type="number" 
-                  value={updatedMarks}
-                  onChange={(e) => setUpdatedMarks(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-lg font-black"
-                  placeholder="e.g. 52"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Evaluator Notes (Optional)</label>
-                <textarea 
-                  value={evaluatorNotes}
-                  onChange={(e) => setEvaluatorNotes(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm resize-none"
-                  rows="3"
-                  placeholder="Any comments from the evaluator..."
-                ></textarea>
-              </div>
+              <button
+                onClick={() => setIsDetailOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowUpdateModal(false)}
-                className="flex-1 px-4 py-3 border-2 border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors"
+            <div className="p-6 overflow-y-auto flex-1 space-y-5 text-left">
+              {detailLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                </div>
+              ) : (
+                <>
+                  <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Student</span>
+                        <span className="text-slate-800 font-bold">
+                          {viewingRequest.student ? `${viewingRequest.student.firstName || ''} ${viewingRequest.student.lastName || ''}`.trim() : 'Unknown'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrollment ID</span>
+                        <span className="text-slate-800 font-mono font-bold">{viewingRequest.student?.enrollmentId || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                      <div>
+                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Institute</span>
+                        <span className="text-slate-800 font-bold">{viewingRequest.institute?.orgName || 'Unknown'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Submitted Date</span>
+                        <span className="text-slate-800 font-bold">{formatDate(viewingRequest.submittedDate)}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                      <div>
+                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
+                        <span className="text-slate-800 font-bold">Semester {viewingRequest.semester || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Year</span>
+                        <span className="text-slate-800 font-bold">{viewingRequest.academicYear || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                      <div>
+                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Status</span>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${getStatusBadge(viewingRequest.status).color}`}>
+                          {getStatusBadge(viewingRequest.status).icon}
+                          {getStatusBadge(viewingRequest.status).label}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Total Fee</span>
+                        <span className="text-slate-800 font-bold">₹{viewingRequest.totalFee?.toLocaleString() || 0}</span>
+                      </div>
+                    </div>
+                    {viewingRequest.paymentStatus && (
+                      <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                        <div>
+                          <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Payment Status</span>
+                          <span className={`inline-flex items-center gap-1 font-bold text-[10px] ${
+                            viewingRequest.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-amber-600'
+                          }`}>
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            {viewingRequest.paymentStatus === 'PAID' ? 'Paid' : viewingRequest.paymentStatus}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Assigned Evaluator</span>
+                          <span className="text-slate-800 font-bold">{viewingRequest.assignedEvaluator?.name || 'Not assigned'}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Subject Details */}
+                  {viewingRequest.subjects && viewingRequest.subjects.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
+                        Subjects for Revaluation
+                      </h4>
+                      <div className="space-y-2">
+                        {viewingRequest.subjects.map((subject, idx) => (
+                          <div key={idx} className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 flex items-center justify-between">
+                            <div>
+                              <span className="font-bold text-slate-800 block">{subject.subjectName}</span>
+                              <span className="text-[10px] text-slate-400 font-mono">{subject.subjectCode}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] text-slate-400 block">Original Marks</span>
+                              <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Revaluation Results */}
+                  {viewingRequest.revaluationResults && viewingRequest.revaluationResults.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
+                        Revaluation Results
+                      </h4>
+                      <div className="space-y-2">
+                        {viewingRequest.revaluationResults.map((result, idx) => (
+                          <div key={idx} className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                              <span className="font-bold text-slate-800 block">{result.subjectName}</span>
+                              <span className="text-[10px] text-slate-400">{result.subjectCode}</span>
+                              <span className={`inline-flex items-center gap-1 ml-2 text-[9px] font-bold ${
+                                result.reviewStatus === 'APPROVED' ? 'text-emerald-600' : 'text-amber-600'
+                              }`}>
+                                {result.reviewStatus === 'APPROVED' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                {result.reviewStatus === 'APPROVED' ? 'Approved' : 'Pending Approval'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <span className="text-[10px] text-slate-400 block">Original</span>
+                                <span className="text-sm font-black text-slate-600">{result.originalMarks}%</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[10px] text-slate-400 block">Revised</span>
+                                <span className={`text-sm font-black ${result.marksChange > 0 ? 'text-emerald-600' : result.marksChange < 0 ? 'text-rose-600' : 'text-amber-600'}`}>
+                                  {result.revisedTotalMarks}%
+                                </span>
+                              </div>
+                              <div className={`text-xs font-black px-2 py-1 rounded-lg ${
+                                result.marksChange > 0 ? 'bg-emerald-100 text-emerald-700' :
+                                result.marksChange < 0 ? 'bg-rose-100 text-rose-700' :
+                                'bg-amber-100 text-amber-700'
+                              }`}>
+                                {result.marksChange > 0 ? '+' : ''}{result.marksChange}%
+                              </div>
+                              {result.reviewStatus !== 'APPROVED' && (
+                                <button
+                                  onClick={() => handleApproveResult(result)}
+                                  disabled={submitting}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                                >
+                                  Approve
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Audit Trail */}
+                  {viewingRequest.auditTrail && viewingRequest.auditTrail.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
+                        Activity Timeline
+                      </h4>
+                      <div className="space-y-2">
+                        {viewingRequest.auditTrail.slice().reverse().map((entry, idx) => (
+                          <div key={idx} className="flex items-start gap-3 bg-slate-50/50 border border-slate-100 rounded-xl p-3">
+                            <div className="w-6 h-6 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center flex-shrink-0">
+                              <Clock className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-700 block text-[10px] uppercase tracking-wider">
+                                {entry.action}
+                              </span>
+                              <span className="text-[10px] text-slate-500 block mt-0.5">
+                                {entry.previousStatus ? `${entry.previousStatus} → ` : ''}{entry.newStatus}
+                              </span>
+                              <span className="text-[9px] text-slate-400 block mt-0.5">{formatDate(entry.timestamp)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+              <button
+                onClick={() => setIsDetailOpen(false)}
+                className="px-5 py-2.5 border border-slate-200 hover:bg-white text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
               >
-                Cancel
-              </button>
-              <button 
-                onClick={handleUpdateMarks}
-                disabled={!updatedMarks}
-                className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-600/30 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Save & Republish
+                Close
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ─── Update Status Modal ─────────────────────────────────────────────── */}
+      {statusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden scale-in-center">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Update Request Status</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {statusModal.request.requestId || statusModal.request._id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setStatusModal(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Status *</label>
+                <select
+                  value={statusModal.status}
+                  onChange={(e) => setStatusModal((prev) => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{getStatusBadge(s).label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {statusModal.status === 'ASSIGNED' && (
+                <div>
+                  <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Assigned Evaluator Name *</label>
+                  <input
+                    type="text"
+                    value={statusModal.assignedEvaluator}
+                    onChange={(e) => setStatusModal((prev) => ({ ...prev, assignedEvaluator: e.target.value }))}
+                    placeholder="e.g. Dr. A. Kumar"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Comments (Optional)</label>
+                <textarea
+                  value={statusModal.comments}
+                  onChange={(e) => setStatusModal((prev) => ({ ...prev, comments: e.target.value }))}
+                  rows="3"
+                  placeholder="Any notes for the institute or evaluator..."
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all resize-none"
+                ></textarea>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setStatusModal(null)}
+                className="px-5 py-2.5 border border-slate-200 hover:bg-white text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateStatus}
+                disabled={submitting}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Update Status
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Add Result Modal ────────────────────────────────────────────────── */}
+      {resultModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden scale-in-center">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
+                  <FilePlus2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Add Revaluation Result</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {resultModal.request.requestId || resultModal.request._id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setResultModal(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Subject *</label>
+                <select
+                  value={resultModal.subjectCode}
+                  onChange={(e) => handleSubjectChange(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                >
+                  <option value="">Select Subject</option>
+                  {resultModal.request.subjects.map((subject) => (
+                    <option key={subject.subjectCode} value={subject.subjectCode}>
+                      {subject.subjectName} ({subject.originalMarks}%)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Revised Total Marks (%) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={resultModal.revisedTotalMarks}
+                    onChange={(e) => setResultModal((prev) => ({ ...prev, revisedTotalMarks: e.target.value }))}
+                    placeholder="e.g. 62"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Revised Grade *</label>
+                  <select
+                    value={resultModal.revisedGrade}
+                    onChange={(e) => setResultModal((prev) => ({ ...prev, revisedGrade: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                  >
+                    <option value="">Select Grade</option>
+                    {GRADE_OPTIONS.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Evaluator Comments (Optional)</label>
+                <textarea
+                  value={resultModal.evaluatorComments}
+                  onChange={(e) => setResultModal((prev) => ({ ...prev, evaluatorComments: e.target.value }))}
+                  rows="3"
+                  placeholder="Notes from the evaluator..."
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all resize-none"
+                ></textarea>
+              </div>
+
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={resultModal.isFinal}
+                  onChange={(e) => setResultModal((prev) => ({ ...prev, isFinal: e.target.checked }))}
+                  className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-slate-600">
+                  Mark as final & republish this subject result
+                </span>
+              </label>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setResultModal(null)}
+                className="px-5 py-2.5 border border-slate-200 hover:bg-white text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitResult}
+                disabled={submitting}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Add Result
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Confirm Modal ───────────────────────────────────────────────────── */}
+      {confirmConfig && (
+        <ConfirmModal
+          isOpen
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          type={confirmConfig.type}
+          confirmText={confirmConfig.confirmText}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
     </div>
   );
-}
+};
+
+export default AcademyRevaluation;
 
 ```
 
@@ -23273,12 +26022,13 @@ import AcademyMarksUpdating from '../components/AcademyMarksUpdating';
 /**
  * Academy Marks Updating Page  (/academy/marks)
  * Allows board members to enter and update student marks.
+ * Subjects are fetched from the API based on the student's course.
+ * Supports ABSENT marking for students who didn't appear.
  */
 export default function AcademyMarksUpdatingPage() {
-  // The component is self-contained and doesn't need context from parent
-  // but we keep the pattern consistent
   return <AcademyMarksUpdating />;
 }
+
 ```
 
 ### `client/src/pages/academy/publish-details/index.jsx`
@@ -31020,158 +33770,650 @@ export default InstituteERPRemittance;
 ### `client/src/pages/institute/components/InstituteERPResults.jsx`
 
 ```jsx
-import { useState, useEffect } from 'react';
-import { Download, FileText, Search, Filter } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  Search,
+  Filter,
+  Download,
+  FileText,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  Users,
+  Calendar,
+  Award,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  CheckCircle2,
+  XCircle,
+  Printer,
+  FileSpreadsheet,
+  Loader2,
+  BarChart3,
+  Clock,
+  X,
+} from 'lucide-react';
 import resultService from '../../../api/results';
+import academicService from '../../../api/academic';
+import Toast from '../../../Components/Toast';
 
 const InstituteERPResults = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Real data for results
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const [loading, setLoading] = useState(true);
   const [results, setResults] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [courses, setCourses] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [students, setStudents] = useState([]);
 
+  // ─── Filters ──────────────────────────────────────────────────────────────
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [resultStatusFilter, setResultStatusFilter] = useState('All');
+
+  // ─── UI State ─────────────────────────────────────────────────────────────
+  const [toast, setToast] = useState(null);
+  const [viewingResult, setViewingResult] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const itemsPerPage = 10;
+
+  // ─── Data Fetching ────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchResults = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        setIsLoading(true);
-        const res = await resultService.getAllResults();
-        const data = res.data?.data || res.data || [];
-        
-        const mappedResults = data.map(r => {
-          const totalMarks = r.subjects ? r.subjects.reduce((sum, s) => sum + (s.totalMarks || 0), 0) : 0;
-          return {
-            id: r._id,
-            enrollmentId: r.student?.enrollmentId || 'N/A',
-            name: r.student?.firstName ? `${r.student.firstName} ${r.student.lastName}` : 'Unknown Student',
-            course: r.student?.course?.name || 'Unknown Course',
-            marks: r.totalMarks || totalMarks || 0,
-            status: r.resultStatus === 'PASS' ? 'Pass' : 'Fail',
-            date: r.publishedDate ? new Date(r.publishedDate).toISOString().split('T')[0] : 'N/A'
-          };
-        });
-        setResults(mappedResults);
+        // Fetch courses, batches, students, and results in parallel.
+        // getAllResults is paginated by default (limit 20) — request a large
+        // limit so client-side course/batch filtering covers all results.
+        const [coursesRes, batchesRes, studentsRes, resultsRes] = await Promise.all([
+          academicService.getCourses().catch(() => ({ data: { data: [] } })),
+          academicService.getBatches().catch(() => ({ data: { data: [] } })),
+          academicService.listStudents().catch(() => ({ data: { data: [] } })),
+          resultService.getAllResults({ limit: 10000 }).catch(() => ({ data: { data: { results: [] } } })),
+        ]);
+
+        // Extract data — getAllResults returns { results, pagination }
+        const coursesData = coursesRes.data?.data || coursesRes.data || [];
+        const batchesData = batchesRes.data?.data || batchesRes.data || [];
+        const studentsData = studentsRes.data?.data || studentsRes.data || [];
+        const resultsData = resultsRes.data?.data?.results || resultsRes.data?.results || resultsRes.data?.data || resultsRes.data || [];
+
+        setCourses(coursesData);
+        setBatches(batchesData);
+        setStudents(studentsData);
+        setResults(resultsData);
+
+        // Auto-select first course if available
+        if (coursesData.length > 0) {
+          setSelectedCourse(coursesData[0]._id || coursesData[0].id);
+        }
       } catch (err) {
-        console.error('Error fetching results:', err);
+        console.error('Error fetching data:', err);
+        setToast({ message: 'Failed to load data', type: 'error' });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    fetchResults();
+    fetchData();
   }, []);
 
-  const filteredResults = results.filter(result => 
-    result.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    result.enrollmentId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ─── Computed Data ──────────────────────────────────────────────────────
+  const filteredBatches = useMemo(() => {
+    if (!selectedCourse) return batches;
+    return batches.filter(b => {
+      const courseId = b.course?._id || b.course || b.courseId;
+      return String(courseId) === String(selectedCourse);
+    });
+  }, [batches, selectedCourse]);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
+  // Effective batch — auto-defaults to the first batch of the selected course
+  const effectiveSelectedBatch = selectedBatch || (filteredBatches[0]?._id || filteredBatches[0]?.id || '');
 
+  // Get student lookup map
+  const studentMap = useMemo(() => {
+    const map = {};
+    students.forEach(s => {
+      const id = s._id || s.id;
+      map[id] = s;
+    });
+    return map;
+  }, [students]);
+
+  // Get course lookup map
+  const courseMap = useMemo(() => {
+    const map = {};
+    courses.forEach(c => {
+      const id = c._id || c.id;
+      map[id] = c;
+    });
+    return map;
+  }, [courses]);
+
+  // Get batch lookup map
+  const batchMap = useMemo(() => {
+    const map = {};
+    batches.forEach(b => {
+      const id = b._id || b.id;
+      map[id] = b;
+    });
+    return map;
+  }, [batches]);
+
+  // Filter results
+  const filteredResults = useMemo(() => {
+    let filtered = [...results];
+
+    // Filter by course
+    if (selectedCourse) {
+      const studentIdsInCourse = students
+        .filter(s => String(s.course?._id || s.course || s.courseId) === String(selectedCourse))
+        .map(s => s._id || s.id);
+      filtered = filtered.filter(r => studentIdsInCourse.includes(String(r.student?._id || r.student)));
+    }
+
+    // Filter by batch
+    if (effectiveSelectedBatch) {
+      const studentIdsInBatch = students
+        .filter(s => String(s.batch?._id || s.batch || s.batchId) === String(effectiveSelectedBatch))
+        .map(s => s._id || s.id);
+      filtered = filtered.filter(r => studentIdsInBatch.includes(String(r.student?._id || r.student)));
+    }
+
+    // Filter by semester
+    if (selectedSemester) {
+      filtered = filtered.filter(r => String(r.semester) === String(selectedSemester));
+    }
+
+    // Filter by status
+    if (resultStatusFilter !== 'All') {
+      filtered = filtered.filter(r => r.resultStatus === resultStatusFilter);
+    }
+
+    // Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(r => {
+        const student = studentMap[r.student?._id || r.student];
+        const name = student ? `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase() : '';
+        const enrollmentId = student?.enrollmentId?.toLowerCase() || '';
+        return name.includes(q) || enrollmentId.includes(q);
+      });
+    }
+
+    return filtered;
+  }, [results, selectedCourse, effectiveSelectedBatch, selectedSemester, resultStatusFilter, searchQuery, students, studentMap]);
+
+  // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
-  const paginatedResults = filteredResults.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedResults = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredResults.slice(start, start + itemsPerPage);
+  }, [filteredResults, currentPage]);
+
+  // ─── Statistics ──────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const total = filteredResults.length;
+    const passed = filteredResults.filter(r => r.resultStatus === 'PASS').length;
+    const failed = filteredResults.filter(r => r.resultStatus === 'FAIL').length;
+    const supplementary = filteredResults.filter(r => r.resultStatus === 'SUPPLEMENTARY').length;
+    const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+
+    const avgPercentage = total > 0
+      ? Math.round(filteredResults.reduce((sum, r) => sum + (r.percentage || 0), 0) / total)
+      : 0;
+
+    return { total, passed, failed, supplementary, passRate, avgPercentage };
+  }, [filteredResults]);
+
+  // ─── Handlers ────────────────────────────────────────────────────────────
+  const handleViewResult = (result) => {
+    setViewingResult(result);
+    setIsModalOpen(true);
+  };
+
+  const handleDownloadMarksheet = async (resultId) => {
+    try {
+      const response = await resultService.downloadMarksheet(resultId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `marksheet-${resultId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setToast({ message: 'Marksheet downloaded successfully!', type: 'success' });
+    } catch {
+      setToast({ message: 'Failed to download marksheet', type: 'error' });
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (filteredResults.length === 0) {
+      setToast({ message: 'No results to export', type: 'warning' });
+      return;
+    }
+
+    // Create CSV content
+    const headers = ['Enrollment ID', 'Student Name', 'Course', 'Batch', 'Semester', 'Total Marks', 'Percentage', 'Result'];
+    const rows = filteredResults.map(r => {
+      const student = studentMap[r.student?._id || r.student];
+      const course = courseMap[student?.course?._id || student?.course || student?.courseId];
+      const batch = batchMap[student?.batch?._id || student?.batch || student?.batchId];
+
+      return [
+        student?.enrollmentId || 'N/A',
+        student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Unknown' : 'Unknown',
+        course?.name || 'N/A',
+        batch?.name || 'N/A',
+        r.semester || 'N/A',
+        r.totalMarks || 0,
+        r.percentage || 0,
+        r.resultStatus || 'N/A',
+      ];
+    });
+
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `results-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setToast({ message: 'Results exported successfully!', type: 'success' });
+  };
+
+  // ─── Render Helpers ──────────────────────────────────────────────────────
+  const getResultBadge = (status) => {
+    const map = {
+      PASS: { label: 'Pass', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> },
+      FAIL: { label: 'Fail', color: 'bg-rose-50 text-rose-700 border-rose-200', icon: <XCircle className="w-3.5 h-3.5 text-rose-600" /> },
+      SUPPLEMENTARY: { label: 'Supplementary', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: <Clock className="w-3.5 h-3.5 text-amber-600" /> },
+      REVALUATION_PENDING: { label: 'Revaluation Pending', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" /> },
+    };
+    return map[status] || map.FAIL;
+  };
+
+  const getGradeColor = (percentage) => {
+    if (percentage >= 90) return 'text-emerald-600';
+    if (percentage >= 80) return 'text-emerald-500';
+    if (percentage >= 70) return 'text-blue-600';
+    if (percentage >= 60) return 'text-amber-600';
+    if (percentage >= 50) return 'text-amber-500';
+    return 'text-rose-600';
+  };
+
+  const getGradeIcon = (percentage) => {
+    if (percentage >= 80) return <TrendingUp className="w-4 h-4 text-emerald-600" />;
+    if (percentage >= 60) return <Minus className="w-4 h-4 text-amber-600" />;
+    return <TrendingDown className="w-4 h-4 text-rose-600" />;
+  };
+
+  const getGradeLetter = (percentage) => {
+    if (percentage >= 90) return 'O';
+    if (percentage >= 80) return 'A+';
+    if (percentage >= 70) return 'A';
+    if (percentage >= 60) return 'B+';
+    if (percentage >= 50) return 'B';
+    if (percentage >= 40) return 'C';
+    if (percentage >= 35) return 'D';
+    return 'F';
+  };
+
+  const getStudentName = (result) => {
+    const student = studentMap[result.student?._id || result.student];
+    return student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Unknown Student' : 'Unknown Student';
+  };
+
+  const getStudentEnrollment = (result) => {
+    const student = studentMap[result.student?._id || result.student];
+    return student?.enrollmentId || 'N/A';
+  };
+
+  const getStudentCourse = (result) => {
+    const student = studentMap[result.student?._id || result.student];
+    const course = courseMap[student?.course?._id || student?.course || student?.courseId];
+    return course?.name || 'N/A';
+  };
+
+  const getStudentBatch = (result) => {
+    const student = studentMap[result.student?._id || result.student];
+    const batch = batchMap[student?.batch?._id || student?.batch || student?.batchId];
+    return batch?.name || 'N/A';
+  };
+
+  // ─── Loading State ──────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
+          <p className="text-sm text-slate-500 mt-4 font-medium">Loading results...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div>
-          <h2 className="text-xl font-black text-slate-800">Examination Results</h2>
-          <p className="text-sm text-slate-500 mt-1">View and download student results and provisional certificates.</p>
+    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+
+      {/* ─── Page Header ─────────────────────────────────────────────────────── */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <Award className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Examination Results</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">
+              View and manage student examination results
+            </p>
+          </div>
         </div>
-        <button className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-bold hover:bg-primary-700 transition-colors">
-          <Download className="w-4 h-4" />
-          Download All Results
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            disabled={filteredResults.length === 0}
+            className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            Export CSV
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-slate-100 transition-all"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        {/* Toolbar */}
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/50">
-          <div className="relative w-full sm:w-96">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Search by student name or enrollment ID..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all bg-white"
-            />
+      {/* ─── Stats Cards ────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Total Results</span>
+            <FileText className="w-4 h-4 text-blue-500" />
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-             <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors bg-white">
-              <Filter className="w-4 h-4" />
-              Filter Options
-            </button>
+          <p className="text-2xl font-black text-slate-800 mt-1">{stats.total}</p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Passed</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          </div>
+          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.passed}</p>
+          <span className="text-[9px] text-emerald-600 font-medium">{stats.passRate}% Pass Rate</span>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Failed</span>
+            <XCircle className="w-4 h-4 text-rose-500" />
+          </div>
+          <p className="text-2xl font-black text-rose-600 mt-1">{stats.failed}</p>
+          <span className="text-[9px] text-rose-600 font-medium">{stats.supplementary} Supplementary</span>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Avg Percentage</span>
+            <BarChart3 className="w-4 h-4 text-indigo-500" />
+          </div>
+          <p className="text-2xl font-black text-indigo-600 mt-1">{stats.avgPercentage}%</p>
+          <span className="text-[9px] text-indigo-600 font-medium">Overall Average</span>
+        </div>
+      </div>
+
+      {/* ─── Filters ────────────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Course Filter */}
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+              Course <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                value={selectedCourse}
+                onChange={(e) => {
+                  setSelectedCourse(e.target.value);
+                  setSelectedBatch('');
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              >
+                {courses.map(c => (
+                  <option key={c._id || c.id} value={c._id || c.id}>
+                    {c.name || c.courseName}
+                  </option>
+                ))}
+                {courses.length === 0 && (
+                  <option value="">No courses available</option>
+                )}
+              </select>
+            </div>
+          </div>
+
+          {/* Batch Filter */}
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+              Batch <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                value={effectiveSelectedBatch}
+                onChange={(e) => {
+                  setSelectedBatch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                disabled={!selectedCourse || filteredBatches.length === 0}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {filteredBatches.map(b => (
+                  <option key={b._id || b.id} value={b._id || b.id}>
+                    {b.name || `Batch ${b.year}`}
+                  </option>
+                ))}
+                {filteredBatches.length === 0 && (
+                  <option value="">No batches available</option>
+                )}
+              </select>
+            </div>
+          </div>
+
+          {/* Semester Filter */}
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+              Semester
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                value={selectedSemester}
+                onChange={(e) => {
+                  setSelectedSemester(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value="">All Semesters</option>
+                {[1, 2, 3, 4, 5, 6].map(sem => (
+                  <option key={sem} value={sem}>Semester {sem}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
+              Result Status
+            </label>
+            <div className="relative">
+              <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                value={resultStatusFilter}
+                onChange={(e) => {
+                  setResultStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value="All">All Statuses</option>
+                <option value="PASS">Pass</option>
+                <option value="FAIL">Fail</option>
+                <option value="SUPPLEMENTARY">Supplementary</option>
+                <option value="REVALUATION_PENDING">Revaluation Pending</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Data Table */}
+        {/* Search Bar */}
+        <div className="flex items-center gap-4 pt-2 border-t border-slate-100">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by student name or enrollment ID..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+            />
+          </div>
+          <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">
+            {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''}
+          </span>
+          {(selectedSemester || resultStatusFilter !== 'All' || searchQuery) && (
+            <button
+              onClick={() => {
+                setSelectedSemester('');
+                setResultStatusFilter('All');
+                setSearchQuery('');
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-bold flex items-center gap-1 transition-all"
+            >
+              <X className="w-3.5 h-3.5" />
+              Clear Filters
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ─── Results Table ──────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Student Details</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Course</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Marks</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              <tr className="bg-slate-50/70 border-b border-slate-100">
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Enrollment ID</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Marks</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-32">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-50 bg-white">
               {paginatedResults.length > 0 ? (
-                paginatedResults.map((result) => (
-                  <tr key={result.id} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-800">{result.name}</span>
-                        <span className="text-xs text-slate-500">{result.enrollmentId}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-slate-600">{result.course}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-700">{result.marks}%</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
-                        result.status === 'Pass' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                      }`}>
-                        {result.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button 
-                          className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip-trigger" 
-                          title="Download Marksheet"
-                          onClick={() => resultService.downloadMarksheet(result.id)}
-                        >
-                          <FileText className="w-4 h-4" />
-                        </button>
-                        {result.status === 'Pass' && (
-                          <button className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors tooltip-trigger" title="Download Provisional Certificate">
+                paginatedResults.map((result, idx) => {
+                  const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
+                  const percentage = result.percentage || 0;
+                  const grade = getGradeLetter(percentage);
+                  const statusBadge = getResultBadge(result.resultStatus);
+                  const studentName = getStudentName(result);
+                  const enrollmentId = getStudentEnrollment(result);
+
+                  return (
+                    <tr key={result._id || result.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-400">
+                        {String(globalIdx).padStart(2, '0')}
+                      </td>
+                      <td className="px-4 py-3.5 font-bold text-slate-800">{studentName}</td>
+                      <td className="px-4 py-3.5 font-mono font-bold text-blue-600">{enrollmentId}</td>
+                      <td className="px-4 py-3.5 text-center font-bold text-slate-700">
+                        Semester {result.semester || 'N/A'}
+                      </td>
+                      <td className="px-4 py-3.5 text-center font-bold text-slate-700">
+                        {result.totalMarks || 0}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span className={`font-black text-sm ${getGradeColor(percentage)}`}>
+                          {percentage}%
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
+                          percentage >= 90 ? 'bg-emerald-100 border-emerald-200 text-emerald-700' :
+                          percentage >= 80 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                          percentage >= 70 ? 'bg-blue-100 border-blue-200 text-blue-700' :
+                          percentage >= 60 ? 'bg-amber-100 border-amber-200 text-amber-700' :
+                          percentage >= 50 ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                          'bg-rose-100 border-rose-200 text-rose-700'
+                        }`}>
+                          {getGradeIcon(percentage)}
+                          {grade}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${statusBadge.color}`}>
+                          {statusBadge.icon}
+                          {statusBadge.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleViewResult(result)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDownloadMarksheet(result._id || result.id)}
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
+                            title="Download Marksheet"
+                          >
                             <Download className="w-4 h-4" />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {result.resultStatus === 'PASS' && (
+                            <button
+                              className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all cursor-pointer"
+                              title="Download Certificate"
+                              onClick={() => setToast({ message: 'Certificate generation coming soon!', type: 'info' })}
+                            >
+                              <FileText className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
-                    <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-sm">No results found matching your criteria.</p>
+                  <td colSpan="9" className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <Award className="w-12 h-12 text-slate-200 stroke-1" />
+                      <p className="text-sm font-bold text-slate-500">No results found</p>
+                      <p className="text-xs text-slate-400">Try adjusting your filters or search terms</p>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -31179,11 +34421,11 @@ const InstituteERPResults = () => {
           </table>
         </div>
 
-        {/* Pagination Controls */}
+        {/* ─── Pagination ────────────────────────────────────────────────────── */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
-            <span className="text-xs text-slate-500 font-medium">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredResults.length)} of {filteredResults.length} Results
+          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <span className="text-[10px] text-slate-400 font-semibold">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredResults.length)} of {filteredResults.length}
             </span>
             <div className="flex gap-1">
               <button
@@ -31191,9 +34433,9 @@ const InstituteERPResults = () => {
                 disabled={currentPage === 1}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Prev
+                <ChevronLeft className="w-3.5 h-3.5" />
               </button>
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-primary-600 shadow-sm">
+              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
                 {currentPage} / {totalPages}
               </div>
               <button
@@ -31201,12 +34443,231 @@ const InstituteERPResults = () => {
                 disabled={currentPage === totalPages}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
       </div>
+
+      {/* ─── Result Detail Modal ────────────────────────────────────────────── */}
+      {isModalOpen && viewingResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Result Details</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {getStudentName(viewingResult)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-5 text-left">
+              {/* Student Info */}
+              <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-5 space-y-3.5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Student Name</span>
+                    <span className="text-slate-800 font-bold text-sm">{getStudentName(viewingResult)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrollment ID</span>
+                    <span className="text-slate-800 font-mono font-bold">{getStudentEnrollment(viewingResult)}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Course</span>
+                    <span className="text-slate-800 font-bold">{getStudentCourse(viewingResult)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Batch</span>
+                    <span className="text-slate-800 font-bold">{getStudentBatch(viewingResult)}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
+                    <span className="text-slate-800 font-bold">Semester {viewingResult.semester || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Year</span>
+                    <span className="text-slate-800 font-bold">{viewingResult.academicYear || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Result Summary */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 text-center">
+                  <span className="text-[8px] uppercase font-black text-slate-400 block">Total Marks</span>
+                  <span className="text-lg font-black text-slate-800">{viewingResult.totalMarks || 0}</span>
+                </div>
+                <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 text-center">
+                  <span className="text-[8px] uppercase font-black text-slate-400 block">Percentage</span>
+                  <span className={`text-lg font-black ${getGradeColor(viewingResult.percentage || 0)}`}>
+                    {viewingResult.percentage || 0}%
+                  </span>
+                </div>
+                <div className={`rounded-xl p-3 text-center ${
+                  viewingResult.resultStatus === 'PASS' ? 'bg-emerald-50/50 border border-emerald-100' :
+                  viewingResult.resultStatus === 'FAIL' ? 'bg-rose-50/50 border border-rose-100' :
+                  viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'bg-amber-50/50 border border-amber-100' :
+                  'bg-blue-50/50 border border-blue-100'
+                }`}>
+                  <span className="text-[8px] uppercase font-black text-slate-400 block">Result</span>
+                  <span className={`text-lg font-black ${
+                    viewingResult.resultStatus === 'PASS' ? 'text-emerald-700' :
+                    viewingResult.resultStatus === 'FAIL' ? 'text-rose-700' :
+                    viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'text-amber-700' :
+                    'text-blue-700'
+                  }`}>
+                    {viewingResult.resultStatus === 'PASS' ? '✅ Pass' :
+                     viewingResult.resultStatus === 'FAIL' ? '❌ Fail' :
+                     viewingResult.resultStatus === 'SUPPLEMENTARY' ? '🔄 Supplementary' :
+                     '⏳ Revaluation Pending'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Subject-wise Marks */}
+              {viewingResult.subjects && viewingResult.subjects.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
+                    Subject-wise Marks
+                  </h4>
+                  <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50/70 border-b border-slate-100">
+                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
+                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Code</th>
+                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Name</th>
+                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Internal</th>
+                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">External</th>
+                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
+                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50 bg-white">
+                        {viewingResult.subjects.map((subject, idx) => {
+                          const total = subject.totalMarks || 0;
+                          const gradeColor = total >= 70 ? 'text-emerald-700' : total >= 50 ? 'text-amber-700' : 'text-rose-700';
+                          const gradeBg = total >= 70 ? 'bg-emerald-50 border-emerald-200' : total >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-rose-50 border-rose-200';
+
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-3 py-2.5 text-center font-mono font-bold text-slate-400">
+                                {String(idx + 1).padStart(2, '0')}
+                              </td>
+                              <td className="px-3 py-2.5 font-mono font-bold text-slate-600">{subject.subjectCode || 'N/A'}</td>
+                              <td className="px-3 py-2.5 font-bold text-slate-700">{subject.subjectName || 'N/A'}</td>
+                              <td className="px-3 py-2.5 text-center font-bold text-slate-700">{subject.internalMarks || 0}</td>
+                              <td className="px-3 py-2.5 text-center font-bold text-slate-700">{subject.externalMarks || 0}</td>
+                              <td className="px-3 py-2.5 text-center font-bold text-slate-800">{total}</td>
+                              <td className="px-3 py-2.5 text-center">
+                                <span className={`inline-flex px-2.5 py-0.5 rounded-lg text-[9px] font-bold border ${gradeBg} ${gradeColor}`}>
+                                  {total >= 90 ? 'O' : total >= 80 ? 'A+' : total >= 70 ? 'A' : total >= 60 ? 'B+' : total >= 50 ? 'B' : total >= 40 ? 'C' : total >= 35 ? 'D' : 'F'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-slate-50/70 border-t border-slate-200">
+                          <td colSpan="5" className="px-3 py-2.5 font-black text-xs text-slate-700 text-right">
+                            Overall Total
+                          </td>
+                          <td className="px-3 py-2.5 text-center font-black text-slate-800">{viewingResult.totalMarks || 0}</td>
+                          <td className="px-3 py-2.5 text-center">
+                            <span className={`font-black text-sm ${getGradeColor(viewingResult.percentage || 0)}`}>
+                              {viewingResult.percentage || 0}%
+                            </span>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Revaluation Info */}
+              {viewingResult.isRevaluationActive && (
+                <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-black text-blue-800 block">Revaluation Active</span>
+                    <p className="text-[10px] text-blue-700 font-medium">
+                      Revaluation deadline: {viewingResult.revaluationDeadline ? new Date(viewingResult.revaluationDeadline).toLocaleDateString() : 'N/A'}
+                      {viewingResult.revaluationRequests && viewingResult.revaluationRequests.length > 0 &&
+                        ` • ${viewingResult.revaluationRequests.length} request(s) submitted`
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Published: {viewingResult.isPublished ? '✅ Yes' : '⏳ No'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {viewingResult.resultStatus === 'PASS' && (
+                  <button
+                    onClick={() => setToast({ message: 'Certificate generation coming soon!', type: 'info' })}
+                    className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold rounded-lg text-[10px] uppercase tracking-wider transition-all"
+                  >
+                    <FileText className="w-3.5 h-3.5 inline mr-1" />
+                    Certificate
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDownloadMarksheet(viewingResult._id || viewingResult.id)}
+                  className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold rounded-lg text-[10px] uppercase tracking-wider transition-all"
+                >
+                  <Download className="w-3.5 h-3.5 inline mr-1" />
+                  Marksheet
+                </button>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-[10px] uppercase tracking-wider transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Toast ────────────────────────────────────────────────────────────── */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
@@ -31218,205 +34679,1394 @@ export default InstituteERPResults;
 ### `client/src/pages/institute/components/InstituteERPRevaluation.jsx`
 
 ```jsx
-import { useState } from 'react';
-import { Search, AlertCircle, CheckCircle2, CreditCard } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  Award,
+  Search,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  BookOpen,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  FileText,
+  TrendingUp,
+  Minus,
+  AlertCircle,
+  CreditCard,
+  RefreshCw,
+  X,
+  Check,
+  UserCheck,
+  ChevronDown,
+  ChevronUp,
+  ClipboardCheck,
+  Filter,
+  CheckSquare,
+} from 'lucide-react';
+import Toast from '../../../Components/Toast';
+import ConfirmModal from '../../../Components/ConfirmModal';
+import revaluationService from '../../../api/revaluation';
+import academicService from '../../../api/academic';
+import feeService from '../../../api/fees';
+
+// ─── Step Indicator ──────────────────────────────────────────────────────────
+const StepIndicator = ({ current, total, labels }) => (
+  <div className="flex items-center justify-center gap-0 mb-8">
+    {Array.from({ length: total }, (_, i) => i + 1).map((num, idx) => {
+      const isActive = current === num;
+      const isCompleted = current > num;
+
+      return (
+        <div key={num} className="flex items-center">
+          {idx > 0 && (
+            <div className={`w-12 h-0.5 sm:w-20 ${isCompleted ? 'bg-blue-500' : 'bg-slate-200'}`} />
+          )}
+          <div className="flex flex-col items-center gap-1.5">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all shadow-sm ${
+                isCompleted || isActive
+                  ? 'bg-blue-600 text-white shadow-blue-500/30'
+                  : 'bg-slate-100 text-slate-400'
+              } ${isActive ? 'ring-4 ring-blue-100' : ''}`}
+            >
+              {isCompleted ? <Check className="w-5 h-5" /> : num}
+            </div>
+            <span
+              className={`text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${
+                isActive || isCompleted ? 'text-blue-700' : 'text-slate-400'
+              }`}
+            >
+              {labels[idx]}
+            </span>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
 
 const InstituteERPRevaluation = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+  // ─── State ──────────────────────────────────────────────────────────────────
+  const [step, setStep] = useState(1);
+  const [courses, setCourses] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
+  const [eligibleStudents, setEligibleStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedSubjects, setSelectedSubjects] = useState({});
+  const [requests, setRequests] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [toast, setToast] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+  const [viewingRequest, setViewingRequest] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [expandedStudent, setExpandedStudent] = useState(null);
+  const itemsPerPage = 10;
 
-  // Mock data for eligible students
-  const [eligibleStudents] = useState([
-    { id: 1, enrollmentId: 'SEMI-2023-003', name: 'Dr. Amit Kumar', course: 'MEM (Emergency Medicine)', subject: 'Clinical Emergency Medicine', currentMarks: 45, status: 'Eligible', fee: 5000 },
-    { id: 2, enrollmentId: 'SEMI-2023-004', name: 'Dr. Sneha Verma', course: 'MD Emergency Medicine', subject: 'Traumatology', currentMarks: 48, status: 'Eligible', fee: 5000 },
-    { id: 3, enrollmentId: 'SEMI-2023-005', name: 'Dr. Vikram Singh', course: 'DNB Emergency Medicine', subject: 'Pediatric Emergencies', currentMarks: 42, status: 'Eligible', fee: 5000 },
-  ]);
+  // ─── Data Fetching ──────────────────────────────────────────────────────────
+  const fetchData = useCallback(async () => {
+    try {
+      const [coursesRes, batchesRes, summaryRes] = await Promise.all([
+        academicService.getCourses().catch(() => ({ data: { data: [] } })),
+        academicService.getBatches().catch(() => ({ data: { data: [] } })),
+        revaluationService.getInstituteSummary().catch(() => ({ data: { data: {} } })),
+      ]);
 
-  const filteredStudents = eligibleStudents.filter(student => 
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    student.enrollmentId.toLowerCase().includes(searchTerm.toLowerCase())
+      const coursesData = coursesRes.data?.data || coursesRes.data || [];
+      const batchesData = batchesRes.data?.data || batchesRes.data || [];
+      const summaryData = summaryRes.data?.data || summaryRes.data || {};
+
+      setCourses(coursesData);
+      setBatches(batchesData);
+      setSummary(summaryData);
+
+      if (coursesData.length > 0 && !selectedCourse) {
+        setSelectedCourse(coursesData[0]._id || coursesData[0].id);
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setToast({ message: 'Failed to load data', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedCourse]);
+
+  const fetchRequests = useCallback(async () => {
+    try {
+      const params = { limit: 10000 };
+      if (statusFilter !== 'All') params.status = statusFilter;
+      if (searchQuery) params.search = searchQuery;
+      if (selectedCourse) params.courseId = selectedCourse;
+      if (selectedBatch) params.batchId = selectedBatch;
+
+      const res = await revaluationService.getAllRevaluationRequests(params);
+      const data = res.data?.data || res.data || {};
+      const list = data.requests || data.results || data;
+      setRequests(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('Error fetching requests:', err);
+      setToast({ message: err.parsedMessage || 'Failed to load revaluation requests', type: 'error' });
+    }
+  }, [statusFilter, searchQuery, selectedCourse, selectedBatch]);
+
+  const fetchEligibleStudents = useCallback(async () => {
+    try {
+      const res = await revaluationService.getEligibleStudents({
+        courseId: selectedCourse,
+        batchId: selectedBatch,
+        semester: selectedSemester,
+      });
+      const data = res.data?.data || res.data || [];
+      setEligibleStudents(Array.isArray(data) ? data : []);
+      setSelectedStudents([]);
+      setSelectedSubjects({});
+      setExpandedStudent(null);
+    } catch (err) {
+      console.error('Error fetching eligible students:', err);
+      setToast({ message: err.parsedMessage || 'Failed to load eligible students', type: 'error' });
+      setEligibleStudents([]);
+    }
+  }, [selectedCourse, selectedBatch, selectedSemester]);
+
+  // ─── Effects ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => fetchData(), 0);
+    return () => clearTimeout(timer);
+  }, [fetchData]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchRequests(), 400);
+    return () => clearTimeout(timer);
+  }, [statusFilter, searchQuery, selectedCourse, selectedBatch, fetchRequests]);
+
+  useEffect(() => {
+    if (!selectedCourse || !selectedBatch || !selectedSemester) return;
+    const timer = setTimeout(() => fetchEligibleStudents(), 0);
+    return () => clearTimeout(timer);
+  }, [selectedCourse, selectedBatch, selectedSemester, fetchEligibleStudents]);
+
+  // ─── Computed Values ──────────────────────────────────────────────────────
+  const filteredBatches = useMemo(() => {
+    if (!selectedCourse) return batches;
+    return batches.filter((b) => {
+      const courseId = b.course?._id || b.course || b.courseId;
+      return String(courseId) === String(selectedCourse);
+    });
+  }, [batches, selectedCourse]);
+
+  const filteredRequests = useMemo(() => {
+    let filtered = [...requests];
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter((r) => r.status === statusFilter);
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((r) => {
+        const student = r.student;
+        const name = student ? `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase() : '';
+        const enrollmentId = student?.enrollmentId?.toLowerCase() || '';
+        return name.includes(q) || enrollmentId.includes(q) || (r.requestId || '').toLowerCase().includes(q);
+      });
+    }
+    return filtered;
+  }, [requests, statusFilter, searchQuery]);
+
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredRequests.slice(start, start + itemsPerPage);
+  }, [filteredRequests, currentPage]);
+
+  // ─── Subject Selection Handlers ──────────────────────────────────────────
+  const toggleSubject = (studentId, subjectCode) => {
+    setSelectedSubjects((prev) => {
+      const studentSubjects = prev[studentId] || new Set();
+      const newSet = new Set(studentSubjects);
+      if (newSet.has(subjectCode)) {
+        newSet.delete(subjectCode);
+      } else {
+        newSet.add(subjectCode);
+      }
+      const updated = { ...prev, [studentId]: newSet };
+      if (newSet.size === 0) {
+        delete updated[studentId];
+      }
+      return updated;
+    });
+  };
+
+  const toggleAllSubjectsForStudent = (studentId, allSubjects) => {
+    setSelectedSubjects((prev) => {
+      const eligibleSubjectCodes = allSubjects
+        .filter((s) => s.isEligible)
+        .map((s) => s.subjectCode);
+      const current = prev[studentId] || new Set();
+      const allSelected = eligibleSubjectCodes.every((code) => current.has(code));
+
+      const newSet = new Set(current);
+      if (allSelected) {
+        eligibleSubjectCodes.forEach((code) => newSet.delete(code));
+      } else {
+        eligibleSubjectCodes.forEach((code) => newSet.add(code));
+      }
+      const updated = { ...prev, [studentId]: newSet };
+      if (newSet.size === 0) {
+        delete updated[studentId];
+      }
+      return updated;
+    });
+  };
+
+  const toggleStudent = (studentId) => {
+    setSelectedStudents((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const toggleAllStudents = () => {
+    const allIds = eligibleStudents.map((s) => s.studentId);
+    if (selectedStudents.length === allIds.length) {
+      setSelectedStudents([]);
+      setSelectedSubjects({});
+    } else {
+      setSelectedStudents(allIds);
+      const newSubjects = {};
+      eligibleStudents.forEach((student) => {
+        const eligibleCodes = (student.allSubjects || student.subjects || [])
+          .filter((s) => s.isEligible !== false)
+          .map((s) => s.subjectCode);
+        if (eligibleCodes.length > 0) {
+          newSubjects[student.studentId] = new Set(eligibleCodes);
+        }
+      });
+      setSelectedSubjects(newSubjects);
+    }
+  };
+
+  // ─── Fee Calculation ─────────────────────────────────────────────────────
+  const selectedStudentsFee = useMemo(() => {
+    let total = 0;
+    selectedStudents.forEach((studentId) => {
+      const student = eligibleStudents.find((s) => s.studentId === studentId);
+      if (!student) return;
+      const selectedCodes = selectedSubjects[studentId] || new Set();
+      const feePerSubject = student.feePerSubject || 500;
+      total += selectedCodes.size * feePerSubject;
+    });
+    return total;
+  }, [selectedStudents, selectedSubjects, eligibleStudents]);
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+  const handleCourseChange = (e) => {
+    setSelectedCourse(e.target.value);
+    setSelectedBatch('');
+    setSelectedStudents([]);
+    setSelectedSubjects({});
+    setEligibleStudents([]);
+  };
+
+  const handleBatchChange = (e) => {
+    setSelectedBatch(e.target.value);
+    setSelectedStudents([]);
+    setSelectedSubjects({});
+    setEligibleStudents([]);
+  };
+
+  const handleSemesterChange = (e) => {
+    setSelectedSemester(e.target.value);
+    setSelectedStudents([]);
+    setSelectedSubjects({});
+    setEligibleStudents([]);
+  };
+
+  const handleSubmitRequest = async () => {
+    const hasSubjects = selectedStudents.some(
+      (sid) => (selectedSubjects[sid] || new Set()).size > 0
+    );
+    if (selectedStudents.length === 0 || !hasSubjects) {
+      setToast({ message: 'Please select at least one student and subject for revaluation.', type: 'warning' });
+      return;
+    }
+
+    setConfirmConfig({
+      title: 'Submit Revaluation Request',
+      message: `Are you sure you want to submit revaluation requests for ${selectedStudents.length} student(s)?\n\nTotal Fee: ₹${selectedStudentsFee.toLocaleString()}\n\nFee will be recorded against each student before the request is submitted.`,
+      type: 'info',
+      confirmText: 'Submit & Pay',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setSubmitting(true);
+
+        try {
+          const results = [];
+          for (const studentId of selectedStudents) {
+            const student = eligibleStudents.find((s) => s.studentId === studentId);
+            if (!student) continue;
+
+            const selectedCodes = selectedSubjects[studentId] || new Set();
+            const selectedSubjectDetails = (student.allSubjects || student.subjects || [])
+              .filter((s) => selectedCodes.has(s.subjectCode));
+
+            if (selectedSubjectDetails.length === 0) continue;
+
+            const totalFee = selectedSubjectDetails.length * (student.feePerSubject || 500);
+            await feeService.payStudentFees(student.studentId, {
+              semesterNumber: student.semester,
+              amount: totalFee,
+              paymentMode: 'Razorpay Online',
+              paymentDate: new Date().toISOString().split('T')[0],
+              paymentPurpose: 'Revaluation fee',
+            });
+
+            const requestData = {
+              student: student.studentId,
+              result: student.resultId,
+              institute: student.instituteId || '',
+              academicYear: student.academicYear,
+              semester: student.semester,
+              subjects: selectedSubjectDetails.map((s) => ({
+                subjectCode: s.subjectCode,
+                subjectName: s.subjectName,
+                originalMarks: s.originalMarks || 0,
+                originalGrade: s.originalGrade || 'F',
+                internalMarks: s.internalMarks || 0,
+                externalMarks: s.externalMarks || 0,
+                revaluationReason: s.revaluationReason || 'Requesting revaluation of answer script',
+              })),
+              feePerSubject: student.feePerSubject || 500,
+              totalFee,
+            };
+
+            const res = await revaluationService.createRevaluationRequest(requestData);
+            results.push(res.data?.data || res.data);
+          }
+
+          setToast({
+            message: `Successfully submitted ${results.length} revaluation request(s)!`,
+            type: 'success',
+          });
+
+          setSelectedStudents([]);
+          setSelectedSubjects({});
+          setStep(3);
+          await fetchRequests();
+          await fetchEligibleStudents();
+        } catch (err) {
+          console.error('Error submitting revaluation:', err);
+          setToast({
+            message: err.parsedMessage || 'Failed to submit revaluation request',
+            type: 'error',
+          });
+        } finally {
+          setSubmitting(false);
+        }
+      },
+    });
+  };
+
+  const handleViewRequest = (request) => {
+    setViewingRequest(request);
+    setIsModalOpen(true);
+  };
+
+  const handleRefresh = () => {
+    fetchData();
+    fetchRequests();
+    fetchEligibleStudents();
+    setToast({ message: 'Data refreshed!', type: 'success' });
+  };
+
+  // ─── Render Helpers ──────────────────────────────────────────────────────
+  const getStatusBadge = (status) => {
+    const map = {
+      PENDING: { label: 'Pending', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: <Clock className="w-3.5 h-3.5" /> },
+      UNDER_REVIEW: { label: 'Under Review', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <Loader2 className="w-3.5 h-3.5 animate-spin" /> },
+      ASSIGNED: { label: 'Assigned', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: <UserCheck className="w-3.5 h-3.5" /> },
+      IN_PROGRESS: { label: 'In Progress', color: 'bg-purple-50 text-purple-700 border-purple-200', icon: <RefreshCw className="w-3.5 h-3.5 animate-spin" /> },
+      COMPLETED: { label: 'Completed', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+      REJECTED: { label: 'Rejected', color: 'bg-rose-50 text-rose-700 border-rose-200', icon: <XCircle className="w-3.5 h-3.5" /> },
+      CANCELLED: { label: 'Cancelled', color: 'bg-slate-50 text-slate-500 border-slate-200', icon: <X className="w-3.5 h-3.5" /> },
+    };
+    return map[status] || map.PENDING;
+  };
+
+  const getSubjectStatusBadge = (subject) => {
+    const marks = subject.originalMarks || 0;
+    const grade = subject.originalGrade || 'F';
+
+    if (grade === 'ABSENT') {
+      return { label: 'ABSENT', color: 'bg-slate-100 text-slate-500 border-slate-200', icon: <XCircle className="w-3 h-3 text-slate-400" /> };
+    }
+    if (marks >= 40) {
+      return { label: 'PASS', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3 h-3 text-emerald-500" /> };
+    }
+    return { label: 'FAIL', color: 'bg-rose-100 text-rose-700 border-rose-200', icon: <AlertCircle className="w-3 h-3 text-rose-500" /> };
+  };
+
+  const getResultBadge = (finalResult) => {
+    if (finalResult === 'CHANGED') {
+      return { label: 'Marks Changed', color: 'text-emerald-600', icon: <TrendingUp className="w-4 h-4" /> };
+    }
+    if (finalResult === 'UNCHANGED') {
+      return { label: 'No Change', color: 'text-amber-600', icon: <Minus className="w-4 h-4" /> };
+    }
+    return { label: 'Pending', color: 'text-slate-400', icon: <Clock className="w-4 h-4" /> };
+  };
+
+  // ─── Render Step 1: Select Students & Subjects ──────────────────────────
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      {/* Filter Bar */}
+      <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-blue-500" />
+              Course <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={selectedCourse}
+              onChange={handleCourseChange}
+              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer shadow-sm hover:border-slate-300"
+            >
+              {courses.map((c) => (
+                <option key={c._id || c.id} value={c._id || c.id}>
+                  {c.name || c.courseName}
+                </option>
+              ))}
+              {courses.length === 0 && <option value="">No courses available</option>}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-blue-500" />
+              Batch <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={selectedBatch}
+              onChange={handleBatchChange}
+              disabled={!selectedCourse}
+              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer disabled:opacity-50 shadow-sm hover:border-slate-300"
+            >
+              <option value="">Select Batch</option>
+              {filteredBatches.map((b) => (
+                <option key={b._id || b.id} value={b._id || b.id}>
+                  {b.name || `Batch ${b.year}`}
+                </option>
+              ))}
+              {filteredBatches.length === 0 && <option value="">No batches available</option>}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-blue-500" />
+              Semester <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={selectedSemester}
+              onChange={handleSemesterChange}
+              disabled={!selectedBatch}
+              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer disabled:opacity-50 shadow-sm hover:border-slate-300"
+            >
+              <option value="">Select Semester</option>
+              {[1, 2, 3, 4, 5, 6].map((sem) => (
+                <option key={sem} value={sem}>Semester {sem}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={handleRefresh}
+              className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Load Students
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {eligibleStudents.length > 0 ? (
+        <>
+          {/* Stats Banner */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight">{eligibleStudents.length} Students</h3>
+                  <p className="text-xs text-blue-200 font-medium">with published results for this semester</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <span className="text-2xl font-black">{selectedStudents.length}</span>
+                  <p className="text-[9px] text-blue-200 uppercase tracking-wider font-bold">Selected</p>
+                </div>
+                <div className="w-px h-10 bg-white/20" />
+                <div className="text-center">
+                  <span className="text-2xl font-black">₹{selectedStudentsFee.toLocaleString()}</span>
+                  <p className="text-[9px] text-blue-200 uppercase tracking-wider font-bold">Total Fee</p>
+                </div>
+                <button
+                  onClick={toggleAllStudents}
+                  className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-xs font-black uppercase tracking-wider transition-all backdrop-blur-sm border border-white/20 cursor-pointer"
+                >
+                  {selectedStudents.length === eligibleStudents.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Student Cards Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {eligibleStudents.map((student) => {
+              const isSelected = selectedStudents.includes(student.studentId);
+              const allSubjects = student.allSubjects || student.subjects || [];
+              const eligibleSubjects = allSubjects.filter((s) => s.isEligible !== false);
+              const selectedCount = (selectedSubjects[student.studentId] || new Set()).size;
+              const totalEligible = eligibleSubjects.length;
+              const isExpanded = expandedStudent === student.studentId;
+              const hasAbsentSubjects = allSubjects.some((s) => !s.isEligible);
+
+              return (
+                <div
+                  key={student.studentId}
+                  className={`group rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
+                    isSelected
+                      ? 'border-blue-400 bg-blue-50/30 shadow-lg shadow-blue-500/10'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
+                  } ${isExpanded ? 'shadow-xl' : ''}`}
+                >
+                  {/* Card Header */}
+                  <div
+                    className={`p-4 cursor-pointer transition-colors ${
+                      isSelected ? 'hover:bg-blue-50/40' : 'hover:bg-slate-50/60'
+                    }`}
+                    onClick={() => toggleStudent(student.studentId)}
+                  >
+                    <div className="flex items-start gap-4">
+                      {/* Selection Checkbox */}
+                      <div className="flex-shrink-0 pt-0.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleStudent(student.studentId);
+                          }}
+                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/30'
+                              : 'border-slate-300 hover:border-blue-400 bg-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </button>
+                      </div>
+
+                      {/* Avatar & Name */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shadow-sm flex-shrink-0 ${
+                            isSelected
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700'
+                          }`}>
+                            {student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className={`text-sm font-black truncate ${isSelected ? 'text-blue-800' : 'text-slate-800'}`}>
+                              {student.name}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-mono text-slate-400">{student.enrollmentId}</span>
+                              <span className="w-1 h-1 rounded-full bg-slate-300" />
+                              <span className="text-[10px] font-medium text-slate-500">Sem {student.semester}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stats Chip */}
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        <div className="text-right">
+                          <div className="text-xs font-bold text-slate-700">
+                            {selectedCount}/{totalEligible}
+                          </div>
+                          <div className="text-[9px] text-slate-400 font-medium">selected</div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedStudent(isExpanded ? null : student.studentId);
+                          }}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                            isExpanded
+                              ? 'bg-blue-100 text-blue-600'
+                              : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                          }`}
+                        >
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick subject status pills */}
+                    <div className="flex flex-wrap gap-1.5 mt-3 ml-9">
+                      {allSubjects.slice(0, 5).map((subject) => {
+                        const status = getSubjectStatusBadge(subject);
+                        const isSubSelected = (selectedSubjects[student.studentId] || new Set()).has(subject.subjectCode);
+                        return (
+                          <span
+                            key={subject.subjectCode}
+                            className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[8px] font-bold border transition-all ${
+                              isSubSelected
+                                ? 'bg-blue-100 border-blue-300 text-blue-700'
+                                : status.color
+                            }`}
+                          >
+                            {subject.subjectName.substring(0, 4)}
+                            {isSubSelected && <Check className="w-2.5 h-2.5 ml-0.5" />}
+                          </span>
+                        );
+                      })}
+                      {allSubjects.length > 5 && (
+                        <span className="text-[8px] text-slate-400 font-bold px-1.5 py-0.5">
+                          +{allSubjects.length - 5} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded Subject Details */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top duration-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">
+                            All Subjects — Select subjects to re-evaluate
+                          </span>
+                          {hasAbsentSubjects && (
+                            <span className="text-[8px] text-slate-400 font-medium bg-slate-200/50 px-2 py-0.5 rounded-full">
+                              Absent disabled
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAllSubjectsForStudent(student.studentId, allSubjects);
+                          }}
+                          className="text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          {selectedCount === totalEligible && totalEligible > 0 ? (
+                            <>Deselect All</>
+                          ) : (
+                            <><CheckSquare className="w-3 h-3" /> Select All Eligible</>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {allSubjects.map((subject) => {
+                          const isEligible = subject.isEligible !== false;
+                          const isSelected = (selectedSubjects[student.studentId] || new Set()).has(subject.subjectCode);
+                          const status = getSubjectStatusBadge(subject);
+                          const marks = subject.originalMarks || 0;
+
+                          return (
+                            <div
+                              key={subject.subjectCode}
+                              className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                                isSelected
+                                  ? 'border-blue-400 bg-blue-50/60 shadow-sm'
+                                  : isEligible
+                                  ? 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                                  : 'border-slate-200 bg-slate-50/50 opacity-60'
+                              }`}
+                            >
+                              <button
+                                onClick={() => toggleSubject(student.studentId, subject.subjectCode)}
+                                disabled={!isEligible}
+                                className={`w-4.5 h-4.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                                  isSelected
+                                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                                    : isEligible
+                                    ? 'border-slate-300 hover:border-blue-400 bg-white'
+                                    : 'border-slate-200 bg-slate-100 cursor-not-allowed'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </button>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-bold truncate ${isEligible ? 'text-slate-800' : 'text-slate-400'}`}>
+                                    {subject.subjectName}
+                                  </span>
+                                  <span className="text-[8px] font-mono text-slate-400 flex-shrink-0">
+                                    {subject.subjectCode}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className={`text-xs font-bold ${
+                                  marks >= 40 ? 'text-emerald-600' : marks >= 35 ? 'text-amber-600' : 'text-rose-600'
+                                } ${!isEligible ? 'opacity-50' : ''}`}>
+                                  {marks}%
+                                </span>
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black border ${status.color}`}>
+                                  {status.icon}
+                                  {status.label}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium border-t border-slate-100 pt-2.5">
+                        <span>
+                          {totalEligible} eligible · {allSubjects.length - totalEligible} absent (disabled)
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CreditCard className="w-3 h-3" />
+                          ₹{(selectedCount * (student.feePerSubject || 500)).toLocaleString()} fee
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : selectedCourse && selectedBatch && selectedSemester ? (
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 border-2 border-amber-200 rounded-2xl p-12 text-center">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-amber-200">
+            <AlertCircle className="w-10 h-10 text-amber-500" />
+          </div>
+          <h3 className="text-lg font-black text-amber-800">No Students Found</h3>
+          <p className="text-sm text-amber-600 mt-2 max-w-md mx-auto">
+            No students with published results found for the selected batch and semester.
+            Students must have published results to apply for revaluation.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100/30 border-2 border-dashed border-slate-300 rounded-2xl p-12 text-center">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-slate-200">
+            <Filter className="w-10 h-10 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-black text-slate-600">Select Filters</h3>
+          <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
+            Choose a course, batch, and semester above to view students with published results.
+          </p>
+        </div>
+      )}
+    </div>
   );
 
-  const handleSelectStudent = (id) => {
-    if (selectedStudents.includes(id)) {
-      setSelectedStudents(selectedStudents.filter(studentId => studentId !== id));
-    } else {
-      setSelectedStudents([...selectedStudents, id]);
-    }
+  // ─── Render Step 2: Review & Pay ──────────────────────────────────────────
+  const renderStep2 = () => {
+    const totalSubjects = selectedStudents.reduce((sum, id) => {
+      return sum + (selectedSubjects[id] || new Set()).size;
+    }, 0);
+
+    return (
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 border border-blue-200 rounded-2xl p-5 text-center">
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <Users className="w-6 h-6 text-blue-600" />
+            </div>
+            <span className="text-[10px] uppercase font-black text-slate-500 block">Selected Students</span>
+            <span className="text-3xl font-black text-blue-700">{selectedStudents.length}</span>
+          </div>
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/30 border border-indigo-200 rounded-2xl p-5 text-center">
+            <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <BookOpen className="w-6 h-6 text-indigo-600" />
+            </div>
+            <span className="text-[10px] uppercase font-black text-slate-500 block">Total Subjects</span>
+            <span className="text-3xl font-black text-indigo-700">{totalSubjects}</span>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 border border-emerald-200 rounded-2xl p-5 text-center">
+            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <CreditCard className="w-6 h-6 text-emerald-600" />
+            </div>
+            <span className="text-[10px] uppercase font-black text-slate-500 block">Total Fee</span>
+            <span className="text-3xl font-black text-emerald-700">₹{selectedStudentsFee.toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Selected Students Summary */}
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white flex items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-blue-600" />
+            <h4 className="text-sm font-black text-slate-700">Selected Students & Subjects Summary</h4>
+            <span className="ml-auto text-[10px] text-slate-400 font-medium">
+              {selectedStudents.length} students · {totalSubjects} subjects
+            </span>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {eligibleStudents
+              .filter((s) => selectedStudents.includes(s.studentId))
+              .map((student) => {
+                const selectedCodes = selectedSubjects[student.studentId] || new Set();
+                const selectedSubjectsList = (student.allSubjects || student.subjects || [])
+                  .filter((s) => selectedCodes.has(s.subjectCode));
+
+                return (
+                  <div key={student.studentId} className="p-4 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black">
+                          {student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="text-sm font-black text-slate-800">{student.name}</span>
+                          <span className="text-[10px] font-mono text-slate-400 ml-2">{student.enrollmentId}</span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full">
+                        {selectedSubjectsList.length} subjects · ₹{(selectedSubjectsList.length * (student.feePerSubject || 500)).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedSubjectsList.map((s) => (
+                        <span key={s.subjectCode} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-[9px] font-bold">
+                          {s.subjectName}
+                          <span className="text-blue-400">({s.originalMarks || 0}%)</span>
+                        </span>
+                      ))}
+                      {selectedSubjectsList.length === 0 && (
+                        <span className="text-[10px] text-slate-400 italic">No subjects selected</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+
+        {/* Notice */}
+        <div className="bg-gradient-to-r from-amber-50 to-amber-100/30 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <AlertCircle className="w-4 h-4 text-amber-600" />
+          </div>
+          <div>
+            <span className="text-xs font-black text-amber-800 block">Revaluation Fee Notice</span>
+            <p className="text-[10px] text-amber-700 font-medium">
+              Revaluation fee is ₹500 per subject. The fee is non-refundable.
+              Results may increase, decrease, or remain unchanged after revaluation.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  const handleSelectAll = () => {
-    if (selectedStudents.length === filteredStudents.length) {
-      setSelectedStudents([]);
-    } else {
-      setSelectedStudents(filteredStudents.map(student => student.id));
-    }
-  };
+  // ─── Render Step 3: Submit ────────────────────────────────────────────────
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 border-2 border-emerald-200 rounded-2xl p-8 text-center">
+        <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-200">
+          <CheckCircle2 className="w-12 h-12 text-emerald-600" />
+        </div>
+        <h3 className="text-2xl font-black text-emerald-800">Revaluation Requests Submitted!</h3>
+        <p className="text-sm text-emerald-700 font-medium mt-2">
+          {selectedStudents.length} revaluation request(s) have been submitted successfully.
+        </p>
+        <p className="text-xs text-emerald-600 mt-1">
+          The Academic Board will review your requests. You can track the status in the requests list below.
+        </p>
+        <button
+          onClick={() => {
+            setStep(1);
+            setSelectedStudents([]);
+            setSelectedSubjects({});
+            fetchRequests();
+            fetchEligibleStudents();
+          }}
+          className="mt-6 px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
+        >
+          Submit Another Request
+        </button>
+      </div>
+    </div>
+  );
 
-  const totalFee = selectedStudents.reduce((sum, id) => {
-    const student = eligibleStudents.find(s => s.id === id);
-    return sum + (student ? student.fee : 0);
-  }, 0);
-
-  const handlePayFee = () => {
-    // Simulate payment process
-    setTimeout(() => {
-      setShowPaymentModal(false);
-      alert('Revaluation request submitted successfully!');
-      setSelectedStudents([]);
-    }, 1500);
-  };
+  // ─── Main Render ───────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
+          <p className="text-sm text-slate-500 mt-4 font-medium">Loading revaluation data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div>
-          <h2 className="text-xl font-black text-slate-800">Revaluation Requests</h2>
-          <p className="text-sm text-slate-500 mt-1">Select students eligible for revaluation and submit requests.</p>
+    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
+
+      {/* ─── Page Header ─────────────────────────────────────────────────────── */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+            <Award className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Revaluation</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">
+              Select subjects for revaluation — only ABSENT subjects are disabled
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-right mr-2">
-            <span className="block text-xs text-slate-500 font-bold uppercase tracking-wider">Total Fee</span>
-            <span className="block text-lg font-black text-primary-600">₹{totalFee.toLocaleString()}</span>
-          </div>
-          <button 
-            onClick={() => setShowPaymentModal(true)}
-            disabled={selectedStudents.length === 0}
-            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
-              selectedStudents.length > 0 
-                ? 'bg-primary-600 text-white hover:bg-primary-700' 
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-            }`}
+          {summary && (
+            <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+              <div className="text-center">
+                <span className="text-[8px] uppercase font-black text-slate-400 block">Pending</span>
+                <span className="text-sm font-black text-amber-600">{summary.pending || 0}</span>
+              </div>
+              <div className="text-center">
+                <span className="text-[8px] uppercase font-black text-slate-400 block">Completed</span>
+                <span className="text-sm font-black text-emerald-600">{summary.completed || 0}</span>
+              </div>
+              <div className="text-center">
+                <span className="text-[8px] uppercase font-black text-slate-400 block">Total</span>
+                <span className="text-sm font-black text-blue-600">{summary.total || 0}</span>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={handleRefresh}
+            className="p-2.5 bg-slate-50 border border-slate-200 hover:bg-white hover:border-slate-300 rounded-xl text-slate-500 hover:text-slate-700 transition-all cursor-pointer"
+            title="Refresh Data"
           >
-            <CreditCard className="w-4 h-4" />
-            Pay & Submit Request
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Rules Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 items-start">
-        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-amber-800">
-          <strong className="block font-bold mb-1">Revaluation Rules:</strong>
-          <ul className="list-disc pl-4 space-y-0.5">
-            <li>Revaluation is allowed only within 7-10 days after result publication.</li>
-            <li>Marks may increase, decrease, or remain the same after revaluation.</li>
-            <li>The final revaluation result is considered final and binding.</li>
-          </ul>
-        </div>
+      {/* ─── Toast ───────────────────────────────────────────────────────────── */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* ─── Main Content ───────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+        <StepIndicator
+          current={step}
+          total={3}
+          labels={['Select Students & Subjects', 'Review & Pay', 'Submit']}
+        />
+
+        {step === 1 && renderStep1()}
+        {step === 2 && renderStep2()}
+        {step === 3 && renderStep3()}
+
+        {/* ─── Navigation Buttons ───────────────────────────────────────────── */}
+        {step < 3 && (
+          <div className="flex justify-between items-center pt-6 mt-6 border-t border-slate-100">
+            <div>
+              {step > 1 && (
+                <button
+                  onClick={() => setStep(step - 1)}
+                  className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Back
+                </button>
+              )}
+            </div>
+            <div>
+              {step === 1 ? (
+                <button
+                  onClick={() => {
+                    const hasSubjects = selectedStudents.some(
+                      (sid) => (selectedSubjects[sid] || new Set()).size > 0
+                    );
+                    if (selectedStudents.length === 0 || !hasSubjects) {
+                      setToast({ message: 'Please select at least one student and subject.', type: 'warning' });
+                      return;
+                    }
+                    setStep(2);
+                  }}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer"
+                >
+                  Review Selected
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmitRequest}
+                  disabled={submitting || selectedStudents.length === 0}
+                  className="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-500/10 cursor-pointer"
+                >
+                  {submitting ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                  ) : (
+                    <><CreditCard className="w-4 h-4" /> Submit & Pay</>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Main Content */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        {/* Toolbar */}
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/50">
-          <div className="relative w-full sm:w-96">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Search by student name or ID..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all bg-white"
-            />
+      {/* ─── Requests History ────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 h-5 text-slate-400" />
+            <div>
+              <h3 className="text-base font-black text-slate-800 tracking-tight">Request History</h3>
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                {filteredRequests.length} revaluation requests
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search requests..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full sm:w-48 pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="All">All Status</option>
+              <option value="PENDING">Pending</option>
+              <option value="UNDER_REVIEW">Under Review</option>
+              <option value="ASSIGNED">Assigned</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
           </div>
         </div>
 
-        {/* Data Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 w-12">
-                  <input 
-                    type="checkbox" 
-                    checked={filteredStudents.length > 0 && selectedStudents.length === filteredStudents.length}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                  />
-                </th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Student Details</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Subject</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Current Marks</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Fee</th>
+              <tr className="bg-slate-50/70 border-b border-slate-100">
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Request ID</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Subjects</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Fee</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-20">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => (
-                  <tr key={student.id} className={`transition-colors group ${selectedStudents.includes(student.id) ? 'bg-primary-50/50' : 'hover:bg-slate-50/80'}`}>
-                    <td className="px-6 py-4">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedStudents.includes(student.id)}
-                        onChange={() => handleSelectStudent(student.id)}
-                        className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                      />
+            <tbody className="divide-y divide-slate-50 bg-white">
+              {paginatedRequests.map((request, idx) => {
+                const statusBadge = getStatusBadge(request.status);
+                const resultBadge = getResultBadge(request.finalResult);
+                const student = request.student;
+                const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
+
+                return (
+                  <tr key={request._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-400">
+                      {String(globalIdx).padStart(2, '0')}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-800">{student.name}</span>
-                        <span className="text-xs text-slate-500">{student.enrollmentId} ({student.course})</span>
+                    <td className="px-4 py-3.5">
+                      <span className="font-mono font-bold text-blue-600 block">
+                        {request.requestId || request._id.toString().substring(0, 8).toUpperCase()}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 text-[9px] font-bold ${resultBadge.color}`}>
+                        {resultBadge.icon}
+                        {resultBadge.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div>
+                        <span className="font-bold text-slate-800 block">
+                          {student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'Unknown'}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          {student?.enrollmentId || 'N/A'}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-slate-600">{student.subject}</span>
+                    <td className="px-4 py-3.5 text-center font-bold text-slate-700">
+                      Sem {request.semester || 'N/A'}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-700">{student.currentMarks}%</span>
+                    <td className="px-4 py-3.5 text-center font-bold text-slate-700">
+                      {request.subjects?.length || 0}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-700">₹{student.fee.toLocaleString()}</span>
+                    <td className="px-4 py-3.5 text-center font-bold text-slate-800">
+                      ₹{request.totalFee?.toLocaleString() || 0}
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${statusBadge.color}`}>
+                        {statusBadge.icon}
+                        {statusBadge.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <button
+                        onClick={() => handleViewRequest(request)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
-                ))
-              ) : (
+                );
+              })}
+              {filteredRequests.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
-                    <CheckCircle2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-sm">No eligible students found for revaluation.</p>
+                  <td colSpan="8" className="px-4 py-12 text-center text-slate-400">
+                    <Award className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                    <p className="text-sm font-bold text-slate-500">No revaluation requests found</p>
+                    <p className="text-xs text-slate-400 mt-1">Submit a request using the form above</p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
+            <span className="text-[10px] text-slate-400 font-semibold">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length}
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
+                {currentPage} / {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <h3 className="text-2xl font-black text-slate-800 mb-2">Confirm Payment</h3>
-            <p className="text-sm text-slate-500 mb-6">You are requesting revaluation for {selectedStudents.length} student(s).</p>
-            
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-bold text-slate-600">Total Fee</span>
-                <span className="text-lg font-black text-primary-600">₹{totalFee.toLocaleString()}</span>
+      {/* ─── Request Detail Modal ───────────────────────────────────────────── */}
+      {isModalOpen && viewingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Revaluation Request Details</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    {viewingRequest.requestId || viewingRequest._id}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-400">Payment goes directly to the Academy.</p>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowPaymentModal(false)}
-                className="flex-1 px-4 py-3 border-2 border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors"
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-5 text-left">
+              <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Student</span>
+                    <span className="text-slate-800 font-bold">
+                      {viewingRequest.student ? `${viewingRequest.student.firstName || ''} ${viewingRequest.student.lastName || ''}`.trim() : 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrollment ID</span>
+                    <span className="text-slate-800 font-mono font-bold">{viewingRequest.student?.enrollmentId || 'N/A'}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
+                    <span className="text-slate-800 font-bold">Semester {viewingRequest.semester || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Year</span>
+                    <span className="text-slate-800 font-bold">{viewingRequest.academicYear || 'N/A'}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Status</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${getStatusBadge(viewingRequest.status).color}`}>
+                      {getStatusBadge(viewingRequest.status).icon}
+                      {getStatusBadge(viewingRequest.status).label}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Fee</span>
+                    <span className="text-slate-800 font-bold">₹{viewingRequest.totalFee?.toLocaleString() || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subject Details */}
+              {viewingRequest.subjects && viewingRequest.subjects.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">Subjects for Revaluation</h4>
+                  <div className="space-y-2">
+                    {viewingRequest.subjects.map((subject, idx) => (
+                      <div key={idx} className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-slate-800 block">{subject.subjectName}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{subject.subjectCode}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 block">Original Marks</span>
+                          <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Revaluation Results */}
+              {viewingRequest.revaluationResults && viewingRequest.revaluationResults.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">Revaluation Results</h4>
+                  <div className="space-y-2">
+                    {viewingRequest.revaluationResults.map((result, idx) => (
+                      <div key={idx} className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-slate-800 block">{result.subjectName}</span>
+                          <span className="text-[10px] text-slate-400">{result.subjectCode}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-400 block">Original</span>
+                            <span className="text-sm font-black text-slate-600">{result.originalMarks}%</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-400 block">Revised</span>
+                            <span className={`text-sm font-black ${result.marksChange > 0 ? 'text-emerald-600' : result.marksChange < 0 ? 'text-rose-600' : 'text-amber-600'}`}>
+                              {result.revisedTotalMarks}%
+                            </span>
+                          </div>
+                          <div className={`text-xs font-black px-2 py-1 rounded-lg ${
+                            result.marksChange > 0 ? 'bg-emerald-100 text-emerald-700' :
+                            result.marksChange < 0 ? 'bg-rose-100 text-rose-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {result.marksChange > 0 ? '+' : ''}{result.marksChange}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Audit Trail */}
+              {viewingRequest.auditTrail && viewingRequest.auditTrail.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">Audit Trail</h4>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {viewingRequest.auditTrail.map((entry, idx) => (
+                      <div key={idx} className="flex items-center gap-3 text-[10px] text-slate-600 border-b border-slate-50 pb-1.5">
+                        <span className="font-black text-slate-400">{entry.action}</span>
+                        <span className="text-slate-400">→</span>
+                        <span className="font-bold text-slate-700">{entry.newStatus}</span>
+                        <span className="text-slate-400 ml-auto">
+                          {entry.timestamp ? new Date(entry.timestamp).toLocaleDateString() : 'N/A'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
               >
-                Cancel
-              </button>
-              <button 
-                onClick={handlePayFee}
-                className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-600/30 transition-all active:scale-95"
-              >
-                Confirm & Pay
+                Close
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* ─── Confirmation Modal ─────────────────────────────────────────────── */}
+      {confirmConfig && (
+        <ConfirmModal
+          isOpen={true}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          type={confirmConfig.type}
+          confirmText={confirmConfig.confirmText}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
       )}
     </div>
   );
@@ -33102,8 +37752,8 @@ const InstituteERPStudents = ({
                           rel="noreferrer" 
                           className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
                         >
-                          <span className="text-xl">🗳️</span>
-                          <span className="truncate text-slate-700 group-hover:text-blue-700">SEMI Membership Form</span>
+                          <span className="text-lg">💳</span>
+                          <span className="truncate">Enrollment Payment Receipt</span>
                         </a>
                       )}
                       {selectedStudentForView.documents.studentSignatureUrl && (
@@ -33124,8 +37774,8 @@ const InstituteERPStudents = ({
                           rel="noreferrer" 
                           className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
                         >
-                          <span className="text-xl">🎓</span>
-                          <span className="truncate text-slate-700 group-hover:text-blue-700">PG Degree Certificate / HOD Confirmation</span>
+                          <span className="text-lg">🗳️</span>
+                          <span className="truncate">SEMI Membership Form</span>
                         </a>
                       )}
                     </div>
@@ -35898,6 +40548,7 @@ function extractRoutes(dir) {
         }
     });
     return allRoutes;
+    
 }
 
 function extractFrontendApis(dir) {

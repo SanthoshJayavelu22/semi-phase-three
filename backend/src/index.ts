@@ -17,6 +17,7 @@ import revaluationRoutes from './routes/revaluationRoutes';
 import marksheetRoutes from './routes/marksheetRoutes';
 import certificateRoutes from './routes/certificateRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import marksRoutes from './routes/marksRoutes';
 import { notFound, errorHandler } from './middlewares/errorMiddleware';
 
 dotenv.config();
@@ -106,6 +107,7 @@ app.use('/api/results', resultRoutes);
 app.use('/api/revaluation', revaluationRoutes);
 app.use('/api/marksheets', marksheetRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/marks', marksRoutes);
 app.use('/api', paymentRoutes);
 
 // Basic Route

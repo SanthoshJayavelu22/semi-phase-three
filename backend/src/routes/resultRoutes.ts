@@ -52,6 +52,15 @@ router.get('/debug/create-dummy', async (req, res) => {
   try {
     const Student = require('../models/studentModel').default;
     const Result = require('../models/resultModel').default;
+    const Course = require('../models/courseModel').default;
+    const Batch = require('../models/batchModel').default;
+    const Institute = require('../models/instituteModel').default;
+
+    // Reuse an existing course/batch/institute if available so the dummy
+    // student satisfies all required schema fields.
+    const course = await Course.findOne({});
+    const batch = await Batch.findOne({});
+    const institute = await Institute.findOne({});
     
     let student = await Student.findOne({ enrollmentId: 'SEMI-2026-9487' });
     if (!student) {
@@ -61,9 +70,43 @@ router.get('/debug/create-dummy', async (req, res) => {
         lastName: 'User',
         email: 'test9487@example.com',
         dateOfBirth: new Date('2026-07-21'),
+        homeAddress: '123 Test Street, Test City',
+        contactNumber: '9876543210',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2025,
+        universityName: 'Test University',
+        medicalCouncilRegistrationNumber: 'MC-TEST9487',
+        isForeignGraduate: false,
+        fmgeClearanceStatus: 'Not Applicable',
+        course: course?._id,
+        batch: batch?._id,
+        institute: institute?._id,
+        courseDirector: 'Dr. Test Director',
+        documents: {
+          passportPhotoUrl: 'http://example.com/photo.jpg',
+          mbbsCertificateUrl: 'http://example.com/mbbs.pdf',
+          medicalCouncilRegistrationCertificateUrl: 'http://example.com/registration.pdf',
+          semiMembershipFormUrl: 'http://example.com/membership.pdf',
+        },
+        remittedToAcademy: false,
+        semesters: [{ semesterNumber: 1, attendancePercentage: 0, thesisApproved: false, eligibilityStatus: 'Pending' }],
       });
     } else {
       student.dateOfBirth = new Date('2026-07-21');
+      if (!student.homeAddress) student.homeAddress = '123 Test Street, Test City';
+      if (!student.contactNumber) student.contactNumber = '9876543210';
+      if (!student.qualification) student.qualification = 'MBBS';
+      if (!student.mbbsQualification) student.mbbsQualification = 'MBBS Degree';
+      if (!student.yearOfPassing) student.yearOfPassing = 2025;
+      if (!student.universityName) student.universityName = 'Test University';
+      if (!student.medicalCouncilRegistrationNumber) student.medicalCouncilRegistrationNumber = 'MC-TEST9487';
+      if (student.isForeignGraduate === undefined) student.isForeignGraduate = false;
+      if (!student.fmgeClearanceStatus) student.fmgeClearanceStatus = 'Not Applicable';
+      if (!student.course) student.course = course?._id;
+      if (!student.batch) student.batch = batch?._id;
+      if (!student.institute) student.institute = institute?._id;
+      if (!student.courseDirector) student.courseDirector = 'Dr. Test Director';
       await student.save();
     }
     

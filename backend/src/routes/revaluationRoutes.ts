@@ -9,12 +9,34 @@ import {
   approveRevaluationResult,
   getRevaluationStatistics,
   deleteRevaluationRequest,
+  getEligibleStudents,
+  getSingleStudentEligibility,
+  getInstituteSummary,
+  getAcademySummary,
+  createRevaluationRazorpayOrder,
+  verifyRevaluationRazorpayPayment,
+  getRevaluationPaymentStatus,
+  verifyRevaluationOrderStatus,
 } from '../controllers/revaluationController';
 import { protect, authorize } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 
 router.use(protect);
+
+// ─── Razorpay Payment Routes ──────────────────────────────────────────────────
+router.post('/payment/create-order', authorize('institute'), createRevaluationRazorpayOrder);
+router.post('/payment/verify', authorize('institute'), verifyRevaluationRazorpayPayment);
+router.get('/payment/status/:studentId', authorize('institute'), getRevaluationPaymentStatus);
+router.get('/payment/verify-order/:orderId', authorize('institute'), verifyRevaluationOrderStatus);
+
+// ─── Institute Routes ──────────────────────────────────────────────────────
+router.get('/institute/summary', authorize('institute'), getInstituteSummary);
+router.get('/institute/eligible-students', authorize('institute'), getEligibleStudents);
+router.get('/institute/student/:studentId/eligibility', authorize('institute'), getSingleStudentEligibility);
+
+// ─── Academy Routes ────────────────────────────────────────────────────────
+router.get('/academy/summary', authorize('admin', 'super_admin', 'board'), getAcademySummary);
 
 // Revaluation request CRUD
 router.get('/requests', getAllRevaluationRequests);

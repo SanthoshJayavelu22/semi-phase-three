@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { Result } from '../models/resultModel';
 import { Student } from '../models/studentModel';
+import { Institute } from '../models/instituteModel';
 import { Marksheet } from '../models/marksheetModel';
 import resultService from '../services/resultService';
 import pdfGeneratorService from '../services/pdfGeneratorService';
@@ -15,6 +16,16 @@ export const getAllResults = async (req: Request, res: Response) => {
     const { page = '1', limit = '20', academicYear, semester, resultStatus, isPublished, studentId, search } = req.query;
 
     const query: any = {};
+
+    // Institute users should only see results for their own students
+    if (req.user.role === 'institute') {
+      const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
+      if (!institute) {
+        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute is not approved.' });
+      }
+      const studentIds = await Student.find({ institute: institute._id }).distinct('_id');
+      query.student = { $in: studentIds };
+    }
 
     if (academicYear) query.academicYear = academicYear;
     if (semester) query.semester = parseInt(semester as string);

@@ -28,12 +28,23 @@ export const PaymentStatusChecker = ({
           return;
         }
 
-        const endpoint = paymentType === 'institute'
-          ? `/institutes/payment/verify-order/${pendingState.orderId}`
-          : `/academic/payment/verify-order/${pendingState.orderId}`;
+        let endpoint;
+        if (paymentType === 'institute') {
+          endpoint = `/institutes/payment/verify-order/${pendingState.orderId}`;
+        } else if (paymentType === 'revaluation') {
+          endpoint = `/revaluation/payment/verify-order/${pendingState.orderId}`;
+        } else {
+          endpoint = `/academic/payment/verify-order/${pendingState.orderId}`;
+        }
 
-        const params = paymentType !== 'institute' && pendingState.additionalData?.studentId
-          ? { params: { studentId: pendingState.additionalData.studentId, purpose: pendingState.additionalData.purpose } }
+        const params = pendingState.additionalData?.studentId
+          ? {
+              params: {
+                studentId: pendingState.additionalData.studentId,
+                semester: pendingState.additionalData.semester,
+                purpose: pendingState.additionalData.purpose,
+              },
+            }
           : {};
 
         const response = await apiClient.get(endpoint, {

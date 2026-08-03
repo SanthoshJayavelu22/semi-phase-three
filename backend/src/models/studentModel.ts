@@ -39,6 +39,16 @@ export interface IStudent extends Document {
     thesisDocumentUrl?: string;
     thesisApproved: boolean;
     eligibilityStatus: 'Pending' | 'Approved' | 'Rejected';
+    marks?: {
+      subjectCode: string;
+      subjectName: string;
+      marksObtained: number | null;
+      totalMarks: number;
+      isAbsent: boolean;
+      grade: string;
+      updatedBy?: mongoose.Types.ObjectId;
+      updatedAt?: Date;
+    }[];
   }[];
 }
 
@@ -161,6 +171,18 @@ const studentSchema: Schema = new Schema(
           enum: ['Pending', 'Approved', 'Rejected'], 
           default: 'Pending' 
         },
+        marks: [
+          {
+            subjectCode: { type: String, required: true },
+            subjectName: { type: String, required: true },
+            marksObtained: { type: Number, default: null },
+            totalMarks: { type: Number, default: 100 },
+            isAbsent: { type: Boolean, default: false },
+            grade: { type: String, default: '' },
+            updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+            updatedAt: { type: Date, default: Date.now },
+          },
+        ],
       }
     ],
   },

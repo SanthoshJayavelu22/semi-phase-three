@@ -35,7 +35,9 @@ export interface IRevaluationRequest extends Document {
   feePerSubject: number;
   totalFee: number;
   paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
-  paymentId?: string;
+  paymentId?: string;           // Razorpay Payment ID
+  paymentOrderId?: string;      // Razorpay Order ID
+  paymentSignature?: string;    // Razorpay Signature
   paymentDate?: Date;
   status: 'PENDING' | 'UNDER_REVIEW' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'REJECTED' | 'CANCELLED';
   submittedDate: Date;
@@ -100,6 +102,8 @@ const revaluationRequestSchema: Schema = new Schema(
       default: 'PENDING',
     },
     paymentId: { type: String },
+    paymentOrderId: { type: String },      // Razorpay Order ID
+    paymentSignature: { type: String },    // Razorpay Signature
     paymentDate: { type: Date },
     status: {
       type: String,
@@ -139,5 +143,7 @@ const revaluationRequestSchema: Schema = new Schema(
 
 revaluationRequestSchema.index({ student: 1, status: 1 });
 revaluationRequestSchema.index({ institute: 1, academicYear: 1 });
+revaluationRequestSchema.index({ paymentOrderId: 1 });
+revaluationRequestSchema.index({ paymentId: 1 });
 
 export const RevaluationRequest = mongoose.model<IRevaluationRequest>('RevaluationRequest', revaluationRequestSchema);

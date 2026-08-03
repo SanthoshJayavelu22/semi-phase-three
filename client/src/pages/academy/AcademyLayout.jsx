@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Outlet, useNavigate,  Navigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 import instituteService from '../../api/institutes';
 import academicService from '../../api/academic';
@@ -368,6 +368,7 @@ export default function AcademyLayout() {
   const handleLogout = useCallback(() => {
     setBoardUser(null);
     localStorage.removeItem('semi_board_user');
+    localStorage.removeItem('semi_board_token');
     localStorage.removeItem('token');
     localStorage.removeItem('semi_token');
     localStorage.removeItem('refreshToken');
