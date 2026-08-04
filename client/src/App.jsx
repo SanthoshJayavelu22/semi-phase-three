@@ -45,9 +45,13 @@ const L = ({ children }) => (
 
 import { useEffect, useState } from 'react';
 import { checkHealth } from './api/health';
+import { useTokenRefresh } from './hooks/useTokenRefresh';
 
 function App() {
   const [showMaintenance, setShowMaintenance] = useState(false);
+
+  // Proactively refresh tokens before the 15-minute access-token expiry.
+  useTokenRefresh(12 * 60 * 1000);
 
   useEffect(() => {
     const checkServerHealth = async () => {

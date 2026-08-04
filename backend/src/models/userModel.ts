@@ -1,15 +1,22 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export interface IRefreshToken {
+  token: string;
+  createdAt: Date;
+}
+
 export interface IUser extends Document {
   name: string;
   email: string;
   password?: string;
-  
+
   role: string;
   isEmailVerified: boolean;
   verificationToken?: string;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  refreshTokens: IRefreshToken[];
+  tokenVersion: number;
 }
 
 const userSchema: Schema = new Schema(

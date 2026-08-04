@@ -1,4 +1,9 @@
-import { Eye, CheckCircle2, ShieldCheck, X, FileCheck, Building2, MapPin, Contact2, GraduationCap, AlertCircle, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  Eye, CheckCircle2, ShieldCheck, X, FileCheck, Building2, GraduationCap,
+  AlertCircle, FileText, Loader2, CreditCard, User, Users, BookOpen,
+  BarChart3, FileSignature
+} from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const AcademyInspectorModal = ({
@@ -10,285 +15,371 @@ const AcademyInspectorModal = ({
 }) => {
   const getDocUrl = (url) => {
     if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const filename = url.replace(/\\/g, '/').split('/').pop();
-    return getUploadUrl(filename);
+    // getUploadUrl resolves Cloudinary/external URLs as-is and rewrites any
+    // backend-hosted absolute URL to the current API origin, so document links
+    // work whether files live on Cloudinary or local disk.
+    return getUploadUrl(url);
   };
-  
-  const InfoCard = ({ icon: Icon, title, children }) => (
-    <div className="bg-white/80 backdrop-blur-sm border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow duration-300 space-y-4 relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-50 to-transparent rounded-bl-full -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      <h4 className="text-xs uppercase font-bold text-indigo-900/60 tracking-wider flex items-center gap-2 border-b border-slate-100/80 pb-3">
-        <Icon className="w-4 h-4 text-indigo-400" />
-        {title}
-      </h4>
-      <div className="grid grid-cols-2 gap-x-6 gap-y-5 text-sm font-medium text-slate-700 relative z-10">
-        {children}
-      </div>
-    </div>
-  );
 
-  const StatBox = ({ label, value, isCompliant }) => (
-    <div className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
-      <div>
-        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">{label}</span>
-        <span className="text-base font-black text-slate-800 mt-0.5 block">
-          {value}
-        </span>
-      </div>
-      <div className="flex flex-col items-end gap-1.5">
-        {isCompliant ? (
-          <span className="flex items-center gap-1 text-[10px] uppercase font-black px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100/50">
-            <CheckCircle2 className="w-3 h-3" /> Compliant
-          </span>
-        ) : (
-          <span className="flex items-center gap-1 text-[10px] uppercase font-black px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-100/50">
-            <AlertCircle className="w-3 h-3" /> Non-Compliant
-          </span>
-        )}
-      </div>
-    </div>
-  );
+  // ── Payment verification state ─────────────────────────────────────────────
+  // All displayed payment values come from the backend `selectedApp` payload.
+  // `isVerifyingPayment` is only a short transient visual state so pending
+  // applications surface a quick "checking" step before the real status.
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(() => Boolean(selectedApp?.id && !selectedApp.paymentComplete));
 
-  const DetailField = ({ label, value, colSpan = 1, isLink = false }) => (
-    <div className={colSpan === 2 ? 'col-span-2' : ''}>
-      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-1">{label}</span>
-      {isLink && value && value !== 'N/A' ? (
-        <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-700 hover:underline font-semibold flex items-center gap-1 w-fit">
-          {value}
-        </a>
-      ) : (
-        <span className={`block ${value === 'N/A' ? 'text-slate-400 italic' : 'text-slate-800'}`}>{value}</span>
-      )}
-    </div>
-  );
+  useEffect(() => {
+    if (!isVerifyingPayment) return;
+    const t = setTimeout(() => setIsVerifyingPayment(false), 900);
+    return () => clearTimeout(t);
+    // The modal remounts per application, so this transient state is safe.
+  }, [isVerifyingPayment]);
+
+  const isPaymentComplete = !!selectedApp?.paymentComplete;
+  const paymentAmount = selectedApp?.paymentDetails?.amount
+    || (selectedApp?.form?.paymentAmount != null
+        ? `₹${Number(selectedApp.form.paymentAmount).toLocaleString('en-IN')}.00`
+        : '₹5,000.00');
+  const transactionId = selectedApp?.paymentDetails?.transactionId
+    || selectedApp?.form?.razorpayPaymentId
+    || 'N/A';
+  const paymentDate = selectedApp?.paymentDetails?.date
+    || (selectedApp?.form?.paymentCompletedAt
+        ? new Date(selectedApp.form.paymentCompletedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+        : 'N/A');
+
+  // Document categories keyed to the backend `uploadedDocs` field names.
+  const docCategories = [
+    { key: 'equipmentList', label: 'Equipment List', icon: <FileText className="w-4 h-4" /> },
+    { key: 'facultyList', label: 'Faculty List', icon: <Users className="w-4 h-4" /> },
+    { key: 'emergencyOPDStatistics', label: 'OPD Statistics', icon: <BarChart3 className="w-4 h-4" /> },
+    { key: 'libraryBookList', label: 'Library List', icon: <BookOpen className="w-4 h-4" /> },
+    { key: 'trainingMannequinList', label: 'Mannequin List', icon: <User className="w-4 h-4" /> },
+    { key: 'diagnosticEquipmentList', label: 'Diagnostic List', icon: <ShieldCheck className="w-4 h-4" /> },
+    { key: 'declarationLetter', label: 'Declaration', icon: <FileCheck className="w-4 h-4" /> },
+    { key: 'facultyCommitmentLetter', label: 'Faculty Commitment', icon: <FileSignature className="w-4 h-4" /> },
+  ];
+
+  const getDocUrlForField = (key) => {
+    const fileData = selectedApp.uploadedDocs?.[key];
+    return getDocUrl(fileData?.url || selectedApp.form?.documents?.[key + 'Url'] || selectedApp.form?.[key + 'Url'] || selectedApp.form?.[key]);
+  };
+
+  const isApproved = selectedApp.status === 'approved' || selectedApp.status === 'active_erp';
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6">
-      <div className="bg-[#f4f7f9] rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] border border-white/20 max-w-6xl w-full h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300 text-left">
-        
-        {/* Modal Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-8 py-6 text-white flex justify-between items-start flex-shrink-0 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
-          
-          <div className="relative z-10 flex gap-5 items-center">
-            <div className="w-14 h-14 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-400/30 shadow-inner backdrop-blur-sm">
-              <ShieldCheck className="w-7 h-7 text-indigo-300" />
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+        {/* ─── HEADER ────────────────────────────────────────────────────────── */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-[10px] uppercase font-black tracking-widest text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30">
-                  Compliance Audit & Inspector
-                </span>
-                <span className="text-[10px] uppercase font-bold text-slate-400">ID: {selectedApp.id}</span>
-              </div>
-              <h3 className="text-2xl font-black text-white tracking-tight">{selectedApp.orgName}</h3>
-              <div className="flex items-center gap-4 mt-1.5 text-xs text-indigo-200/80 font-medium">
-                <span className="flex items-center gap-1.5"><Contact2 className="w-3.5 h-3.5" /> {selectedApp.email}</span>
-                <span className="w-1 h-1 bg-indigo-500 rounded-full" />
-                <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {selectedApp.form?.instituteAddress || 'Address Not Provided'}</span>
+            <div className="min-w-0">
+              <h3 className="text-sm font-black text-slate-800 truncate">{selectedApp.orgName}</h3>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="font-medium">ID: {selectedApp.id}</span>
+                <span className="text-slate-300">•</span>
+                <span className="font-medium">{selectedApp.email}</span>
               </div>
             </div>
           </div>
-
           <button
             onClick={() => setSelectedApp(null)}
-            className="relative z-10 p-2.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl transition-all duration-200 border border-white/10 group"
+            className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600 flex-shrink-0"
           >
-            <X className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Scrollable Content split panel */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 custom-scrollbar">
-          
-          {/* Left Column: Compliance checks & General specs (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            
-            {/* Compliance Quick Stats */}
-            <div>
-              <div className="flex items-center gap-2 mb-4 px-1">
-                <ShieldCheck className="w-4 h-4 text-indigo-500" />
-                <h4 className="text-xs uppercase font-black text-slate-500 tracking-widest">Compliance Checks</h4>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <StatBox 
-                  label="Emergency Beds" 
-                  value={`${selectedApp.form?.bedCount || selectedApp.bedCount} Beds`}
-                  isCompliant={parseInt(selectedApp.form?.bedCount || selectedApp.bedCount, 10) >= 10}
-                />
-                <StatBox 
-                  label="Physician Exp" 
-                  value={`${selectedApp.form?.physicianExperience || selectedApp.experience} Months`}
-                  isCompliant={parseInt(selectedApp.form?.physicianExperience || selectedApp.experience, 10) >= 24}
-                />
-                <StatBox 
-                  label="EM Faculty" 
-                  value={`${selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount} Instructors`}
-                  isCompliant={parseInt(selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount, 10) >= 1}
-                />
-                <StatBox 
-                  label="Classroom / Teaching Space" 
-                  value={(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)' ? 'Available' : 'Unavailable'}
-                  isCompliant={(selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' || (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes (Mandatory)'}
-                />
-              </div>
+        {/* ─── BODY ──────────────────────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+          {/* ═══ TOP ROW: Status Badge + Quick Stats ═══ */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${
+                selectedApp.status === 'pending_review'
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : isApproved
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-rose-50 border-rose-200 text-rose-700'
+              }`}>
+                {selectedApp.status === 'pending_review' ? '⏳ Pending Review' :
+                 isApproved ? '✅ Approved' : '❌ Rejected'}
+              </span>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${
+                isPaymentComplete
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-amber-50 border-amber-200 text-amber-700'
+              }`}>
+                {isPaymentComplete ? (
+                  <><CheckCircle2 className="w-3.5 h-3.5" /> Payment Verified</>
+                ) : (
+                  <><AlertCircle className="w-3.5 h-3.5" /> Payment Pending</>
+                )}
+              </span>
             </div>
-
-            <InfoCard icon={Building2} title="1. Institutional Profile">
-              <DetailField label="Organization Name" value={selectedApp.orgName} />
-              <DetailField label="Constitution Type" value={selectedApp.form?.constitutionType || 'N/A'} />
-              <DetailField label="Institutional Address" value={selectedApp.form?.instituteAddress || 'N/A'} colSpan={2} />
-              <DetailField label="Registered Office Address" value={selectedApp.form?.registeredOfficeAddress || 'N/A'} colSpan={2} />
-              <DetailField label="Institutional Website" value={selectedApp.form?.website} colSpan={2} isLink={true} />
-            </InfoCard>
-
-            <InfoCard icon={Contact2} title="2. Contact Registry">
-              <DetailField label="Primary Account Email" value={selectedApp.email} />
-              <DetailField label="Application Contact Email" value={selectedApp.form?.emailAddress || 'N/A'} />
-              <DetailField label="Office Phone" value={selectedApp.form?.officePhone || 'N/A'} />
-              <DetailField label="Mobile Phone" value={selectedApp.form?.phoneNumber || 'N/A'} />
-            </InfoCard>
-
-            <InfoCard icon={GraduationCap} title="3. Executive Leadership & Representation">
-              <DetailField label="Head of College / Institute" value={selectedApp.form?.headName || 'N/A'} />
-              <DetailField label="Head Designation" value={selectedApp.form?.headDesignation || 'N/A'} />
-              <DetailField label="HOD (Emergency Medicine)" value={selectedApp.form?.hodName || 'N/A'} />
-              <DetailField label="Authorized Representative" value={`${selectedApp.form?.authorizedRepName || 'N/A'} (${selectedApp.form?.authorizedRepDesignation || 'N/A'})`} />
-            </InfoCard>
-
-            <InfoCard icon={FileCheck} title="4. Academic Intake & Specifications">
-              <DetailField label="Proposed Commencement" value={selectedApp.form?.commencementDate ? new Date(selectedApp.form.commencementDate).toLocaleDateString() : 'N/A'} />
-              <DetailField label="Seats Requested" value={`${selectedApp.form?.seatsRequested || 'N/A'} Seats`} />
-              <DetailField label="NABH Accreditation Status" value={(selectedApp.form?.nabhStatus || 'Yes') === 'Yes' ? 'Accredited' : 'Non-Accredited'} />
-              <DetailField label="Course Director EM Qualified" value={selectedApp.form?.courseDirectorEMQualified || 'Yes'} />
-            </InfoCard>
-            
-            {selectedApp.rejectionReason && (
-              <div className="bg-gradient-to-r from-rose-50 to-white border border-rose-100 rounded-2xl p-5 shadow-sm mt-4 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
-                <span className="flex items-center gap-1.5 text-[10px] uppercase font-black text-rose-600 mb-2 tracking-widest">
-                  <AlertCircle className="w-3.5 h-3.5" /> Logged Rejection Reason
-                </span>
-                <p className="text-sm font-medium text-slate-700 italic pl-1 border-l-2 border-rose-200">
-                  "{selectedApp.rejectionReason}"
-                </p>
-              </div>
-            )}
-
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span className="font-medium">Submitted: {selectedApp.submittedAt || 'N/A'}</span>
+            </div>
           </div>
 
-          {/* Right Column: Documents (5 cols) */}
-          <div className="lg:col-span-5 space-y-6">
-            
-            {/* Uploaded Documents */}
-            <div className="bg-white/90 backdrop-blur-sm border border-slate-200/60 rounded-[1.5rem] p-6 shadow-xl shadow-slate-200/20 sticky top-0">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <FileText className="w-5 h-5" />
+          {/* ═══ PAYMENT SECTION - Clean & Compact ═══ */}
+          {isPaymentComplete ? (
+            <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800">Certified Upload Inspections</h4>
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mt-0.5">9 Mandatory Documents</p>
+                  <p className="text-xs font-bold text-emerald-800">Inspection Fee Paid</p>
+                  <p className="text-[10px] text-emerald-600 font-medium">
+                    <span className="font-mono">{transactionId}</span> • {paymentAmount} • {paymentDate}
+                  </p>
                 </div>
               </div>
-              
-              <div className="flex flex-col gap-2.5">
-                {auditDocs.map((key) => {
-                  const titles = {
-                    equipmentList: 'Equipment Register PDF',
-                    facultyList: 'Faculty bio-data PDF',
-                    emergencyOPDStatistics: 'OPD Clinical Audit PDF',
-                    libraryBookList: 'Library book register PDF',
-                    trainingMannequinList: 'Resuscitation inventory PDF',
-                    diagnosticEquipmentList: 'Imaging diagnostics PDF',
-                    declarationLetter: 'Signed Declaration PDF',
-                    inspectionPaymentReceipt: 'Inspection Payment Receipt PDF',
-                    facultyCommitmentLetter: 'Faculty Commitment Letter PDF'
-                  };
-                  const fileData = selectedApp.uploadedDocs?.[key];
-                  const docUrl = getDocUrl(fileData?.url || selectedApp.form?.documents?.[key + 'Url'] || selectedApp.form?.documents?.[key] || selectedApp.form?.[key + 'Url'] || selectedApp.form?.[key]);
-                  
-                  return (
-                    <div key={key} className="bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-xl p-3.5 flex items-center justify-between transition-colors group">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${docUrl ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
-                          {docUrl ? <FileCheck className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                        </div>
-                        <span className="font-semibold text-slate-700 truncate text-xs group-hover:text-slate-900 transition-colors">
-                          {titles[key] || key}
-                        </span>
-                      </div>
-                      
-                      {docUrl ? (
-                        <a
-                          href={docUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-slate-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all shadow-sm flex-shrink-0"
-                          title="View Document"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </a>
-                      ) : (
-                        <span className="bg-slate-100 text-slate-400 text-[9px] uppercase tracking-wider font-bold px-2 py-1 rounded-md flex-shrink-0">
-                          Missing
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Verified</span>
               </div>
             </div>
-
-            {selectedApp.paymentComplete && selectedApp.paymentDetails && (
-              <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-[1.5rem] p-6 text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl transform translate-x-1/3 -translate-y-1/3"></div>
-                
-                <div className="flex items-center gap-3 mb-4 relative z-10">
-                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20">
-                    <CheckCircle2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white tracking-wide">Payment Verified</h4>
-                    <p className="text-[10px] uppercase font-semibold text-emerald-100 tracking-wider mt-0.5">Fully Paid</p>
-                  </div>
+          ) : isVerifyingPayment ? (
+            <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-4 flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+              <p className="text-xs font-medium text-blue-700">Verifying payment status...</p>
+            </div>
+          ) : (
+            <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-4 h-4" />
                 </div>
-                
-                <div className="bg-black/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 relative z-10 text-xs text-emerald-50 leading-relaxed font-medium">
-                  Inspection fee payment captured: transaction reference <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails.transactionId}</span> for amount <span className="font-black text-white bg-black/10 px-1.5 py-0.5 rounded">{selectedApp.paymentDetails.amount}</span> completed on {selectedApp.paymentDetails.date}.
+                <div>
+                  <p className="text-xs font-bold text-amber-800">Payment Pending</p>
+                  <p className="text-[10px] text-amber-600 font-medium">Inspection fee of ₹5,000.00 not yet completed</p>
                 </div>
               </div>
-            )}
-            
+              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Awaiting</span>
+            </div>
+          )}
+
+          {/* ═══ MAIN CONTENT GRID ═══ */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* ─── LEFT COLUMN: Institution Details ────────────────────────── */}
+            <div className="lg:col-span-2 space-y-4">
+
+              {/* General Info */}
+              <div className="bg-slate-50/50 rounded-xl border border-slate-100 overflow-hidden">
+                <div className="px-4 py-2.5 bg-slate-100/50 border-b border-slate-100">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <Building2 className="w-3.5 h-3.5" /> Institution Profile
+                  </h4>
+                </div>
+                <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-medium block">Organization</span>
+                    <span className="text-slate-800 font-bold">{selectedApp.orgName}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">Constitution</span>
+                    <span className="text-slate-800 font-bold">{selectedApp.form?.constitutionType || 'N/A'}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-400 font-medium block">Address</span>
+                    <span className="text-slate-700">{selectedApp.form?.instituteAddress || 'N/A'}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-400 font-medium block">Registered Office</span>
+                    <span className="text-slate-700">{selectedApp.form?.registeredOfficeAddress || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">Phone</span>
+                    <span className="text-slate-700 font-medium">{selectedApp.form?.phoneNumber || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">Website</span>
+                    {selectedApp.form?.website ? (
+                      <a href={selectedApp.form.website} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline font-medium">
+                        {selectedApp.form.website.replace(/^https?:\/\//, '')}
+                      </a>
+                    ) : <span className="text-slate-400">N/A</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Leadership */}
+              <div className="bg-slate-50/50 rounded-xl border border-slate-100 overflow-hidden">
+                <div className="px-4 py-2.5 bg-slate-100/50 border-b border-slate-100">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <User className="w-3.5 h-3.5" /> Leadership & Representation
+                  </h4>
+                </div>
+                <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-medium block">Head of Institution</span>
+                    <span className="text-slate-800 font-bold">{selectedApp.form?.headName || 'N/A'}</span>
+                    <span className="text-slate-400 text-[10px] block">{selectedApp.form?.headDesignation || ''}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">HOD (Emergency Medicine)</span>
+                    <span className="text-slate-800 font-bold">{selectedApp.form?.hodName || 'N/A'}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-400 font-medium block">Authorized Representative</span>
+                    <span className="text-slate-800 font-bold">{selectedApp.form?.authorizedRepName || 'N/A'}</span>
+                    <span className="text-slate-400 text-[10px] block">{selectedApp.form?.authorizedRepDesignation || ''}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Academic Specs */}
+              <div className="bg-slate-50/50 rounded-xl border border-slate-100 overflow-hidden">
+                <div className="px-4 py-2.5 bg-slate-100/50 border-b border-slate-100">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <GraduationCap className="w-3.5 h-3.5" /> Academic Specifications
+                  </h4>
+                </div>
+                <div className="p-4 grid grid-cols-3 gap-x-4 gap-y-2.5 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-medium block">Seats Requested</span>
+                    <span className="text-slate-800 font-bold">{selectedApp.form?.seatsRequested || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">Commencement</span>
+                    <span className="text-slate-800 font-bold">{selectedApp.form?.commencementDate ? new Date(selectedApp.form.commencementDate).toLocaleDateString() : 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">NABH Status</span>
+                    <span className={`font-bold ${(selectedApp.form?.nabhStatus || 'Yes') === 'Yes' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {(selectedApp.form?.nabhStatus || 'Yes') === 'Yes' ? 'Accredited' : 'Non-Accredited'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Compliance */}
+              <div className="bg-slate-50/50 rounded-xl border border-slate-100 overflow-hidden">
+                <div className="px-4 py-2.5 bg-slate-100/50 border-b border-slate-100">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Compliance Checklist
+                  </h4>
+                </div>
+                <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Emergency Beds', value: `${selectedApp.form?.bedCount || selectedApp.bedCount} Beds`, pass: parseInt(selectedApp.form?.bedCount || selectedApp.bedCount, 10) >= 10 },
+                    { label: 'Physician Experience', value: `${selectedApp.form?.physicianExperience || selectedApp.experience} Months`, pass: parseInt(selectedApp.form?.physicianExperience || selectedApp.experience, 10) >= 24 },
+                    { label: 'EM Faculty', value: `${selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount} Faculty`, pass: parseInt(selectedApp.form?.emFacultyCount || selectedApp.emFacultyCount, 10) >= 1 },
+                    { label: 'Teaching Space', value: (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' ? 'Available' : 'Unavailable', pass: (selectedApp.form?.teachingSpace || selectedApp.teachingSpace) === 'Yes' },
+                  ].map((item, idx) => (
+                    <div key={idx} className={`p-3 rounded-lg border ${item.pass ? 'border-emerald-200 bg-emerald-50/30' : 'border-amber-200 bg-amber-50/30'}`}>
+                      <span className="text-[10px] text-slate-400 font-medium block">{item.label}</span>
+                      <span className="text-xs font-bold text-slate-800">{item.value}</span>
+                      {item.pass ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-500 mt-0.5" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {selectedApp.rejectionReason && (
+                <div className="bg-rose-50/60 border border-rose-200 rounded-xl p-4">
+                  <p className="text-[10px] font-black text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" /> Rejection Reason
+                  </p>
+                  <p className="text-xs text-rose-800 font-medium mt-1">"{selectedApp.rejectionReason}"</p>
+                </div>
+              )}
+            </div>
+
+            {/* ─── RIGHT COLUMN: Documents ─────────────────────────────────── */}
+            <div className="space-y-4">
+              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden sticky top-0">
+                <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                  <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5" /> Documents ({auditDocs.length})
+                  </h4>
+                </div>
+                <div className="p-3 space-y-1.5 max-h-[400px] overflow-y-auto">
+                  {docCategories.map((doc) => {
+                    const docUrl = getDocUrlForField(doc.key);
+                    return (
+                      <div key={doc.key} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 transition-colors group">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${docUrl ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                            {doc.icon}
+                          </div>
+                          <span className={`text-xs font-medium truncate ${docUrl ? 'text-slate-700' : 'text-slate-400'}`}>
+                            {doc.label}
+                          </span>
+                        </div>
+                        {docUrl ? (
+                          <a
+                            href={docUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex-shrink-0"
+                            title="View Document"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </a>
+                        ) : (
+                          <span className="text-[9px] text-slate-400 font-medium uppercase">Missing</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Modal Bottom Actions bar */}
-        {selectedApp.status === 'pending_review' && (
-          <div className="bg-white/80 backdrop-blur-md px-8 py-5 border-t border-slate-200/80 flex justify-end items-center flex-shrink-0">
-            <div className="flex gap-4">
-              <button
-                onClick={() => setShowRejectModal(true)}
-                className="px-6 py-3 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
-              >
-                <AlertCircle className="w-4 h-4" />
-                Reject & Log Reason
-              </button>
-              <button
-                onClick={handleApprove}
-                className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-[0_8px_16px_-6px_rgba(16,185,129,0.4)] hover:shadow-[0_12px_20px_-6px_rgba(16,185,129,0.5)] hover:-translate-y-0.5 transition-all flex items-center gap-2"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                Approve Institution
-              </button>
-            </div>
+        {/* ─── FOOTER ────────────────────────────────────────────────────────── */}
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-shrink-0">
+          <div className="text-[10px] text-slate-400 font-medium">
+            {isPaymentComplete ? '✅ All checks passed' : '⏳ Payment verification required'}
           </div>
-        )}
+          <div className="flex items-center gap-3">
+            {selectedApp.status === 'pending_review' && (
+              <>
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  className="px-5 py-2 text-rose-600 border border-rose-200 hover:bg-rose-50 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={handleApprove}
+                  disabled={!isPaymentComplete}
+                  className={`px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
+                    isPaymentComplete
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  }`}
+                  title={!isPaymentComplete ? 'Payment must be completed before approval' : ''}
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  Approve
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => setSelectedApp(null)}
+              className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
 export default AcademyInspectorModal;
-

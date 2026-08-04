@@ -10,12 +10,16 @@ import path from 'path';
 
 const getFileUrl = (filePath: string) => {
   if (!filePath) return '';
+  // Cloudinary (or any external/absolute) URLs are returned as-is so the stored
+  // link points directly at the CDN and works from any environment.
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
     return filePath;
   }
-  const filename = path.basename(filePath);
-  const baseUrl = (process.env.BASE_URL || 'http://localhost:5003').replace(/\/$/, '');
-  return `${baseUrl}/api/uploads/${filename}`;
+  // Local uploads are stored as an origin-agnostic relative path so the
+  // frontend can resolve them against whichever backend origin it is talking to
+  // (localhost in dev, the production domain in prod).
+  const filename = path.basename(filePath).replace(/\\/g, '/');
+  return `/api/uploads/${filename}`;
 };
 
 const instituteSchema = z.object({
@@ -72,8 +76,7 @@ export const applyInstitute = async (req: Request, res: Response) => {
       if (files && files[field] && files[field].length > 0 && files[field][0].path) {
         return getFileUrl(files[field][0].path);
       }
-      const baseUrl = (process.env.BASE_URL || 'http://localhost:5003').replace(/\/$/, '');
-      return `${baseUrl}/uploads/mock_${field}.pdf`;
+      return `/api/uploads/mock_${field}.pdf`;
     };
 
     const newInstitute = await Institute.create({

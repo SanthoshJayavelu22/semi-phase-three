@@ -36,7 +36,10 @@ if (isCloudinaryConfigured) {
       return {
         folder: 'semi_institutes',
         resource_type: 'auto',
-        public_id: `${base}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`,
+        // NOTE: public_id must NOT include the file extension — Cloudinary
+        // appends the format itself. Passing an extension here produces
+        // double-extension URLs (e.g. ".../semi_institutes/file.pdf.pdf").
+        public_id: `${base}-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
       };
     },
   });

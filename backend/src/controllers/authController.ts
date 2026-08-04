@@ -81,6 +81,13 @@ export const register = async (req: Request, res: Response) => {
     const accessToken = generateToken(user._id.toString(), 'access');
     const refreshToken = generateToken(user._id.toString(), 'refresh');
 
+    user.refreshTokens = user.refreshTokens || [];
+    user.refreshTokens.push({ token: refreshToken, createdAt: new Date() });
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens = user.refreshTokens.slice(-5);
+    }
+    await user.save();
+
     return sendSuccess({
       req,
       res,
@@ -138,6 +145,16 @@ export const login = async (req: Request, res: Response) => {
     const accessToken = generateToken(user._id.toString(), 'access');
     const refreshToken = generateToken(user._id.toString(), 'refresh');
 
+    // Persist the refresh token so refreshToken() can validate rotation. Without
+    // this the token was never stored, so every refresh hit the "stolen token"
+    // branch and logged the user out.
+    user.refreshTokens = user.refreshTokens || [];
+    user.refreshTokens.push({ token: refreshToken, createdAt: new Date() });
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens = user.refreshTokens.slice(-5);
+    }
+    await user.save();
+
     return sendSuccess({
       req,
       res,
@@ -160,8 +177,19 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  // In a real application, you might want to blacklist the token or remove refresh token from db
-  return sendSuccess({ req, res, message: 'Logout successful' });
+  try {
+    const { token } = req.body || {};
+    if (token && req.user) {
+      const user = await User.findById(req.user._id);
+      if (user) {
+        user.refreshTokens = (user.refreshTokens || []).filter(t => t.token !== token);
+        await user.save();
+      }
+    }
+    return sendSuccess({ req, res, message: 'Logout successful' });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
 };
 
 export const refreshToken = async (req: Request, res: Response) => {
@@ -177,12 +205,12 @@ export const refreshToken = async (req: Request, res: Response) => {
     }
 
     // Refresh Token Rotation: verify token is registered & non-revoked
-    const existingTokens = (user as any).refreshTokens || [];
-    const tokenExists = existingTokens.some((t: any) => t.token === token);
+    const existingTokens = user.refreshTokens || [];
+    const tokenExists = existingTokens.some((t) => t.token === token);
     if (!tokenExists) {
       // Security Alert: Potential token reuse / stolen token! Revoke all user sessions.
-      (user as any).refreshTokens = [];
-      (user as any).tokenVersion = ((user as any).tokenVersion || 0) + 1;
+      user.refreshTokens = [];
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
       await user.save();
       return sendError({ req, res, statusCode: 403, message: 'Security alert: Stolen token detected. All active sessions invalidated.' });
     }
@@ -192,9 +220,13 @@ export const refreshToken = async (req: Request, res: Response) => {
     const newRefreshToken = generateToken(decoded.id, 'refresh');
 
     // Replace old refresh token with rotated refresh token
-    (user as any).refreshTokens = existingTokens
-      .filter((t: any) => t.token !== token)
+    user.refreshTokens = existingTokens
+      .filter((t) => t.token !== token)
       .concat({ token: newRefreshToken, createdAt: new Date() });
+
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens = user.refreshTokens.slice(-5);
+    }
 
     await user.save();
 
@@ -213,8 +245,8 @@ export const logoutAllDevices = async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req.user._id);
     if (user) {
-      (user as any).refreshTokens = [];
-      (user as any).tokenVersion = ((user as any).tokenVersion || 0) + 1;
+      user.refreshTokens = [];
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
       await user.save();
     }
     return sendSuccess({ req, res, message: 'Successfully logged out from all active devices.' });

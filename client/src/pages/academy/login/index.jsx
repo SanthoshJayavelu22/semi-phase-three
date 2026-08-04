@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import authService from '../../../api/auth';
+import { setTokens } from '../../../api/apiClient';
 import InstitutionalLayout from '../../institute/InstitutionalLayout';
 import AcademyLoginForm from '../components/AcademyLogin';
 import Toast from '../../../Components/Toast';
@@ -55,12 +56,7 @@ export default function AcademyLoginPage() {
       };
 
       if (userToken) {
-        localStorage.setItem('semi_board_token', userToken);
-        localStorage.setItem('token', userToken);
-        localStorage.setItem('semi_token', userToken);
-      }
-      if (userRefreshToken) {
-        localStorage.setItem('refreshToken', userRefreshToken);
+        setTokens(userToken, userRefreshToken);
       }
       localStorage.setItem('semi_board_user', JSON.stringify(userSession));
 

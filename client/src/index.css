@@ -47,6 +47,17 @@
   animation: typingBounceAdmin 1.4s infinite ease-in-out;
 }
 
+/* Verified badge pulse ring */
+@keyframes verifiedPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.3); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+.verified-pulse {
+  animation: verifiedPulse 2s ease-out infinite;
+}
+
 /* Hide scrollbars but allow scrolling */
 .invisible-scrollbar::-webkit-scrollbar {
   display: none;

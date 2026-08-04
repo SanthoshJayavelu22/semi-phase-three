@@ -120,23 +120,26 @@ export default function AcademyLayout() {
               facultyList: app.documents?.facultyListUrl
                 ? { name: 'facultyList.pdf', url: app.documents.facultyListUrl }
                 : null,
-              opdStats: app.documents?.emergencyOPDStatisticsUrl
-                ? { name: 'opdStats.pdf', url: app.documents.emergencyOPDStatisticsUrl }
+              emergencyOPDStatistics: app.documents?.emergencyOPDStatisticsUrl
+                ? { name: 'emergencyOPDStatistics.pdf', url: app.documents.emergencyOPDStatisticsUrl }
                 : null,
-              libraryList: app.documents?.libraryBookListUrl
-                ? { name: 'libraryList.pdf', url: app.documents.libraryBookListUrl }
+              libraryBookList: app.documents?.libraryBookListUrl
+                ? { name: 'libraryBookList.pdf', url: app.documents.libraryBookListUrl }
                 : null,
-              mannequinList: app.documents?.trainingMannequinListUrl
-                ? { name: 'mannequinList.pdf', url: app.documents.trainingMannequinListUrl }
+              trainingMannequinList: app.documents?.trainingMannequinListUrl
+                ? { name: 'trainingMannequinList.pdf', url: app.documents.trainingMannequinListUrl }
                 : null,
-              diagnosticList: app.documents?.diagnosticEquipmentListUrl
-                ? { name: 'diagnosticList.pdf', url: app.documents.diagnosticEquipmentListUrl }
+              diagnosticEquipmentList: app.documents?.diagnosticEquipmentListUrl
+                ? { name: 'diagnosticEquipmentList.pdf', url: app.documents.diagnosticEquipmentListUrl }
                 : null,
               declarationLetter: app.documents?.declarationLetterUrl
                 ? { name: 'declarationLetter.pdf', url: app.documents.declarationLetterUrl }
                 : null,
-              signatureDoc: app.facultyCommitmentLetterUrl
-                ? { name: 'signatureDoc.pdf', url: app.facultyCommitmentLetterUrl }
+              inspectionPaymentReceipt: app.documents?.inspectionPaymentReceiptUrl
+                ? { name: 'inspectionPaymentReceipt.pdf', url: app.documents.inspectionPaymentReceiptUrl }
+                : null,
+              facultyCommitmentLetter: app.facultyCommitmentLetterUrl
+                ? { name: 'facultyCommitmentLetter.pdf', url: app.facultyCommitmentLetterUrl }
                 : null,
             },
           };
@@ -266,7 +269,7 @@ export default function AcademyLayout() {
   const auditDocs = useMemo(() => {
     if (!selectedApp) return [];
     if (selectedApp.uploadedDocs) {
-      return Object.keys(selectedApp.uploadedDocs).filter(k => k !== 'paymentReceiptDoc');
+      return Object.keys(selectedApp.uploadedDocs).filter(k => k !== 'inspectionPaymentReceipt');
     }
     return ['equipmentList', 'facultyList', 'emergencyOPDStatistics', 'libraryBookList', 'trainingMannequinList', 'diagnosticEquipmentList', 'declarationLetter', 'inspectionPaymentReceipt', 'facultyCommitmentLetter'];
   }, [selectedApp]);
@@ -381,11 +384,12 @@ export default function AcademyLayout() {
     const titles = {
       equipmentList: 'Emergency Department Equipment List',
       facultyList: 'Emergency Department Faculty List',
-      opdStats: 'OPD/Emergency Admissions Statistics',
-      libraryList: 'Library Book List (EM Subscriptions)',
-      mannequinList: 'Emergency Skill Mannequin Catalog',
-      diagnosticList: 'Emergency Diagnostic Specs & Imaging Audits',
+      emergencyOPDStatistics: 'OPD/Emergency Admissions Statistics',
+      libraryBookList: 'Library Book List (EM Subscriptions)',
+      trainingMannequinList: 'Emergency Skill Mannequin Catalog',
+      diagnosticEquipmentList: 'Emergency Diagnostic Specs & Imaging Audits',
       declarationLetter: 'Declaration Statement & Representative Digital Card',
+      facultyCommitmentLetter: 'Faculty Commitment Letter',
     };
     return (
       <div className="space-y-5">

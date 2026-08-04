@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import authService from '../../api/auth';
+import { setTokens, clearAllTokens } from '../../api/apiClient';
 import instituteService from '../../api/institutes';
 import { getPaymentState, clearPaymentState } from '../../utils/razorpay';
 import { PaymentStatusChecker } from '../../Components/PaymentStatusChecker';
@@ -1031,6 +1032,10 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       const userToken = data.accessToken || data.token || data.data?.accessToken;
       const userRefreshToken = data.refreshToken || data.data?.refreshToken;
       
+      if (userToken) {
+        setTokens(userToken, userRefreshToken);
+      }
+
       const parsedUser = {
         instituteName: data.user?.instituteName || data.user?.name || 'Saraswathi Medical College',
         email: data.user?.email || loginForm.email,
@@ -1038,16 +1043,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         role: data.user?.role || 'institute',
         ...data.user
       };
-
-      if (userToken) {
-        localStorage.setItem('semi_institute_token', userToken);
-        localStorage.setItem('token', userToken);
-        localStorage.setItem('semi_token', userToken);
-      }
-      if (userRefreshToken) {
-        localStorage.setItem('refreshToken', userRefreshToken);
-        localStorage.setItem('semi_refreshToken', userRefreshToken);
-      }
 
       setUser(parsedUser);
       localStorage.setItem('semi_user', JSON.stringify(parsedUser));
@@ -2033,7 +2028,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
   const handleLogout = useCallback(() => {
     setUser(null);
-    localStorage.clear();
+    clearAllTokens();
     setCurrentStep('login');
   }, [setCurrentStep]);
 

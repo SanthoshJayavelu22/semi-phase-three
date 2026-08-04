@@ -11,20 +11,119 @@ export const getBaseURL = () => {
 
 export const getUploadUrl = (filename) => {
   if (!filename) return '';
-  // If the filename is already a full URL (like from cloudinary), return it directly
-  if (filename.startsWith('http://') || filename.startsWith('https://')) {
-    return filename;
-  }
-  
+
   const baseUrl = getBaseURL().replace(/\/api$/, '');
-  // ensure clean joining without losing subdirectories
-  let cleanFilename = filename.replace(/\\/g, '/');
-  if (cleanFilename.startsWith('uploads/')) {
-    cleanFilename = cleanFilename.substring(8);
-  } else if (cleanFilename.startsWith('/uploads/')) {
-    cleanFilename = cleanFilename.substring(9);
+  const clean = String(filename).replace(/\\/g, '/');
+
+  // Full absolute URLs.
+  if (/^https?:\/\//i.test(clean)) {
+    // Cloudinary (https://res.cloudinary.com/...) and other external URLs pass
+    // through unchanged. But a backend-hosted upload URL that was baked with a
+    // different BASE_URL (e.g. the production domain) gets rewritten to the
+    // current API origin so local/dev environments resolve against the local
+    // backend instead of hitting a dead link.
+    const uploadPathMatch = clean.match(/\/(?:api\/)?uploads\/[^?#]+/i);
+    if (uploadPathMatch) {
+      return `${baseUrl}/${uploadPathMatch[0].replace(/^\/+/, '')}`;
+    }
+    return clean;
   }
-  return `${baseUrl}/api/uploads/${cleanFilename}`;
+
+  // Relative backend path variants → resolve to the current API origin.
+  // Handles `/api/uploads/...`, `uploads/...`, bare filenames, and even
+  // Windows-style absolute paths that still reference an uploads/ folder.
+  let rel = clean;
+  const relMatch = rel.match(/(?:^|\/)(?:api\/)?uploads\/([^?#]+)$/i);
+  if (relMatch) {
+    rel = relMatch[1];
+  } else {
+    const last = rel.split('/').pop();
+    if (last) rel = last;
+  }
+  return `${baseUrl}/api/uploads/${rel}`;
+};
+
+// ─── Token Management ──────────────────────────────────────────────────────────
+
+const TOKEN_KEYS = {
+  access: 'semi_access_token',
+  refresh: 'semi_refresh_token',
+};
+
+export const getRefreshToken = () => {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem(TOKEN_KEYS.refresh)
+      || localStorage.getItem('semi_refreshToken')
+      || localStorage.getItem('refreshToken');
+  } catch { return null; }
+};
+
+export const getAccessToken = () => {
+  try {
+    if (typeof localStorage === 'undefined' || typeof window === 'undefined') return null;
+    // Context-aware token selection to prevent 403s when switching portals
+    if (window.location.pathname.startsWith('/institute')) {
+      return localStorage.getItem('semi_institute_token')
+        || localStorage.getItem(TOKEN_KEYS.access)
+        || localStorage.getItem('semi_token')
+        || localStorage.getItem('token');
+    }
+    if (window.location.pathname.startsWith('/academy')) {
+      return localStorage.getItem('semi_board_token')
+        || localStorage.getItem(TOKEN_KEYS.access)
+        || localStorage.getItem('semi_token')
+        || localStorage.getItem('token');
+    }
+    return localStorage.getItem(TOKEN_KEYS.access)
+      || localStorage.getItem('semi_token')
+      || localStorage.getItem('token');
+  } catch { return null; }
+};
+
+export const setTokens = (accessToken, refreshToken) => {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    if (accessToken) {
+      localStorage.setItem(TOKEN_KEYS.access, accessToken);
+      localStorage.setItem('semi_token', accessToken);
+      localStorage.setItem('token', accessToken);
+      if (typeof window !== 'undefined') {
+        if (window.location.pathname.startsWith('/institute')) {
+          localStorage.setItem('semi_institute_token', accessToken);
+        } else if (window.location.pathname.startsWith('/academy')) {
+          localStorage.setItem('semi_board_token', accessToken);
+        }
+      }
+    }
+    if (refreshToken) {
+      localStorage.setItem(TOKEN_KEYS.refresh, refreshToken);
+      localStorage.setItem('semi_refreshToken', refreshToken);
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+  } catch { /* ignore */ }
+};
+
+export const clearAllTokens = () => {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    [
+      'token',
+      'semi_token',
+      'semi_institute_token',
+      'semi_board_token',
+      'refreshToken',
+      'semi_refreshToken',
+      TOKEN_KEYS.access,
+      TOKEN_KEYS.refresh,
+      'semi_user',
+      'semi_board_user',
+      'semi_registered_email',
+    ].forEach((key) => {
+      try { localStorage.removeItem(key); } catch { /* ignore */ }
+    });
+    try { sessionStorage.clear(); } catch { /* ignore */ }
+  } catch { /* ignore */ }
 };
 
 const apiClient = axios.create({
@@ -51,13 +150,7 @@ const addRefreshSubscriber = (cb) => {
 
 // Clear every auth token so the user is forced to log in again
 const clearStoredSession = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('semi_token');
-  localStorage.removeItem('semi_institute_token');
-  localStorage.removeItem('semi_board_token');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('semi_refreshToken');
-  localStorage.removeItem('semi_board_user');
+  clearAllTokens();
 };
 
 // Hard-redirect to the correct portal login page
@@ -71,23 +164,10 @@ const redirectToLogin = () => {
 // Request interceptor to automatically add Authorization header
 apiClient.interceptors.request.use(
   (config) => {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        let token;
-        // Context-aware token selection to prevent 403s when switching portals
-        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/institute')) {
-          token = localStorage.getItem('semi_institute_token') || localStorage.getItem('semi_token') || localStorage.getItem('token');
-        } else if (typeof window !== 'undefined' && window.location.pathname.startsWith('/academy')) {
-          token = localStorage.getItem('semi_board_token') || localStorage.getItem('semi_token') || localStorage.getItem('token');
-        } else {
-          token = localStorage.getItem('token') || localStorage.getItem('semi_token');
-        }
-
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      }
-    } catch { /* ignore */ }
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -130,7 +210,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken') || localStorage.getItem('semi_refreshToken');
+        const refreshToken = getRefreshToken();
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
@@ -146,20 +226,7 @@ apiClient.interceptors.response.use(
         const newRefreshToken = data.refreshToken;
         
         if (newAccessToken) {
-          localStorage.setItem('token', newAccessToken);
-          localStorage.setItem('semi_token', newAccessToken);
-          
-          if (localStorage.getItem('semi_institute_token')) {
-            localStorage.setItem('semi_institute_token', newAccessToken);
-          }
-          if (localStorage.getItem('semi_board_token')) {
-            localStorage.setItem('semi_board_token', newAccessToken);
-          }
-          
-          if (newRefreshToken) {
-            localStorage.setItem('refreshToken', newRefreshToken);
-            localStorage.setItem('semi_refreshToken', newRefreshToken);
-          }
+          setTokens(newAccessToken, newRefreshToken);
           
           // Update the authorization header of the original request and retry
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
