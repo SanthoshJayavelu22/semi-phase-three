@@ -169,19 +169,57 @@ export const refreshToken = async (req: Request, res: Response) => {
     const { token } = req.body;
     if (!token) return sendError({ req, res, statusCode: 400, message: 'Refresh token is required' });
 
-
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'refresh_secret') as any;
 
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id);
     if (!user) {
       return sendError({ req, res, statusCode: 401, message: 'User account no longer exists' });
     }
 
-    const accessToken = generateToken(decoded.id, 'access');
+    // Refresh Token Rotation: verify token is registered & non-revoked
+    const existingTokens = (user as any).refreshTokens || [];
+    const tokenExists = existingTokens.some((t: any) => t.token === token);
+    if (!tokenExists) {
+      // Security Alert: Potential token reuse / stolen token! Revoke all user sessions.
+      (user as any).refreshTokens = [];
+      (user as any).tokenVersion = ((user as any).tokenVersion || 0) + 1;
+      await user.save();
+      return sendError({ req, res, statusCode: 403, message: 'Security alert: Stolen token detected. All active sessions invalidated.' });
+    }
 
-    return sendSuccess({ req, res, message: 'Token refreshed', data: { accessToken } });
+    // Rotate refresh token
+    const newAccessToken = generateToken(decoded.id, 'access');
+    const newRefreshToken = generateToken(decoded.id, 'refresh');
+
+    // Replace old refresh token with rotated refresh token
+    (user as any).refreshTokens = existingTokens
+      .filter((t: any) => t.token !== token)
+      .concat({ token: newRefreshToken, createdAt: new Date() });
+
+    await user.save();
+
+    return sendSuccess({ 
+      req, 
+      res, 
+      message: 'Token refreshed successfully with rotation', 
+      data: { accessToken: newAccessToken, refreshToken: newRefreshToken } 
+    });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 401, message: 'Invalid or expired refresh token' });
+  }
+};
+
+export const logoutAllDevices = async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user) {
+      (user as any).refreshTokens = [];
+      (user as any).tokenVersion = ((user as any).tokenVersion || 0) + 1;
+      await user.save();
+    }
+    return sendSuccess({ req, res, message: 'Successfully logged out from all active devices.' });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
 

@@ -30,16 +30,16 @@ const InstituteERPStudents = ({
   };
 
   const batchesList = useMemo(() => {
-    return Array.from(new Set(students.map(s => s.batchName || s.batch).filter(Boolean)));
+    return Array.from(new Set(students.map(s => s.batchName || (typeof s.batch === 'string' ? s.batch : (s.batch?.name || (s.batch?.year ? `Batch ${s.batch.year}` : '')))).filter(Boolean)));
   }, [students]);
 
   const coursesList = useMemo(() => {
-    return Array.from(new Set(students.map(s => s.courseName || s.course).filter(Boolean)));
+    return Array.from(new Set(students.map(s => s.courseName || (typeof s.course === 'string' ? s.course : (s.course?.name || s.course?.courseName || ''))).filter(Boolean)));
   }, [students]);
 
   const filteredList = useMemo(() => {
     return students.filter(s => {
-      const name = s.fullName || '';
+      const name = s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
       const email = s.email || '';
       const enroll = s.enrollmentNo || s.applicationId || s.enrollmentId || '';
       const matchesSearch = name.toLowerCase().includes(studentSearch.toLowerCase()) || 
@@ -49,11 +49,11 @@ const InstituteERPStudents = ({
       const currentStatus = s.status || 'Active';
       const matchesStatus = studentFilter === 'All' || currentStatus === studentFilter;
       
-      const bName = s.batchName || s.batch || '';
-      const matchesBatch = selectedStudentFilterBatch === 'All' || bName === selectedStudentFilterBatch;
+      const bName = s.batchName || (typeof s.batch === 'string' ? s.batch : (s.batch?.name || (s.batch?.year ? `Batch ${s.batch.year}` : ''))) || '';
+      const matchesBatch = selectedStudentFilterBatch === 'All' || bName === selectedStudentFilterBatch || String(s.batchId || s.batch?._id) === String(selectedStudentFilterBatch);
       
-      const cName = s.courseName || s.course || '';
-      const matchesCourse = selectedStudentFilterCourse === 'All' || cName === selectedStudentFilterCourse;
+      const cName = s.courseName || (typeof s.course === 'string' ? s.course : (s.course?.name || s.course?.courseName || '')) || '';
+      const matchesCourse = selectedStudentFilterCourse === 'All' || cName === selectedStudentFilterCourse || String(s.courseId || s.course?._id) === String(selectedStudentFilterCourse);
       
       return matchesSearch && matchesStatus && matchesBatch && matchesCourse;
     });

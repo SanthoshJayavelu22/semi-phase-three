@@ -44,7 +44,10 @@ const InstituteERPRemittance = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (token) {
+      fetchData();
+    }
   }, []);
 
   const handlePayViaRazorpay = async (e) => {

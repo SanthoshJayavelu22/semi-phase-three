@@ -54,7 +54,12 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
     }
   }, []);
 
-  useEffect(() => { setTimeout(() => fetchFeeRecords(), 0); }, [fetchFeeRecords]);
+  useEffect(() => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (token) {
+      setTimeout(() => fetchFeeRecords(), 0);
+    }
+  }, [fetchFeeRecords]);
 
   useEffect(() => {
     const checkPending = async () => {

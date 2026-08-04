@@ -63,6 +63,11 @@ const InstituteERPRevaluation = () => {
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       const [coursesRes, batchesRes, summaryRes] = await Promise.all([
         academicService.getCourses().catch(() => ({ data: { data: [] } })),
@@ -90,6 +95,8 @@ const InstituteERPRevaluation = () => {
   }, [selectedCourse]);
 
   const fetchRequests = useCallback(async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) return;
     try {
       const params = { limit: 10000 };
       if (statusFilter !== 'All') params.status = statusFilter;
@@ -108,6 +115,8 @@ const InstituteERPRevaluation = () => {
   }, [statusFilter, searchQuery, selectedCourse, selectedBatch]);
 
   const fetchEligibleStudents = useCallback(async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) return;
     try {
       const res = await revaluationService.getEligibleStudents({
         courseId: selectedCourse,
@@ -135,6 +144,8 @@ const InstituteERPRevaluation = () => {
   }, [selectedCourse, selectedBatch, selectedSemester]);
 
   const fetchSingleStudentEligibility = useCallback(async (studentId) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) return;
     try {
       const res = await revaluationService.getSingleStudentEligibility(studentId, {
         semester: selectedSemester,
@@ -174,6 +185,8 @@ const InstituteERPRevaluation = () => {
   // ─── Payment Recovery ──────────────────────────────────────────────────────
   useEffect(() => {
     const recoverPayment = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+      if (!token) return;
       const pendingState = getPaymentState();
       if (pendingState && pendingState.paymentType === 'revaluation' && pendingState.additionalData?.studentId) {
         try {

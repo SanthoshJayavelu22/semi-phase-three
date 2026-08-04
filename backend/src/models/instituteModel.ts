@@ -150,4 +150,12 @@ const instituteSchema: Schema = new Schema(
   }
 );
 
-export const Institute = mongoose.model<IInstitute>('Institute', instituteSchema);
+instituteSchema.index({ applicationStatus: 1 });
+instituteSchema.index({ status: 1 });
+instituteSchema.index({ emailAddress: 1 });
+instituteSchema.index({ orgName: 'text' });
+instituteSchema.index({ phoneNumber: 1 });
+instituteSchema.index({ paymentStatus: 1 });
+
+
+export const Institute = mongoose.model<IInstitute>('Institute', instituteSchema);

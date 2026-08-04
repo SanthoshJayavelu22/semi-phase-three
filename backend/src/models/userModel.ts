@@ -46,10 +46,28 @@ const userSchema: Schema = new Schema(
       index: { unique: false, sparse: true },
     },
     resetPasswordExpires: Date,
+    refreshTokens: [
+      {
+        token: String,
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
   }
 );
 
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ verificationToken: 1 }, { sparse: true });
+userSchema.index({ resetPasswordToken: 1 }, { sparse: true });
+userSchema.index({ resetPasswordExpires: 1 }, { expires: '1h' });
+
+
 export const User = mongoose.model<IUser>('User', userSchema);
+
+

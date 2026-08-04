@@ -3,7 +3,7 @@ import { HallTicket } from '../models/hallTicketModel';
 import { HallTicketTemplate } from '../models/hallTicketTemplateModel';
 import { IHallTicket } from '../models/hallTicketModel';
 import pdfGeneratorService from './pdfGeneratorService';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'crypto';
 
 class HallTicketService {
   async createHallTicket(data: Partial<IHallTicket>): Promise<IHallTicket> {
@@ -39,6 +39,10 @@ class HallTicketService {
 
     // Generate PDF using the template
     return await pdfGeneratorService.generateHallTicket(hallTicket, template);
+  }
+
+  async getHallTicketById(hallTicketId: string): Promise<IHallTicket | null> {
+    return await HallTicket.findById(hallTicketId).populate('issuedBy');
   }
 
   async getHallTicketTemplate(templateId: string): Promise<any> {

@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6
+    container_name: semi-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-rootpassword}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: semi-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5003
+      MONGO_URI: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-rootpassword}@mongodb:27017/semi?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-supersecretjwtkey}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-mock_key}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-mock_secret}
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_USER: ${EMAIL_USER:-user@example.com}
+      EMAIL_PASS: ${EMAIL_PASS:-pass}
+      CLIENT_URL: http://localhost:5173
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+    ports:
+      - "5003:5003"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:5003/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: semi-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: semi-client
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:5003/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:
+  redis_data:
+

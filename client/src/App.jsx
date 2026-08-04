@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Loader from './Components/Loader';
+import ErrorBoundary from './Components/ErrorBoundary';
 
 // ─── Institute Portal ─────────────────────────────────────────────────────────
 // All institute routes share ONE lazy import so React never unmounts the
@@ -36,11 +37,41 @@ const EmailVerificationPage = lazy(() => import('./pages/EmailVerificationPage')
 // ─── Public Results Page ──────────────────────────────────────────────────────
 const PublicResultsPage = lazy(() => import('./pages/public/results/index'));
 
-const L = ({ children }) => <Suspense fallback={<Loader />}>{children}</Suspense>;
+const L = ({ children }) => (
+  <ErrorBoundary>
+    <Suspense fallback={<Loader />}>{children}</Suspense>
+  </ErrorBoundary>
+);
+
+import { useEffect, useState } from 'react';
+import { checkHealth } from './api/health';
 
 function App() {
+  const [showMaintenance, setShowMaintenance] = useState(false);
+
+  useEffect(() => {
+    const checkServerHealth = async () => {
+      try {
+        await checkHealth();
+      } catch (error) {
+        console.warn('Initial server health check failed:', error);
+      }
+    };
+    checkServerHealth();
+  }, []);
+
+  if (showMaintenance) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px', fontFamily: 'sans-serif' }}>
+        <h1>System Under Maintenance</h1>
+        <p>We are currently experiencing server connectivity issues or routine maintenance. Please try again shortly.</p>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
+
       <Routes>
 
         {/* ═══════════════════════════════════════════════════

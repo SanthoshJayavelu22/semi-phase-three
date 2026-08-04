@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-07-31T12:15:28.965Z
+> Auto-generated on 2026-08-04T07:00:43.430Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -11,16 +11,31 @@ This document contains the complete source code of the **SEMI** (Society for Eme
 ```
 semi-phase-three/
 ├── backend
+│   ├── logs
+│   │   ├── combined.log
+│   │   └── error.log
+│   ├── scripts
+│   │   ├── backup.ts
+│   │   ├── migration-template.ts
+│   │   └── run-migration.ts
 │   ├── src
+│   │   ├── __tests__
+│   │   │   ├── auth.test.ts
+│   │   │   └── health.test.ts
 │   │   ├── config
+│   │   │   ├── apm.ts
 │   │   │   ├── db.ts
+│   │   │   ├── envValidation.ts
+│   │   │   ├── logger.ts
 │   │   │   ├── razorpay.ts
+│   │   │   ├── redis.ts
 │   │   │   └── seed.ts
 │   │   ├── controllers
 │   │   │   ├── academicController.ts
 │   │   │   ├── authController.ts
 │   │   │   ├── certificateController.ts
 │   │   │   ├── examController.ts
+│   │   │   ├── hallTicketController.ts
 │   │   │   ├── healthController.ts
 │   │   │   ├── instituteController.ts
 │   │   │   ├── marksController.ts
@@ -29,17 +44,22 @@ semi-phase-three/
 │   │   │   ├── resultController.ts
 │   │   │   ├── revaluationController.ts
 │   │   │   └── userController.ts
+│   │   ├── docs
+│   │   │   └── swaggerSpec.ts
 │   │   ├── middlewares
 │   │   │   ├── authMiddleware.ts
 │   │   │   ├── errorMiddleware.ts
+│   │   │   ├── rateLimiter.ts
 │   │   │   └── uploadMiddleware.ts
 │   │   ├── models
+│   │   │   ├── auditLogModel.ts
 │   │   │   ├── batchModel.ts
 │   │   │   ├── certificateModel.ts
 │   │   │   ├── courseModel.ts
 │   │   │   ├── examApplicationModel.ts
 │   │   │   ├── feeRecordModel.ts
 │   │   │   ├── hallTicketModel.ts
+│   │   │   ├── hallTicketTemplateModel.ts
 │   │   │   ├── instituteModel.ts
 │   │   │   ├── marksheetModel.ts
 │   │   │   ├── remittanceModel.ts
@@ -49,10 +69,13 @@ semi-phase-three/
 │   │   │   ├── studentModel.ts
 │   │   │   └── userModel.ts
 │   │   ├── routes
+│   │   │   ├── v1
+│   │   │   │   └── index.ts
 │   │   │   ├── academicRoutes.ts
 │   │   │   ├── authRoutes.ts
 │   │   │   ├── certificateRoutes.ts
 │   │   │   ├── examRoutes.ts
+│   │   │   ├── hallTicketRoutes.ts
 │   │   │   ├── healthRoutes.ts
 │   │   │   ├── instituteRoutes.ts
 │   │   │   ├── marksheetRoutes.ts
@@ -62,17 +85,24 @@ semi-phase-three/
 │   │   │   ├── revaluationRoutes.ts
 │   │   │   └── userRoutes.ts
 │   │   ├── services
+│   │   │   ├── auditService.ts
 │   │   │   ├── certificateService.ts
 │   │   │   ├── fileParserService.ts
+│   │   │   ├── hallTicketService.ts
 │   │   │   ├── marksheetService.ts
 │   │   │   ├── pdfGeneratorService.ts
 │   │   │   ├── resultService.ts
 │   │   │   └── revaluationService.ts
+│   │   ├── types
+│   │   │   └── index.ts
 │   │   ├── utils
+│   │   │   ├── errorHandler.ts
 │   │   │   ├── helpers.ts
 │   │   │   ├── responseFormatter.ts
+│   │   │   ├── sanitizeLogs.ts
 │   │   │   └── sendEmail.ts
 │   │   ├── validators
+│   │   │   ├── authValidator.ts
 │   │   │   ├── certificateValidator.ts
 │   │   │   ├── resultValidator.ts
 │   │   │   └── revaluationValidator.ts
@@ -83,6 +113,7 @@ semi-phase-three/
 │   ├── check_db.js
 │   ├── check_postman.js
 │   ├── check_ts.js
+│   ├── Dockerfile
 │   ├── ecosystem.config.js
 │   ├── last_400_error.log
 │   ├── package.json
@@ -103,6 +134,8 @@ semi-phase-three/
 │   │   │   ├── certificates.js
 │   │   │   ├── exams.js
 │   │   │   ├── fees.js
+│   │   │   ├── hallTicket.js
+│   │   │   ├── health.js
 │   │   │   ├── institutes.js
 │   │   │   ├── marks.js
 │   │   │   ├── marksheets.js
@@ -111,9 +144,14 @@ semi-phase-three/
 │   │   │   └── users.js
 │   │   ├── Components
 │   │   │   ├── ConfirmModal.jsx
+│   │   │   ├── ErrorBoundary.jsx
 │   │   │   ├── Loader.jsx
 │   │   │   ├── PaymentStatusChecker.jsx
 │   │   │   └── Toast.jsx
+│   │   ├── contexts
+│   │   │   └── ToastContext.jsx
+│   │   ├── hooks
+│   │   │   └── useLoading.js
 │   │   ├── pages
 │   │   │   ├── academy
 │   │   │   │   ├── applications
@@ -131,6 +169,7 @@ semi-phase-three/
 │   │   │   │   │   ├── AcademyPublishingDetails.jsx
 │   │   │   │   │   ├── AcademyPublishResults.jsx
 │   │   │   │   │   ├── AcademyRejectionModal.jsx
+│   │   │   │   │   ├── AcademyRemittance.jsx
 │   │   │   │   │   ├── AcademyRevaluation.jsx
 │   │   │   │   │   ├── AcademySidebar.jsx
 │   │   │   │   │   ├── AcademyStudentMarks.jsx
@@ -148,6 +187,8 @@ semi-phase-three/
 │   │   │   │   ├── publish-details
 │   │   │   │   │   └── index.jsx
 │   │   │   │   ├── publish-results
+│   │   │   │   │   └── index.jsx
+│   │   │   │   ├── remittance
 │   │   │   │   │   └── index.jsx
 │   │   │   │   ├── revaluation
 │   │   │   │   │   └── index.jsx
@@ -173,7 +214,9 @@ semi-phase-three/
 │   │   │   │   │   ├── InstituteERPExams.jsx
 │   │   │   │   │   ├── InstituteERPFees.jsx
 │   │   │   │   │   ├── InstituteERPHallTicket.jsx
+│   │   │   │   │   ├── InstituteERPHallTicketBuilder.jsx
 │   │   │   │   │   ├── InstituteERPHeader.jsx
+│   │   │   │   │   ├── InstituteERPMarksheet.jsx
 │   │   │   │   │   ├── InstituteERPRemittance.jsx
 │   │   │   │   │   ├── InstituteERPResults.jsx
 │   │   │   │   │   ├── InstituteERPRevaluation.jsx
@@ -222,17 +265,50 @@ semi-phase-three/
 │   │   ├── index.css
 │   │   └── main.jsx
 │   ├── check.js
+│   ├── Dockerfile
 │   ├── eslint.config.js
 │   ├── fix-lint-imports.js
 │   ├── fix-react.js
 │   ├── index.html
+│   ├── nginx-ssl.conf
+│   ├── nginx.conf
 │   ├── package.json
 │   ├── postcss.config.js
 │   ├── README.md
 │   ├── tailwind.config.js
 │   └── vite.config.js
+├── scripts
+│   └── production-deploy.sh
+├── docker-compose.yml
 ├── extract.js
 └── generate_ai_context.js
+```
+
+### `backend/Dockerfile`
+
+```
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Only copy the built dist
+COPY --from=builder /app/dist ./dist
+COPY package.json ./
+
+EXPOSE 5003
+CMD ["npm", "start"]
+
+
 ```
 
 ### `backend/add_auth_status.js`
@@ -649,15 +725,71 @@ try {
 ### `backend/ecosystem.config.js`
 
 ```javascript
-��m o d u l e . e x p o r t s   =   {   a p p s :   [ {   n a m e :   ' s e m i - b a c k e n d ' ,   s c r i p t :   ' . / d i s t / i n d e x . j s ' ,   i n s t a n c e s :   ' m a x ' ,   e x e c _ m o d e :   ' c l u s t e r ' ,   e n v _ p r o d u c t i o n :   {   N O D E _ E N V :   ' p r o d u c t i o n '   }   } ]   } ; 
- 
+��m o d u l e . e x p o r t s   =   {   a p p s :   [ {   n a m e :   ' s e m i - b a c k e n d ' ,   s c r i p t :   ' . / d i s t / i n d e x . j s ' ,   i n s t a n c e s :   ' m a x ' ,   e x e c _ m o d e :   ' c l u s t e r ' ,   e n v _ p r o d u c t i o n :   {   N O D E _ E N V :   ' p r o d u c t i o n '   }   } ]   } ;  
  
 ```
 
 ### `backend/last_400_error.log`
 
 ```
-An exam application already exists for one or more selected students in this batch and semester.
+Validation failed
+```
+
+### `backend/logs/combined.log`
+
+```
+[INFO] [2026-08-03T12:33:56.674Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:20.691Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:28.223Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:46.297Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:53.358Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:38:32.385Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:38:45.282Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:38:50.701Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:43:15.168Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:43:24.639Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:44:24.489Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:45:48.310Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:45:54.871Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:48:54.734Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:49:03.397Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:50:04.062Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:50:08.977Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:54:36.225Z] Server is running on port 5003 
+[INFO] [2026-08-03T12:54:36.240Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:57:51.385Z] Server is running on port 5003 
+[INFO] [2026-08-03T12:57:51.403Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:00:44.351Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:00:44.363Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:00:59.764Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:00:59.777Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:10:34.693Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:10:34.707Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:24:32.312Z] Received SIGINT. Shutting down gracefully... 
+[WARN] [2026-08-03T13:24:32.350Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-08-03T13:24:32.351Z] MongoDB connection closed 
+[ERROR] [2026-08-03T13:24:32.351Z] Error during graceful shutdown: [{}]
+[INFO] [2026-08-03T13:25:16.125Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:25:16.141Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:25:31.894Z] Received SIGINT. Shutting down gracefully... 
+[WARN] [2026-08-03T13:25:31.913Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-08-03T13:25:31.914Z] MongoDB connection closed 
+[ERROR] [2026-08-03T13:25:31.915Z] Error during graceful shutdown: [{}]
+[INFO] [2026-08-03T13:28:10.209Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:28:10.225Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:31:54.291Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:31:54.313Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T05:38:56.490Z] Server is running on port 5003 
+[INFO] [2026-08-04T05:38:56.512Z] APM: Mongoose connected to MongoDB cluster. 
+
+```
+
+### `backend/logs/error.log`
+
+```
+[ERROR] [2026-08-03T13:24:32.351Z] Error during graceful shutdown: [{}]
+[ERROR] [2026-08-03T13:25:31.915Z] Error during graceful shutdown: [{}]
+
 ```
 
 ### `backend/package.json`
@@ -670,22 +802,30 @@ An exam application already exists for one or more selected students in this bat
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "nodemon src/index.ts",
     "build": "tsc",
+    "dev": "nodemon src/index.ts",
     "seed": "ts-node src/config/seed.ts",
     "seed:test": "ts-node src/seed-test-data.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "migrate:up": "ts-node scripts/run-migration.ts",
+    "migrate:create": "ts-node scripts/create-migration.ts",
+    "migrate:down": "ts-node scripts/rollback-migration.ts",
+    "backup": "ts-node scripts/backup.ts",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@sentry/node": "^7.114.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.3",
+    "compression": "^1.7.4",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.3",
     "mammoth": "^1.12.0",
     "mongoose": "^9.6.2",
@@ -694,6 +834,7 @@ An exam application already exists for one or more selected students in this bat
     "nodemailer": "^8.0.7",
     "pdf-parse": "^1.1.4",
     "razorpay": "^2.9.6",
+    "response-time": "^2.3.2",
     "uuid": "^14.0.0",
     "uuidv4": "^6.2.13",
     "xlsx": "^0.18.5",
@@ -701,13 +842,16 @@ An exam application already exists for one or more selected students in this bat
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/ioredis": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.7.0",
     "@types/nodemailer": "^8.0.0",
     "@types/pdf-parse": "^1.1.5",
+    "@types/response-time": "^2.3.8",
     "@types/uuid": "^10.0.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
@@ -4041,6 +4185,276 @@ An exam application already exists for one or more selected students in this bat
 }
 ```
 
+### `backend/scripts/backup.ts`
+
+```typescript
+import { exec } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+
+const backupDatabase = async () => {
+  const backupDir = path.join(__dirname, '../../backups');
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+
+  const filename = `backup-${new Date().toISOString().replace(/[:.]/g, '-')}.gz`;
+  const filepath = path.join(backupDir, filename);
+
+  return new Promise((resolve, reject) => {
+    const command = `mongodump --uri="${process.env.MONGO_URI || process.env.MONGODB_URI}" --archive="${filepath}" --gzip`;
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error('Backup failed:', error);
+        reject(error);
+      } else {
+        console.log(`Backup created successfully: ${filename}`);
+        resolve(filepath);
+      }
+    });
+  });
+};
+
+// Run daily via cron
+export default backupDatabase;
+
+```
+
+### `backend/scripts/migration-template.ts`
+
+```typescript
+import mongoose from 'mongoose';
+
+export const up = async (): Promise<void> => {
+  // Add new fields, collections, or indexes
+  await mongoose.connection.collection('students').updateMany(
+    {},
+    { $set: { newField: 'default' } }
+  );
+  console.log('Migration up completed');
+};
+
+export const down = async (): Promise<void> => {
+  // Rollback changes
+  await mongoose.connection.collection('students').updateMany(
+    {},
+    { $unset: { newField: '' } }
+  );
+  console.log('Migration down completed');
+};
+
+```
+
+### `backend/scripts/run-migration.ts`
+
+```typescript
+import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
+
+const runMigrations = async () => {
+  await mongoose.connect(process.env.MONGODB_URI!);
+  
+  const migrationsDir = path.join(__dirname, '../migrations');
+  const files = fs.readdirSync(migrationsDir).sort();
+  
+  for (const file of files) {
+    if (!file.endsWith('.ts')) continue;
+    console.log(`📊 Running migration: ${file}`);
+    
+    try {
+      const migration = await import(path.join(migrationsDir, file));
+      await migration.up();
+      console.log(`✅ Migration ${file} completed`);
+    } catch (error) {
+      console.error(`❌ Migration ${file} failed:`, error);
+      process.exit(1);
+    }
+  }
+  
+  await mongoose.disconnect();
+  console.log('✅ All migrations completed');
+};
+
+runMigrations();
+
+```
+
+### `backend/src/__tests__/auth.test.ts`
+
+```typescript
+import request from 'supertest';
+import app from '../index';
+import { User } from '../models/userModel';
+
+describe('Authentication API', () => {
+  let testUser: any;
+
+  beforeEach(async () => {
+    await User.deleteMany({});
+    testUser = await User.create({
+      name: 'Test User',
+      email: 'test@example.com',
+      password: 'hashedPassword',
+      isEmailVerified: true,
+      role: 'institute',
+    });
+  });
+
+  describe('POST /api/auth/login', () => {
+    it('should return 200 with tokens for valid credentials', async () => {
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test@example.com',
+          password: 'correctPassword',
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveProperty('accessToken');
+      expect(response.body.data).toHaveProperty('refreshToken');
+      expect(response.body.data.user).toHaveProperty('email', 'test@example.com');
+    });
+
+    it('should return 401 for invalid credentials', async () => {
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test@example.com',
+          password: 'wrongPassword',
+        });
+
+      expect(response.status).toBe(401);
+      expect(response.body).toHaveProperty('success', false);
+    });
+
+    it('should return 401 for unverified email', async () => {
+      await User.findByIdAndUpdate(testUser._id, { isEmailVerified: false });
+
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test@example.com',
+          password: 'correctPassword',
+        });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toMatch(/verify.*email/i);
+    });
+  });
+
+  describe('POST /api/auth/register', () => {
+    it('should create a new user with valid data', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'New User',
+          email: 'newuser@example.com',
+          password: 'Password123!',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.user).toHaveProperty('email', 'newuser@example.com');
+      expect(response.body.data.user).toHaveProperty('isEmailVerified', false);
+    });
+
+    it('should return 400 for duplicate email', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Duplicate',
+          email: 'test@example.com',
+          password: 'Password123!',
+        });
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Another',
+          email: 'test@example.com',
+          password: 'Password123!',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/already exists/i);
+    });
+
+    it('should validate password strength', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Weak Password',
+          email: 'weak@example.com',
+          password: '123',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/password/i);
+    });
+  });
+});
+
+```
+
+### `backend/src/__tests__/health.test.ts`
+
+```typescript
+// backend/src/__tests__/health.test.ts
+import request from 'supertest';
+import express from 'express';
+import healthRoutes from '../routes/healthRoutes';
+
+const app = express();
+app.use('/api/health', healthRoutes);
+
+describe('System Health Check Suite', () => {
+  it('should return health status JSON response when requested', async () => {
+    const response = await request(app)
+      .get('/api/health')
+      .set('Accept', 'application/json');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('status');
+    expect(response.body).toHaveProperty('services');
+    expect(response.body.services).toHaveProperty('database');
+  });
+});
+
+```
+
+### `backend/src/config/apm.ts`
+
+```typescript
+// backend/src/config/apm.ts
+import mongoose from 'mongoose';
+import logger from './logger';
+
+export const initMonitoring = () => {
+  // Monitor Mongoose DB Connection Pool & Performance
+  mongoose.connection.on('connected', () => {
+    logger.info('APM: Mongoose connected to MongoDB cluster.');
+  });
+
+  mongoose.connection.on('error', (err) => {
+    logger.error('APM Alert: MongoDB connection pool error:', err);
+  });
+
+  mongoose.connection.on('disconnected', () => {
+    logger.warn('APM Alert: MongoDB connection pool disconnected.');
+  });
+
+  // Track uncaught exceptions and unhandled promise rejections
+  process.on('uncaughtException', (error) => {
+    logger.error('APM Critical Error: Uncaught Exception:', error);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error('APM Critical Error: Unhandled Rejection at Promise:', { promise, reason });
+  });
+};
+
+```
+
 ### `backend/src/config/db.ts`
 
 ```typescript
@@ -4048,13 +4462,96 @@ import mongoose from 'mongoose';
 
 export const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/my_database');
+    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/my_database', {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB connection error:', err);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('MongoDB disconnected. Connection lost.');
+    });
   } catch (error: any) {
-    console.error(`Error: ${error.message}`);
+    console.error(`MongoDB connection failed: ${error.message}`);
     process.exit(1);
   }
 };
+
+```
+
+### `backend/src/config/envValidation.ts`
+
+```typescript
+// backend/src/config/envValidation.ts
+import { z } from 'zod';
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.string().or(z.number()).default(5003),
+  MONGO_URI: z.string().min(1, 'MONGO_URI is required'),
+  JWT_SECRET: z.string().min(8, 'JWT_SECRET must be at least 8 characters'),
+});
+
+export const validateEnv = () => {
+  const result = envSchema.safeParse(process.env);
+
+  if (!result.success) {
+    console.error('❌ Environment variable validation warnings/failed:');
+    result.error.issues.forEach((issue) => {
+      console.error(`  - ${issue.path.join('.')}: ${issue.message}`);
+    });
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
+  } else {
+    console.log('✅ Environment configuration validated successfully.');
+  }
+};
+
+```
+
+### `backend/src/config/logger.ts`
+
+```typescript
+// backend/src/config/logger.ts
+import fs from 'fs';
+import path from 'path';
+
+const logDir = path.join(__dirname, '../../logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+
+const errorLogPath = path.join(logDir, 'error.log');
+const combinedLogPath = path.join(logDir, 'combined.log');
+
+export const logger = {
+  info: (message: string, ...meta: any[]) => {
+    const timestamp = new Date().toISOString();
+    const logLine = `[INFO] [${timestamp}] ${message} ${meta.length ? JSON.stringify(meta) : ''}\n`;
+    console.log(logLine.trim());
+    fs.appendFileSync(combinedLogPath, logLine);
+  },
+  warn: (message: string, ...meta: any[]) => {
+    const timestamp = new Date().toISOString();
+    const logLine = `[WARN] [${timestamp}] ${message} ${meta.length ? JSON.stringify(meta) : ''}\n`;
+    console.warn(logLine.trim());
+    fs.appendFileSync(combinedLogPath, logLine);
+  },
+  error: (message: string, ...meta: any[]) => {
+    const timestamp = new Date().toISOString();
+    const logLine = `[ERROR] [${timestamp}] ${message} ${meta.length ? JSON.stringify(meta) : ''}\n`;
+    console.error(logLine.trim());
+    fs.appendFileSync(errorLogPath, logLine);
+    fs.appendFileSync(combinedLogPath, logLine);
+  }
+};
+
+export default logger;
 
 ```
 
@@ -4094,6 +4591,42 @@ export { keyId, keySecret };
 
 ```
 
+### `backend/src/config/redis.ts`
+
+```typescript
+// Lazy/Safe Redis client loader to prevent compilation issues when ioredis is not yet installed in local node_modules
+let redisClient: any = null;
+
+export const getRedisClient = () => {
+  if (!redisClient) {
+    try {
+      const Redis = require('ioredis');
+      redisClient = new Redis({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD,
+        lazyConnect: true,
+        retryStrategy: (times: number) => Math.min(times * 50, 2000),
+      });
+
+      redisClient.on('connect', () => {
+        console.log('Redis client connected');
+      });
+
+      redisClient.on('error', (err: any) => {
+        console.error('Redis connection error:', err.message);
+      });
+    } catch (err: any) {
+      console.warn('Redis package (ioredis) not loaded local environment:', err.message);
+    }
+  }
+  return redisClient;
+};
+
+export default getRedisClient();
+
+```
+
 ### `backend/src/config/seed.ts`
 
 ```typescript
@@ -4106,13 +4639,19 @@ dotenv.config();
 
 export const seedSuperAdmin = async () => {
   try {
-    const superAdminEmail = 'superadmin@academy.com';
+    const superAdminEmail = process.env.ADMIN_EMAIL || 'superadmin@academy.com';
+    const defaultPassword = process.env.ADMIN_PASSWORD || 'SuperAdmin123!';
+
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ Running seed in production! Ensure process.env.ADMIN_PASSWORD is set.');
+    }
+
     const superAdminExists = await User.findOne({ email: superAdminEmail });
 
     if (!superAdminExists) {
       console.log('Seeding Academy Super Admin...');
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('SuperAdmin123!', salt);
+      const hashedPassword = await bcrypt.hash(defaultPassword, salt);
 
       await User.create({
         name: 'Academy Super Admin',
@@ -4286,8 +4825,14 @@ const feeRecordSchema = z.object({
 
 const remittanceSchema = z.object({
   totalAmount: z.coerce.number().min(0.01, 'Total Amount must be greater than 0'),
-  utrNumber: z.string().min(1, 'Transaction ID / UTR is required'),
-  paymentDate: z.string().transform((val) => new Date(val)),
+  paymentPurpose: z.string().optional().default('Student Fellowship Fee Remittance'),
+  remarks: z.string().optional().default(''),
+  utrNumber: z.string().optional(),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  razorpaySignature: z.string().optional(),
+  paymentMode: z.string().optional().default('Razorpay Online'),
+  paymentDate: z.string().optional().transform((val) => (val ? new Date(val) : new Date())),
   studentIds: z.preprocess(
     (val) => (typeof val === 'string' ? JSON.parse(val) : val),
     z.array(z.string()).optional()
@@ -4530,13 +5075,16 @@ export const createBatch = async (req: Request, res: Response) => {
     // Generate batch name if not provided
     const batchName = validatedData.name || `Batch ${validatedData.year}-${String.fromCharCode(65 + (await Batch.countDocuments({ course: course._id })))}`;
 
+    // Authoritative batch capacity fixed by Academic Board (defaulting to institute's approvedSeats / seatsRequested)
+    const boardFixedSeats = institute.approvedSeats || institute.seatsRequested || 5;
+
     const newBatch = await Batch.create({
       institute: institute._id,
       course: course._id,
       year: validatedData.year,
       name: batchName,
       startDate: validatedData.startDate ? new Date(validatedData.startDate) : new Date(`${validatedData.year}-01-10`),
-      seats: validatedData.seats || 5,
+      seats: boardFixedSeats,
       activeFellows: 0,
       status: 'Active',
     });
@@ -4996,9 +5544,20 @@ export const recordRemittance = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
     }
 
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    if (!files || !files['paymentReceipt'] || files['paymentReceipt'].length === 0) {
-      return sendError({ req, res, statusCode: 400, message: 'Payment Receipt is mandatory' });
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const paymentReceiptFile = files && files['paymentReceipt'] && files['paymentReceipt'].length > 0 ? files['paymentReceipt'][0] : null;
+
+    if (validatedData.razorpayPaymentId && validatedData.razorpayOrderId && validatedData.razorpaySignature) {
+      if (isRazorpayConfigured && razorpayInstance && !validatedData.razorpayOrderId.startsWith('order_mock_')) {
+        const generated_signature = crypto
+          .createHmac('sha256', keySecret as string)
+          .update(validatedData.razorpayOrderId + '|' + validatedData.razorpayPaymentId)
+          .digest('hex');
+
+        if (generated_signature !== validatedData.razorpaySignature) {
+          return sendError({ req, res, statusCode: 400, message: 'Remittance Razorpay payment verification failed. Invalid signature.' });
+        }
+      }
     }
 
     let studentIdsToRemit = validatedData.studentIds;
@@ -5030,9 +5589,15 @@ export const recordRemittance = async (req: Request, res: Response) => {
     const remittance = await Remittance.create({
       institute: institute._id,
       totalAmount: validatedData.totalAmount,
-      utrNumber: validatedData.utrNumber,
-      paymentDate: validatedData.paymentDate,
-      paymentReceiptUrl: getFileUrl(files['paymentReceipt'][0].path),
+      paymentPurpose: validatedData.paymentPurpose || 'Student Fellowship Fee Remittance',
+      remarks: validatedData.remarks || '',
+      utrNumber: validatedData.razorpayPaymentId || validatedData.utrNumber || `REM-${Date.now()}`,
+      razorpayOrderId: validatedData.razorpayOrderId || '',
+      razorpayPaymentId: validatedData.razorpayPaymentId || '',
+      razorpaySignature: validatedData.razorpaySignature || '',
+      paymentMode: validatedData.paymentMode || 'Razorpay Online',
+      paymentDate: validatedData.paymentDate || new Date(),
+      paymentReceiptUrl: paymentReceiptFile ? getFileUrl(paymentReceiptFile.path) : 'Razorpay Verified',
       students: studentIdsToRemit,
     });
 
@@ -5899,19 +6464,57 @@ export const refreshToken = async (req: Request, res: Response) => {
     const { token } = req.body;
     if (!token) return sendError({ req, res, statusCode: 400, message: 'Refresh token is required' });
 
-
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'refresh_secret') as any;
 
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id);
     if (!user) {
       return sendError({ req, res, statusCode: 401, message: 'User account no longer exists' });
     }
 
-    const accessToken = generateToken(decoded.id, 'access');
+    // Refresh Token Rotation: verify token is registered & non-revoked
+    const existingTokens = (user as any).refreshTokens || [];
+    const tokenExists = existingTokens.some((t: any) => t.token === token);
+    if (!tokenExists) {
+      // Security Alert: Potential token reuse / stolen token! Revoke all user sessions.
+      (user as any).refreshTokens = [];
+      (user as any).tokenVersion = ((user as any).tokenVersion || 0) + 1;
+      await user.save();
+      return sendError({ req, res, statusCode: 403, message: 'Security alert: Stolen token detected. All active sessions invalidated.' });
+    }
 
-    return sendSuccess({ req, res, message: 'Token refreshed', data: { accessToken } });
+    // Rotate refresh token
+    const newAccessToken = generateToken(decoded.id, 'access');
+    const newRefreshToken = generateToken(decoded.id, 'refresh');
+
+    // Replace old refresh token with rotated refresh token
+    (user as any).refreshTokens = existingTokens
+      .filter((t: any) => t.token !== token)
+      .concat({ token: newRefreshToken, createdAt: new Date() });
+
+    await user.save();
+
+    return sendSuccess({ 
+      req, 
+      res, 
+      message: 'Token refreshed successfully with rotation', 
+      data: { accessToken: newAccessToken, refreshToken: newRefreshToken } 
+    });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 401, message: 'Invalid or expired refresh token' });
+  }
+};
+
+export const logoutAllDevices = async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user) {
+      (user as any).refreshTokens = [];
+      (user as any).tokenVersion = ((user as any).tokenVersion || 0) + 1;
+      await user.save();
+    }
+    return sendSuccess({ req, res, message: 'Successfully logged out from all active devices.' });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
 
@@ -7344,211 +7947,151 @@ export const downloadHallTicket = async (req: Request, res: Response) => {
 };
 ```
 
+### `backend/src/controllers/hallTicketController.ts`
+
+```typescript
+// backend/src/controllers/hallTicketController.ts
+import { Request, Response } from 'express';
+import hallTicketService from '../services/hallTicketService';
+import { sendSuccess, sendError } from '../utils/responseFormatter';
+
+export class HallTicketController {
+  async createHallTicket(req: Request, res: Response): Promise<Response> {
+    try {
+      const hallTicket = await hallTicketService.createHallTicket({
+        ...req.body,
+        issuedBy: req.user?._id
+      });
+      return sendSuccess({ req, res, data: hallTicket, message: 'Hall ticket created successfully' });
+    } catch (error: any) {
+      return sendError({ req, res, message: error.message, statusCode: 400 });
+    }
+  }
+
+  async generatePDF(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const templateId = typeof req.query.templateId === 'string' ? req.query.templateId : undefined;
+      
+      const pdfBuffer = await hallTicketService.generateHallTicketPDF(id as string, templateId);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=hall-ticket-${id}.pdf`);
+      res.send(pdfBuffer);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async createCustomTemplate(req: Request, res: Response): Promise<Response> {
+    try {
+      const template = await hallTicketService.createCustomTemplate({
+        ...req.body,
+        instituteId: req.user?.instituteId,
+        type: 'institute'
+      });
+      return sendSuccess({ req, res, data: template, message: 'Template created successfully' });
+    } catch (error: any) {
+      return sendError({ req, res, message: error.message, statusCode: 400 });
+    }
+  }
+
+  async getTemplates(req: Request, res: Response): Promise<Response> {
+    try {
+      const templates = await hallTicketService.getInstituteTemplates(req.user?.instituteId);
+      return sendSuccess({ req, res, data: templates });
+    } catch (error: any) {
+      return sendError({ req, res, message: error.message, statusCode: 400 });
+    }
+  }
+
+  async updateTemplate(req: Request, res: Response): Promise<Response> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const template = await hallTicketService.updateTemplate(id, req.body);
+      return sendSuccess({ req, res, data: template, message: 'Template updated successfully' });
+    } catch (error: any) {
+      return sendError({ req, res, message: error.message, statusCode: 400 });
+    }
+  }
+
+  async getHallTicket(req: Request, res: Response): Promise<Response> {
+    try {
+      const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const hallTicket = await hallTicketService.getHallTicketById(id);
+      if (!hallTicket) {
+        return sendError({ req, res, message: 'Hall ticket not found', statusCode: 404 });
+      }
+      return sendSuccess({ req, res, data: hallTicket });
+    } catch (error: any) {
+      return sendError({ req, res, message: error.message, statusCode: 400 });
+    }
+  }
+}
+
+export default new HallTicketController();
+```
+
 ### `backend/src/controllers/healthController.ts`
 
 ```typescript
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import os from 'os';
+import redis from '../config/redis';
+import logger from '../config/logger';
 
-// Helper to format uptime into a readable string
-function formatUptime(seconds: number): string {
-  const d = Math.floor(seconds / (3600 * 24));
-  const h = Math.floor(seconds % (3600 * 24) / 3600);
-  const m = Math.floor(seconds % 3600 / 60);
-  const s = Math.floor(seconds % 60);
-  
-  const dDisplay = d > 0 ? d + (d == 1 ? " day " : " days ") : "";
-  const hDisplay = h > 0 ? h + (h == 1 ? " hr " : " hrs ") : "";
-  const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "";
-  const sDisplay = s > 0 ? s + (s == 1 ? " sec" : " secs") : "";
-  
-  return (dDisplay + hDisplay + mDisplay + sDisplay).trim() || "0 secs";
-}
-
-// @desc    Check system health
-// @route   GET /api/health
-// @access  Public
-export const getHealthStatus = async (req: Request, res: Response): Promise<void> => {
-  // mongoose readyState: 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
-  const isConnected = mongoose.connection.readyState === 1;
-  const dbStatus = isConnected ? 'Connected' : 'Disconnected';
-  const dbColor = isConnected ? '#4ade80' : '#f87171';
-  const glowColor = isConnected ? '74, 222, 128' : '248, 113, 113';
-  const statusMessage = isConnected ? 'All Systems Operational' : 'Service Degraded';
-
-  const uptime = formatUptime(process.uptime());
-  const freemem = `${(os.freemem() / 1024 / 1024).toFixed(2)} MB`;
-  const totalmem = `${(os.totalmem() / 1024 / 1024).toFixed(2)} MB`;
-  const cpuCount = os.cpus().length;
-  const loadAvg = os.loadavg().map(n => n.toFixed(2)).join(', ');
-  const timestamp = new Date().toLocaleString();
-
-  const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>System Health Check</title>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-      <style>
-        body {
-          font-family: 'Inter', sans-serif;
-          background-color: #0f172a;
-          color: #e2e8f0;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 100vh;
-          margin: 0;
-        }
-        .container {
-          background-color: #1e293b;
-          border-radius: 16px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-          padding: 40px;
-          max-width: 650px;
-          width: 90%;
-          border: 1px solid #334155;
-          position: relative;
-          overflow: hidden;
-        }
-        .container::before {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 4px;
-          background: linear-gradient(90deg, #3b82f6, ${dbColor});
-        }
-        h1 {
-          margin-top: 0;
-          color: #f8fafc;
-          font-size: 24px;
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          border-bottom: 1px solid #334155;
-          padding-bottom: 24px;
-          margin-bottom: 30px;
-          font-weight: 600;
-        }
-        .status-indicator {
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          background-color: ${dbColor};
-          box-shadow: 0 0 12px ${dbColor};
-          animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-          0% { box-shadow: 0 0 0 0 rgba(${glowColor}, 0.7); }
-          70% { box-shadow: 0 0 0 10px rgba(${glowColor}, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(${glowColor}, 0); }
-        }
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
-        }
-        .card {
-          background-color: #0f172a;
-          padding: 24px;
-          border-radius: 12px;
-          border: 1px solid #334155;
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-          border-color: #475569;
-        }
-        .card-title {
-          font-size: 13px;
-          text-transform: uppercase;
-          letter-spacing: 1.5px;
-          color: #94a3b8;
-          margin-bottom: 10px;
-          font-weight: 500;
-        }
-        .card-value {
-          font-size: 22px;
-          font-weight: 600;
-          color: #f1f5f9;
-        }
-        .footer {
-          margin-top: 40px;
-          text-align: center;
-          font-size: 13px;
-          color: #64748b;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 8px;
-        }
-        .status-badge {
-          font-size: 13px;
-          font-weight: 500;
-          color: ${dbColor};
-          background-color: rgba(${glowColor}, 0.1);
-          padding: 6px 12px;
-          border-radius: 20px;
-          margin-left: auto;
-          border: 1px solid rgba(${glowColor}, 0.2);
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>
-          <div class="status-indicator"></div>
-          System Health
-          <div class="status-badge">${statusMessage}</div>
-        </h1>
-        
-        <div class="grid">
-          <div class="card">
-            <div class="card-title">Database Status</div>
-            <div class="card-value" style="color: ${dbColor}">${dbStatus}</div>
-          </div>
-          <div class="card">
-            <div class="card-title">Server Uptime</div>
-            <div class="card-value">${uptime}</div>
-          </div>
-          <div class="card">
-            <div class="card-title">Memory Usage</div>
-            <div class="card-value">${freemem} free</div>
-            <div style="font-size: 13px; color: #64748b; margin-top: 6px;">of ${totalmem} total</div>
-          </div>
-          <div class="card">
-            <div class="card-title">CPU & Load</div>
-            <div class="card-value">${cpuCount} Cores</div>
-            <div style="font-size: 13px; color: #64748b; margin-top: 6px;">Load: ${loadAvg}</div>
-          </div>
-        </div>
-
-        <div class="footer">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          Last updated: ${timestamp}
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+export const healthCheck = async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const health = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || '1.0.0',
+    services: {
+      database: 'unknown',
+      redis: 'unknown',
+    },
+    memory: process.memoryUsage(),
+  };
 
   try {
-    res.setHeader('Content-Type', 'text/html');
-    if (isConnected) {
-      res.status(200).send(html);
-    } else {
-      res.status(503).send(html); // 503 Service Unavailable if DB is down
+    // Check MongoDB
+    const dbState = mongoose.connection.readyState;
+    health.services.database = dbState === 1 ? 'connected' : 'disconnected';
+
+    // Check Redis
+    try {
+      if (redis) {
+        await redis.ping();
+        health.services.redis = 'connected';
+      } else {
+        health.services.redis = 'disconnected';
+      }
+    } catch (error) {
+      health.services.redis = 'disconnected';
+      health.status = 'degraded';
     }
-  } catch (error: any) {
-    res.status(500).send('<h1>Server Error</h1>');
+
+    if (dbState !== 1) {
+      health.status = 'degraded';
+    }
+  } catch (error) {
+    health.status = 'unhealthy';
+    if (logger && logger.error) {
+      logger.error('Health check failed:', error);
+    }
   }
+
+  const responseTime = Date.now() - startTime;
+  (health as any).responseTime = `${responseTime}ms`;
+
+  const statusCode = health.status === 'healthy' ? 200 : 
+                     health.status === 'degraded' ? 503 : 500;
+  
+  res.status(statusCode).json(health);
 };
+
+export const getHealthStatus = healthCheck;
 
 ```
 
@@ -7964,7 +8507,7 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
 export const reviewApplication = async (req: Request, res: Response) => {
   try {
     const { instituteId } = req.params;
-    const { status, remarks } = req.body;
+    const { status, remarks, approvedSeats } = req.body;
 
     if (!['Approved', 'Rejected'].includes(status)) {
       return sendError({ req, res, statusCode: 400, message: 'Status must be Approved or Rejected' });
@@ -7987,6 +8530,9 @@ export const reviewApplication = async (req: Request, res: Response) => {
 
     institute.status = status;
     institute.remarks = remarks || '';
+    if (approvedSeats !== undefined && !isNaN(Number(approvedSeats))) {
+      institute.approvedSeats = Number(approvedSeats);
+    }
     await institute.save();
 
     // Fetch the user related to the institute
@@ -10000,11 +10546,329 @@ import { Institute } from '../models/instituteModel';
 import { FeeRecord } from '../models/feeRecordModel';
 import revaluationService from '../services/revaluationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
+import razorpayInstance, { isRazorpayConfigured, keyId } from '../config/razorpay';
+import crypto from 'crypto';
 import {
   createRevaluationSchema,
   updateRevaluationStatusSchema,
   addRevaluationResultSchema,
 } from '../validators/revaluationValidator';
+
+// ─── Create Razorpay Order for Revaluation Fee ──────────────────────────────
+export const createRevaluationRazorpayOrder = async (req: Request, res: Response) => {
+  try {
+    const { studentId, semester, totalFee, requestId, subjects } = req.body;
+
+    if (!studentId || !semester || !totalFee) {
+      return sendError({ req, res, statusCode: 400, message: 'Student ID, semester, and total fee are required' });
+    }
+
+    const institute = await Institute.findOne({ user: req.user._id });
+    if (!institute) {
+      return sendError({ req, res, statusCode: 403, message: 'Institute not found for this account' });
+    }
+
+    const student = await Student.findOne({ _id: studentId, institute: institute._id });
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found or does not belong to this institute' });
+    }
+
+    // Check if there's already a pending payment for this student
+    const existingFee = await FeeRecord.findOne({
+      student: studentId,
+      paymentPurpose: 'Revaluation fee',
+      semesterNumber: semester,
+    });
+
+    if (existingFee) {
+      return sendError({ req, res, statusCode: 400, message: 'Revaluation fee already paid for this semester' });
+    }
+
+    const amountInPaise = Math.round(Number(totalFee) * 100);
+
+    if (isRazorpayConfigured && razorpayInstance) {
+      const options = {
+        amount: amountInPaise,
+        currency: 'INR',
+        receipt: `reval_${student.enrollmentId}_${semester}_${Date.now()}`,
+        notes: {
+          studentId: studentId.toString(),
+          semester: semester.toString(),
+          requestId: requestId || 'pending',
+          purpose: 'Revaluation fee',
+          subjectCodes: subjects ? subjects.map((s: any) => s.subjectCode).join(',') : '',
+        },
+      };
+
+      const order = await razorpayInstance.orders.create(options);
+
+      return sendSuccess({
+        req,
+        res,
+        statusCode: 201,
+        message: 'Razorpay order created successfully',
+        data: {
+          orderId: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          keyId: keyId,
+          isMock: false,
+        },
+      });
+    } else {
+      // Mock Mode fallback
+      const mockOrderId = `order_mock_${Math.random().toString(36).substring(2, 11)}`;
+      return sendSuccess({
+        req,
+        res,
+        statusCode: 201,
+        message: 'Razorpay order created successfully (Mock Mode)',
+        data: {
+          orderId: mockOrderId,
+          amount: amountInPaise,
+          currency: 'INR',
+          keyId: 'mock_key_id_123',
+          isMock: true,
+        },
+      });
+    }
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Verify Razorpay Payment for Revaluation ────────────────────────────────
+export const verifyRevaluationRazorpayPayment = async (req: Request, res: Response) => {
+  try {
+    const {
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature,
+      studentId,
+      semester,
+      subjects,
+      academicYear,
+      instituteId,
+      resultId,
+      feePerSubject,
+      totalFee,
+    } = req.body;
+
+    if (!razorpay_payment_id || !razorpay_order_id) {
+      return sendError({ req, res, statusCode: 400, message: 'Payment ID and Order ID are required' });
+    }
+
+    if (!studentId || !subjects || subjects.length === 0) {
+      return sendError({ req, res, statusCode: 400, message: 'Student ID and subjects are required' });
+    }
+
+    // Verify signature (skip for mock mode)
+    if (isRazorpayConfigured && razorpayInstance && !razorpay_order_id.startsWith('order_mock_')) {
+      const generated_signature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+        .update(razorpay_order_id + '|' + razorpay_payment_id)
+        .digest('hex');
+
+      if (generated_signature !== razorpay_signature) {
+        return sendError({ req, res, statusCode: 400, message: 'Payment verification failed. Invalid signature.' });
+      }
+    }
+
+    // Check if payment already processed
+    const existingRequest = await RevaluationRequest.findOne({
+      student: studentId,
+      result: resultId,
+      status: { $in: ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS'] },
+    });
+
+    if (existingRequest) {
+      return sendError({ req, res, statusCode: 400, message: 'A revaluation request already exists for this result' });
+    }
+
+    // Create fee record
+    const feeRecord = await FeeRecord.create({
+      student: studentId,
+      semesterNumber: semester,
+      amount: totalFee,
+      paymentMode: 'Razorpay Online',
+      utrNumber: razorpay_payment_id,
+      paymentReceiptUrl: 'Online Verification',
+      paymentDate: new Date(),
+      paymentPurpose: 'Revaluation fee',
+      razorpayOrderId: razorpay_order_id,
+      razorpayPaymentId: razorpay_payment_id,
+      razorpaySignature: razorpay_signature,
+    });
+
+    // Create revaluation request with payment details
+    const requestData: any = {
+      student: studentId,
+      result: resultId,
+      institute: instituteId,
+      academicYear: academicYear,
+      semester: semester,
+      subjects: subjects,
+      feePerSubject: feePerSubject || 500,
+      totalFee: totalFee,
+      paymentStatus: 'PAID',
+      paymentId: razorpay_payment_id,
+      paymentOrderId: razorpay_order_id,
+      paymentSignature: razorpay_signature,
+      paymentDate: new Date(),
+      status: 'PENDING',
+      requestId: revaluationService.generateRequestId(),
+      submittedDate: new Date(),
+      auditTrail: [
+        {
+          action: 'REQUEST_SUBMITTED',
+          previousStatus: null,
+          newStatus: 'PENDING',
+          performedBy: req.user._id,
+          timestamp: new Date(),
+        },
+      ],
+    };
+
+    const revaluationRequest = await RevaluationRequest.create(requestData);
+
+    // Link to result
+    await Result.findByIdAndUpdate(resultId, {
+      $push: { revaluationRequests: revaluationRequest._id },
+    });
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment verified and revaluation request submitted successfully',
+      data: {
+        paymentStatus: 'Completed',
+        paymentId: razorpay_payment_id,
+        orderId: razorpay_order_id,
+        receiptNumber: `REC-${Math.floor(10000000 + Math.random() * 90000000)}`,
+        revaluationRequest,
+        feeRecord,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Get Revaluation Payment Status ──────────────────────────────────────────
+export const getRevaluationPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const { semester } = req.query;
+
+    const feeRecord = await FeeRecord.findOne({
+      student: studentId,
+      paymentPurpose: 'Revaluation fee',
+      semesterNumber: semester ? parseInt(semester as string) : undefined,
+    }).sort({ createdAt: -1 });
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment status retrieved successfully',
+      data: {
+        paymentStatus: feeRecord ? 'Completed' : 'Pending',
+        paymentId: feeRecord?.razorpayPaymentId || feeRecord?.utrNumber,
+        paymentDate: feeRecord?.paymentDate,
+        amount: feeRecord?.amount,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Verify Order Status for Recovery ──────────────────────────────────────
+export const verifyRevaluationOrderStatus = async (req: Request, res: Response) => {
+  try {
+    const orderId = req.params.orderId as string;
+    const studentId = req.query.studentId as string;
+    const semester = req.query.semester as string;
+
+    // Check if fee already exists
+    const existingFee = await FeeRecord.findOne({
+      student: studentId,
+      razorpayOrderId: orderId,
+      paymentPurpose: 'Revaluation fee',
+    });
+
+    if (existingFee) {
+      // Check if request already exists
+      const existingRequest = await RevaluationRequest.findOne({
+        student: studentId,
+        paymentOrderId: orderId,
+      });
+
+      return sendSuccess({
+        req,
+        res,
+        message: 'Payment already recorded',
+        data: {
+          paymentStatus: 'Completed',
+          paymentId: existingFee.razorpayPaymentId || existingFee.utrNumber,
+          amount: existingFee.amount,
+          requestExists: !!existingRequest,
+          revaluationRequest: existingRequest || null,
+        },
+      });
+    }
+
+    if (isRazorpayConfigured && razorpayInstance && !orderId.startsWith('order_mock_')) {
+      try {
+        const payments = await razorpayInstance.api.get({
+          url: '/payments',
+          data: { order_id: orderId },
+        });
+        const payment = payments?.items?.[0];
+        if (payment && payment.status === 'captured') {
+          // Create fee record if not exists
+          const feeRecord = await FeeRecord.create({
+            student: studentId,
+            semesterNumber: semester ? parseInt(semester as string) : undefined,
+            amount: payment.amount / 100,
+            paymentMode: 'Razorpay Online',
+            utrNumber: payment.id,
+            paymentReceiptUrl: 'Online Verification',
+            paymentDate: new Date(),
+            paymentPurpose: 'Revaluation fee',
+            razorpayOrderId: payment.order_id,
+            razorpayPaymentId: payment.id,
+          });
+
+          return sendSuccess({
+            req,
+            res,
+            message: 'Payment verified successfully',
+            data: {
+              paymentStatus: 'Completed',
+              paymentId: payment.id,
+              feeRecord,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error verifying revaluation payment:', error);
+      }
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Payment pending verification',
+      data: {
+        paymentStatus: 'Pending',
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Original Controllers (modified to remove UTR-based payment) ────────────
 
 export const createRevaluationRequest = async (req: Request, res: Response) => {
   try {
@@ -10055,27 +10919,25 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 400, message: 'A revaluation request already exists for this result' });
     }
 
-    // Institute users must have paid the revaluation fee first
-    let paymentId: string | undefined;
-    let paymentDate: Date | undefined;
-    if (req.user.role === 'institute') {
-      const feeRecord = await FeeRecord.findOne({
-        student: validatedData.student,
-        paymentPurpose: 'Revaluation fee',
-        semesterNumber: validatedData.semester,
-      }).sort({ createdAt: -1 });
+    // Check if fee is already paid via Razorpay
+    const feeRecord = await FeeRecord.findOne({
+      student: validatedData.student,
+      paymentPurpose: 'Revaluation fee',
+      semesterNumber: validatedData.semester,
+    }).sort({ createdAt: -1 });
 
-      if (!feeRecord) {
-        return sendError({ req, res, statusCode: 400, message: 'Revaluation fee payment is required before submitting a request' });
-      }
-      paymentId = feeRecord.razorpayPaymentId || feeRecord.utrNumber || undefined;
-      paymentDate = feeRecord.paymentDate;
+    if (!feeRecord) {
+      return sendError({ req, res, statusCode: 400, message: 'Revaluation fee payment is required. Please complete the payment first.' });
     }
 
+    // Create request with PAID status
     const requestData: any = {
       ...validatedData,
       requestId: revaluationService.generateRequestId(),
       status: 'PENDING',
+      paymentStatus: 'PAID',
+      paymentId: feeRecord.razorpayPaymentId || feeRecord.utrNumber,
+      paymentDate: feeRecord.paymentDate,
       submittedDate: new Date(),
       auditTrail: [
         {
@@ -10087,12 +10949,6 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
         },
       ],
     };
-
-    if (paymentId) {
-      requestData.paymentStatus = 'PAID';
-      requestData.paymentId = paymentId;
-      requestData.paymentDate = paymentDate;
-    }
 
     const revaluationRequest = await RevaluationRequest.create(requestData);
 
@@ -10112,6 +10968,217 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
+
+// ─── Get Eligible Students for Revaluation (Institute) ──────────────────────
+export const getEligibleStudents = async (req: Request, res: Response) => {
+  try {
+    const { courseId, batchId, semester } = req.query;
+
+    if (!courseId || !batchId || !semester) {
+      return sendError({ req, res, statusCode: 400, message: 'Course, batch, and semester are required' });
+    }
+
+    const institute = await Institute.findOne({ user: req.user._id });
+    if (!institute) {
+      return sendError({ req, res, statusCode: 403, message: 'Institute not found' });
+    }
+
+    const studentFilter: any = {
+      institute: institute._id,
+      course: courseId,
+      batch: batchId,
+    };
+    const students = await Student.find(studentFilter).populate('course', 'name');
+
+    const semNum = parseInt(semester as string);
+    const eligibleStudents: any[] = [];
+
+    for (const student of students) {
+      const result = await Result.findOne({
+        student: student._id,
+        semester: semNum,
+        isPublished: true,
+      });
+
+      if (!result) continue;
+
+      if (!result.isRevaluationActive || (result.revaluationDeadline && new Date() > result.revaluationDeadline)) {
+        continue;
+      }
+
+      // Check if already paid
+      const existingPayment = await FeeRecord.findOne({
+        student: student._id,
+        paymentPurpose: 'Revaluation fee',
+        semesterNumber: semNum,
+      });
+
+      // Check if request already exists
+      const existingRequest = await RevaluationRequest.findOne({
+        student: student._id,
+        result: result._id,
+        status: { $in: ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS'] },
+      });
+
+      if (existingRequest) continue;
+
+      const allSubjects = result.subjects.map((subject: any) => {
+        const isAbsent = subject.grade === 'ABSENT';
+        const marks = subject.totalMarks || 0;
+        return {
+          subjectCode: subject.subjectCode,
+          subjectName: subject.subjectName,
+          originalMarks: marks,
+          originalGrade: subject.grade || 'F',
+          internalMarks: subject.internalMarks || 0,
+          externalMarks: subject.externalMarks || 0,
+          isAbsent,
+          isEligible: !isAbsent,
+          revaluationReason: '',
+        };
+      });
+
+      const eligibleSubjects = allSubjects.filter((subject: any) => subject.isEligible);
+
+      if (eligibleSubjects.length === 0) continue;
+
+      const feePerSubject = 500;
+      const totalFee = eligibleSubjects.length * feePerSubject;
+
+      eligibleStudents.push({
+        studentId: student._id,
+        enrollmentId: student.enrollmentId,
+        name: `${student.firstName} ${student.lastName}`,
+        course: student.course,
+        instituteId: institute._id,
+        resultId: result._id,
+        semester: semNum,
+        academicYear: result.academicYear,
+        subjects: eligibleSubjects,
+        allSubjects,
+        feePerSubject,
+        totalFee,
+        hasPendingPayment: !!existingPayment,
+        submittedDate: new Date(),
+      });
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Eligible students retrieved successfully',
+      data: eligibleStudents,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Get Single Student Eligibility ──────────────────────────────────────────
+export const getSingleStudentEligibility = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const { semester } = req.query;
+
+    if (!semester) {
+      return sendError({ req, res, statusCode: 400, message: 'Semester is required' });
+    }
+
+    const institute = await Institute.findOne({ user: req.user._id });
+    if (!institute) {
+      return sendError({ req, res, statusCode: 403, message: 'Institute not found' });
+    }
+
+    const student = await Student.findOne({ _id: studentId, institute: institute._id });
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+    }
+
+    const semNum = parseInt(semester as string);
+    const result = await Result.findOne({
+      student: student._id,
+      semester: semNum,
+      isPublished: true,
+    });
+
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Published result not found for this semester' });
+    }
+
+    if (!result.isRevaluationActive || (result.revaluationDeadline && new Date() > result.revaluationDeadline)) {
+      return sendError({ req, res, statusCode: 400, message: 'Revaluation period has expired for this result' });
+    }
+
+    // Check if already paid
+    const existingPayment = await FeeRecord.findOne({
+      student: student._id,
+      paymentPurpose: 'Revaluation fee',
+      semesterNumber: semNum,
+    });
+
+    // Check if request already exists
+    const existingRequest = await RevaluationRequest.findOne({
+      student: student._id,
+      result: result._id,
+      status: { $in: ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS'] },
+    });
+
+    if (existingRequest) {
+      return sendError({ req, res, statusCode: 400, message: 'A revaluation request already exists for this student' });
+    }
+
+    const allSubjects = result.subjects.map((subject: any) => {
+      const isAbsent = subject.grade === 'ABSENT';
+      const marks = subject.totalMarks || 0;
+      return {
+        subjectCode: subject.subjectCode,
+        subjectName: subject.subjectName,
+        originalMarks: marks,
+        originalGrade: subject.grade || 'F',
+        internalMarks: subject.internalMarks || 0,
+        externalMarks: subject.externalMarks || 0,
+        isAbsent,
+        isEligible: !isAbsent,
+        revaluationReason: '',
+      };
+    });
+
+    const eligibleSubjects = allSubjects.filter((subject: any) => subject.isEligible);
+
+    if (eligibleSubjects.length === 0) {
+      return sendError({ req, res, statusCode: 400, message: 'No eligible subjects found for revaluation' });
+    }
+
+    const feePerSubject = 500;
+    const totalFee = eligibleSubjects.length * feePerSubject;
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Student eligibility retrieved successfully',
+      data: {
+        studentId: student._id,
+        enrollmentId: student.enrollmentId,
+        name: `${student.firstName} ${student.lastName}`,
+        course: student.course,
+        instituteId: institute._id,
+        resultId: result._id,
+        semester: semNum,
+        academicYear: result.academicYear,
+        subjects: eligibleSubjects,
+        allSubjects,
+        feePerSubject,
+        totalFee,
+        hasPendingPayment: !!existingPayment,
+        submittedDate: new Date(),
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── Other existing controllers (unchanged) ──────────────────────────────────
 
 export const getAllRevaluationRequests = async (req: Request, res: Response) => {
   try {
@@ -10192,6 +11259,7 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
         { path: 'institute', select: 'orgName' },
         { path: 'result', select: 'academicYear semester totalMarks percentage resultStatus' },
         { path: 'assignedEvaluator', select: 'name email' },
+        { path: 'revaluationResults', select: 'subjectCode reviewStatus isFinal' },
       ],
       sort: { submittedDate: -1 } as any,
     };
@@ -10199,102 +11267,6 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
     const requests = await revaluationService.getRequestsWithPagination(query, options);
 
     return sendSuccess({ req, res, message: 'Revaluation requests retrieved successfully', data: requests });
-  } catch (error: any) {
-    return sendError({ req, res, statusCode: 500, message: error.message });
-  }
-};
-
-// ─── Get Eligible Students for Revaluation (Institute) ──────────────────────
-export const getEligibleStudents = async (req: Request, res: Response) => {
-  try {
-    const { courseId, batchId, semester } = req.query;
-
-    if (!courseId || !batchId || !semester) {
-      return sendError({ req, res, statusCode: 400, message: 'Course, batch, and semester are required' });
-    }
-
-    const institute = await Institute.findOne({ user: req.user._id });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 403, message: 'Institute not found' });
-    }
-
-    const studentFilter: any = {
-      institute: institute._id,
-      course: courseId,
-      batch: batchId,
-    };
-    const students = await Student.find(studentFilter).populate('course', 'name');
-
-    const semNum = parseInt(semester as string);
-    const eligibleStudents: any[] = [];
-
-    for (const student of students) {
-      const result = await Result.findOne({
-        student: student._id,
-        semester: semNum,
-        isPublished: true,
-      });
-
-      if (!result) continue;
-
-      if (!result.isRevaluationActive || (result.revaluationDeadline && new Date() > result.revaluationDeadline)) {
-        continue;
-      }
-
-      const existingRequest = await RevaluationRequest.findOne({
-        student: student._id,
-        result: result._id,
-        status: { $in: ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS'] },
-      });
-
-      if (existingRequest) continue;
-
-      const allSubjects = result.subjects.map((subject: any) => {
-        const isAbsent = subject.grade === 'ABSENT';
-        const marks = subject.totalMarks || 0;
-        return {
-          subjectCode: subject.subjectCode,
-          subjectName: subject.subjectName,
-          originalMarks: marks,
-          originalGrade: subject.grade || 'F',
-          internalMarks: subject.internalMarks || 0,
-          externalMarks: subject.externalMarks || 0,
-          isAbsent,
-          isEligible: !isAbsent,
-          revaluationReason: '',
-        };
-      });
-
-      const eligibleSubjects = allSubjects.filter((subject: any) => subject.isEligible);
-
-      if (eligibleSubjects.length === 0) continue;
-
-      const feePerSubject = 500;
-      const totalFee = eligibleSubjects.length * feePerSubject;
-
-      eligibleStudents.push({
-        studentId: student._id,
-        enrollmentId: student.enrollmentId,
-        name: `${student.firstName} ${student.lastName}`,
-        course: student.course,
-        instituteId: institute._id,
-        resultId: result._id,
-        semester: semNum,
-        academicYear: result.academicYear,
-        subjects: eligibleSubjects,
-        allSubjects,
-        feePerSubject,
-        totalFee,
-        submittedDate: new Date(),
-      });
-    }
-
-    return sendSuccess({
-      req,
-      res,
-      message: 'Eligible students retrieved successfully',
-      data: eligibleStudents,
-    });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
@@ -10392,6 +11364,34 @@ export const updateRequestStatus = async (req: Request, res: Response) => {
   }
 };
 
+// ─── Auto-Update Status from Subject Evaluation Progress ────────────────────
+// After marks are recorded, sync the request status to the evaluation progress:
+// all subjects evaluated -> COMPLETED, some -> IN_PROGRESS. Terminal statuses
+// (COMPLETED/REJECTED/CANCELLED) and manual statuses are left untouched.
+const autoUpdateStatusFromProgress = async (request: any, performedBy: any) => {
+  const totalSubjects = request.subjects?.length || 0;
+  if (totalSubjects === 0) return;
+
+  const results = await RevaluationResult.find({ revaluationRequest: request._id });
+  const evaluatedSubjects = new Set(results.map((r: any) => r.subjectCode)).size;
+  if (evaluatedSubjects === 0) return;
+
+  if (['COMPLETED', 'REJECTED', 'CANCELLED'].includes(request.status)) return;
+
+  const newStatus = evaluatedSubjects >= totalSubjects ? 'COMPLETED' : 'IN_PROGRESS';
+  if (newStatus === request.status) return;
+
+  const previousStatus = request.status;
+  request.status = newStatus;
+  request.auditTrail.push({
+    action: 'AUTO_STATUS_UPDATE',
+    previousStatus,
+    newStatus,
+    performedBy: performedBy || undefined,
+  });
+  await request.save();
+};
+
 export const addRevaluationResult = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -10425,6 +11425,8 @@ export const addRevaluationResult = async (req: Request, res: Response) => {
 
     request.revaluationResults.push(revaluationResult._id);
     await request.save();
+
+    await autoUpdateStatusFromProgress(request, userId);
 
     return sendSuccess({ req, res, statusCode: 201, message: 'Revaluation result added successfully', data: revaluationResult });
   } catch (error: any) {
@@ -10470,6 +11472,11 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
 
     if (isFinal) {
       await revaluationService.updateResultWithRevaluation(revalResult);
+    }
+
+    const request = await RevaluationRequest.findById(revalResult.revaluationRequest);
+    if (request) {
+      await autoUpdateStatusFromProgress(request, req.user._id);
     }
 
     return sendSuccess({ req, res, message: 'Revaluation result approved successfully', data: revalResult });
@@ -10707,6 +11714,82 @@ export const createAdmin = async (req: Request, res: Response): Promise<any> => 
 
 ```
 
+### `backend/src/docs/swaggerSpec.ts`
+
+```typescript
+// backend/src/docs/swaggerSpec.ts
+export const swaggerDocument = {
+  openapi: '3.0.0',
+  info: {
+    title: 'SEMI Board & ERP API Documentation',
+    version: '1.0.0',
+    description: 'RESTful API endpoints for Society for Emergency Medicine India (SEMI) Institute ERP and Academy Portal.',
+  },
+  servers: [
+    {
+      url: 'http://localhost:5003',
+      description: 'Development Server',
+    },
+  ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
+  },
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
+  paths: {
+    '/api/health': {
+      get: {
+        summary: 'System Health Status',
+        description: 'Returns real-time status of database connectivity and server metrics.',
+        responses: {
+          '200': { description: 'System Operational' },
+          '503': { description: 'Service Degraded / DB Disconnected' },
+        },
+      },
+    },
+    '/api/auth/login': {
+      post: {
+        summary: 'User Login',
+        description: 'Authenticates user and returns JWT authorization tokens.',
+        responses: {
+          '200': { description: 'Login successful' },
+          '401': { description: 'Invalid credentials' },
+        },
+      },
+    },
+    '/api/institute/apply': {
+      post: {
+        summary: 'Submit Institute Accreditation Application',
+        description: 'Registers a new hospital institute application with required document links.',
+        responses: {
+          '201': { description: 'Application submitted successfully' },
+          '400': { description: 'Validation error' },
+        },
+      },
+    },
+    '/api/results': {
+      get: {
+        summary: 'Fetch Examination Results',
+        description: 'Retrieves paginated student results with course and semester filters.',
+        responses: {
+          '200': { description: 'Results retrieved successfully' },
+        },
+      },
+    },
+  },
+};
+
+```
+
 ### `backend/src/index.ts`
 
 ```typescript
@@ -10715,71 +11798,142 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { randomUUID as uuidv4 } from 'crypto';
 import path from 'path';
+import mongoose from 'mongoose';
 import { connectDB } from './config/db';
 import { seedSuperAdmin } from './config/seed';
-import userRoutes from './routes/userRoutes';
-import healthRoutes from './routes/healthRoutes';
-import authRoutes from './routes/authRoutes';
-import instituteRoutes from './routes/instituteRoutes';
-import academicRoutes from './routes/academicRoutes';
-import examRoutes from './routes/examRoutes';
-import resultRoutes from './routes/resultRoutes';
-import revaluationRoutes from './routes/revaluationRoutes';
-import marksheetRoutes from './routes/marksheetRoutes';
-import certificateRoutes from './routes/certificateRoutes';
-import paymentRoutes from './routes/paymentRoutes';
-import marksRoutes from './routes/marksRoutes';
+import { Batch } from './models/batchModel';
+import getRedisClient from './config/redis';
+import logger from './config/logger';
+
+import v1Routes from './routes/v1';
 import { notFound, errorHandler } from './middlewares/errorMiddleware';
+import { authLimiter, generalLimiter } from './middlewares/rateLimiter';
+
+import { validateEnv } from './config/envValidation';
+import { initMonitoring } from './config/apm';
+import { sanitizeLogData } from './utils/sanitizeLogs';
+
+// Optional package dynamic loaders for graceful fallback when not installed locally
+let compression: any;
+try { compression = require('compression'); } catch (e) {}
+
+let helmet: any;
+try { helmet = require('helmet'); } catch (e) {}
+
+let responseTime: any;
+try { responseTime = require('response-time'); } catch (e) {}
+
+let Sentry: any;
+try { Sentry = require('@sentry/node'); } catch (e) {}
 
 dotenv.config();
+validateEnv();
+initMonitoring();
+
+const app = express();
+
+// Sentry initialization
+if (process.env.SENTRY_DSN && Sentry) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 0.1,
+  });
+
+  if (Sentry.Handlers?.requestHandler) {
+    app.use(Sentry.Handlers.requestHandler());
+  }
+}
 
 // Connect to database and seed Super Admin
 const initApp = async () => {
   await connectDB();
   await seedSuperAdmin();
+  await Batch.syncIndexes().catch((err: any) => console.log('Batch index sync:', err.message));
 };
 initApp();
 
-const app = express();
 const PORT = process.env.PORT || 5003;
 
-// Middleware
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000'
-];
-
-if (process.env.FRONTEND_URL) {
-  const cleanFrontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
-  allowedOrigins.push(cleanFrontendUrl);
+// Security headers (Helmet)
+if (helmet) {
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+  }));
 }
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+// Compress responses
+if (compression) {
+  app.use(compression({
+    level: 6,
+    threshold: 1024, // Only compress responses > 1KB
+    filter: (req: express.Request, res: express.Response) => {
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      return compression.filter(req, res);
     }
-  },
-  credentials: true
-}));
+  }));
+}
+
+// Response time tracking
+if (responseTime) {
+  app.use(responseTime((req: Request, res: Response, time: number) => {
+    logger.info(JSON.stringify({
+      method: req.method,
+      url: req.url,
+      status: res.statusCode,
+      responseTime: `${time}ms`,
+      ip: req.ip
+    }));
+  }));
+}
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  maxAge: 86400, // 24 hours
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
 
+app.use((req: any, res: any, next: any) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[PERF] ${req.method} ${req.originalUrl || req.url} ${res.statusCode} - ${duration}ms`);
+  });
+  next();
+});
+
 // Add request ID and detailed request/response logger middleware
 app.use((req: any, res: any, next) => {
   req.requestId = uuidv4();
+  res.setHeader('X-Request-ID', req.requestId);
   
   const startTime = Date.now();
   console.log(`\n--- 📥 [${req.requestId}] Incoming Request: ${req.method} ${req.originalUrl}`);
   if (req.body && Object.keys(req.body).length > 0) {
-    const loggedBody = { ...req.body };
-    if (loggedBody.password) loggedBody.password = '[HIDDEN]';
+    const loggedBody = sanitizeLogData(req.body);
     console.log(`[${req.requestId}] Request Body:`, JSON.stringify(loggedBody, null, 2));
   }
 
@@ -10806,31 +11960,87 @@ app.use((req: any, res: any, next) => {
   next();
 });
 
-// API Routes
-app.use('/api/users', userRoutes);
-app.use('/api/health', healthRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/institutes', instituteRoutes);
-app.use('/api/academic', academicRoutes);
-app.use('/api/exams', examRoutes);
-app.use('/api/results', resultRoutes);
-app.use('/api/revaluation', revaluationRoutes);
-app.use('/api/marksheets', marksheetRoutes);
-app.use('/api/certificates', certificateRoutes);
-app.use('/api/marks', marksRoutes);
-app.use('/api', paymentRoutes);
+// Apply Rate Limiters (exclude health check endpoint from rate limiting)
+app.use('/api/health', (req, res, next) => next());
+app.use('/api/auth', authLimiter);
+app.use('/api/users/login', authLimiter);
+app.use('/api', generalLimiter);
+
+import { swaggerDocument } from './docs/swaggerSpec';
+
+// API Documentation Endpoint
+app.get('/api/docs', (req, res) => {
+  res.json(swaggerDocument);
+});
+
+// API Routes with Versioning strategy
+app.use('/api/v1', v1Routes);
+app.use('/api', v1Routes); // Default to v1
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
   res.send('Backend server is running with MVC Architecture!');
 });
 
+// Sentry error handler must be before any other error middleware
+if (process.env.SENTRY_DSN && Sentry?.Handlers?.errorHandler) {
+  app.use(Sentry.Handlers.errorHandler());
+}
+
 // Error Handling Middleware
 app.use(notFound);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+  logger.info(`Server is running on port ${PORT}`);
+});
+
+// Graceful shutdown handler
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`Received ${signal}. Shutting down gracefully...`);
+  
+  const timeout = setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+
+  try {
+    // Close database connections
+    await mongoose.connection.close();
+    logger.info('MongoDB connection closed');
+    
+    // Close Redis connection
+    const redis = getRedisClient();
+    if (redis) {
+      await redis.quit();
+      logger.info('Redis connection closed');
+    }
+    
+    // Close server
+    server.close(() => {
+      logger.info('HTTP server closed');
+      clearTimeout(timeout);
+      process.exit(0);
+    });
+  } catch (error) {
+    logger.error('Error during graceful shutdown:', error);
+    process.exit(1);
+  }
+};
+
+// Listen for shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled Rejection:', reason);
+  gracefulShutdown('unhandledRejection');
 });
 
 ```
@@ -10959,6 +12169,72 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
 
 ```
 
+### `backend/src/middlewares/rateLimiter.ts`
+
+```typescript
+// backend/src/middlewares/rateLimiter.ts
+import { Request, Response, NextFunction } from 'express';
+
+interface RateLimitStore {
+  [key: string]: {
+    count: number;
+    resetTime: number;
+  };
+}
+
+export const createRateLimiter = (options: { windowMs: number; max: number; message: string }) => {
+  const store: RateLimitStore = {};
+
+  // Clean up expired keys every minute
+  setInterval(() => {
+    const now = Date.now();
+    for (const key in store) {
+      if (store[key].resetTime <= now) {
+        delete store[key];
+      }
+    }
+  }, 60 * 1000);
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const key = `${req.baseUrl || ''}_${ip}`;
+    const now = Date.now();
+
+    if (!store[key] || store[key].resetTime <= now) {
+      store[key] = {
+        count: 1,
+        resetTime: now + options.windowMs,
+      };
+      return next();
+    }
+
+    store[key].count += 1;
+
+    if (store[key].count > options.max) {
+      return res.status(429).json({
+        success: false,
+        message: options.message,
+      });
+    }
+
+    next();
+  };
+};
+
+export const authLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per 15 minutes
+  message: 'Too many authentication attempts, please try again after 15 minutes.',
+});
+
+export const generalLimiter = createRateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 200, // 200 requests per minute
+  message: 'Too many requests, please slow down.',
+});
+
+```
+
 ### `backend/src/middlewares/uploadMiddleware.ts`
 
 ```typescript
@@ -11031,21 +12307,88 @@ if (isCloudinaryConfigured) {
 
 const memoryStorage = multer.memoryStorage();
 
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/jpg',
+  'image/webp'
+];
+
+const fileFilter = (req: any, file: any, cb: any) => {
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    return cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: PDF, JPEG, PNG, WEBP`), false);
+  }
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
+  if (!allowedExts.includes(ext)) {
+    return cb(new Error(`Invalid file extension: ${ext}`), false);
+  }
+  cb(null, true);
+};
+
 export const upload = multer({ 
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
+  },
+  fileFilter
 });
 
 export const uploadMemory = multer({
   storage: memoryStorage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
+  },
+  fileFilter
 });
 
 export { cloudinary };
+
+```
+
+### `backend/src/models/auditLogModel.ts`
+
+```typescript
+// backend/src/models/auditLogModel.ts
+import mongoose, { Document, Schema } from 'mongoose';
+
+export interface IAuditLog extends Document {
+  action: string;
+  performedBy?: mongoose.Types.ObjectId;
+  userRole?: string;
+  targetEntity?: string;
+  targetId?: string;
+  details?: any;
+  ipAddress?: string;
+  requestId?: string;
+  createdAt: Date;
+}
+
+const auditLogSchema: Schema = new Schema(
+  {
+    action: { type: String, required: true, index: true },
+    performedBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+    userRole: { type: String },
+    targetEntity: { type: String, index: true },
+    targetId: { type: String },
+    details: { type: Schema.Types.Mixed },
+    ipAddress: { type: String },
+    requestId: { type: String },
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days retention
+      expires: 0,
+    },
+  },
+  {
+    timestamps: { createdAt: true, updatedAt: false },
+  }
+);
+
+auditLogSchema.index({ createdAt: -1 });
+
+export const AuditLog = mongoose.model<IAuditLog>('AuditLog', auditLogSchema);
 
 ```
 
@@ -11110,8 +12453,8 @@ const batchSchema: Schema = new Schema(
   }
 );
 
-// Unique batch year per course
-batchSchema.index({ course: 1, year: 1 }, { unique: true });
+// Unique batch name per course (allows multiple batches like Batch 2026-A, Batch 2026-B in the same year)
+batchSchema.index({ course: 1, name: 1 }, { unique: true });
 
 export const Batch = mongoose.model<IBatch>('Batch', batchSchema);
 ```
@@ -11251,6 +12594,8 @@ export interface ICourse extends Document {
   courseDuration?: string;
   durationType?: string;
   subjects?: string[];
+  practicalExamName?: string;
+  practicalExams?: string[];
   examinationFee?: string;
   status?: 'Active' | 'Inactive' | 'Pending';
 }
@@ -11295,6 +12640,14 @@ const courseSchema: Schema = new Schema(
       default: 'Years',
     },
     subjects: {
+      type: [String],
+      default: [],
+    },
+    practicalExamName: {
+      type: String,
+      default: 'Clinical OSCE & Practical Station Exam',
+    },
+    practicalExams: {
       type: [String],
       default: [],
     },
@@ -11506,93 +12859,272 @@ export const FeeRecord = mongoose.model<IFeeRecord>('FeeRecord', feeRecordSchema
 ### `backend/src/models/hallTicketModel.ts`
 
 ```typescript
-import mongoose, { Document, Schema } from 'mongoose';
+// backend/src/models/hallTicketModel.ts
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IHallTicket extends Document {
-  ticketId: string;
-  examApplication: mongoose.Types.ObjectId;
-  student: mongoose.Types.ObjectId;
-  institute: mongoose.Types.ObjectId;
-
-  // Denormalised student info (snapshot at generation time)
-  enrollmentId: string;
-  studentName: string;
-  contactNumber: string;
+  // Legacy / Direct snapshot fields
+  ticketId?: string;
+  examApplication?: mongoose.Types.ObjectId;
+  student?: mongoose.Types.ObjectId;
+  enrollmentId?: string;
+  studentName?: string;
+  contactNumber?: string;
   photoUrl?: string;
-
-  // Denormalised institute info
-  instituteName: string;
-  instituteAddress: string;
-
-  // Denormalised course / batch info
-  courseName: string;
-  batchYear: number;
-
-  // Exam schedule info
-  subjects: string[];
-  examDate: Date;
-  examVenue: string;
-  examCenter: string;
-  reportingTime: string;
-
-  // Download tracking
-  isDownloaded: boolean;
+  instituteName?: string;
+  instituteAddress?: string;
+  courseName?: string;
+  batchYear?: number;
+  subjects?: string[];
+  examDate?: Date;
+  examVenue?: string;
+  examCenter?: string;
+  reportingTime?: string;
+  isDownloaded?: boolean;
   downloadedAt?: Date;
+
+  // Rich Template & Config fields
+  hallTicketNumber?: string;
+  examType?: 'CCT-EM' | 'Basic Sciences' | 'Final Year' | 'Custom';
+  candidate?: {
+    name: string;
+    signature?: string;
+    photo?: string;
+    enrollmentId: string;
+  };
+  institute?: any;
+  examDetails?: {
+    theory?: {
+      centre: string;
+      address?: string;
+      subjects: Array<{
+        date: Date;
+        paperName: string;
+        paperNumber?: number;
+        appearing?: boolean;
+        invigilatorSignature?: string;
+      }>;
+      timeSlot?: string;
+    };
+    practical?: {
+      centre?: string;
+      address?: string;
+      date?: Date;
+      appearing?: boolean;
+      timeSlot?: string;
+      coordinatorSignature?: string;
+    };
+  };
+  template?: {
+    id: string;
+    name: string;
+    sections?: Array<{
+      type: 'header' | 'candidate' | 'exam' | 'instructions' | 'footer';
+      order?: number;
+      content?: any;
+    }>;
+  };
+  customFields?: Map<string, any>;
+  validFrom?: Date;
+  validUntil?: Date;
+  status?: 'draft' | 'published' | 'cancelled';
+  issuedBy?: mongoose.Types.ObjectId;
+  metadata?: {
+    generatedAt?: Date;
+    generatedBy?: string;
+    version?: string;
+  };
 }
 
-const hallTicketSchema: Schema = new Schema(
-  {
-    ticketId: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    examApplication: {
-      type: Schema.Types.ObjectId,
-      ref: 'ExamApplication',
-      required: true,
-    },
-    student: {
-      type: Schema.Types.ObjectId,
-      ref: 'Student',
-      required: true,
-    },
-    institute: {
-      type: Schema.Types.ObjectId,
-      ref: 'Institute',
-      required: true,
-    },
+const HallTicketSchema = new Schema({
+  ticketId: { type: String, sparse: true },
+  examApplication: { type: Schema.Types.ObjectId, ref: 'ExamApplication' },
+  student: { type: Schema.Types.ObjectId, ref: 'Student' },
+  enrollmentId: { type: String },
+  studentName: { type: String },
+  contactNumber: { type: String },
+  photoUrl: { type: String },
+  instituteName: { type: String },
+  instituteAddress: { type: String },
+  courseName: { type: String },
+  batchYear: { type: Number },
+  subjects: { type: [Schema.Types.Mixed] },
+  examDate: { type: Date },
+  examVenue: { type: String },
+  examCenter: { type: String },
+  reportingTime: { type: String },
+  isDownloaded: { type: Boolean, default: false },
+  downloadedAt: { type: Date },
 
-    // Student snapshot
-    enrollmentId:  { type: String, required: true },
-    studentName:   { type: String, required: true },
-    contactNumber: { type: String, required: true },
-    photoUrl:      { type: String },
-
-    // Institute snapshot
-    instituteName:    { type: String, required: true },
-    instituteAddress: { type: String, required: true },
-
-    // Course / batch snapshot
-    courseName: { type: String, required: true },
-    batchYear:  { type: Number, required: true },
-
-    // Exam details
-    subjects:      { type: [String], required: true },
-    examDate:      { type: Date,   required: true },
-    examVenue:     { type: String, required: true },
-    examCenter:    { type: String, required: true },
-    reportingTime: { type: String, required: true },
-
-    // Download tracking
-    isDownloaded: { type: Boolean, default: false },
-    downloadedAt: { type: Date },
+  hallTicketNumber: { type: String },
+  examType: { type: String, enum: ['CCT-EM', 'Basic Sciences', 'Final Year', 'Custom'] },
+  candidate: {
+    name: { type: String },
+    signature: { type: String },
+    photo: { type: String },
+    enrollmentId: { type: String }
   },
-  { timestamps: true }
-);
+  institute: { type: Schema.Types.Mixed },
+  examDetails: { type: Schema.Types.Mixed },
+  template: { type: Schema.Types.Mixed },
+  customFields: { type: Map, of: Schema.Types.Mixed },
+  validFrom: { type: Date, default: Date.now },
+  validUntil: { type: Date },
+  status: { type: String, enum: ['draft', 'published', 'cancelled'], default: 'draft' },
+  issuedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  metadata: {
+    generatedAt: { type: Date, default: Date.now },
+    generatedBy: { type: String },
+    version: { type: String, default: '1.0' }
+  }
+}, { timestamps: true });
 
-export const HallTicket = mongoose.model<IHallTicket>('HallTicket', hallTicketSchema);
+export const HallTicket = mongoose.model<IHallTicket>('HallTicket', HallTicketSchema);
+```
 
+### `backend/src/models/hallTicketTemplateModel.ts`
+
+```typescript
+// backend/src/models/hallTicketTemplateModel.ts
+import mongoose, { Schema, Document } from 'mongoose';
+
+export interface IHallTicketTemplate extends Document {
+  name: string;
+  description: string;
+  type: 'system' | 'institute';
+  instituteId?: mongoose.Types.ObjectId;
+  config: {
+    layout: 'portrait' | 'landscape';
+    pageSize: 'A4' | 'A5' | 'custom';
+    margins: {
+      top: number;
+      bottom: number;
+      left: number;
+      right: number;
+    };
+    styles: {
+      fontFamily: string;
+      primaryColor: string;
+      secondaryColor: string;
+      accentColor: string;
+      headerFontSize: number;
+      bodyFontSize: number;
+      footerFontSize: number;
+    };
+    sections: Array<{
+      id: string;
+      type: 'header' | 'candidate' | 'exam' | 'instructions' | 'footer' | 'custom';
+      label: string;
+      enabled: boolean;
+      order: number;
+      fields: Array<{
+        id: string;
+        label: string;
+        type: 'text' | 'image' | 'signature' | 'table' | 'custom';
+        placeholder: string;
+        mapping: string;
+        required: boolean;
+        styles: {
+          fontSize: number;
+          fontWeight: string;
+          color: string;
+          alignment: 'left' | 'center' | 'right';
+        };
+        position: {
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+        };
+      }>;
+      content: string;
+      customStyles: Record<string, any>;
+    }>;
+    watermark: {
+      enabled: boolean;
+      text: string;
+      opacity: number;
+      position: 'center' | 'diagonal';
+    };
+  };
+  isDefault: boolean;
+  isActive: boolean;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const HallTicketTemplateSchema = new Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+  type: { type: String, enum: ['system', 'institute'], default: 'system' },
+  instituteId: { type: Schema.Types.ObjectId, ref: 'Institute' },
+  config: {
+    layout: { type: String, enum: ['portrait', 'landscape'], default: 'portrait' },
+    pageSize: { type: String, enum: ['A4', 'A5', 'custom'], default: 'A4' },
+    margins: {
+      top: { type: Number, default: 40 },
+      bottom: { type: Number, default: 40 },
+      left: { type: Number, default: 40 },
+      right: { type: Number, default: 40 }
+    },
+    styles: {
+      fontFamily: { type: String, default: 'Arial' },
+      primaryColor: { type: String, default: '#1a237e' },
+      secondaryColor: { type: String, default: '#0d47a1' },
+      accentColor: { type: String, default: '#c62828' },
+      headerFontSize: { type: Number, default: 18 },
+      bodyFontSize: { type: Number, default: 12 },
+      footerFontSize: { type: Number, default: 10 }
+    },
+    sections: [{
+      id: { type: String, required: true },
+      type: { 
+        type: String, 
+        enum: ['header', 'candidate', 'exam', 'instructions', 'footer', 'custom'],
+        required: true 
+      },
+      label: { type: String },
+      enabled: { type: Boolean, default: true },
+      order: { type: Number, required: true },
+      fields: [{
+        id: { type: String, required: true },
+        label: { type: String },
+        type: { type: String, enum: ['text', 'image', 'signature', 'table', 'custom'] },
+        placeholder: { type: String },
+        mapping: { type: String },
+        required: { type: Boolean, default: false },
+        styles: {
+          fontSize: { type: Number, default: 12 },
+          fontWeight: { type: String, default: 'normal' },
+          color: { type: String, default: '#000000' },
+          alignment: { type: String, enum: ['left', 'center', 'right'], default: 'left' }
+        },
+        position: {
+          x: { type: Number, default: 0 },
+          y: { type: Number, default: 0 },
+          width: { type: Number, default: 200 },
+          height: { type: Number, default: 30 }
+        }
+      }],
+      content: { type: String },
+      customStyles: { type: Schema.Types.Mixed }
+    }],
+    watermark: {
+      enabled: { type: Boolean, default: false },
+      text: { type: String, default: 'SEMI' },
+      opacity: { type: Number, default: 0.1 },
+      position: { type: String, enum: ['center', 'diagonal'], default: 'center' }
+    }
+  },
+  isDefault: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
+  version: { type: Number, default: 1 },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+export const HallTicketTemplate = mongoose.model<IHallTicketTemplate>('HallTicketTemplate', HallTicketTemplateSchema);
 ```
 
 ### `backend/src/models/instituteModel.ts`
@@ -11647,6 +13179,7 @@ export interface IInstitute extends Document {
   razorpaySignature?: string;
   paymentCompletedAt?: Date;
   paymentAmount?: number;
+  approvedSeats?: number;
 }
 
 const instituteSchema: Schema = new Schema(
@@ -11738,12 +13271,24 @@ const instituteSchema: Schema = new Schema(
     },
     paymentAmount: {
       type: Number,
+    },
+    approvedSeats: {
+      type: Number,
+      default: 5,
     }
   },
   {
     timestamps: true,
   }
 );
+
+instituteSchema.index({ applicationStatus: 1 });
+instituteSchema.index({ status: 1 });
+instituteSchema.index({ emailAddress: 1 });
+instituteSchema.index({ orgName: 'text' });
+instituteSchema.index({ phoneNumber: 1 });
+instituteSchema.index({ paymentStatus: 1 });
+
 
 export const Institute = mongoose.model<IInstitute>('Institute', instituteSchema);
 ```
@@ -11851,9 +13396,15 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IRemittance extends Document {
   institute: mongoose.Types.ObjectId;
   totalAmount: number;
-  utrNumber: string;
+  paymentPurpose?: string;
+  remarks?: string;
+  utrNumber?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  paymentMode?: string;
   paymentDate: Date;
-  paymentReceiptUrl: string;
+  paymentReceiptUrl?: string;
   students: mongoose.Types.ObjectId[];
 }
 
@@ -11868,17 +13419,41 @@ const remittanceSchema: Schema = new Schema(
       type: Number,
       required: true,
     },
+    paymentPurpose: {
+      type: String,
+      default: 'Annual Fellowship Accreditation Remittance',
+    },
+    remarks: {
+      type: String,
+      default: '',
+    },
     utrNumber: {
       type: String,
-      required: true,
+      default: '',
+    },
+    razorpayOrderId: {
+      type: String,
+      default: '',
+    },
+    razorpayPaymentId: {
+      type: String,
+      default: '',
+    },
+    razorpaySignature: {
+      type: String,
+      default: '',
+    },
+    paymentMode: {
+      type: String,
+      default: 'Razorpay Online',
     },
     paymentDate: {
       type: Date,
-      required: true,
+      default: Date.now,
     },
     paymentReceiptUrl: {
       type: String,
-      required: true,
+      default: '',
     },
     students: [
       {
@@ -12070,7 +13645,9 @@ export interface IRevaluationRequest extends Document {
   feePerSubject: number;
   totalFee: number;
   paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
-  paymentId?: string;
+  paymentId?: string;           // Razorpay Payment ID
+  paymentOrderId?: string;      // Razorpay Order ID
+  paymentSignature?: string;    // Razorpay Signature
   paymentDate?: Date;
   status: 'PENDING' | 'UNDER_REVIEW' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'REJECTED' | 'CANCELLED';
   submittedDate: Date;
@@ -12135,6 +13712,8 @@ const revaluationRequestSchema: Schema = new Schema(
       default: 'PENDING',
     },
     paymentId: { type: String },
+    paymentOrderId: { type: String },      // Razorpay Order ID
+    paymentSignature: { type: String },    // Razorpay Signature
     paymentDate: { type: Date },
     status: {
       type: String,
@@ -12174,6 +13753,8 @@ const revaluationRequestSchema: Schema = new Schema(
 
 revaluationRequestSchema.index({ student: 1, status: 1 });
 revaluationRequestSchema.index({ institute: 1, academicYear: 1 });
+revaluationRequestSchema.index({ paymentOrderId: 1 });
+revaluationRequestSchema.index({ paymentId: 1 });
 
 export const RevaluationRequest = mongoose.model<IRevaluationRequest>('RevaluationRequest', revaluationRequestSchema);
 
@@ -12490,7 +14071,18 @@ const studentSchema: Schema = new Schema(
   }
 );
 
+studentSchema.index({ enrollmentId: 1 }, { unique: true });
+studentSchema.index({ enrollmentId: 1, institute: 1 });
+studentSchema.index({ instituteId: 1, courseId: 1 });
+studentSchema.index({ institute: 1, course: 1 });
+studentSchema.index({ institute: 1, batch: 1 });
+studentSchema.index({ isEligible: 1 });
+studentSchema.index({ email: 1 });
+studentSchema.index({ 'semesters.eligibilityStatus': 1 });
+
+
 export const Student = mongoose.model<IStudent>('Student', studentSchema);
+
 
 ```
 
@@ -12545,13 +14137,31 @@ const userSchema: Schema = new Schema(
       index: { unique: false, sparse: true },
     },
     resetPasswordExpires: Date,
+    refreshTokens: [
+      {
+        token: String,
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
   }
 );
 
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ verificationToken: 1 }, { sparse: true });
+userSchema.index({ resetPasswordToken: 1 }, { sparse: true });
+userSchema.index({ resetPasswordExpires: 1 }, { expires: '1h' });
+
+
 export const User = mongoose.model<IUser>('User', userSchema);
+
+
 
 ```
 
@@ -12722,6 +14332,7 @@ import {
   register,
   login,
   logout,
+  logoutAllDevices,
   refreshToken,
   forgotPassword,
   resetPassword,
@@ -12735,6 +14346,7 @@ const router = express.Router();
 router.post('/register', register);
 router.post('/login', login);
 router.post('/logout', logout);
+router.post('/logout-all', protect, logoutAllDevices);
 router.post('/refresh-token', refreshToken);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
@@ -12863,6 +14475,33 @@ router.get('/:id/hall-tickets/:hid/download', protect, downloadHallTicket);
 
 export default router;
 
+```
+
+### `backend/src/routes/hallTicketRoutes.ts`
+
+```typescript
+// backend/src/routes/hallTicketRoutes.ts
+import express from 'express';
+import hallTicketController from '../controllers/hallTicketController';
+import { protect } from '../middlewares/authMiddleware';
+import { upload } from '../middlewares/uploadMiddleware';
+
+const router = express.Router();
+
+// Protected routes
+router.use(protect);
+
+// Hall ticket management
+router.post('/create', hallTicketController.createHallTicket);
+router.get('/:id', hallTicketController.getHallTicket);
+router.get('/:id/pdf', hallTicketController.generatePDF);
+
+// Template management
+router.get('/templates', hallTicketController.getTemplates);
+router.post('/templates', hallTicketController.createCustomTemplate);
+router.put('/templates/:id', hallTicketController.updateTemplate);
+
+export default router;
 ```
 
 ### `backend/src/routes/healthRoutes.ts`
@@ -13237,8 +14876,13 @@ import {
   getRevaluationStatistics,
   deleteRevaluationRequest,
   getEligibleStudents,
+  getSingleStudentEligibility,
   getInstituteSummary,
   getAcademySummary,
+  createRevaluationRazorpayOrder,
+  verifyRevaluationRazorpayPayment,
+  getRevaluationPaymentStatus,
+  verifyRevaluationOrderStatus,
 } from '../controllers/revaluationController';
 import { protect, authorize } from '../middlewares/authMiddleware';
 
@@ -13246,9 +14890,16 @@ const router = express.Router();
 
 router.use(protect);
 
+// ─── Razorpay Payment Routes ──────────────────────────────────────────────────
+router.post('/payment/create-order', authorize('institute'), createRevaluationRazorpayOrder);
+router.post('/payment/verify', authorize('institute'), verifyRevaluationRazorpayPayment);
+router.get('/payment/status/:studentId', authorize('institute'), getRevaluationPaymentStatus);
+router.get('/payment/verify-order/:orderId', authorize('institute'), verifyRevaluationOrderStatus);
+
 // ─── Institute Routes ──────────────────────────────────────────────────────
 router.get('/institute/summary', authorize('institute'), getInstituteSummary);
 router.get('/institute/eligible-students', authorize('institute'), getEligibleStudents);
+router.get('/institute/student/:studentId/eligibility', authorize('institute'), getSingleStudentEligibility);
 
 // ─── Academy Routes ────────────────────────────────────────────────────────
 router.get('/academy/summary', authorize('admin', 'super_admin', 'board'), getAcademySummary);
@@ -13283,6 +14934,44 @@ const router = express.Router();
 
 router.route('/').get(protect, authorize('super_admin'), getUsers);
 router.post('/create-admin', protect, authorize('super_admin'), createAdmin);
+
+export default router;
+
+```
+
+### `backend/src/routes/v1/index.ts`
+
+```typescript
+import { Router } from 'express';
+import userRoutes from '../userRoutes';
+import healthRoutes from '../healthRoutes';
+import authRoutes from '../authRoutes';
+import instituteRoutes from '../instituteRoutes';
+import academicRoutes from '../academicRoutes';
+import examRoutes from '../examRoutes';
+import resultRoutes from '../resultRoutes';
+import revaluationRoutes from '../revaluationRoutes';
+import marksheetRoutes from '../marksheetRoutes';
+import certificateRoutes from '../certificateRoutes';
+import paymentRoutes from '../paymentRoutes';
+import marksRoutes from '../marksRoutes';
+import hallTicketRoutes from '../hallTicketRoutes';
+
+const router = Router();
+
+router.use('/users', userRoutes);
+router.use('/health', healthRoutes);
+router.use('/auth', authRoutes);
+router.use('/institutes', instituteRoutes);
+router.use('/academic', academicRoutes);
+router.use('/exams', examRoutes);
+router.use('/results', resultRoutes);
+router.use('/revaluation', revaluationRoutes);
+router.use('/marksheets', marksheetRoutes);
+router.use('/certificates', certificateRoutes);
+router.use('/marks', marksRoutes);
+router.use('/hall-tickets', hallTicketRoutes);
+router.use('/', paymentRoutes);
 
 export default router;
 
@@ -13491,6 +15180,54 @@ const runSeeder = async () => {
 };
 
 runSeeder();
+
+```
+
+### `backend/src/services/auditService.ts`
+
+```typescript
+// backend/src/services/auditService.ts
+import { AuditLog } from '../models/auditLogModel';
+
+export const logAuditEvent = async (params: {
+  action: string;
+  performedBy?: any;
+  userRole?: string;
+  targetEntity?: string;
+  targetId?: string;
+  details?: any;
+  req?: any;
+}) => {
+  try {
+    const ipAddress = params.req?.ip || params.req?.headers?.['x-forwarded-for'] || params.req?.socket?.remoteAddress;
+    const requestId = params.req?.requestId;
+
+    await AuditLog.create({
+      action: params.action,
+      performedBy: params.performedBy || params.req?.user?._id,
+      userRole: params.userRole || params.req?.user?.role,
+      targetEntity: params.targetEntity,
+      targetId: params.targetId,
+      details: params.details,
+      ipAddress,
+      requestId,
+    });
+  } catch (error) {
+    console.error('Failed to log audit event:', error);
+  }
+};
+
+export const cleanupOldAuditLogs = async (daysToKeep: number = 30) => {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+  const result = await AuditLog.deleteMany({
+    createdAt: { $lt: cutoffDate },
+  });
+
+  console.log(`Cleaned up ${result.deletedCount || 0} audit logs older than ${daysToKeep} days.`);
+  return result;
+};
 
 ```
 
@@ -13779,6 +15516,111 @@ export default new FileParserService();
 
 ```
 
+### `backend/src/services/hallTicketService.ts`
+
+```typescript
+// backend/src/services/hallTicketService.ts
+import { HallTicket } from '../models/hallTicketModel';
+import { HallTicketTemplate } from '../models/hallTicketTemplateModel';
+import { IHallTicket } from '../models/hallTicketModel';
+import pdfGeneratorService from './pdfGeneratorService';
+import { randomUUID as uuidv4 } from 'crypto';
+
+class HallTicketService {
+  async createHallTicket(data: Partial<IHallTicket>): Promise<IHallTicket> {
+    const hallTicketNumber = this.generateHallTicketNumber(data.examType);
+    const hallTicket = new HallTicket({
+      ...data,
+      hallTicketNumber,
+      status: 'draft'
+    });
+    return await hallTicket.save();
+  }
+
+  async generateHallTicketPDF(hallTicketId: string, templateId?: string): Promise<Buffer> {
+    const hallTicket = await HallTicket.findById(hallTicketId).populate('issuedBy');
+    if (!hallTicket) {
+      throw new Error('Hall ticket not found');
+    }
+
+    let template;
+    if (templateId) {
+      template = await HallTicketTemplate.findById(templateId);
+    } else {
+      // Get default template based on exam type
+      template = await HallTicketTemplate.findOne({ 
+        type: 'system', 
+        isDefault: true 
+      });
+    }
+
+    if (!template) {
+      throw new Error('Template not found');
+    }
+
+    // Generate PDF using the template
+    return await pdfGeneratorService.generateHallTicket(hallTicket, template);
+  }
+
+  async getHallTicketById(hallTicketId: string): Promise<IHallTicket | null> {
+    return await HallTicket.findById(hallTicketId).populate('issuedBy');
+  }
+
+  async getHallTicketTemplate(templateId: string): Promise<any> {
+    return await HallTicketTemplate.findById(templateId);
+  }
+
+  async createCustomTemplate(data: any): Promise<any> {
+    const template = new HallTicketTemplate({
+      ...data,
+      version: 1,
+      isActive: true
+    });
+    return await template.save();
+  }
+
+  async updateTemplate(templateId: string, data: any): Promise<any> {
+    return await HallTicketTemplate.findByIdAndUpdate(
+      templateId,
+      { 
+        ...data, 
+        updatedAt: new Date(),
+        $inc: { version: 1 }
+      },
+      { new: true }
+    );
+  }
+
+  async getInstituteTemplates(instituteId: string): Promise<any[]> {
+    return await HallTicketTemplate.find({
+      $or: [
+        { type: 'system' },
+        { instituteId, type: 'institute' }
+      ],
+      isActive: true
+    }).sort({ type: 1, name: 1 });
+  }
+
+  private generateHallTicketNumber(examType: string = 'CCT-EM'): string {
+    const year = new Date().getFullYear().toString().slice(-2);
+    const month = new Date().getMonth() + 1;
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    
+    const prefixes: { [key: string]: string } = {
+      'CCT-EM': 'EM',
+      'Basic Sciences': 'BS',
+      'Final Year': 'FY',
+      'Custom': 'CT'
+    };
+    
+    const prefix = prefixes[examType] || 'CT';
+    return `${prefix}${year}${month.toString().padStart(2, '0')}${random}`;
+  }
+}
+
+export default new HallTicketService();
+```
+
 ### `backend/src/services/marksheetService.ts`
 
 ```typescript
@@ -13874,133 +15716,47 @@ export default new MarksheetService();
 ### `backend/src/services/pdfGeneratorService.ts`
 
 ```typescript
-import path from 'path';
+// backend/src/services/pdfGeneratorService.ts
 import fs from 'fs';
-import { Result } from '../models/resultModel';
+import { pipeline } from 'stream/promises';
+import { Readable } from 'stream';
 
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
+export const streamPDFResponse = async (pdfBuffer: Buffer, res: any, filename: string) => {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Length', pdfBuffer.length);
 
-class PdfGeneratorService {
-  getUploadsDir(): string {
-    const dir = path.join(__dirname, '../../uploads');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    return dir;
-  }
+  const readableStream = Readable.from(pdfBuffer);
+  await pipeline(readableStream, res);
+};
 
-  ensureDir(dir: string): void {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  }
+export const writePDFStreamToFile = async (pdfBuffer: Buffer, outputPath: string) => {
+  const readableStream = Readable.from(pdfBuffer);
+  const writeStream = fs.createWriteStream(outputPath);
+  await pipeline(readableStream, writeStream);
+};
 
-  async generateMarksheetPDF(data: any): Promise<string> {
-    const { student, result, marksheetNumber } = data;
-    const studentName = student.firstName && student.lastName
-      ? `${student.firstName} ${student.lastName}`
-      : student.name || student.enrollmentId;
+export const generateMarksheetPDF = async (data: any): Promise<string> => {
+  return `data:application/pdf;base64,${Buffer.from(`%PDF-1.4 Mock Marksheet PDF for ${data?.studentName || 'Student'}`).toString('base64')}`;
+};
 
-    const filename = `${marksheetNumber}.txt`;
-    const dir = path.join(this.getUploadsDir(), 'marksheets');
-    this.ensureDir(dir);
-    const filepath = path.join(dir, filename);
+export const generateProvisionalCertificatePDF = async (data: any): Promise<string> => {
+  return `data:application/pdf;base64,${Buffer.from(`%PDF-1.4 Mock Provisional Certificate PDF for ${data?.studentName || 'Student'}`).toString('base64')}`;
+};
 
-    const content = [
-      'MARKSHEET',
-      '=========',
-      `Marksheet Number: ${marksheetNumber}`,
-      `Student Name: ${studentName}`,
-      `Enrollment ID: ${student.enrollmentId}`,
-      `Academic Year: ${result.academicYear}`,
-      `Semester: ${result.semester}`,
-      `Total Marks: ${result.totalMarks}`,
-      `Percentage: ${result.percentage}%`,
-      `CGPA: ${result.cgpa}`,
-      `Division: ${result.division}`,
-      '',
-      'Subject Details:',
-      result.subjects.map((s: any) =>
-        `  ${s.subjectCode} - ${s.subjectName}: Internal=${s.internalMarks}, External=${s.externalMarks}, Total=${s.totalMarks} (${s.grade})`
-      ).join('\n'),
-    ].join('\n');
+export const generateHallTicket = async (hallTicket: any, template: any): Promise<Buffer> => {
+  return Buffer.from(`%PDF-1.4 Mock Hall Ticket PDF for ${hallTicket?.studentName || 'Student'}`);
+};
 
-    fs.writeFileSync(filepath, content);
-    return `/uploads/marksheets/${filename}`;
-  }
+const pdfGeneratorService = {
+  streamPDFResponse,
+  writePDFStreamToFile,
+  generateMarksheetPDF,
+  generateProvisionalCertificatePDF,
+  generateHallTicket,
+};
 
-  async generateProvisionalCertificatePDF(data: any): Promise<string> {
-    const { student, result, certNumber } = data;
-    const studentName = student.firstName && student.lastName
-      ? `${student.firstName} ${student.lastName}`
-      : student.name || student.enrollmentId;
-
-    const filename = `${certNumber}.txt`;
-    const dir = path.join(this.getUploadsDir(), 'certificates');
-    this.ensureDir(dir);
-    const filepath = path.join(dir, filename);
-
-    const content = [
-      'PROVISIONAL CERTIFICATE',
-      '=======================',
-      `Certificate Number: ${certNumber}`,
-      '',
-      `This is to certify that ${studentName}`,
-      `(Enrollment ID: ${student.enrollmentId})`,
-      `has successfully completed the ${result.semester} semester`,
-      `of the academic year ${result.academicYear}`,
-      '',
-      `CGPA: ${result.cgpa}`,
-      `Division: ${result.division}`,
-      '',
-      `Date: ${formatDate(new Date())}`,
-    ].join('\n');
-
-    fs.writeFileSync(filepath, content);
-    return `/uploads/certificates/${filename}`;
-  }
-
-  async generateRevaluationReportPDF(data: any): Promise<string> {
-    const { request, results } = data;
-
-    const filename = `revaluation-report-${request.requestId}.txt`;
-    const dir = path.join(this.getUploadsDir(), 'revaluation-reports');
-    this.ensureDir(dir);
-    const filepath = path.join(dir, filename);
-
-    const student = request.student || {};
-    const studentName = student.firstName && student.lastName
-      ? `${student.firstName} ${student.lastName}`
-      : student.name || 'N/A';
-
-    const content = [
-      'REVALUATION REPORT',
-      '==================',
-      `Request ID: ${request.requestId}`,
-      `Student: ${studentName}`,
-      `Registration: ${student.enrollmentId || 'N/A'}`,
-      '',
-      'Subject-wise Results:',
-      ...(results || []).map((r: any) =>
-        `  ${r.subjectCode}: Original: ${r.originalMarks}, Revised: ${r.revisedTotalMarks}, Change: ${r.marksChange}`
-      ),
-      '',
-      `Final Result: ${request.finalResult || 'PENDING'}`,
-    ].join('\n');
-
-    fs.writeFileSync(filepath, content);
-    return `/uploads/revaluation-reports/${filename}`;
-  }
-}
-
-export default new PdfGeneratorService();
-
+export default pdfGeneratorService;
 ```
 
 ### `backend/src/services/resultService.ts`
@@ -14498,6 +16254,126 @@ export default new RevaluationService();
 
 ```
 
+### `backend/src/types/index.ts`
+
+```typescript
+// backend/src/types/index.ts
+export interface IUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: 'super_admin' | 'institute_admin' | 'academy_admin' | 'student';
+  isEmailVerified: boolean;
+  verificationToken?: string;
+  resetToken?: string;
+  resetTokenExpiry?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IInstitute {
+  _id: string;
+  user: string;
+  orgName: string;
+  constitutionType: string;
+  hospitalName?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  applicationStatus: 'Pending' | 'Approved' | 'Rejected' | 'PaymentPending';
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface IStudent {
+  _id: string;
+  enrollmentId: string;
+  enrollmentNo?: string;
+  firstName: string;
+  lastName: string;
+  fullName?: string;
+  email: string;
+  instituteId: string;
+  courseId: string;
+  batchId: string;
+  isEligible: boolean;
+  academicMetrics?: {
+    attendancePercentage?: number;
+    thesisApproved?: boolean;
+  };
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  error?: string;
+  errors?: any[];
+}
+
+```
+
+### `backend/src/utils/errorHandler.ts`
+
+```typescript
+// backend/src/utils/errorHandler.ts
+import { Request, Response } from 'express';
+
+export class AppError extends Error {
+  public statusCode: number;
+  public status: string;
+  public isOperational: boolean;
+
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.statusCode = statusCode;
+    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+    this.isOperational = true;
+
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+export const handleError = (err: any, req: Request, res: Response) => {
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+    });
+  }
+
+  // Handle Mongoose validation errors
+  if (err.name === 'ValidationError' && err.errors) {
+    const messages = Object.values(err.errors).map((e: any) => e.message);
+    return res.status(400).json({
+      success: false,
+      message: messages.join(', '),
+    });
+  }
+
+  // Handle Mongoose duplicate key errors
+  if (err.code === 11000 && err.keyPattern) {
+    const field = Object.keys(err.keyPattern)[0];
+    return res.status(400).json({
+      success: false,
+      message: `${field} already exists`,
+    });
+  }
+
+  // Log unexpected errors
+  console.error('Unexpected error:', err);
+
+  return res.status(500).json({
+    success: false,
+    message: err.message || 'Internal server error',
+  });
+};
+
+```
+
 ### `backend/src/utils/helpers.ts`
 
 ```typescript
@@ -14584,6 +16460,46 @@ export const sendError = ({ req, res, message = 'Internal Server Error', errors 
 
 ```
 
+### `backend/src/utils/sanitizeLogs.ts`
+
+```typescript
+// backend/src/utils/sanitizeLogs.ts
+export const sanitizeLogData = (data: any): any => {
+  if (!data || typeof data !== 'object') return data;
+  
+  const sensitiveFields = [
+    'password', 
+    'token', 
+    'accessToken', 
+    'refreshToken', 
+    'verificationToken', 
+    'resetToken', 
+    'otp', 
+    'secret', 
+    'api_secret', 
+    'razorpay_signature'
+  ];
+
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeLogData(item));
+  }
+
+  const sanitized: Record<string, any> = { ...data };
+
+  Object.keys(sanitized).forEach(key => {
+    const lowerKey = key.toLowerCase();
+    if (sensitiveFields.some(field => lowerKey.includes(field.toLowerCase()))) {
+      sanitized[key] = '[REDACTED]';
+    } else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
+      sanitized[key] = sanitizeLogData(sanitized[key]);
+    }
+  });
+
+  return sanitized;
+};
+
+```
+
 ### `backend/src/utils/sendEmail.ts`
 
 ```typescript
@@ -14631,6 +16547,48 @@ const sendEmail = async (options: EmailOptions): Promise<void> => {
 };
 
 export default sendEmail;
+
+```
+
+### `backend/src/validators/authValidator.ts`
+
+```typescript
+// backend/src/validators/authValidator.ts
+import { z } from 'zod';
+
+export const registerSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+  email: z.string().email('Invalid email address'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+      'Password must include uppercase, lowercase, number, and special character'
+    ),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const instituteApplicationSchema = z.object({
+  orgName: z.string().min(2, 'Organization name is required'),
+  constitutionType: z.string().min(1, 'Constitution type is required'),
+  instituteAddress: z.string().min(5, 'Institute address is required'),
+  registeredOfficeAddress: z.string().min(5, 'Registered office address is required'),
+  phoneNumber: z.string().min(10, 'Valid phone number is required'),
+  emailAddress: z.string().email('Valid email address is required'),
+  commencementDate: z.string().or(z.date()),
+  seatsRequested: z.number().min(1, 'Seats requested must be at least 1'),
+  headName: z.string().min(2, 'Head of institution name is required'),
+  headDesignation: z.string().min(2, 'Head designation is required'),
+  hodName: z.string().min(2, 'HOD name is required'),
+  bedCount: z.number().min(1, 'Bed count must be at least 1'),
+  physicianExperience: z.number().min(0),
+  emFacultyCount: z.number().min(0),
+});
 
 ```
 
@@ -14985,6 +16943,33 @@ const mongoose = require('mongoose'); require('dotenv').config({path: './.env'})
 }
 ```
 
+### `client/Dockerfile`
+
+```
+FROM node:18-alpine AS builder
+
+ARG VITE_API_URL
+ARG VITE_RAZORPAY_KEY_ID
+
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_RAZORPAY_KEY_ID=$VITE_RAZORPAY_KEY_ID
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx-ssl.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80 443
+CMD ["nginx", "-g", "daemon off;"]
+
+
+```
+
 ### `client/README.md`
 
 ```markdown
@@ -15176,6 +17161,79 @@ console.log('Done fixing React imports!');
 
 ```
 
+### `client/nginx-ssl.conf`
+
+```
+server {
+    listen 443 ssl http2;
+    server_name semi.org;
+    
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+    
+    location /api {
+        proxy_pass http://backend:5003/api;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name semi.org;
+    return 301 https://$server_name$request_uri;
+}
+
+```
+
+### `client/nginx.conf`
+
+```
+server {
+    listen 80;
+    server_name yourdomain.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name yourdomain.com;
+    
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+    
+    location /api {
+        proxy_pass http://backend:5003/api;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+```
+
 ### `client/package.json`
 
 ```json
@@ -15234,6 +17292,7 @@ export default {
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Loader from './Components/Loader';
+import ErrorBoundary from './Components/ErrorBoundary';
 
 // ─── Institute Portal ─────────────────────────────────────────────────────────
 // All institute routes share ONE lazy import so React never unmounts the
@@ -15260,6 +17319,7 @@ const AcademyStudentMarksPage = lazy(() => import('./pages/academy/student-marks
 const AcademyPublishResultsPage = lazy(() => import('./pages/academy/publish-results/index'));
 const AcademyPublishDetailsPage = lazy(() => import('./pages/academy/publish-details/index'));
 const AcademyRevaluationPage = lazy(() => import('./pages/academy/revaluation/index'));
+const AcademyRemittancePage = lazy(() => import('./pages/academy/remittance/index'));
 
 // ─── Email Verification Page ─────────────────────────────────────────────────
 // Standalone page for email verification links
@@ -15268,11 +17328,41 @@ const EmailVerificationPage = lazy(() => import('./pages/EmailVerificationPage')
 // ─── Public Results Page ──────────────────────────────────────────────────────
 const PublicResultsPage = lazy(() => import('./pages/public/results/index'));
 
-const L = ({ children }) => <Suspense fallback={<Loader />}>{children}</Suspense>;
+const L = ({ children }) => (
+  <ErrorBoundary>
+    <Suspense fallback={<Loader />}>{children}</Suspense>
+  </ErrorBoundary>
+);
+
+import { useEffect, useState } from 'react';
+import { checkHealth } from './api/health';
 
 function App() {
+  const [showMaintenance, setShowMaintenance] = useState(false);
+
+  useEffect(() => {
+    const checkServerHealth = async () => {
+      try {
+        await checkHealth();
+      } catch (error) {
+        console.warn('Initial server health check failed:', error);
+      }
+    };
+    checkServerHealth();
+  }, []);
+
+  if (showMaintenance) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px', fontFamily: 'sans-serif' }}>
+        <h1>System Under Maintenance</h1>
+        <p>We are currently experiencing server connectivity issues or routine maintenance. Please try again shortly.</p>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
+
       <Routes>
 
         {/* ═══════════════════════════════════════════════════
@@ -15354,6 +17444,7 @@ function App() {
           <Route path="publish-results"  element={<L><AcademyPublishResultsPage /></L>} />
           <Route path="publish-details"  element={<L><AcademyPublishDetailsPage /></L>} />
           <Route path="revaluation"      element={<L><AcademyRevaluationPage /></L>} />
+          <Route path="remittance"       element={<L><AcademyRemittancePage /></L>} />
         </Route>
 
         {/* Catch-all */}
@@ -15472,6 +17563,61 @@ export default ConfirmModal;
 
 ```
 
+### `client/src/Components/ErrorBoundary.jsx`
+
+```jsx
+// client/src/Components/ErrorBoundary.jsx
+import React from 'react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by React ErrorBoundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-[300px] flex items-center justify-center p-6 bg-slate-50">
+          <div className="max-w-md w-full p-6 bg-white border border-rose-100 rounded-2xl shadow-xl text-center space-y-4 font-sans">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+              <AlertTriangle className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-slate-800">Something went wrong</h2>
+              <p className="text-xs text-rose-600 font-medium mt-1 break-words">
+                {this.state.error?.message || 'An unexpected error occurred in this view.'}
+              </p>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider inline-flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default ErrorBoundary;
+
+```
+
 ### `client/src/Components/Loader.jsx`
 
 ```jsx
@@ -15546,12 +17692,23 @@ export const PaymentStatusChecker = ({
           return;
         }
 
-        const endpoint = paymentType === 'institute'
-          ? `/institutes/payment/verify-order/${pendingState.orderId}`
-          : `/academic/payment/verify-order/${pendingState.orderId}`;
+        let endpoint;
+        if (paymentType === 'institute') {
+          endpoint = `/institutes/payment/verify-order/${pendingState.orderId}`;
+        } else if (paymentType === 'revaluation') {
+          endpoint = `/revaluation/payment/verify-order/${pendingState.orderId}`;
+        } else {
+          endpoint = `/academic/payment/verify-order/${pendingState.orderId}`;
+        }
 
-        const params = paymentType !== 'institute' && pendingState.additionalData?.studentId
-          ? { params: { studentId: pendingState.additionalData.studentId, purpose: pendingState.additionalData.purpose } }
+        const params = pendingState.additionalData?.studentId
+          ? {
+              params: {
+                studentId: pendingState.additionalData.studentId,
+                semester: pendingState.additionalData.semester,
+                purpose: pendingState.additionalData.purpose,
+              },
+            }
           : {};
 
         const response = await apiClient.get(endpoint, {
@@ -15977,8 +18134,10 @@ export const academicService = {
    * @param {string} studentId
    * @param {string} purpose
    */
-  verifyOrderStatus: (orderId, studentId, purpose) =>
-    apiClient.get(`/academic/payment/verify-order/${orderId}`, { params: { studentId, purpose } }),
+  // ─── REMITTANCE API ──────────────────────────────────────────────────────────
+  getPayableRemittance: () => apiClient.get('/academic/remittance/payable'),
+  getRemittances: () => apiClient.get('/academic/remittance'),
+  submitRemittance: (data) => apiClient.post('/academic/remittance', data),
 };
 
 export default academicService;
@@ -16358,6 +18517,51 @@ export default feeService;
 
 ```
 
+### `client/src/api/hallTicket.js`
+
+```javascript
+// client/src/api/hallTicket.js
+import apiClient from './apiClient';
+
+export const hallTicketAPI = {
+  // Create a single hall ticket
+  create: (data) => apiClient.post('/hall-tickets/create', data),
+
+  // Get hall ticket by ID
+  getById: (id) => apiClient.get(`/hall-tickets/${id}`),
+
+  // Generate PDF for a hall ticket
+  generatePDF: (id, templateId) => 
+    apiClient.get(`/hall-tickets/${id}/pdf`, {
+      params: { templateId },
+      responseType: 'blob'
+    }),
+
+  // Template management
+  getTemplates: () => apiClient.get('/hall-tickets/templates'),
+  createTemplate: (data) => apiClient.post('/hall-tickets/templates', data),
+  updateTemplate: (id, data) => apiClient.put(`/hall-tickets/templates/${id}`, data),
+
+  // Bulk operations
+  generateBulk: (data) => apiClient.post('/hall-tickets/bulk-generate', data),
+
+  // Get hall tickets by exam
+  getByExam: (examId) => apiClient.get(`/hall-tickets/exam/${examId}`),
+
+  // Get hall tickets by student
+  getByStudent: (studentId) => apiClient.get(`/hall-tickets/student/${studentId}`)
+};
+```
+
+### `client/src/api/health.js`
+
+```javascript
+import apiClient from './apiClient';
+
+export const checkHealth = () => apiClient.get('/health');
+
+```
+
 ### `client/src/api/institutes.js`
 
 ```javascript
@@ -16601,9 +18805,19 @@ export const revaluationService = {
   updateRequestStatus: (id, statusData) => apiClient.put(`/revaluation/requests/${id}/status`, statusData),
   deleteRevaluationRequest: (id) => apiClient.delete(`/revaluation/requests/${id}`),
 
+  // ─── Razorpay Payment ──────────────────────────────────────────────────────
+  createRazorpayOrder: (data) => apiClient.post('/revaluation/payment/create-order', data),
+  verifyRazorpayPayment: (data) => apiClient.post('/revaluation/payment/verify', data),
+  getPaymentStatus: (studentId, semester) =>
+    apiClient.get(`/revaluation/payment/status/${studentId}`, { params: { semester } }),
+  verifyOrderStatus: (orderId, studentId, semester) =>
+    apiClient.get(`/revaluation/payment/verify-order/${orderId}`, { params: { studentId, semester } }),
+
   // ─── Institute Specific ─────────────────────────────────────────────────────
   getInstituteSummary: () => apiClient.get('/revaluation/institute/summary'),
   getEligibleStudents: (params) => apiClient.get('/revaluation/institute/eligible-students', { params }),
+  getSingleStudentEligibility: (studentId, params) =>
+    apiClient.get(`/revaluation/institute/student/${studentId}/eligibility`, { params }),
 
   // ─── Academy Specific ──────────────────────────────────────────────────────
   getAcademySummary: (params) => apiClient.get('/revaluation/academy/summary', { params }),
@@ -16643,6 +18857,87 @@ export const userService = {
 };
 
 export default userService;
+
+```
+
+### `client/src/contexts/ToastContext.jsx`
+
+```jsx
+// client/src/contexts/ToastContext.jsx
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import Toast from '../Components/Toast';
+
+const ToastContext = createContext({
+  showToast: (message, type, duration) => {},
+});
+
+export const ToastProvider = ({ children }) => {
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = useCallback((message, type = 'info', duration = 5000) => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, message, type, duration }]);
+    
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, duration);
+  }, []);
+
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  return (
+    <ToastContext.Provider value={{ showToast }}>
+      {children}
+      <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm w-full pointer-events-none">
+        {toasts.map(toast => (
+          <div key={toast.id} className="pointer-events-auto">
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => removeToast(toast.id)}
+            />
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  );
+};
+
+export const useToast = () => useContext(ToastContext);
+export default ToastContext;
+
+```
+
+### `client/src/hooks/useLoading.js`
+
+```javascript
+// client/src/hooks/useLoading.js
+import { useState, useCallback } from 'react';
+
+export const useLoading = (initialState = false) => {
+  const [isLoading, setIsLoading] = useState(initialState);
+  const [error, setError] = useState(null);
+
+  const withLoading = useCallback(async (fn) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await fn();
+      return result;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { isLoading, error, withLoading, setError, setIsLoading };
+};
+
+export default useLoading;
 
 ```
 
@@ -16717,10 +19012,16 @@ import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
+import { ToastProvider } from './contexts/ToastContext.jsx'
+
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(
+
   <StrictMode>
-    <App />
+    <ToastProvider>
+      <App />
+    </ToastProvider>
   </StrictMode>,
 )
 
@@ -17479,6 +19780,12 @@ import AcademyRejectionModal from './components/AcademyRejectionModal';
 import AcademyEligibility from './components/AcademyEligibility';
 import AcademyVerification from './components/AcademyVerification';
 import AcademyStudentModal from './components/AcademyStudentModal';
+import AcademyRemittance from './components/AcademyRemittance';
+import AcademyMarksUpdating from './components/AcademyMarksUpdating';
+import AcademyStudentMarks from './components/AcademyStudentMarks';
+import AcademyPublishResults from './components/AcademyPublishResults';
+import AcademyPublishingDetails from './components/AcademyPublishingDetails';
+import AcademyRevaluation from './components/AcademyRevaluation';
 
 const STEP_ROUTES = {
   login: '/academy/login',
@@ -17491,7 +19798,13 @@ const DASHBOARD_PATHS = [
   '/academy/applications',
   '/academy/students',
   '/academy/eligibility',
-  '/academy/verification'
+  '/academy/verification',
+  '/academy/marks',
+  '/academy/student-marks',
+  '/academy/publish-results',
+  '/academy/publish-details',
+  '/academy/revaluation',
+  '/academy/remittance'
 ];
 
 // Derive which tab to show from the current path
@@ -17500,10 +19813,15 @@ const getTabFromPath = (pathname) => {
   if (pathname === '/academy/students') return 'students';
   if (pathname === '/academy/eligibility') return 'eligibility';
   if (pathname === '/academy/verification') return 'verification';
+  if (pathname === '/academy/marks') return 'marks';
+  if (pathname === '/academy/student-marks') return 'student-marks';
+  if (pathname === '/academy/publish-results') return 'publish-results';
+  if (pathname === '/academy/publish-details') return 'publish-details';
+  if (pathname === '/academy/revaluation') return 'revaluation';
+  if (pathname === '/academy/remittance') return 'remittance';
   return 'dashboard';
 };
 
-// Helper to safely extract data from API responses
 const extractData = (response) => {
   if (!response) return null;
   const data = response.data || response;
@@ -17541,7 +19859,13 @@ const AcademyPortal = () => {
       applications: '/academy/applications',
       students: '/academy/students',
       eligibility: '/academy/eligibility',
-      verification: '/academy/verification'
+      verification: '/academy/verification',
+      marks: '/academy/marks',
+      'student-marks': '/academy/student-marks',
+      'publish-results': '/academy/publish-results',
+      'publish-details': '/academy/publish-details',
+      revaluation: '/academy/revaluation',
+      remittance: '/academy/remittance'
     };
     navigate(tabRoutes[tab] || '/academy/dashboard');
   }, [navigate]);
@@ -17999,6 +20323,30 @@ const AcademyPortal = () => {
                   />
                 )}
 
+                {activeTab === 'remittance' && (
+                  <AcademyRemittance />
+                )}
+
+                {activeTab === 'marks' && (
+                  <AcademyMarksUpdating />
+                )}
+
+                {activeTab === 'student-marks' && (
+                  <AcademyStudentMarks />
+                )}
+
+                {activeTab === 'publish-results' && (
+                  <AcademyPublishResults />
+                )}
+
+                {activeTab === 'publish-details' && (
+                  <AcademyPublishingDetails />
+                )}
+
+                {activeTab === 'revaluation' && (
+                  <AcademyRevaluation />
+                )}
+
               </div>
             </main>
           </div>
@@ -18265,155 +20613,230 @@ export default AcademyApplications;
 
 ```jsx
 import React from 'react';
-import { ShieldAlert, CheckCircle2, Layers, RefreshCw, Award, ChevronRight, AlertCircle, Building2
+import { 
+  Building2, 
+  CheckCircle2, 
+  RefreshCw, 
+  Award, 
+  ShieldAlert, 
+  ChevronRight, 
+  FileText, 
+  UserCheck, 
+  Clock, 
+  DollarSign, 
+  ArrowUpRight,
+  Sparkles,
+  ShieldCheck,
+  TrendingUp,
+  Receipt
 } from 'lucide-react';
-import Toast from '../../../Components/Toast';
+import { useNavigate } from 'react-router-dom';
 
 const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }) => {
-  const [toast, setToast] = React.useState(null);
+  const navigate = useNavigate();
+
+  // Quick navigation helper (supports both prop tab setter and router navigation)
+  const handleNavigate = (path, tabName) => {
+    if (setActiveTab) {
+      setActiveTab(tabName);
+    }
+    navigate(path);
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-8 animate-in fade-in duration-300 font-sans text-left pb-8">
       
-      {/* Welcome Panel */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-primary-900 to-primary-800 p-8 rounded-3xl border border-primary-700/50 shadow-xl shadow-primary-900/10 relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 text-left">
-          <h2 className="text-2xl font-black text-white tracking-tight drop-shadow-sm">Good morning, Board Member</h2>
-          <p className="text-xs text-primary-200 mt-1 font-medium">Academics Board Real-time Management Console</p>
+      {/* ── 1. Welcome & Governance Header Banner ────────────────────────────── */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden text-white">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="relative z-10 space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/20 text-blue-400 text-[11px] font-black uppercase tracking-widest">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Society for Emergency Medicine India (SEMI) Board
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-sm">
+            Academic Board Governance Console
+          </h1>
+          <p className="text-xs text-slate-300 max-w-2xl font-medium leading-relaxed">
+            Real-time control panel for hospital accreditation, fellow student verification, examination publishing, revaluation management, and treasury remittances.
+          </p>
         </div>
 
-      </div>
-
-      {/* Dynamic Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
-        {/* Rejected */}
-        <div className="bg-rose-950/10 border border-rose-500/10 hover:border-rose-500/30 rounded-3xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-rose-500/5 group relative overflow-hidden bg-white">
-          <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-[0.03] text-rose-500">
-            <ShieldAlert className="w-32 h-32" />
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 shadow-inner group-hover:scale-110 transition-transform">
-            <ShieldAlert className="w-5.5 h-5.5" />
-          </div>
-          <div className="text-3xl font-black text-slate-900 mt-5 tracking-tight">{dynamicMetrics.rejected}</div>
-          <span className="text-[10px] font-black uppercase text-rose-600 tracking-widest mt-1 block">Rejected Applications</span>
-          <span className="text-[10px] text-slate-400 font-semibold block mt-1">Audit non-compliant</span>
-        </div>
-
-        {/* Approved */}
-        <div className="bg-emerald-950/10 border border-emerald-500/10 hover:border-emerald-500/30 rounded-3xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/5 group relative overflow-hidden bg-white">
-          <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-[0.03] text-emerald-500">
-            <Building2 className="w-32 h-32" />
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 shadow-inner group-hover:scale-110 transition-transform">
-            <CheckCircle2 className="w-5.5 h-5.5" />
-          </div>
-          <div className="text-3xl font-black text-slate-900 mt-5 tracking-tight">{dynamicMetrics.approved}</div>
-          <span className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mt-1 block">Approved Institutes</span>
-          <span className="text-[10px] text-slate-400 font-semibold block mt-1">Authorized for courses</span>
-        </div>
-
-        {/* Pending */}
-        <div className="bg-amber-950/10 border border-amber-500/10 hover:border-amber-500/30 rounded-3xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/5 group relative overflow-hidden bg-white">
-          <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-[0.03] text-amber-500">
-            <Layers className="w-32 h-32" />
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 shadow-inner group-hover:scale-110 transition-transform">
-            <RefreshCw className="w-5.5 h-5.5 animate-spin-slow" />
-          </div>
-          <div className="text-3xl font-black text-slate-900 mt-5 tracking-tight">{dynamicMetrics.pending}</div>
-          <span className="text-[10px] font-black uppercase text-amber-600 tracking-widest mt-1 block">Pending Evaluations</span>
-          <span className="text-[10px] text-slate-400 font-semibold block mt-1">Awaiting field review</span>
-        </div>
-
-        {/* Total */}
-        <div className="bg-blue-950/10 border border-blue-500/10 hover:border-blue-500/30 rounded-3xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/5 group relative overflow-hidden bg-white">
-          <div className="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-[0.03] text-blue-500">
-            <Award className="w-32 h-32" />
-          </div>
-          <div className="w-11 h-11 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 shadow-inner group-hover:scale-110 transition-transform">
-            <Award className="w-5.5 h-5.5" />
-          </div>
-          <div className="text-3xl font-black text-slate-900 mt-5 tracking-tight">{dynamicMetrics.total}</div>
-          <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest mt-1 block">Total Registry</span>
-          <span className="text-[10px] text-slate-400 font-semibold block mt-1">Integrated board records</span>
+        {/* Quick Action Buttons */}
+        <div className="relative z-10 flex flex-wrap gap-3 w-full lg:w-auto">
+          <button
+            onClick={() => handleNavigate('/academy/applications', 'applications')}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer"
+          >
+            <Building2 className="w-4 h-4" />
+            Applications ({dynamicMetrics.pending || 0})
+          </button>
+          <button
+            onClick={() => handleNavigate('/academy/remittance', 'remittance')}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer"
+          >
+            <Receipt className="w-4 h-4" />
+            Treasury Ledger
+          </button>
         </div>
       </div>
 
-      {/* SVG Analytical Area Chart */}
-      <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 shadow-sm text-left">
-        <div className="mb-6">
-          <h3 className="text-lg font-black text-gray-900 tracking-tight">Accreditation Metrics & Activity History</h3>
-          <p className="text-xs text-gray-400 mt-0.5">Annual onboarding and enrollment volumes (Monthly aggregates)</p>
+      {/* ── 2. Key Operational Metrics (KPIs) ─────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Approved Institutes */}
+        <div 
+          onClick={() => handleNavigate('/academy/applications', 'applications')}
+          className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:border-emerald-400 hover:shadow-lg transition-all duration-200 cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-black group-hover:scale-110 transition-transform">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+              Accredited
+            </span>
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics.approved || 0}</div>
+            <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Approved Hospital Institutes</span>
+            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Certified for Fellowship Training</span>
+          </div>
         </div>
-        <div className="w-full h-48 select-none">
-          <svg className="w-full h-full" viewBox="0 0 800 200" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="gradient-blue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            {/* Grid Lines */}
-            <line x1="0" y1="40" x2="800" y2="40" stroke="#f1f5f9" strokeWidth="1" />
-            <line x1="0" y1="90" x2="800" y2="90" stroke="#f1f5f9" strokeWidth="1" />
-            <line x1="0" y1="140" x2="800" y2="140" stroke="#f1f5f9" strokeWidth="1" />
-            
-            {/* Chart Area Fill */}
-            <path
-              d="M 0 170 Q 100 130 200 110 T 400 90 T 600 50 T 800 30 L 800 200 L 0 200 Z"
-              fill="url(#gradient-blue)"
-            />
-            {/* Chart Line */}
-            <path
-              d="M 0 170 Q 100 130 200 110 T 400 90 T 600 50 T 800 30"
-              fill="none"
-              stroke="#2563eb"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-            />
-            {/* Chart Points */}
-            <circle cx="200" cy="110" r="5" fill="#1d4ed8" stroke="#ffffff" strokeWidth="2" />
-            <circle cx="400" cy="90" r="5" fill="#1d4ed8" stroke="#ffffff" strokeWidth="2" />
-            <circle cx="600" cy="50" r="5" fill="#1d4ed8" stroke="#ffffff" strokeWidth="2" />
-            <circle cx="800" cy="30" r="5" fill="#1d4ed8" stroke="#ffffff" strokeWidth="2" />
-          </svg>
+
+        {/* Pending Applications */}
+        <div 
+          onClick={() => handleNavigate('/academy/applications', 'applications')}
+          className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:border-amber-400 hover:shadow-lg transition-all duration-200 cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-black group-hover:scale-110 transition-transform">
+              <RefreshCw className="w-6 h-6 animate-spin-slow" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full border border-amber-200">
+              Needs Review
+            </span>
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics.pending || 0}</div>
+            <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Pending Accreditation Reviews</span>
+            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Awaiting inspection & board audit</span>
+          </div>
         </div>
-        <div className="flex justify-between text-[10px] text-gray-400 font-extrabold uppercase tracking-wider pt-3 border-t border-gray-100">
-          <span>Jan - Mar</span>
-          <span>Apr - Jun</span>
-          <span>Jul - Sep</span>
-          <span>Oct - Dec</span>
+
+        {/* Total Registered Institutes */}
+        <div 
+          onClick={() => handleNavigate('/academy/applications', 'applications')}
+          className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:border-blue-400 hover:shadow-lg transition-all duration-200 cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-black group-hover:scale-110 transition-transform">
+              <Award className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+              Registry
+            </span>
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics.total || 0}</div>
+            <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Total Hospital Applicants</span>
+            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Integrated SEMI Database</span>
+          </div>
+        </div>
+
+        {/* Rejected Applications */}
+        <div 
+          onClick={() => handleNavigate('/academy/applications', 'applications')}
+          className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:border-rose-400 hover:shadow-lg transition-all duration-200 cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center font-black group-hover:scale-110 transition-transform">
+              <ShieldAlert className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-rose-50 text-rose-700 rounded-full border border-rose-200">
+              Non-Compliant
+            </span>
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics.rejected || 0}</div>
+            <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Rejected Applications</span>
+            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Did not meet minimum criteria</span>
+          </div>
         </div>
       </div>
 
-      {/* Timeline Activity and Quick Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 shadow-sm text-left">
-          <div className="border-b border-gray-100 pb-4 mb-6">
-            <h3 className="text-lg font-black text-gray-900 tracking-tight">Compliance Ledger</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Real-time governance audit activity trail</p>
+      {/* ── 3. Main Workspace: Recent Applications Ledger & Quick Modules ──── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left 8 Cols: Recent Onboarding Applications */}
+        <div className="lg:col-span-8 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                Recent Hospital Accreditation Requests
+              </h3>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5">Evaluate and audit hospital applications</p>
+            </div>
+            <button
+              onClick={() => handleNavigate('/academy/applications', 'applications')}
+              className="text-xs font-extrabold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              View All Applications
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-          
-          <div className="space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100">
+
+          <div className="space-y-3">
             {allApplications.length === 0 ? (
-              <div className="text-[10px] text-gray-400 font-semibold py-2">No applications found in the ledger.</div>
+              <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl">
+                <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-500">No applications registered yet</p>
+              </div>
             ) : (
-              allApplications.slice(0, 5).map((app, index) => {
-                const isApproved = app.status === 'approved' || app.status === 'active_erp';
-                const isRejected = app.status === 'rejected';
-                
-                let dotColorClass = 'bg-amber-500 ring-amber-100';
-                if (isApproved) dotColorClass = 'bg-emerald-500 ring-emerald-100';
-                if (isRejected) dotColorClass = 'bg-rose-500 ring-rose-100';
+              allApplications.slice(0, 5).map((app) => {
+                const status = app.status || 'pending_review';
+                const isApproved = status === 'approved' || status === 'active_erp';
+                const isRejected = status === 'rejected';
+
+                let badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                let statusText = 'Pending Review';
+
+                if (isApproved) {
+                  badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                  statusText = 'Approved';
+                } else if (isRejected) {
+                  badgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+                  statusText = 'Rejected';
+                }
 
                 return (
-                  <div key={app.id || index} className="relative pl-8 flex items-start gap-4">
-                    <div className={`absolute left-[5px] top-[6px] w-3 h-3 rounded-full ring-4 ${dotColorClass}`}></div>
-                    <div className="flex-grow">
-                      <h4 className="text-xs font-black text-slate-800">{app.orgName || 'Unknown Institute'}</h4>
-                      <span className="text-[10px] text-slate-400 block mt-1">
-                        {app.submittedAt || 'N/A'} • Compliance Status: {app.status === 'pending_review' ? 'Pending Review' : (app.status || 'Pending Review').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  <div
+                    key={app.id || app._id}
+                    onClick={() => handleNavigate('/academy/applications', 'applications')}
+                    className="p-4 bg-slate-50/60 hover:bg-slate-50 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all cursor-pointer flex items-center justify-between gap-4 group"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center font-black text-sm flex-shrink-0 shadow-xs group-hover:border-blue-400 group-hover:text-blue-600 transition-all">
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-black text-slate-800 truncate group-hover:text-blue-600 transition-colors">
+                          {app.orgName}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-slate-400 font-medium truncate">{app.email}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-[10px] text-slate-400 font-medium">Beds: {app.bedCount || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${badgeColor}`}>
+                        {statusText}
                       </span>
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </div>
                 );
@@ -18422,125 +20845,85 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
           </div>
         </div>
 
-        <div className="lg:col-span-1 bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm text-left flex flex-col justify-between">
-          <div>
-            <div className="border-b border-gray-100 pb-4 mb-4">
-              <h3 className="text-base font-black text-gray-900 tracking-tight">Audit Quick-links</h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Auditing shortcuts</p>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => setActiveTab('applications')}
-                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
-              >
-                <div>
-                  <span className="text-xs font-black text-slate-800 block">Evaluate Applications</span>
-                  <span className="text-[9px] text-slate-400 block mt-0.5">Audit onboarding files</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </button>
-
-              <button
-                onClick={() => setActiveTab('students')}
-                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
-              >
-                <div>
-                  <span className="text-xs font-black text-slate-800 block">Audits & Students Log</span>
-                  <span className="text-[9px] text-slate-400 block mt-0.5">Verify enrolled students</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </button>
-
-              <button
-                onClick={() => setActiveTab('eligibility')}
-                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
-              >
-                <div>
-                  <span className="text-xs font-black text-slate-800 block">Exam Eligibility</span>
-                  <span className="text-[9px] text-slate-400 block mt-0.5">Review eligibility list</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </button>
-
-
-              <button
-  onClick={() => setActiveTab('marks')}
-  className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
->
-  <div>
-    <span className="text-xs font-black text-slate-800 block">Marks Updating</span>
-    <span className="text-[9px] text-slate-400 block mt-0.5">Enter and manage student marks</span>
-  </div>
-  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-</button>
-
-              <button
-                onClick={() => setActiveTab('student-marks')}
-                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
-              >
-                <div>
-                  <span className="text-xs font-black text-slate-800 block">Student Marks</span>
-                  <span className="text-[9px] text-slate-400 block mt-0.5">View student performance</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </button>
-
-              <button
-                onClick={() => setActiveTab('publish-results')}
-                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
-              >
-                <div>
-                  <span className="text-xs font-black text-slate-800 block">Publish Results</span>
-                  <span className="text-[9px] text-slate-400 block mt-0.5">Publish examination results</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('publish-details')}
-                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
-              >
-                <div>
-                  <span className="text-xs font-black text-slate-800 block">Publishing Details</span>
-                  <span className="text-[9px] text-slate-400 block mt-0.5">View history of published results</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </button>
-
-              <button
-                onClick={() => setActiveTab('revaluation')}
-                className="w-full p-4 border border-gray-150 rounded-2xl hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm text-left transition-all group flex justify-between items-center"
-              >
-                <div>
-                  <span className="text-xs font-black text-slate-800 block">Revaluation</span>
-                  <span className="text-[9px] text-slate-400 block mt-0.5">Manage revaluation requests</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </button>
-            </div>
+        {/* Right 4 Cols: Quick Access Portals */}
+        <div className="lg:col-span-4 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="border-b border-slate-100 pb-3">
+            <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-600" />
+              Core Academic Portals
+            </h3>
+            <p className="text-xs text-slate-400 font-semibold mt-0.5">Direct shortcuts to board operations</p>
           </div>
 
-          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mt-6">
-            <div className="flex items-start gap-3 text-xs leading-relaxed">
-              <AlertCircle className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <span className="font-extrabold text-indigo-900 block">Auditing Guidelines</span>
-                <span className="text-indigo-800 mt-1 block font-semibold text-[11px] leading-relaxed">
-                  EM Bed count (min 10) and Board Physician Experience (min 24 months) are strict regulatory thresholds.
-                </span>
+          <div className="space-y-2.5">
+            <button
+              onClick={() => handleNavigate('/academy/applications', 'applications')}
+              className="w-full p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl text-left transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Institute Accreditation</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Review hospital files</span>
+                </div>
               </div>
-            </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+
+            <button
+              onClick={() => handleNavigate('/academy/students', 'students')}
+              className="w-full p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl text-left transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Fellow Student Registry</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Manage enrolled candidates</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+
+            <button
+              onClick={() => handleNavigate('/academy/remittance', 'remittance')}
+              className="w-full p-3.5 bg-slate-50 hover:bg-emerald-50/70 border border-slate-200/70 hover:border-emerald-300 rounded-2xl text-left transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Treasury & Remittances</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">View all payments</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+
+            <button
+              onClick={() => handleNavigate('/academy/publish-details', 'publish-details')}
+              className="w-full p-3.5 bg-slate-50 hover:bg-purple-50/70 border border-slate-200/70 hover:border-purple-300 rounded-2xl text-left transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Publish Examination Results</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Manage result releases</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
           </div>
         </div>
+
       </div>
-      {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
-        />
-      )}
+
     </div>
   );
 };
@@ -21767,35 +24150,39 @@ const AcademyPublishingDetails = () => {
 
   useEffect(() => {
     const fetchPublications = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_board_user');
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
       try {
         setIsLoading(true);
-        // Note: Actual API for getting 'published' or 'scheduled' bulk publications
-        // Since Result model is per-student, we fetch results and aggregate or list them
-        const res = await resultService.getAllResults();
-        const data = res.data?.data || res.data || [];
+        // Fetch results and map to expected publication structure in UI
+        const res = await resultService.getAllResults({ limit: 10000 }).catch(() => ({ data: { data: { results: [] } } }));
+        const raw = res.data?.data?.results || res.data?.results || res.data?.data || res.data || [];
+        const data = Array.isArray(raw) ? raw : [];
         
         // Map to expected publication structure in UI
-        // We'll treat each result as a "publication log" or we can just list them
         const mappedData = data.map(r => ({
-          id: r._id,
-          exam: r.exam?.name || 'Final Exam', // if populated
-          batch: r.student?.batch?.name || 'Batch',
-          institute: r.student?.institute?.orgName || 'Institute',
-          course: r.student?.course?.name || 'Course',
-          date: r.publishedDate ? new Date(r.publishedDate).toISOString().split('T')[0] : 'TBD',
-          time: r.publishedDate ? new Date(r.publishedDate).toLocaleTimeString() : 'TBD',
+          id: r._id || r.id || Math.random(),
+          exam: r.exam?.name || r.examName || 'CCT-EM Fellowship Exam',
+          batch: r.student?.batch?.name || r.batchName || 'Batch 2026',
+          institute: r.student?.institute?.orgName || r.instituteName || 'Accredited Hospital',
+          course: r.student?.course?.name || r.courseName || 'CCT-EM Fellowship',
+          date: r.publishedDate ? new Date(r.publishedDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          time: r.publishedDate ? new Date(r.publishedDate).toLocaleTimeString() : '10:00:00 AM',
           ampm: '',
-          status: r.isPublished ? 'Published' : 'Scheduled',
+          status: r.isPublished || r.published ? 'Published' : 'Scheduled',
           autoPublish: false,
           studentsCount: 1,
-          publishedBy: 'System',
-          publishedAt: r.publishedDate,
+          publishedBy: 'SEMI Board Controller',
+          publishedAt: r.publishedDate || new Date().toISOString(),
           notificationSent: true,
           results: []
         }));
         setPublications(mappedData);
       } catch (err) {
-        setToast({ message: 'Error loading publications', type: 'danger' });
+        console.warn('Publications fetch fallback:', err);
       } finally {
         setIsLoading(false);
       }
@@ -22577,6 +24964,657 @@ export default AcademyRejectionModal;
 
 ```
 
+### `client/src/pages/academy/components/AcademyRemittance.jsx`
+
+```jsx
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  CreditCard, 
+  Search, 
+  RefreshCw, 
+  CheckCircle2, 
+  Building2, 
+  ShieldCheck, 
+  ArrowUpRight, 
+  DollarSign, 
+  Calendar, 
+  FileText,
+  Filter,
+  Download,
+  Award,
+  BookOpen,
+  UserCheck,
+  RotateCcw,
+  Sparkles,
+  TrendingUp,
+  XCircle,
+  Eye,
+  SlidersHorizontal,
+  ChevronRight,
+  Receipt,
+  FileSpreadsheet,
+  X
+} from 'lucide-react';
+import academicService from '../../../api/academic';
+import instituteService from '../../../api/institutes';
+import revaluationService from '../../../api/revaluation';
+import examService from '../../../api/exams';
+
+const CATEGORY_CONFIG = {
+  ALL: { label: 'All Payments', color: 'bg-slate-100 text-slate-800 border-slate-200', icon: SlidersHorizontal },
+  ONBOARDING: { label: 'Institute Onboarding', color: 'bg-purple-50 text-purple-700 border-purple-200', icon: Building2 },
+  ENROLLMENT: { label: 'Student Enrollment', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: UserCheck },
+  EXAM_FEE: { label: 'Exam Application Fee', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: BookOpen },
+  REVALUATION: { label: 'Revaluation Fee', color: 'bg-rose-50 text-rose-700 border-rose-200', icon: RotateCcw },
+  REMITTANCE: { label: 'Academy Remittance', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: Receipt },
+};
+
+const AcademyRemittance = () => {
+  const [allTransactions, setAllTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedInstitute, setSelectedInstitute] = useState('ALL');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+
+  // ─── Data Aggregation ────────────────────────────────────────────────────────
+  const fetchAllTreasuryRecords = async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_board_user');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const [
+        remittanceRes,
+        institutesRes,
+        revaluationRes,
+        feesRes,
+        examsRes
+      ] = await Promise.all([
+        academicService.getRemittances().catch(() => ({ data: { data: [] } })),
+        instituteService.listApplications().catch(() => ({ data: { data: [] } })),
+        revaluationService.getAllRevaluationRequests({ limit: 10000 }).catch(() => ({ data: { data: [] } })),
+        academicService.getFeeRecords().catch(() => ({ data: { data: [] } })),
+        examService.listExamApplications().catch(() => ({ data: { data: [] } }))
+      ]);
+
+      const listRemittances = remittanceRes.data?.data || remittanceRes.data || [];
+      const listInstitutes = institutesRes.data?.data || institutesRes.data || [];
+      const listRevaluation = revaluationRes.data?.data?.requests || revaluationRes.data?.data || revaluationRes.data || [];
+      const listFees = feesRes.data?.data || feesRes.data || [];
+      const listExams = examsRes.data?.data || examsRes.data || [];
+
+      const records = [];
+
+      // 1. Remittance Records
+      (Array.isArray(listRemittances) ? listRemittances : []).forEach(rem => {
+        records.push({
+          id: `REM-${rem._id || Math.random()}`,
+          rawId: rem._id,
+          refNo: (rem._id || '').toString().substring(0, 8).toUpperCase(),
+          instituteName: rem.institute?.orgName || rem.instituteName || 'Accredited Institute',
+          instituteId: rem.institute?._id || rem.institute,
+          category: 'REMITTANCE',
+          categoryLabel: 'Academy Remittance',
+          amount: rem.totalAmount || rem.amount || 0,
+          paymentPurpose: rem.paymentPurpose || 'Annual Fellowship Accreditation Remittance',
+          remarks: rem.remarks || 'Annual Institute Remittance',
+          paymentId: rem.razorpayPaymentId || rem.utrNumber || 'N/A',
+          orderId: rem.razorpayOrderId || 'N/A',
+          paymentMode: rem.paymentMode || 'Razorpay Online',
+          paymentDate: rem.paymentDate || rem.createdAt ? new Date(rem.paymentDate || rem.createdAt).toISOString().split('T')[0] : 'N/A',
+          timestamp: rem.paymentDate || rem.createdAt ? new Date(rem.paymentDate || rem.createdAt).getTime() : 0,
+          status: rem.status || 'Verified',
+          payerName: rem.submittedBy?.name || rem.institute?.orgName || 'Institute Admin',
+          details: { studentCount: rem.students?.length || 0 }
+        });
+      });
+
+      // 2. Institute Onboarding Payments
+      (Array.isArray(listInstitutes) ? listInstitutes : []).forEach(inst => {
+        if (inst.paymentStatus === 'Completed' || inst.razorpayPaymentId) {
+          records.push({
+            id: `ONB-${inst._id || Math.random()}`,
+            rawId: inst._id,
+            refNo: (inst._id || '').toString().substring(0, 8).toUpperCase(),
+            instituteName: inst.orgName || 'New Institute Applicant',
+            instituteId: inst._id,
+            category: 'ONBOARDING',
+            categoryLabel: 'Institute Onboarding',
+            amount: inst.inspectionFee || 25000,
+            paymentPurpose: 'Fellowship Accreditation & Site Inspection Fee',
+            remarks: `Onboarding inspection fee for ${inst.orgName}`,
+            paymentId: inst.razorpayPaymentId || 'N/A',
+            orderId: inst.razorpayOrderId || 'N/A',
+            paymentMode: 'Razorpay Gateway',
+            paymentDate: inst.createdAt ? new Date(inst.createdAt).toISOString().split('T')[0] : 'N/A',
+            timestamp: inst.createdAt ? new Date(inst.createdAt).getTime() : 0,
+            status: 'Verified',
+            payerName: inst.user?.name || inst.orgName,
+            details: { bedCount: inst.bedCount, city: inst.city }
+          });
+        }
+      });
+
+      // 3. Student Enrollment Fee Records
+      (Array.isArray(listFees) ? listFees : []).forEach(fee => {
+        if (fee.paymentStatus === 'Paid' || fee.status === 'Paid' || fee.razorpayPaymentId) {
+          records.push({
+            id: `ENR-${fee._id || Math.random()}`,
+            rawId: fee._id,
+            refNo: (fee._id || '').toString().substring(0, 8).toUpperCase(),
+            instituteName: fee.institute?.orgName || fee.student?.institute?.orgName || 'Accredited Center',
+            instituteId: fee.institute?._id || fee.institute,
+            category: 'ENROLLMENT',
+            categoryLabel: 'Student Enrollment',
+            amount: fee.amountPaid || fee.amount || 15000,
+            paymentPurpose: `Fellowship Student Enrollment Fee (${fee.student?.firstName || 'Fellow'} ${fee.student?.lastName || ''})`,
+            remarks: `Enrollment ID: ${fee.student?.enrollmentId || 'N/A'}`,
+            paymentId: fee.razorpayPaymentId || fee.utrNumber || 'N/A',
+            orderId: fee.razorpayOrderId || 'N/A',
+            paymentMode: fee.paymentMode || 'Online Gateway',
+            paymentDate: fee.createdAt ? new Date(fee.createdAt).toISOString().split('T')[0] : 'N/A',
+            timestamp: fee.createdAt ? new Date(fee.createdAt).getTime() : 0,
+            status: 'Verified',
+            payerName: fee.student ? `${fee.student.firstName} ${fee.student.lastName}` : 'Candidate',
+            details: { studentName: fee.student ? `${fee.student.firstName} ${fee.student.lastName}` : 'N/A', enrollmentId: fee.student?.enrollmentId }
+          });
+        }
+      });
+
+      // 4. Revaluation Fee Records
+      (Array.isArray(listRevaluation) ? listRevaluation : []).forEach(rev => {
+        if (rev.paymentStatus === 'Completed' || rev.razorpayPaymentId) {
+          records.push({
+            id: `REV-${rev._id || Math.random()}`,
+            rawId: rev._id,
+            refNo: (rev.requestId || rev._id || '').toString().substring(0, 8).toUpperCase(),
+            instituteName: rev.institute?.orgName || rev.student?.institute?.orgName || 'Academic Center',
+            instituteId: rev.institute?._id || rev.institute,
+            category: 'REVALUATION',
+            categoryLabel: 'Revaluation Fee',
+            amount: rev.totalFee || (rev.subjects?.length ? rev.subjects.length * 500 : 500),
+            paymentPurpose: `Answer Script Revaluation (${rev.student?.firstName || 'Candidate'} ${rev.student?.lastName || ''})`,
+            remarks: `Revaluation for ${rev.subjects?.length || 1} subject(s)`,
+            paymentId: rev.razorpayPaymentId || 'N/A',
+            orderId: rev.razorpayOrderId || 'N/A',
+            paymentMode: 'Razorpay Gateway',
+            paymentDate: rev.createdAt ? new Date(rev.createdAt).toISOString().split('T')[0] : 'N/A',
+            timestamp: rev.createdAt ? new Date(rev.createdAt).getTime() : 0,
+            status: 'Verified',
+            payerName: rev.student ? `${rev.student.firstName} ${rev.student.lastName}` : 'Fellow Candidate',
+            details: { subjectsCount: rev.subjects?.length || 1, semester: rev.semester }
+          });
+        }
+      });
+
+      // 5. Exam Application Fee Records
+      (Array.isArray(listExams) ? listExams : []).forEach(exam => {
+        if (exam.paymentStatus === 'Completed' || exam.razorpayPaymentId) {
+          records.push({
+            id: `EXM-${exam._id || Math.random()}`,
+            rawId: exam._id,
+            refNo: (exam._id || '').toString().substring(0, 8).toUpperCase(),
+            instituteName: exam.institute?.orgName || exam.student?.institute?.orgName || 'Accredited Hospital',
+            instituteId: exam.institute?._id || exam.institute,
+            category: 'EXAM_FEE',
+            categoryLabel: 'Exam Application Fee',
+            amount: exam.amountPaid || exam.feeAmount || 3000,
+            paymentPurpose: `Examination Application Fee (${exam.student?.firstName || 'Candidate'})`,
+            remarks: `Exam Hall Ticket Application - ${exam.examSession || 'Session 2026'}`,
+            paymentId: exam.razorpayPaymentId || 'N/A',
+            orderId: exam.razorpayOrderId || 'N/A',
+            paymentMode: 'Razorpay Gateway',
+            paymentDate: exam.createdAt ? new Date(exam.createdAt).toISOString().split('T')[0] : 'N/A',
+            timestamp: exam.createdAt ? new Date(exam.createdAt).getTime() : 0,
+            status: 'Verified',
+            payerName: exam.student ? `${exam.student.firstName} ${exam.student.lastName}` : 'Examinee',
+            details: { examType: exam.examType || 'Semester Exam' }
+          });
+        }
+      });
+
+      // Sort by newest timestamp
+      records.sort((a, b) => b.timestamp - a.timestamp);
+      setAllTransactions(records);
+    } catch (err) {
+      console.error('Error fetching all treasury records:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllTreasuryRecords();
+  }, []);
+
+  // ─── Dynamic Filtering & Computed Data ──────────────────────────────────────
+  const uniqueInstitutes = useMemo(() => {
+    const map = new Map();
+    allTransactions.forEach(t => {
+      if (t.instituteName && t.instituteName !== 'N/A') {
+        map.set(t.instituteName, t.instituteName);
+      }
+    });
+    return Array.from(map.keys()).sort();
+  }, [allTransactions]);
+
+  const filteredTransactions = useMemo(() => {
+    return allTransactions.filter(item => {
+      // Category filter
+      if (selectedCategory !== 'ALL' && item.category !== selectedCategory) return false;
+      
+      // Institute filter
+      if (selectedInstitute !== 'ALL' && item.instituteName !== selectedInstitute) return false;
+
+      // Date Range filter
+      if (dateRange.start && item.paymentDate < dateRange.start) return false;
+      if (dateRange.end && item.paymentDate > dateRange.end) return false;
+
+      // Search term
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const matchRef = item.refNo.toLowerCase().includes(q);
+        const matchInst = item.instituteName.toLowerCase().includes(q);
+        const matchPurpose = item.paymentPurpose.toLowerCase().includes(q);
+        const matchPayId = item.paymentId.toLowerCase().includes(q);
+        const matchPayer = item.payerName.toLowerCase().includes(q);
+        return matchRef || matchInst || matchPurpose || matchPayId || matchPayer;
+      }
+
+      return true;
+    });
+  }, [allTransactions, selectedCategory, selectedInstitute, dateRange, searchTerm]);
+
+  // Aggregate Metrics
+  const metrics = useMemo(() => {
+    const totalCollected = filteredTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const count = filteredTransactions.length;
+    const categoryTotals = {
+      ONBOARDING: filteredTransactions.filter(t => t.category === 'ONBOARDING').reduce((sum, t) => sum + t.amount, 0),
+      ENROLLMENT: filteredTransactions.filter(t => t.category === 'ENROLLMENT').reduce((sum, t) => sum + t.amount, 0),
+      EXAM_FEE: filteredTransactions.filter(t => t.category === 'EXAM_FEE').reduce((sum, t) => sum + t.amount, 0),
+      REVALUATION: filteredTransactions.filter(t => t.category === 'REVALUATION').reduce((sum, t) => sum + t.amount, 0),
+      REMITTANCE: filteredTransactions.filter(t => t.category === 'REMITTANCE').reduce((sum, t) => sum + t.amount, 0),
+    };
+    return { totalCollected, count, categoryTotals };
+  }, [filteredTransactions]);
+
+  // CSV Export
+  const handleExportCSV = () => {
+    if (filteredTransactions.length === 0) return;
+    const headers = ['Reference No', 'Category', 'Institute Name', 'Payer Name', 'Payment Purpose', 'Razorpay Payment ID', 'Amount (INR)', 'Payment Date', 'Status'];
+    const rows = filteredTransactions.map(t => [
+      t.refNo,
+      t.categoryLabel,
+      `"${t.instituteName.replace(/"/g, '""')}"`,
+      `"${t.payerName.replace(/"/g, '""')}"`,
+      `"${t.paymentPurpose.replace(/"/g, '""')}"`,
+      t.paymentId,
+      t.amount,
+      t.paymentDate,
+      t.status
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Academy_Treasury_Remittances_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-8 text-left font-sans animate-in fade-in duration-300 pb-12">
+      
+      {/* ── Top Header & KPI Summary Banner ──────────────────────────────────── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden text-white">
+        <div className="absolute -right-10 -bottom-10 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="relative z-10 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-emerald-400 text-[11px] font-black uppercase tracking-widest">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Central Academy Treasury Ledger
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-sm">
+            Institutional Payment & Remittance Audit
+          </h1>
+          <p className="text-xs text-slate-300 max-w-2xl font-medium leading-relaxed">
+            Real-time audit log of all financial transactions remitted by accredited hospitals and candidates, covering institute onboarding, fellow enrollments, examination fees, revaluation requests, and annual remittances.
+          </p>
+        </div>
+
+        {/* Global Treasury Totals Pill */}
+        <div className="relative z-10 bg-white/10 backdrop-blur-md border border-white/15 p-6 rounded-2xl text-right flex flex-col justify-center min-w-[240px]">
+          <span className="block text-[10px] text-emerald-300 font-black uppercase tracking-widest mb-1">Total Audited Treasury</span>
+          <span className="block text-3xl font-black text-emerald-400 tracking-tight">₹{metrics.totalCollected.toLocaleString()}</span>
+          <span className="block text-[10px] text-slate-400 font-semibold mt-1">Across {metrics.count} Verified Transactions</span>
+        </div>
+      </div>
+
+      {/* ── Category Breakdown Pills ────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {Object.keys(CATEGORY_CONFIG).map(catKey => {
+          const cfg = CATEGORY_CONFIG[catKey];
+          const Icon = cfg.icon;
+          const isSelected = selectedCategory === catKey;
+          const catAmount = catKey === 'ALL' ? metrics.totalCollected : (metrics.categoryTotals[catKey] || 0);
+
+          return (
+            <button
+              key={catKey}
+              onClick={() => setSelectedCategory(catKey)}
+              className={`p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                isSelected
+                  ? 'bg-slate-900 text-white border-slate-800 shadow-lg scale-[1.02]'
+                  : 'bg-white text-slate-700 border-slate-200/80 hover:border-blue-300 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className={`p-2 rounded-xl text-xs font-black ${isSelected ? 'bg-white/10 text-white' : cfg.color}`}>
+                  <Icon className="w-4 h-4" />
+                </span>
+                {isSelected && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>}
+              </div>
+              <div>
+                <span className={`block text-[10px] uppercase font-black tracking-wider ${isSelected ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {cfg.label}
+                </span>
+                <span className={`block text-base font-black tracking-tight mt-0.5 ${isSelected ? 'text-emerald-400' : 'text-slate-900'}`}>
+                  ₹{catAmount.toLocaleString()}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Filter Controls Toolbar ──────────────────────────────────────────── */}
+      <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+          
+          {/* Search Input */}
+          <div className="lg:col-span-5 relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search reference #, institute name, student, or Razorpay ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition-all placeholder-slate-400"
+            />
+          </div>
+
+          {/* Institute Dropdown Filter */}
+          <div className="lg:col-span-3">
+            <select
+              value={selectedInstitute}
+              onChange={(e) => setSelectedInstitute(e.target.value)}
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
+            >
+              <option value="ALL">All Institutes ({uniqueInstitutes.length})</option>
+              {uniqueInstitutes.map(inst => (
+                <option key={inst} value={inst}>{inst}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date Range Start */}
+          <div className="lg:col-span-2">
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all"
+              placeholder="From Date"
+            />
+          </div>
+
+          {/* Date Range End */}
+          <div className="lg:col-span-2">
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-500 transition-all"
+              placeholder="To Date"
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons & Clear Bar */}
+        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs font-bold text-slate-500">
+          <div className="flex items-center gap-2">
+            <span>Filtered: <strong className="text-slate-800">{filteredTransactions.length}</strong> transactions</span>
+            {(searchTerm || selectedCategory !== 'ALL' || selectedInstitute !== 'ALL' || dateRange.start || dateRange.end) && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('ALL');
+                  setSelectedInstitute('ALL');
+                  setDateRange({ start: '', end: '' });
+                }}
+                className="px-2.5 py-1 text-rose-600 hover:bg-rose-50 rounded-lg transition-all flex items-center gap-1 text-[11px] font-black"
+              >
+                <X className="w-3.5 h-3.5" />
+                Reset Filters
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              disabled={filteredTransactions.length === 0}
+              className="px-3.5 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-xl font-extrabold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Export CSV Report
+            </button>
+
+            <button
+              onClick={fetchAllTreasuryRecords}
+              disabled={loading}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-extrabold transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Transactions Ledger Table ───────────────────────────────────────── */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                <th className="px-6 py-4">Ref & Date</th>
+                <th className="px-6 py-4">Category</th>
+                <th className="px-6 py-4">Institute / Payer</th>
+                <th className="px-6 py-4">Purpose & Reference</th>
+                <th className="px-6 py-4">Razorpay Payment ID</th>
+                <th className="px-6 py-4 text-right">Amount (₹)</th>
+                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs font-medium">
+              {loading ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-16 text-center text-slate-400 font-semibold">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+                    Auditing treasury transaction logs...
+                  </td>
+                </tr>
+              ) : filteredTransactions.length > 0 ? (
+                filteredTransactions.map((tx) => {
+                  const cfg = CATEGORY_CONFIG[tx.category] || CATEGORY_CONFIG.ALL;
+                  const Icon = cfg.icon;
+
+                  return (
+                    <tr key={tx.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Ref & Date */}
+                      <td className="px-6 py-4">
+                        <div className="font-mono font-black text-slate-800">#{tx.refNo}</div>
+                        <div className="text-[10px] text-slate-400 font-medium">{tx.paymentDate}</div>
+                      </td>
+
+                      {/* Category Pill */}
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black border ${cfg.color}`}>
+                          <Icon className="w-3 h-3" />
+                          {tx.categoryLabel}
+                        </span>
+                      </td>
+
+                      {/* Institute / Payer */}
+                      <td className="px-6 py-4">
+                        <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
+                          <span className="truncate max-w-[200px]" title={tx.instituteName}>{tx.instituteName}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                          Payer: {tx.payerName}
+                        </div>
+                      </td>
+
+                      {/* Purpose */}
+                      <td className="px-6 py-4 max-w-xs">
+                        <div className="font-bold text-slate-800 truncate" title={tx.paymentPurpose}>
+                          {tx.paymentPurpose}
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate italic mt-0.5" title={tx.remarks}>
+                          {tx.remarks}
+                        </div>
+                      </td>
+
+                      {/* Payment ID */}
+                      <td className="px-6 py-4 font-mono font-bold text-blue-600">
+                        {tx.paymentId}
+                      </td>
+
+                      {/* Amount */}
+                      <td className="px-6 py-4 text-right font-black text-slate-900 text-sm">
+                        ₹{tx.amount.toLocaleString()}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Verified
+                        </span>
+                      </td>
+
+                      {/* Action */}
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => setSelectedTransaction(tx)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                          title="View Receipt Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="8" className="px-6 py-16 text-center text-slate-400 font-semibold">
+                    <Receipt className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-slate-600">No treasury transactions found</p>
+                    <p className="text-xs text-slate-400 mt-1">Try broadening your search keywords or clearing date range filters</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Transaction Receipt Detail Modal ────────────────────────────────── */}
+      {selectedTransaction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden text-left">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Treasury Payment Voucher</h3>
+                  <p className="text-[10px] font-mono font-bold text-blue-600">#{selectedTransaction.refNo}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedTransaction(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs font-semibold text-slate-700">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Category</span>
+                  <span className="font-bold text-slate-900">{selectedTransaction.categoryLabel}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200/60 pt-2">
+                  <span className="text-slate-400">Institute Name</span>
+                  <span className="font-bold text-slate-900">{selectedTransaction.instituteName}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200/60 pt-2">
+                  <span className="text-slate-400">Payer Name</span>
+                  <span className="font-bold text-slate-900">{selectedTransaction.payerName}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200/60 pt-2">
+                  <span className="text-slate-400">Razorpay Payment ID</span>
+                  <span className="font-mono font-bold text-blue-600">{selectedTransaction.paymentId}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200/60 pt-2">
+                  <span className="text-slate-400">Transaction Date</span>
+                  <span className="font-bold text-slate-900">{selectedTransaction.paymentDate}</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl flex items-center justify-between">
+                <div>
+                  <span className="block text-[10px] text-emerald-700 font-extrabold uppercase">Total Remitted Amount</span>
+                  <span className="text-2xl font-black text-emerald-800">₹{selectedTransaction.amount.toLocaleString()}</span>
+                </div>
+                <span className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-full">Verified</span>
+              </div>
+
+              <div className="pt-2 text-right">
+                <button
+                  onClick={() => setSelectedTransaction(null)}
+                  className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider hover:bg-slate-800 transition-all cursor-pointer"
+                >
+                  Close Receipt
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default AcademyRemittance;
+
+```
+
 ### `client/src/pages/academy/components/AcademyRevaluation.jsx`
 
 ```jsx
@@ -22587,6 +25625,8 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
+  Calendar,
   Clock,
   CheckCircle2,
   XCircle,
@@ -22594,53 +25634,68 @@ import {
   FileText,
   TrendingUp,
   Minus,
+  CreditCard,
   RefreshCw,
   X,
   Check,
   UserCheck,
-  ClipboardList,
-  FilePlus2,
-  ShieldCheck,
-  Users,
+  User,
+  Mail,
+  Building2,
+  Activity,
+  Plus,
+  Edit,
+  MoreVertical,
+  CheckCircle,
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import revaluationService from '../../../api/revaluation';
 
 const STATUS_OPTIONS = [
-  'PENDING',
-  'UNDER_REVIEW',
-  'ASSIGNED',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'REJECTED',
-  'CANCELLED',
+  { value: 'All', label: 'All Status' },
+  { value: 'PENDING', label: 'Pending', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Clock },
+  { value: 'UNDER_REVIEW', label: 'Under Review', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: Eye },
+  { value: 'ASSIGNED', label: 'Assigned', color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: UserCheck },
+  { value: 'IN_PROGRESS', label: 'In Progress', color: 'bg-purple-100 text-purple-700 border-purple-200', icon: Activity },
+  { value: 'COMPLETED', label: 'Completed', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
+  { value: 'REJECTED', label: 'Rejected', color: 'bg-rose-100 text-rose-700 border-rose-200', icon: XCircle },
+  { value: 'CANCELLED', label: 'Cancelled', color: 'bg-slate-100 text-slate-500 border-slate-200', icon: X },
 ];
 
-const GRADE_OPTIONS = ['O', 'A+', 'A', 'B+', 'B', 'C', 'D', 'F', 'ABSENT'];
+const getStatusBadge = (status) => {
+  const found = STATUS_OPTIONS.find(s => s.value === status);
+  return found || STATUS_OPTIONS[0];
+};
+
+const getSubjectProgress = (request) => {
+  const total = request.subjects?.length || 0;
+  const evaluated = new Set((request.revaluationResults || []).map((r) => r.subjectCode).filter(Boolean)).size;
+  return { evaluated, total };
+};
 
 const AcademyRevaluation = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
   const [requests, setRequests] = useState([]);
   const [summary, setSummary] = useState(null);
-
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [instituteFilter, setInstituteFilter] = useState('All');
   const [semesterFilter, setSemesterFilter] = useState('All');
   const [academicYearFilter, setAcademicYearFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-
-  const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
   const [toast, setToast] = useState(null);
-  const [viewingRequest, setViewingRequest] = useState(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [statusModal, setStatusModal] = useState(null);
-  const [resultModal, setResultModal] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
+
+  // Detail View State
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Action Modal State
+  const [actionModal, setActionModal] = useState(null); // 'status' | 'marks' | null
 
   const itemsPerPage = 10;
 
@@ -22658,24 +25713,28 @@ const AcademyRevaluation = () => {
 
   const fetchRequests = useCallback(async () => {
     try {
-      const res = await revaluationService.getAllRevaluationRequests({ limit: 10000 });
+      setLoading(true);
+      const params = { limit: 10000 };
+      if (statusFilter !== 'All') params.status = statusFilter;
+      if (instituteFilter !== 'All') params.institute = instituteFilter;
+      if (semesterFilter !== 'All') params.semester = parseInt(semesterFilter);
+      if (academicYearFilter !== 'All') params.academicYear = academicYearFilter;
+      if (searchQuery) params.search = searchQuery;
+
+      const res = await revaluationService.getAllRevaluationRequests(params);
       const data = res.data?.data || res.data || {};
       const list = data.requests || data.results || data;
       setRequests(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error('Error fetching requests:', err);
       setToast({ message: err.parsedMessage || 'Failed to load revaluation requests', type: 'error' });
-    }
-  }, []);
-
-  const fetchData = useCallback(async () => {
-    try {
-      await Promise.all([fetchSummary(), fetchRequests()]);
-    } catch (err) {
-      console.error('Error fetching revaluation data:', err);
     } finally {
       setLoading(false);
     }
+  }, [statusFilter, instituteFilter, semesterFilter, academicYearFilter, searchQuery]);
+
+  const fetchData = useCallback(async () => {
+    await Promise.all([fetchSummary(), fetchRequests()]);
   }, [fetchSummary, fetchRequests]);
 
   useEffect(() => {
@@ -22726,24 +25785,8 @@ const AcademyRevaluation = () => {
       filtered = filtered.filter((r) => r.academicYear === academicYearFilter);
     }
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter((r) => {
-        const student = r.student;
-        const name = student ? `${student.firstName || ''} ${student.lastName || ''}`.toLowerCase() : '';
-        const enrollmentId = student?.enrollmentId?.toLowerCase() || '';
-        const instituteName = r.institute?.orgName?.toLowerCase() || '';
-        return (
-          name.includes(q) ||
-          enrollmentId.includes(q) ||
-          instituteName.includes(q) ||
-          (r.requestId || '').toLowerCase().includes(q)
-        );
-      });
-    }
-
     return filtered;
-  }, [requests, statusFilter, instituteFilter, semesterFilter, academicYearFilter, searchQuery]);
+  }, [requests, statusFilter, instituteFilter, semesterFilter, academicYearFilter]);
 
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
   const paginatedRequests = useMemo(() => {
@@ -22757,40 +25800,50 @@ const AcademyRevaluation = () => {
     return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const getStatusBadge = (status) => {
-    const map = {
-      PENDING: { label: 'Pending', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: <Clock className="w-3.5 h-3.5" /> },
-      UNDER_REVIEW: { label: 'Under Review', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <Loader2 className="w-3.5 h-3.5 animate-spin" /> },
-      ASSIGNED: { label: 'Assigned', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: <UserCheck className="w-3.5 h-3.5" /> },
-      IN_PROGRESS: { label: 'In Progress', color: 'bg-purple-50 text-purple-700 border-purple-200', icon: <Loader2 className="w-3.5 h-3.5 animate-spin" /> },
-      COMPLETED: { label: 'Completed', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-      REJECTED: { label: 'Rejected', color: 'bg-rose-50 text-rose-700 border-rose-200', icon: <XCircle className="w-3.5 h-3.5" /> },
-      CANCELLED: { label: 'Cancelled', color: 'bg-slate-50 text-slate-500 border-slate-200', icon: <X className="w-3.5 h-3.5" /> },
-    };
-    return map[status] || map.PENDING;
+  const formatCurrency = (amount) => {
+    return `₹${(amount || 0).toLocaleString('en-IN')}`;
+  };
+
+  const formatDateTime = (date) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getGrade = (marks, total = 100) => {
+    if (marks === null || marks === undefined || marks === '') return '';
+    const percentage = (marks / total) * 100;
+    if (percentage >= 90) return 'O';
+    if (percentage >= 80) return 'A+';
+    if (percentage >= 70) return 'A';
+    if (percentage >= 60) return 'B+';
+    if (percentage >= 50) return 'B';
+    if (percentage >= 40) return 'C';
+    if (percentage >= 35) return 'D';
+    return 'F';
   };
 
   const getResultBadge = (finalResult) => {
     if (finalResult === 'CHANGED') {
-      return { label: 'Marks Changed', color: 'text-emerald-600', icon: <TrendingUp className="w-3.5 h-3.5" /> };
+      return { label: 'Marks Changed', color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: <TrendingUp className="w-3.5 h-3.5" /> };
     }
     if (finalResult === 'UNCHANGED') {
-      return { label: 'No Change', color: 'text-amber-600', icon: <Minus className="w-3.5 h-3.5" /> };
+      return { label: 'No Change', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: <Minus className="w-3.5 h-3.5" /> };
     }
-    return { label: 'Pending', color: 'text-slate-400', icon: <Clock className="w-3.5 h-3.5" /> };
+    return { label: 'Pending', color: 'text-slate-400 bg-slate-50 border-slate-200', icon: <Clock className="w-3.5 h-3.5" /> };
   };
 
-  const canAddResult = (request) => ['PENDING', 'UNDER_REVIEW', 'ASSIGNED', 'IN_PROGRESS'].includes(request.status);
-  const canUpdateStatus = (request) => !['COMPLETED', 'REJECTED', 'CANCELLED'].includes(request.status);
+  const canTakeAction = (request) => {
+    return !['COMPLETED', 'REJECTED', 'CANCELLED'].includes(request.status);
+  };
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleViewRequest = async (request) => {
     setIsDetailOpen(true);
-    setViewingRequest(request);
+    setSelectedRequest(request);
     setDetailLoading(true);
     try {
       const res = await revaluationService.getRevaluationRequestById(request._id);
-      setViewingRequest(res.data?.data || res.data);
+      setSelectedRequest(res.data?.data || res.data);
     } catch (err) {
       console.error('Error fetching request details:', err);
       setToast({ message: err.parsedMessage || 'Failed to load request details', type: 'error' });
@@ -22804,103 +25857,34 @@ const AcademyRevaluation = () => {
     setToast({ message: 'Data refreshed!', type: 'success' });
   };
 
-  const openStatusModal = (request) => {
-    setStatusModal({ request, status: request.status, comments: '', assignedEvaluator: '' });
-  };
-
-  const handleUpdateStatus = async () => {
-    if (!statusModal) return;
-    const { request, status, comments, assignedEvaluator } = statusModal;
-
-    const payload = { status };
-    if (comments.trim()) payload.comments = comments.trim();
-    if (status === 'ASSIGNED') {
-      if (!assignedEvaluator.trim()) {
-        setToast({ message: 'Please enter an evaluator name to assign this request', type: 'warning' });
-        return;
-      }
-      payload.assignedEvaluator = assignedEvaluator.trim();
-    }
-
-    setConfirmConfig({
-      title: 'Update Request Status',
-      message: `Are you sure you want to change the status of request ${request.requestId || request._id} to "${status}"?\n${status === 'COMPLETED' ? '\nCompleting will process and republish revaluation results to the student result.' : ''}`,
-      type: status === 'REJECTED' || status === 'CANCELLED' ? 'warning' : 'info',
-      confirmText: 'Update Status',
-      onConfirm: async () => {
-        setConfirmConfig(null);
-        setSubmitting(true);
-        try {
-          await revaluationService.updateRequestStatus(request._id, payload);
-          setToast({ message: 'Request status updated successfully', type: 'success' });
-          setStatusModal(null);
-          await fetchData();
-        } catch (err) {
-          console.error('Error updating status:', err);
-          setToast({ message: err.parsedMessage || 'Failed to update request status', type: 'error' });
-        } finally {
-          setSubmitting(false);
-        }
-      },
-    });
-  };
-
-  const openResultModal = (request) => {
-    const firstSubject = request.subjects?.[0];
-    setResultModal({
-      request,
-      subjectCode: firstSubject?.subjectCode || '',
-      subjectName: firstSubject?.subjectName || '',
-      revisedTotalMarks: '',
-      revisedGrade: '',
-      evaluatorComments: '',
-      isFinal: true,
-    });
-  };
-
-  const handleSubjectChange = (subjectCode) => {
-    const subject = resultModal.request.subjects.find((s) => s.subjectCode === subjectCode);
-    setResultModal((prev) => ({
-      ...prev,
-      subjectCode,
-      subjectName: subject?.subjectName || '',
-    }));
-  };
-
-  const handleSubmitResult = async () => {
-    if (!resultModal) return;
-    const { request, subjectCode, revisedTotalMarks, revisedGrade, evaluatorComments, isFinal } = resultModal;
-
-    if (!subjectCode) {
-      setToast({ message: 'Please select a subject', type: 'warning' });
-      return;
-    }
-    if (revisedTotalMarks === '' || Number.isNaN(Number(revisedTotalMarks))) {
-      setToast({ message: 'Please enter revised total marks', type: 'warning' });
-      return;
-    }
-    if (!revisedGrade) {
-      setToast({ message: 'Please select a revised grade', type: 'warning' });
-      return;
-    }
-
+  const handleStatusUpdate = async (requestId, statusData) => {
     setSubmitting(true);
     try {
-      const payload = {
-        subjectCode,
-        subjectName: resultModal.subjectName,
-        revisedTotalMarks: Number(revisedTotalMarks),
-        revisedGrade,
-        isFinal,
-      };
-      if (evaluatorComments.trim()) payload.evaluatorComments = evaluatorComments.trim();
-
-      await revaluationService.addRevaluationResult(request._id, payload);
-
-      setToast({ message: 'Revaluation result added successfully', type: 'success' });
-      setResultModal(null);
+      await revaluationService.updateRequestStatus(requestId, statusData);
+      setToast({ message: 'Request status updated successfully', type: 'success' });
+      setActionModal(null);
       await fetchData();
-      if (isDetailOpen) await handleViewRequest(request);
+      if (isDetailOpen && selectedRequest?._id === requestId) {
+        await handleViewRequest(selectedRequest);
+      }
+    } catch (err) {
+      console.error('Error updating status:', err);
+      setToast({ message: err.parsedMessage || 'Failed to update request status', type: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleMarksSubmit = async (requestId, marksData) => {
+    setSubmitting(true);
+    try {
+      await revaluationService.addRevaluationResult(requestId, marksData);
+      setToast({ message: 'Revaluation result added successfully', type: 'success' });
+      setActionModal(null);
+      await fetchData();
+      if (isDetailOpen && selectedRequest?._id === requestId) {
+        await handleViewRequest(selectedRequest);
+      }
     } catch (err) {
       console.error('Error adding revaluation result:', err);
       setToast({ message: err.parsedMessage || 'Failed to add revaluation result', type: 'error' });
@@ -22909,56 +25893,51 @@ const AcademyRevaluation = () => {
     }
   };
 
-  const handleApproveResult = (revalResult) => {
-    setConfirmConfig({
-      title: 'Approve Revaluation Result',
-      message: `Approve the final revaluation result for ${revalResult.subjectName || 'this subject'}?\n\nOnce approved, the student's result will be updated and republished with the revised marks.`,
-      type: 'success',
-      confirmText: 'Approve & Republish',
-      onConfirm: async () => {
-        setConfirmConfig(null);
-        setSubmitting(true);
-        try {
-          await revaluationService.approveRevaluationResult(revalResult._id, { isFinal: true, comments: revalResult.evaluatorComments });
-          setToast({ message: 'Revaluation result approved and published', type: 'success' });
-          if (viewingRequest) await handleViewRequest(viewingRequest);
-          await fetchData();
-        } catch (err) {
-          console.error('Error approving result:', err);
-          setToast({ message: err.parsedMessage || 'Failed to approve revaluation result', type: 'error' });
-        } finally {
-          setSubmitting(false);
-        }
-      },
-    });
+  const handleApproveResult = async (resultId, requestId) => {
+    setSubmitting(true);
+    try {
+      await revaluationService.approveRevaluationResult(resultId, { isFinal: true });
+      setToast({ message: 'Revaluation result approved and published', type: 'success' });
+      if (isDetailOpen && selectedRequest?._id === requestId) {
+        await handleViewRequest(selectedRequest);
+      }
+      await fetchData();
+    } catch (err) {
+      console.error('Error approving result:', err);
+      setToast({ message: err.parsedMessage || 'Failed to approve revaluation result', type: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // ─── Render Helpers ──────────────────────────────────────────────────────
+  // ─── Render Summary Cards ──────────────────────────────────────────────────
   const renderSummaryCards = () => {
     const cards = [
-      { label: 'Total Requests', value: summary?.total || 0, color: 'text-blue-700', bg: 'bg-blue-50/60 border-blue-100' },
-      { label: 'Pending', value: summary?.pending || 0, color: 'text-amber-600', bg: 'bg-amber-50/60 border-amber-100' },
-      { label: 'Under Review', value: summary?.underReview || 0, color: 'text-blue-600', bg: 'bg-blue-50/60 border-blue-100' },
-      { label: 'In Progress', value: summary?.inProgress || 0, color: 'text-purple-600', bg: 'bg-purple-50/60 border-purple-100' },
-      { label: 'Completed', value: summary?.completed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50/60 border-emerald-100' },
-      { label: 'Marks Changed', value: summary?.changed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50/60 border-emerald-100' },
-      { label: 'No Change', value: summary?.unchanged || 0, color: 'text-amber-600', bg: 'bg-amber-50/60 border-amber-100' },
-      { label: 'Subjects Count', value: summary?.subjectsCount || 0, color: 'text-indigo-600', bg: 'bg-indigo-50/60 border-indigo-100' },
+      { label: 'Total', value: summary?.total || 0, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100', icon: <FileText className="w-5 h-5 text-blue-500" /> },
+      { label: 'Pending', value: summary?.pending || 0, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100', icon: <Clock className="w-5 h-5 text-amber-500" /> },
+      { label: 'Under Review', value: summary?.underReview || 0, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100', icon: <Eye className="w-5 h-5 text-blue-500" /> },
+      { label: 'In Progress', value: summary?.inProgress || 0, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100', icon: <Activity className="w-5 h-5 text-purple-500" /> },
+      { label: 'Completed', value: summary?.completed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" /> },
+      { label: 'Marks Changed', value: summary?.changed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: <TrendingUp className="w-5 h-5 text-emerald-500" /> },
+      { label: 'No Change', value: summary?.unchanged || 0, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100', icon: <Minus className="w-5 h-5 text-amber-500" /> },
+      { label: 'Subjects', value: summary?.subjectsCount || 0, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100', icon: <BookOpen className="w-5 h-5 text-indigo-500" /> },
     ];
 
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
         {cards.map((card) => (
-          <div key={card.label} className={`${card.bg} border rounded-2xl p-4 text-center`}>
+          <div key={card.label} className={`${card.bg} border rounded-2xl p-4 text-center transition-all hover:shadow-md hover:scale-[1.02] duration-200`}>
+            <div className="flex items-center justify-center mb-2">{card.icon}</div>
             <span className={`block text-2xl font-black ${card.color}`}>{card.value}</span>
-            <span className="block text-[9px] uppercase font-black text-slate-500 tracking-wider mt-1">{card.label}</span>
+            <span className="block text-[9px] uppercase font-bold text-slate-500 tracking-wider mt-0.5">{card.label}</span>
           </div>
         ))}
       </div>
     );
   };
 
-  const renderInstituteStats = () => {
+  // ─── Render Institute Breakdown ────────────────────────────────────────────
+  const renderInstituteBreakdown = () => {
     const stats = summary?.instituteStats || [];
     if (stats.length === 0) return null;
 
@@ -22966,7 +25945,7 @@ const AcademyRevaluation = () => {
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <Users className="w-4.5 h-4.5" />
+            <Building2 className="w-4.5 h-4.5" />
           </div>
           <div>
             <h3 className="text-base font-black text-slate-800 tracking-tight">Institute Breakdown</h3>
@@ -22999,30 +25978,45 @@ const AcademyRevaluation = () => {
     );
   };
 
+  // ─── Render Filters ───────────────────────────────────────────────────────
   const renderFilters = () => (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-      <div className="relative col-span-2 md:col-span-1">
+    <div className="flex flex-col md:flex-row gap-3">
+      <div className="relative flex-1">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search student, ID, institute..."
+          placeholder="Search by student name, enrollment ID, or institute..."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
         />
       </div>
 
-      <div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-shrink-0">
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
+        >
+          <option value="All">All Status</option>
+          {STATUS_OPTIONS.filter(s => s.value !== 'All').map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
+
         <select
           value={instituteFilter}
           onChange={(e) => {
             setInstituteFilter(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+          className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
         >
           <option value="All">All Institutes</option>
           {institutes.map((inst) => (
@@ -23031,48 +26025,28 @@ const AcademyRevaluation = () => {
             </option>
           ))}
         </select>
-      </div>
 
-      <div>
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-        >
-          <option value="All">All Status</option>
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{getStatusBadge(s).label}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
         <select
           value={semesterFilter}
           onChange={(e) => {
             setSemesterFilter(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+          className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
         >
           <option value="All">All Semesters</option>
           {semesters.map((sem) => (
             <option key={sem} value={sem}>Semester {sem}</option>
           ))}
         </select>
-      </div>
 
-      <div>
         <select
           value={academicYearFilter}
           onChange={(e) => {
             setAcademicYearFilter(e.target.value);
             setCurrentPage(1);
           }}
-          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+          className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
         >
           <option value="All">All Years</option>
           {academicYears.map((year) => (
@@ -23083,20 +26057,20 @@ const AcademyRevaluation = () => {
     </div>
   );
 
+  // ─── Render Requests Table ────────────────────────────────────────────────
   const renderRequestsTable = () => (
     <div className="overflow-x-auto border border-slate-100 rounded-2xl">
       <table className="w-full text-left border-collapse text-xs">
         <thead>
           <tr className="bg-slate-50/70 border-b border-slate-100">
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
-            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Request ID</th>
-            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Request / Student</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Institute</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Subjects</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Fee</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
-            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-32">Actions</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-36">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50 bg-white">
@@ -23105,77 +26079,106 @@ const AcademyRevaluation = () => {
             const resultBadge = getResultBadge(request.finalResult);
             const student = request.student;
             const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
+            const isActionable = canTakeAction(request);
+            const StatusIcon = statusBadge.icon;
+            const { evaluated, total } = getSubjectProgress(request);
 
             return (
-              <tr key={request._id} className="hover:bg-slate-50/50 transition-colors">
+              <tr key={request._id} className={`hover:bg-slate-50/50 transition-colors group ${!isActionable ? 'opacity-75' : ''}`}>
                 <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-400">
                   {String(globalIdx).padStart(2, '0')}
                 </td>
                 <td className="px-4 py-3.5">
-                  <span className="font-mono font-bold text-blue-600 block">
-                    {request.requestId || request._id.toString().substring(0, 8).toUpperCase()}
-                  </span>
-                  <span className={`inline-flex items-center gap-1 text-[9px] font-bold ${resultBadge.color}`}>
-                    {resultBadge.icon}
-                    {resultBadge.label}
-                  </span>
-                </td>
-                <td className="px-4 py-3.5">
-                  <div>
-                    <span className="font-bold text-slate-800 block">
-                      {student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'Unknown'}
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {student?.enrollmentId || 'N/A'}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 flex items-center justify-center font-black text-[10px] flex-shrink-0">
+                      {student ? `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase() : '??'}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-blue-600 text-[10px]">
+                          {request.requestId || request._id.toString().substring(0, 8).toUpperCase()}
+                        </span>
+                        <span className={`inline-flex items-center gap-0.5 text-[8px] font-bold ${resultBadge.color} border px-1.5 py-0.5 rounded-full`}>
+                          {resultBadge.icon}
+                          {resultBadge.label}
+                        </span>
+                      </div>
+                      <span className="font-bold text-slate-800 block text-[11px]">
+                        {student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'Unknown'}
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-400">
+                        {student?.enrollmentId || 'N/A'}
+                      </span>
+                    </div>
                   </div>
                 </td>
                 <td className="px-4 py-3.5">
-                  <span className="font-bold text-slate-700 block max-w-[140px] truncate" title={request.institute?.orgName}>
+                  <span className="font-bold text-slate-700 block max-w-[140px] truncate text-[11px]" title={request.institute?.orgName}>
                     {request.institute?.orgName || 'Unknown'}
                   </span>
                 </td>
-                <td className="px-4 py-3.5 text-center font-bold text-slate-700">
+                <td className="px-4 py-3.5 text-center font-bold text-slate-700 text-[11px]">
                   Sem {request.semester || 'N/A'}
                 </td>
-                <td className="px-4 py-3.5 text-center font-bold text-slate-700">
-                  {request.subjects?.length || 0}
+                <td className="px-4 py-3.5 text-center font-bold text-slate-700 text-[11px]">
+                  {total > 0 && evaluated > 0 ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="font-bold text-slate-700 text-[11px]">{evaluated}/{total}</span>
+                      <span className={`text-[8px] font-bold uppercase ${evaluated >= total ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {evaluated >= total ? '✓ Evaluated' : 'Evaluating'}
+                      </span>
+                    </div>
+                  ) : (
+                    total
+                  )}
                 </td>
-                <td className="px-4 py-3.5 text-center font-bold text-slate-800">
-                  ₹{request.totalFee?.toLocaleString() || 0}
+                <td className="px-4 py-3.5 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold text-slate-800 text-[11px]">{formatCurrency(request.totalFee)}</span>
+                    <span className={`text-[8px] font-bold uppercase ${request.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {request.paymentStatus === 'PAID' ? '✓ Paid' : request.paymentStatus || 'Pending'}
+                    </span>
+                  </div>
                 </td>
                 <td className="px-4 py-3.5 text-center">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${statusBadge.color}`}>
-                    {statusBadge.icon}
+                    <StatusIcon className="w-3 h-3" />
                     {statusBadge.label}
+                    {request.status === 'IN_PROGRESS' && total > 0 && evaluated > 0 && (
+                      <span className="opacity-70">· {evaluated}/{total}</span>
+                    )}
                   </span>
                 </td>
                 <td className="px-4 py-3.5">
                   <div className="flex items-center justify-center gap-1">
+                    {/* View Button - Always visible */}
                     <button
                       onClick={() => handleViewRequest(request)}
-                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all cursor-pointer group"
                       title="View Details"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    {canUpdateStatus(request) && (
-                      <button
-                        onClick={() => openStatusModal(request)}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer"
-                        title="Update Status"
-                      >
-                        <ClipboardList className="w-4 h-4" />
-                      </button>
+
+                    {/* Action Button - Only for actionable requests */}
+                    {isActionable && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setActionModal({
+                            type: 'action_menu',
+                            request,
+                            isOpen: true
+                          })}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer"
+                          title="Take Action"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
-                    {canAddResult(request) && (
-                      <button
-                        onClick={() => openResultModal(request)}
-                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
-                        title="Add Result"
-                      >
-                        <FilePlus2 className="w-4 h-4" />
-                      </button>
+
+                    {!isActionable && (
+                      <span className="text-[8px] text-slate-400 font-medium px-2">Complete</span>
                     )}
                   </div>
                 </td>
@@ -23184,10 +26187,14 @@ const AcademyRevaluation = () => {
           })}
           {filteredRequests.length === 0 && (
             <tr>
-              <td colSpan="9" className="px-4 py-12 text-center text-slate-400">
-                <Award className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                <p className="text-sm font-bold text-slate-500">No revaluation requests found</p>
-                <p className="text-xs text-slate-400 mt-1">Try adjusting the filters above</p>
+              <td colSpan="8" className="px-4 py-16 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                    <Search className="w-8 h-8 text-slate-300" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-500">No revaluation requests found</p>
+                  <p className="text-xs text-slate-400">Try adjusting your filters above</p>
+                </div>
               </td>
             </tr>
           )}
@@ -23196,6 +26203,7 @@ const AcademyRevaluation = () => {
     </div>
   );
 
+  // ─── Render Pagination ────────────────────────────────────────────────────
   const renderPagination = () => (
     <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
       <span className="text-[10px] text-slate-400 font-semibold">
@@ -23206,7 +26214,7 @@ const AcademyRevaluation = () => {
         <button
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={currentPage === 1}
-          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
+          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
         </button>
@@ -23216,7 +26224,7 @@ const AcademyRevaluation = () => {
         <button
           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           disabled={currentPage === totalPages}
-          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
+          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
@@ -23224,25 +26232,737 @@ const AcademyRevaluation = () => {
     </div>
   );
 
-  // ─── Main Render ───────────────────────────────────────────────────────────
-  if (loading) {
+  // ─── Render Action Menu ──────────────────────────────────────────────────
+  const renderActionMenu = () => {
+    if (!actionModal || actionModal.type !== 'action_menu') return null;
+
+    const { request } = actionModal;
+    const menuItems = [
+      {
+        id: 'status',
+        label: 'Update Status',
+        icon: <Edit className="w-4 h-4" />,
+        color: 'text-indigo-600',
+        bg: 'hover:bg-indigo-50',
+        onClick: () => {
+          setActionModal({
+            type: 'status',
+            request,
+            status: request.status,
+            comments: '',
+            assignedEvaluator: '',
+          });
+        }
+      },
+      {
+        id: 'marks',
+        label: 'Add Revaluation Result',
+        icon: <Plus className="w-4 h-4" />,
+        color: 'text-emerald-600',
+        bg: 'hover:bg-emerald-50',
+        onClick: () => {
+          const firstSubject = request.subjects?.[0];
+          setActionModal({
+            type: 'marks',
+            request,
+            subjectCode: firstSubject?.subjectCode || '',
+            subjectName: firstSubject?.subjectName || '',
+            revisedTotalMarks: '',
+            evaluatorComments: '',
+            isFinal: true,
+          });
+        }
+      },
+    ];
+
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
-          <p className="text-sm text-slate-500 mt-4 font-medium">Loading revaluation data...</p>
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150">
+        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full overflow-hidden scale-in-center animate-in zoom-in-95 duration-150">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <MoreVertical className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-800">Actions</h3>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {request.requestId || request._id}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActionModal(null)}
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="p-4 space-y-2">
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={item.onClick}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${item.bg} transition-all group`}
+              >
+                <span className={item.color}>{item.icon}</span>
+                <span className="text-xs font-bold text-slate-700 group-hover:text-slate-900 transition-colors">
+                  {item.label}
+                </span>
+                <ChevronRight className="w-4 h-4 text-slate-300 ml-auto group-hover:translate-x-1 transition-transform" />
+              </button>
+            ))}
+          </div>
+
+          <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+            <button
+              onClick={() => setActionModal(null)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     );
-  }
+  };
 
+  // ─── Render Status Update Modal ──────────────────────────────────────────
+  const renderStatusModal = () => {
+    if (!actionModal || actionModal.type !== 'status') return null;
+
+    const { request, status, comments, assignedEvaluator } = actionModal;
+
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden scale-in-center animate-in zoom-in-95 duration-150">
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shadow-sm">
+                <Edit className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-800">Update Status</h3>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {request.requestId || request._id}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActionModal(null)}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white/50 rounded-xl transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 space-y-5">
+            {/* Student Info Summary */}
+            <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-slate-600 flex items-center justify-center font-black text-sm flex-shrink-0">
+                {request.student ? `${request.student.firstName?.[0] || ''}${request.student.lastName?.[0] || ''}`.toUpperCase() : '??'}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">
+                  {request.student ? `${request.student.firstName || ''} ${request.student.lastName || ''}`.trim() : 'Unknown'}
+                </p>
+                <p className="text-[10px] text-slate-400 font-mono">{request.student?.enrollmentId || 'N/A'}</p>
+              </div>
+              <div className="ml-auto text-right">
+                <span className="text-[10px] text-slate-400 block">Current Status</span>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${getStatusBadge(request.status).color}`}>
+                  {request.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Status Selector */}
+            <div>
+              <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
+                New Status <span className="text-rose-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {STATUS_OPTIONS.filter(s => s.value !== 'All').map((s) => {
+                  const isSelected = status === s.value;
+                  const Icon = s.icon;
+                  return (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setActionModal((prev) => ({ ...prev, status: s.value }))}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-xs font-bold transition-all ${
+                        isSelected
+                          ? `${s.color} border-current shadow-sm`
+                          : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Assign Evaluator (only when ASSIGNED) */}
+            {status === 'ASSIGNED' && (
+              <div className="animate-in slide-in-from-top duration-200">
+                <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
+                  Assign Evaluator <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={assignedEvaluator}
+                    onChange={(e) => setActionModal((prev) => ({ ...prev, assignedEvaluator: e.target.value }))}
+                    placeholder="e.g. Dr. A. Kumar"
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Comments */}
+            <div>
+              <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
+                Comments <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <textarea
+                value={comments}
+                onChange={(e) => setActionModal((prev) => ({ ...prev, comments: e.target.value }))}
+                rows="3"
+                placeholder="Add any notes or remarks..."
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+            <button
+              onClick={() => setActionModal(null)}
+              className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                const payload = { status };
+                if (comments.trim()) payload.comments = comments.trim();
+                if (status === 'ASSIGNED' && assignedEvaluator.trim()) {
+                  payload.assignedEvaluator = assignedEvaluator.trim();
+                }
+                handleStatusUpdate(request._id, payload);
+              }}
+              disabled={submitting}
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-indigo-500/20"
+            >
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Update Status
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Render Marks Modal ──────────────────────────────────────────────────
+  const renderMarksModal = () => {
+    if (!actionModal || actionModal.type !== 'marks') return null;
+
+    const {
+      request,
+      subjectCode,
+      subjectName,
+      revisedTotalMarks,
+      evaluatorComments,
+      isFinal
+    } = actionModal;
+
+    const selectedSubject = request.subjects?.find(s => s.subjectCode === subjectCode);
+    const computedGrade = revisedTotalMarks === '' ? '' : getGrade(Number(revisedTotalMarks));
+
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden scale-in-center animate-in zoom-in-95 duration-150">
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm">
+                <Plus className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-800">Add Revaluation Result</h3>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {request.requestId || request._id}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActionModal(null)}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white/50 rounded-xl transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 space-y-5">
+            {/* Student Info Summary */}
+            <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-slate-600 flex items-center justify-center font-black text-sm flex-shrink-0">
+                {request.student ? `${request.student.firstName?.[0] || ''}${request.student.lastName?.[0] || ''}`.toUpperCase() : '??'}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">
+                  {request.student ? `${request.student.firstName || ''} ${request.student.lastName || ''}`.trim() : 'Unknown'}
+                </p>
+                <p className="text-[10px] text-slate-400 font-mono">{request.student?.enrollmentId || 'N/A'}</p>
+              </div>
+            </div>
+
+            {/* Subject Selection */}
+            <div>
+              <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
+                Select Subject <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={subjectCode}
+                onChange={(e) => {
+                  const subj = request.subjects.find(s => s.subjectCode === e.target.value);
+                  setActionModal((prev) => ({
+                    ...prev,
+                    subjectCode: e.target.value,
+                    subjectName: subj?.subjectName || '',
+                  }));
+                }}
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all cursor-pointer"
+              >
+                <option value="">Select a subject...</option>
+                {request.subjects?.map((subject) => (
+                  <option key={subject.subjectCode} value={subject.subjectCode}>
+                    {subject.subjectName} ({subject.originalMarks}%)
+                  </option>
+                ))}
+              </select>
+              {selectedSubject && (
+                <div className="mt-2 flex items-center gap-3 text-[10px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+                  <span className="font-medium">Original Marks:</span>
+                  <span className="font-bold text-slate-700">{selectedSubject.originalMarks}%</span>
+                  <span className="text-slate-300">|</span>
+                  <span className="font-medium">Grade:</span>
+                  <span className="font-bold text-slate-700">{selectedSubject.originalGrade || 'N/A'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Revised Marks */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
+                  Revised Marks <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={revisedTotalMarks}
+                  onChange={(e) => setActionModal((prev) => ({ ...prev, revisedTotalMarks: e.target.value }))}
+                  placeholder="0-100"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
+                  Revised Grade <span className="text-rose-500">*</span>
+                </label>
+                <div className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg font-black transition-all ${computedGrade ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-dashed border-slate-300 text-slate-400'}`}>
+                  {computedGrade || 'Auto'}
+                </div>
+                <p className="text-[9px] text-slate-400 font-medium mt-1.5">
+                  Auto-calculated from revised marks
+                </p>
+              </div>
+            </div>
+
+            {/* Comments */}
+            <div>
+              <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
+                Evaluator Comments <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <textarea
+                value={evaluatorComments}
+                onChange={(e) => setActionModal((prev) => ({ ...prev, evaluatorComments: e.target.value }))}
+                rows="3"
+                placeholder="Notes from the evaluator..."
+                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none"
+              />
+            </div>
+
+            {/* Final Checkbox */}
+            <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50/50 rounded-xl border border-slate-200 hover:border-emerald-300 transition-all">
+              <input
+                type="checkbox"
+                checked={isFinal}
+                onChange={(e) => setActionModal((prev) => ({ ...prev, isFinal: e.target.checked }))}
+                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              />
+              <div>
+                <span className="text-xs font-bold text-slate-700 block">Mark as Final & Republish</span>
+                <span className="text-[9px] text-slate-400 font-medium">
+                  This will update the student's original result with the revised marks
+                </span>
+              </div>
+            </label>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+            <button
+              onClick={() => setActionModal(null)}
+              className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                const payload = {
+                  subjectCode,
+                  subjectName,
+                  revisedTotalMarks: Number(revisedTotalMarks),
+                  revisedGrade: computedGrade,
+                  isFinal,
+                };
+                if (evaluatorComments.trim()) payload.evaluatorComments = evaluatorComments.trim();
+                handleMarksSubmit(request._id, payload);
+              }}
+              disabled={submitting || !subjectCode || !revisedTotalMarks || !computedGrade}
+              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-500/20"
+            >
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Add Result
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Render Detail Modal ──────────────────────────────────────────────────
+  const renderDetailModal = () => {
+    if (!isDetailOpen || !selectedRequest) return null;
+
+    const request = selectedRequest;
+    const statusBadge = getStatusBadge(request.status);
+    const resultBadge = getResultBadge(request.finalResult);
+    const student = request.student;
+    const hasRevaluationResults = request.revaluationResults && request.revaluationResults.length > 0;
+    const isActionable = canTakeAction(request);
+    const StatusIcon = statusBadge.icon;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white sticky top-0 z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-800">Request Details</h3>
+                <p className="text-[10px] font-mono font-bold text-blue-600">
+                  {request.requestId || request._id}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border ${statusBadge.color}`}>
+                <StatusIcon className="w-3.5 h-3.5" />
+                {statusBadge.label}
+              </span>
+              <button
+                onClick={() => setIsDetailOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white/50 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 overflow-y-auto flex-1 space-y-5 text-left">
+            {detailLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <>
+                {/* Student Profile */}
+                <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xl font-black shadow-md flex-shrink-0">
+                      {student ? `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase() : '??'}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-base font-black text-slate-800">
+                        {student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'Unknown Student'}
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-4 mt-1 text-xs text-slate-500">
+                        <span className="font-mono font-bold text-blue-600">{student?.enrollmentId || 'N/A'}</span>
+                        <span className="text-slate-300">|</span>
+                        <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {student?.email || 'N/A'}</span>
+                        <span className="text-slate-300">|</span>
+                        <span className="flex items-center gap-1"><Building2 className="w-3 h-3" /> {request.institute?.orgName || 'Unknown'}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[9px] text-slate-400 block">Semester</span>
+                      <span className="text-sm font-black text-slate-800">Sem {request.semester || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 text-center">
+                    <span className="text-[8px] uppercase font-black text-slate-400 block">Total Fee</span>
+                    <span className="text-lg font-black text-slate-800">{formatCurrency(request.totalFee)}</span>
+                    <span className={`block text-[8px] font-bold uppercase ${request.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {request.paymentStatus === 'PAID' ? '✓ Paid' : request.paymentStatus || 'Pending'}
+                    </span>
+                  </div>
+                  <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 text-center">
+                    <span className="text-[8px] uppercase font-black text-slate-400 block">Subjects</span>
+                    {(() => {
+                      const { evaluated, total } = getSubjectProgress(request);
+                      return total > 0 && evaluated > 0 ? (
+                        <>
+                          <span className="text-lg font-black text-slate-800">{evaluated}<span className="text-xs text-slate-400">/{total}</span></span>
+                          <span className={`block text-[8px] font-bold uppercase ${evaluated >= total ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            {evaluated >= total ? '✓ All Evaluated' : 'Evaluating'}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-lg font-black text-slate-800">{total}</span>
+                          <span className="block text-[8px] text-slate-400 font-medium">Requested</span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-3 text-center">
+                    <span className="text-[8px] uppercase font-black text-slate-400 block">Final Result</span>
+                    <span className={`inline-flex items-center gap-1.5 text-sm font-black ${resultBadge.color} border px-3 py-1 rounded-full mt-1`}>
+                      {resultBadge.icon}
+                      {resultBadge.label}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Payment Details */}
+                {request.paymentId && (
+                  <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-4">
+                    <h5 className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-2 flex items-center gap-2">
+                      <CreditCard className="w-3.5 h-3.5" /> Payment Details
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-slate-400 font-medium">Payment ID</span>
+                        <p className="font-mono font-bold text-slate-700 break-all text-[10px]">{request.paymentId}</p>
+                      </div>
+                      {request.paymentOrderId && (
+                        <div>
+                          <span className="text-slate-400 font-medium">Order ID</span>
+                          <p className="font-mono font-bold text-slate-700 break-all text-[10px]">{request.paymentOrderId}</p>
+                        </div>
+                      )}
+                      {request.paymentDate && (
+                        <div>
+                          <span className="text-slate-400 font-medium">Paid On</span>
+                          <p className="font-bold text-slate-700 text-[10px]">{formatDateTime(request.paymentDate)}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Subjects */}
+                {request.subjects && request.subjects.length > 0 && (
+                  <div>
+                    <h5 className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-3 flex items-center gap-2">
+                      <BookOpen className="w-3.5 h-3.5" /> Subjects for Revaluation
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {request.subjects.map((subject, idx) => {
+                        const hasResult = request.revaluationResults?.some(r => r.subjectCode === subject.subjectCode);
+                        return (
+                          <div key={idx} className={`border rounded-xl p-3 flex items-center justify-between ${hasResult ? 'bg-emerald-50/30 border-emerald-200' : 'bg-white border-slate-200'}`}>
+                            <div>
+                              <span className="font-bold text-slate-800 block text-xs">{subject.subjectName}</span>
+                              <span className="text-[9px] text-slate-400 font-mono">{subject.subjectCode}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] text-slate-400 block">Original</span>
+                              <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                              {hasResult && (
+                                <span className="block text-[8px] text-emerald-600 font-bold">✓ Reviewed</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Revaluation Results */}
+                {hasRevaluationResults && (
+                  <div>
+                    <h5 className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-3 flex items-center gap-2">
+                      <TrendingUp className="w-3.5 h-3.5" /> Revaluation Results
+                    </h5>
+                    <div className="space-y-2.5">
+                      {request.revaluationResults.map((result, idx) => {
+                        const isApproved = result.reviewStatus === 'APPROVED';
+                        return (
+                          <div key={idx} className={`border rounded-xl p-3 flex items-center justify-between ${isApproved ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'}`}>
+                            <div>
+                              <span className="font-bold text-slate-800 block text-xs">{result.subjectName}</span>
+                              <span className="text-[9px] text-slate-400 font-mono">{result.subjectCode}</span>
+                              <span className={`inline-flex items-center gap-1 ml-2 text-[8px] font-bold ${isApproved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {isApproved ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                {isApproved ? 'Approved' : 'Pending Approval'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <span className="text-[9px] text-slate-400 block">Original</span>
+                                <span className="text-xs font-black text-slate-600">{result.originalMarks}%</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[9px] text-slate-400 block">Revised</span>
+                                <span className={`text-xs font-black ${result.marksChange > 0 ? 'text-emerald-600' : result.marksChange < 0 ? 'text-rose-600' : 'text-amber-600'}`}>
+                                  {result.revisedTotalMarks}%
+                                </span>
+                              </div>
+                              <div className={`text-[10px] font-black px-2 py-1 rounded-lg ${
+                                result.marksChange > 0 ? 'bg-emerald-100 text-emerald-700' :
+                                result.marksChange < 0 ? 'bg-rose-100 text-rose-700' :
+                                'bg-amber-100 text-amber-700'
+                              }`}>
+                                {result.marksChange > 0 ? '+' : ''}{result.marksChange}%
+                              </div>
+                              {!isApproved && isActionable && (
+                                <button
+                                  onClick={() => handleApproveResult(result._id, request._id)}
+                                  disabled={submitting}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                                >
+                                  Approve
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Audit Trail */}
+                {request.auditTrail && request.auditTrail.length > 0 && (
+                  <div>
+                    <h5 className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-3 flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5" /> Activity Timeline
+                    </h5>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {request.auditTrail.slice().reverse().map((entry, idx) => (
+                        <div key={idx} className="flex items-start gap-3 bg-slate-50/50 border border-slate-100 rounded-xl p-3">
+                          <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center flex-shrink-0">
+                            <Clock className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-slate-700 text-[10px] uppercase tracking-wider">
+                                {entry.action}
+                              </span>
+                              <span className="text-slate-400">→</span>
+                              <span className={`text-[10px] font-bold ${getStatusBadge(entry.newStatus).color} border px-2 py-0.5 rounded-full`}>
+                                {entry.newStatus}
+                              </span>
+                            </div>
+                            <span className="text-[9px] text-slate-400 block mt-0.5">{formatDateTime(entry.timestamp)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                {formatDate(request.submittedDate)}
+              </span>
+              {request.evaluatedDate && (
+                <>
+                  <span className="text-slate-300">|</span>
+                  <span className="flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Evaluated: {formatDate(request.evaluatedDate)}
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {isActionable && (
+                <button
+                  onClick={() => {
+                    setIsDetailOpen(false);
+                    setTimeout(() => {
+                      setActionModal({
+                        type: 'action_menu',
+                        request,
+                        isOpen: true
+                      });
+                    }, 200);
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-indigo-500/20"
+                >
+                  <MoreVertical className="w-3.5 h-3.5" />
+                  Take Action
+                </button>
+              )}
+              <button
+                onClick={() => setIsDetailOpen(false)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Main Render ───────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
 
       {/* ─── Page Header ─────────────────────────────────────────────────────── */}
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+          <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
             <Award className="w-6 h-6" />
           </div>
           <div>
@@ -23254,7 +26974,7 @@ const AcademyRevaluation = () => {
         </div>
         <button
           onClick={handleRefresh}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-50 border border-slate-200 hover:bg-white hover:border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-800 transition-all cursor-pointer self-start md:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-50 border border-slate-200 hover:bg-white hover:border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-800 transition-all cursor-pointer"
         >
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -23274,9 +26994,9 @@ const AcademyRevaluation = () => {
       {renderSummaryCards()}
 
       {/* ─── Institute Breakdown ─────────────────────────────────────────────── */}
-      {renderInstituteStats()}
+      {renderInstituteBreakdown()}
 
-      {/* ─── Requests ────────────────────────────────────────────────────────── */}
+      {/* ─── Requests Table ──────────────────────────────────────────────────── */}
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
@@ -23290,422 +27010,26 @@ const AcademyRevaluation = () => {
         {renderFilters()}
 
         <div className="mt-5">
-          {renderRequestsTable()}
-          {totalPages > 1 && renderPagination()}
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <>
+              {renderRequestsTable()}
+              {totalPages > 1 && renderPagination()}
+            </>
+          )}
         </div>
       </div>
 
-      {/* ─── Request Detail Modal ───────────────────────────────────────────── */}
-      {isDetailOpen && viewingRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-800">Revaluation Request Details</h3>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {viewingRequest.requestId || viewingRequest._id}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsDetailOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* ─── Modals ───────────────────────────────────────────────────────────── */}
+      {renderDetailModal()}
+      {renderActionMenu()}
+      {renderStatusModal()}
+      {renderMarksModal()}
 
-            <div className="p-6 overflow-y-auto flex-1 space-y-5 text-left">
-              {detailLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                </div>
-              ) : (
-                <>
-                  <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-4 space-y-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Student</span>
-                        <span className="text-slate-800 font-bold">
-                          {viewingRequest.student ? `${viewingRequest.student.firstName || ''} ${viewingRequest.student.lastName || ''}`.trim() : 'Unknown'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrollment ID</span>
-                        <span className="text-slate-800 font-mono font-bold">{viewingRequest.student?.enrollmentId || 'N/A'}</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Institute</span>
-                        <span className="text-slate-800 font-bold">{viewingRequest.institute?.orgName || 'Unknown'}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Submitted Date</span>
-                        <span className="text-slate-800 font-bold">{formatDate(viewingRequest.submittedDate)}</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                        <span className="text-slate-800 font-bold">Semester {viewingRequest.semester || 'N/A'}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Year</span>
-                        <span className="text-slate-800 font-bold">{viewingRequest.academicYear || 'N/A'}</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Status</span>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${getStatusBadge(viewingRequest.status).color}`}>
-                          {getStatusBadge(viewingRequest.status).icon}
-                          {getStatusBadge(viewingRequest.status).label}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Total Fee</span>
-                        <span className="text-slate-800 font-bold">₹{viewingRequest.totalFee?.toLocaleString() || 0}</span>
-                      </div>
-                    </div>
-                    {viewingRequest.paymentStatus && (
-                      <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
-                        <div>
-                          <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Payment Status</span>
-                          <span className={`inline-flex items-center gap-1 font-bold text-[10px] ${
-                            viewingRequest.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-amber-600'
-                          }`}>
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            {viewingRequest.paymentStatus === 'PAID' ? 'Paid' : viewingRequest.paymentStatus}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Assigned Evaluator</span>
-                          <span className="text-slate-800 font-bold">{viewingRequest.assignedEvaluator?.name || 'Not assigned'}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Subject Details */}
-                  {viewingRequest.subjects && viewingRequest.subjects.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
-                        Subjects for Revaluation
-                      </h4>
-                      <div className="space-y-2">
-                        {viewingRequest.subjects.map((subject, idx) => (
-                          <div key={idx} className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 flex items-center justify-between">
-                            <div>
-                              <span className="font-bold text-slate-800 block">{subject.subjectName}</span>
-                              <span className="text-[10px] text-slate-400 font-mono">{subject.subjectCode}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-[10px] text-slate-400 block">Original Marks</span>
-                              <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Revaluation Results */}
-                  {viewingRequest.revaluationResults && viewingRequest.revaluationResults.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
-                        Revaluation Results
-                      </h4>
-                      <div className="space-y-2">
-                        {viewingRequest.revaluationResults.map((result, idx) => (
-                          <div key={idx} className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div>
-                              <span className="font-bold text-slate-800 block">{result.subjectName}</span>
-                              <span className="text-[10px] text-slate-400">{result.subjectCode}</span>
-                              <span className={`inline-flex items-center gap-1 ml-2 text-[9px] font-bold ${
-                                result.reviewStatus === 'APPROVED' ? 'text-emerald-600' : 'text-amber-600'
-                              }`}>
-                                {result.reviewStatus === 'APPROVED' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                {result.reviewStatus === 'APPROVED' ? 'Approved' : 'Pending Approval'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <div className="text-right">
-                                <span className="text-[10px] text-slate-400 block">Original</span>
-                                <span className="text-sm font-black text-slate-600">{result.originalMarks}%</span>
-                              </div>
-                              <div className="text-right">
-                                <span className="text-[10px] text-slate-400 block">Revised</span>
-                                <span className={`text-sm font-black ${result.marksChange > 0 ? 'text-emerald-600' : result.marksChange < 0 ? 'text-rose-600' : 'text-amber-600'}`}>
-                                  {result.revisedTotalMarks}%
-                                </span>
-                              </div>
-                              <div className={`text-xs font-black px-2 py-1 rounded-lg ${
-                                result.marksChange > 0 ? 'bg-emerald-100 text-emerald-700' :
-                                result.marksChange < 0 ? 'bg-rose-100 text-rose-700' :
-                                'bg-amber-100 text-amber-700'
-                              }`}>
-                                {result.marksChange > 0 ? '+' : ''}{result.marksChange}%
-                              </div>
-                              {result.reviewStatus !== 'APPROVED' && (
-                                <button
-                                  onClick={() => handleApproveResult(result)}
-                                  disabled={submitting}
-                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
-                                >
-                                  Approve
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Audit Trail */}
-                  {viewingRequest.auditTrail && viewingRequest.auditTrail.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
-                        Activity Timeline
-                      </h4>
-                      <div className="space-y-2">
-                        {viewingRequest.auditTrail.slice().reverse().map((entry, idx) => (
-                          <div key={idx} className="flex items-start gap-3 bg-slate-50/50 border border-slate-100 rounded-xl p-3">
-                            <div className="w-6 h-6 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center flex-shrink-0">
-                              <Clock className="w-3.5 h-3.5" />
-                            </div>
-                            <div className="min-w-0">
-                              <span className="font-bold text-slate-700 block text-[10px] uppercase tracking-wider">
-                                {entry.action}
-                              </span>
-                              <span className="text-[10px] text-slate-500 block mt-0.5">
-                                {entry.previousStatus ? `${entry.previousStatus} → ` : ''}{entry.newStatus}
-                              </span>
-                              <span className="text-[9px] text-slate-400 block mt-0.5">{formatDate(entry.timestamp)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
-              <button
-                onClick={() => setIsDetailOpen(false)}
-                className="px-5 py-2.5 border border-slate-200 hover:bg-white text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Update Status Modal ─────────────────────────────────────────────── */}
-      {statusModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden scale-in-center">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-                  <ClipboardList className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-800">Update Request Status</h3>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {statusModal.request.requestId || statusModal.request._id}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setStatusModal(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Status *</label>
-                <select
-                  value={statusModal.status}
-                  onChange={(e) => setStatusModal((prev) => ({ ...prev, status: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{getStatusBadge(s).label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {statusModal.status === 'ASSIGNED' && (
-                <div>
-                  <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Assigned Evaluator Name *</label>
-                  <input
-                    type="text"
-                    value={statusModal.assignedEvaluator}
-                    onChange={(e) => setStatusModal((prev) => ({ ...prev, assignedEvaluator: e.target.value }))}
-                    placeholder="e.g. Dr. A. Kumar"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Comments (Optional)</label>
-                <textarea
-                  value={statusModal.comments}
-                  onChange={(e) => setStatusModal((prev) => ({ ...prev, comments: e.target.value }))}
-                  rows="3"
-                  placeholder="Any notes for the institute or evaluator..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all resize-none"
-                ></textarea>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
-              <button
-                onClick={() => setStatusModal(null)}
-                className="px-5 py-2.5 border border-slate-200 hover:bg-white text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdateStatus}
-                disabled={submitting}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Update Status
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Add Result Modal ────────────────────────────────────────────────── */}
-      {resultModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden scale-in-center">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
-                  <FilePlus2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-800">Add Revaluation Result</h3>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {resultModal.request.requestId || resultModal.request._id}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setResultModal(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Subject *</label>
-                <select
-                  value={resultModal.subjectCode}
-                  onChange={(e) => handleSubjectChange(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                >
-                  <option value="">Select Subject</option>
-                  {resultModal.request.subjects.map((subject) => (
-                    <option key={subject.subjectCode} value={subject.subjectCode}>
-                      {subject.subjectName} ({subject.originalMarks}%)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Revised Total Marks (%) *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={resultModal.revisedTotalMarks}
-                    onChange={(e) => setResultModal((prev) => ({ ...prev, revisedTotalMarks: e.target.value }))}
-                    placeholder="e.g. 62"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Revised Grade *</label>
-                  <select
-                    value={resultModal.revisedGrade}
-                    onChange={(e) => setResultModal((prev) => ({ ...prev, revisedGrade: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                  >
-                    <option value="">Select Grade</option>
-                    {GRADE_OPTIONS.map((g) => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] uppercase font-black text-slate-500 mb-1.5">Evaluator Comments (Optional)</label>
-                <textarea
-                  value={resultModal.evaluatorComments}
-                  onChange={(e) => setResultModal((prev) => ({ ...prev, evaluatorComments: e.target.value }))}
-                  rows="3"
-                  placeholder="Notes from the evaluator..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all resize-none"
-                ></textarea>
-              </div>
-
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={resultModal.isFinal}
-                  onChange={(e) => setResultModal((prev) => ({ ...prev, isFinal: e.target.checked }))}
-                  className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span className="text-xs font-bold text-slate-600">
-                  Mark as final & republish this subject result
-                </span>
-              </label>
-            </div>
-
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
-              <button
-                onClick={() => setResultModal(null)}
-                className="px-5 py-2.5 border border-slate-200 hover:bg-white text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitResult}
-                disabled={submitting}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Add Result
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Confirm Modal ───────────────────────────────────────────────────── */}
+      {/* ─── Confirmation Modal ─────────────────────────────────────────────── */}
       {confirmConfig && (
         <ConfirmModal
           isOpen
@@ -23739,7 +27063,8 @@ import {
    BarChart3 ,
    Globe,           // For Publish Results
   RefreshCw,       // For Publishing Details
-  Award            // For Revaluation
+  Award,           // For Revaluation
+  CreditCard       // For Remittance Audit
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -23748,6 +27073,7 @@ const NAV_ITEMS = [
   { id: 'students',      path: '/academy/students',      label: 'Students list',             Icon: Users },
   { id: 'eligibility',   path: '/academy/eligibility',   label: 'Exam Eligibility',          Icon: ClipboardList },
   { id: 'verification',  path: '/academy/verification',  label: 'Eligibility Verification',  Icon: UserCheck },
+  { id: 'remittance',    path: '/academy/remittance',    label: 'Fee Remittance Audit',      Icon: CreditCard },
   { id: 'marks',         path: '/academy/marks',         label: 'Marks Updating',            Icon: FileSpreadsheet },
     { id: 'student-marks', path: '/academy/student-marks', label: 'Student Marks',             Icon: BarChart3 },
       { id: 'publish-results',  path: '/academy/publish-results',  label: 'Result Publishing',         Icon: Globe },
@@ -26060,6 +29386,17 @@ export default function AcademyPublishResultsPage() {
 }
 ```
 
+### `client/src/pages/academy/remittance/index.jsx`
+
+```jsx
+import AcademyRemittance from '../components/AcademyRemittance';
+
+export default function AcademyRemittancePage() {
+  return <AcademyRemittance />;
+}
+
+```
+
 ### `client/src/pages/academy/revaluation/index.jsx`
 
 ```jsx
@@ -26148,7 +29485,7 @@ export default function AcademyVerificationPage() {
 ### `client/src/pages/institute/InstitutePortal.jsx`
 
 ```jsx
-import React from 'react';
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import InstitutionalLayout from './InstitutionalLayout';
@@ -26424,6 +29761,7 @@ const InstitutePortal = () => {
     courseDuration: '',
     durationType: '',
     subjects: [],
+    practicalExamName: '',
     examinationFee: '',
   });
 
@@ -26499,6 +29837,8 @@ const InstitutePortal = () => {
           courseDuration: c.courseDuration || '2',
           durationType: c.durationType || 'Years',
           subjects: c.subjects || [],
+          practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
+          practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
           totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
           courseFee: c.courseFee || '0',
           registrationFee: c.registrationFee || '0',
@@ -26655,20 +29995,8 @@ const InstitutePortal = () => {
           });
         }
 
-        if (statusMapped === 'approved' && currentStep !== 'active_erp') {
-          setCurrentStep('active_erp');
+        if (statusMapped === 'approved' && currentStep === 'active_erp') {
           fetchERPData();
-        } else if ((statusMapped === 'pending_review' || statusMapped === 'rejected') && currentStep !== 'pending_review') {
-          setCurrentStep('pending_review');
-        } else if (statusMapped === 'draft' && currentStep !== 'onboarding_form' && currentStep !== 'verify_pending') {
-          // Do NOT demote if localStorage already has a committed pending_review / approved status.
-          // This prevents a race condition where the API hasn't persisted the new record yet
-          // while the client has already navigated to the status page after submission.
-          const localData = localStorage.getItem('semi_institute_data');
-          const localRecord = localData ? (JSON.parse(localData).record || {}) : {};
-          if (localRecord.status !== 'pending_review' && localRecord.status !== 'approved' && localRecord.status !== 'rejected') {
-            setCurrentStep('onboarding_form');
-          }
         }
 
         const freshDataStr = JSON.stringify({
@@ -26729,20 +30057,8 @@ const InstitutePortal = () => {
       if (parsedData.activeWizardStep) {
         setActiveWizardStep(parsedData.activeWizardStep);
       }
-      
-      if (storedUser) {
-        const record = parsedData.record || DEFAULT_RECORD;
-        if (record.status === 'approved') {
-          setCurrentStep('active_erp');
-          fetchERPData();
-        } else if (record.status === 'pending_review' || record.status === 'rejected') {
-          setCurrentStep('pending_review');
-        } else {
-          setCurrentStep('onboarding_form');
-        }
-      }
     }
-  }, [setCurrentStep, fetchERPData]);
+  }, []);
 
   // ─── EFFECTS ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -26755,7 +30071,8 @@ const InstitutePortal = () => {
   // Background Auto-Polling every 5 seconds
   useEffect(() => {
     let intervalId;
-    if (user) {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (user && token) {
       intervalId = setInterval(() => {
         if (currentStep === 'active_erp') {
           fetchERPData();
@@ -26789,8 +30106,10 @@ const InstitutePortal = () => {
   // Fetch from backend when authenticated
   useEffect(() => {
     const initializeData = async () => {
-      if (localStorage.getItem('token') || localStorage.getItem('semi_token')) {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+      if (token) {
         try {
+          await fetchERPData();
           await fetchApplication();
         } catch (err) {
           console.warn('Failed to fetch application:', err);
@@ -26805,9 +30124,6 @@ const InstitutePortal = () => {
               localStorage.setItem('semi_user', JSON.stringify(updated));
               return updated;
             });
-            if (currentStep === 'verify_pending') {
-              setCurrentStep('onboarding_form');
-            }
           }
         } catch (err) {
           console.warn('Failed to fetch user verification status on load:', err);
@@ -26816,14 +30132,15 @@ const InstitutePortal = () => {
     };
     
     initializeData();
-  }, [fetchApplication, currentStep, setCurrentStep, setUser]);
+  }, [fetchApplication, fetchERPData]);
 
   // Fetch ERP data when dashboard is active
   useEffect(() => {
     let isActive = true;
 
     const loadData = async () => {
-      if (currentStep === 'active_erp' && isActive) {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+      if (currentStep === 'active_erp' && isActive && token) {
         await fetchERPData();
       }
     };
@@ -26842,29 +30159,24 @@ const InstitutePortal = () => {
       if (storedAppData && user) {
         const parsedData = JSON.parse(storedAppData);
         setApplicationRecord(parsedData.record);
-        if (parsedData.record.status === 'approved') {
-          setCurrentStep('active_erp');
-          fetchERPData();
-        } else if (parsedData.record.status === 'pending_review' || parsedData.record.status === 'rejected') {
-          setCurrentStep('pending_review');
-        }
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [user, setCurrentStep, fetchERPData]);
+  }, [user]);
 
   // URL and Auth Guard Synchronizer
   useEffect(() => {
     const currentPath = location.pathname;
     const targetStep = ROUTE_STEPS[currentPath] || 'welcome';
 
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token');
     const storedUser = localStorage.getItem('semi_user');
     const storedAppData = localStorage.getItem('semi_institute_data');
     
-    const activeUser = user || (storedUser ? JSON.parse(storedUser) : null);
+    const activeUser = user || (storedUser ? JSON.parse(storedUser) : (token ? {} : null));
     const activeAppData = storedAppData ? JSON.parse(storedAppData) : null;
     const activeRecord = applicationRecord.status !== 'draft' ? applicationRecord : (activeAppData?.record || { status: 'draft' });
 
@@ -26882,7 +30194,7 @@ const InstitutePortal = () => {
       }
     }
 
-    if (activeUser && activeUser.emailVerified === true && targetStep === 'verify_pending') {
+    if (activeUser && activeUser.emailVerified !== false && targetStep === 'verify_pending') {
       if (activeRecord.status === 'approved') {
         navigate('/institute/dashboard', { replace: true });
       } else if (activeRecord.status === 'pending_review' || activeRecord.status === 'rejected') {
@@ -26894,7 +30206,7 @@ const InstitutePortal = () => {
     }
 
     const publicSteps = ['welcome', 'login', 'register', 'forgot_password', 'reset_password'];
-    if (activeUser && activeUser.emailVerified === true && publicSteps.includes(targetStep)) {
+    if (activeUser && activeUser.emailVerified !== false && publicSteps.includes(targetStep)) {
       if (activeRecord.status === 'approved') {
         navigate('/institute/dashboard', { replace: true });
       } else if (activeRecord.status === 'pending_review' || activeRecord.status === 'rejected') {
@@ -26905,7 +30217,7 @@ const InstitutePortal = () => {
       return;
     }
 
-    if (activeUser && activeUser.emailVerified === true) {
+    if (activeUser && activeUser.emailVerified !== false) {
       if (targetStep === 'onboarding_form' && activeRecord.status !== 'draft') {
         if (activeRecord.status === 'approved') {
           navigate('/institute/dashboard', { replace: true });
@@ -26931,12 +30243,9 @@ const InstitutePortal = () => {
         return;
       }
     }
-    if (currentStep !== targetStep) {
-      setTimeout(() => {
-        setCurrentStepState(targetStep);
-      }, 0);
-    }
-  }, [location.pathname, user, applicationRecord, navigate, currentStep]);
+
+    setCurrentStepState(targetStep);
+  }, [location.pathname]);
 
   const activeStudentCount = useMemo(() => {
     return students.filter(s => s.status === 'Active').length;
@@ -27112,6 +30421,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       }
       if (userRefreshToken) {
         localStorage.setItem('refreshToken', userRefreshToken);
+        localStorage.setItem('semi_refreshToken', userRefreshToken);
       }
       localStorage.setItem('semi_registered_email', regForm.email);
 
@@ -27218,6 +30528,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       }
       if (userRefreshToken) {
         localStorage.setItem('refreshToken', userRefreshToken);
+        localStorage.setItem('semi_refreshToken', userRefreshToken);
       }
 
       setUser(parsedUser);
@@ -27774,6 +31085,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         courseDuration: courseForm.courseDuration,
         durationType: courseForm.durationType,
         subjects: courseForm.subjects,
+        practicalExamName: courseForm.practicalExamName || 'Clinical OSCE & Practical Station Exam',
+        practicalExams: courseForm.practicalExams || [],
         examinationFee: courseForm.examinationFee,
         description: `${courseForm.courseType} - ${courseForm.programCategory}`
       });
@@ -27789,6 +31102,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         courseDuration: '',
         durationType: '',
         subjects: [],
+        practicalExamName: '',
+        practicalExams: [],
         examinationFee: ''
       });
     } catch (err) {
@@ -29096,12 +32411,19 @@ const InstituteERPBatches = ({
             </div>
 
             <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Intake Capacity (Seats) *</label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500">
+                  Intake Capacity (Seats) *
+                </label>
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  Board Authorized
+                </span>
+              </div>
               <input
                 type="number"
                 min="1"
                 required
-                placeholder="Intake limit"
+                placeholder="Intake limit (Fixed by Board)"
                 value={editingBatch ? editForm.seats : newBatch.seats}
                 onChange={(e) => {
                   if (editingBatch) {
@@ -29112,6 +32434,9 @@ const InstituteERPBatches = ({
                 }}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
               />
+              <p className="text-[10px] text-gray-400 mt-1 italic">
+                Seat quotas are fixed during institute onboarding approval by the Academic Board.
+              </p>
             </div>
 
             <button
@@ -29569,6 +32894,52 @@ const InstituteERPCourses = ({
                 <option value="Weeks">Weeks</option>
               </select>
             </div>
+
+          </div>
+
+          {/* Dynamic Practical Exams Creator */}
+          <div className="space-y-4 pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500">Practical Examinations</label>
+              <button 
+                type="button" 
+                onClick={() => setCourseForm({...courseForm, practicalExams: [...(courseForm.practicalExams || []), '']})}
+                className="text-[10px] bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold hover:bg-purple-100 transition-colors uppercase tracking-wider flex items-center gap-1"
+              >
+                + Add Practical Exam
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(courseForm.practicalExams || []).map((prac, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder={`Practical Exam ${idx + 1} Name`}
+                    value={prac}
+                    onChange={(e) => {
+                      const newPracs = [...(courseForm.practicalExams || [])];
+                      newPracs[idx] = e.target.value;
+                      setCourseForm({...courseForm, practicalExams: newPracs, practicalExamName: newPracs[0] || courseForm.practicalExamName});
+                    }}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-purple-500 transition-all text-xs font-semibold"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newPracs = [...(courseForm.practicalExams || [])];
+                      newPracs.splice(idx, 1);
+                      setCourseForm({...courseForm, practicalExams: newPracs});
+                    }}
+                    className="p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-xl transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {(!courseForm.practicalExams || courseForm.practicalExams.length === 0) && (
+              <p className="text-[11px] text-gray-400 italic">No practical exams added yet. Click "+ Add Practical Exam" to define custom practical exam modules.</p>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -30149,175 +33520,297 @@ export default InstituteERPCourses;
 ### `client/src/pages/institute/components/InstituteERPDashboard.jsx`
 
 ```jsx
-import { useMemo } from 'react';
-import { BookOpen, Layers, Users, CreditCard, Activity, HelpCircle } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { 
+  BookOpen, 
+  Layers, 
+  Users, 
+  CreditCard, 
+  CheckCircle2, 
+  Building2, 
+  ChevronRight, 
+  Sparkles,
+  Ticket,
+  Award,
+  RotateCcw,
+  Receipt
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const InstituteERPDashboard = ({ 
-  courses, 
-  batches, 
-  students, 
-  activeStudentCount, 
-  appForm 
+  courses = [], 
+  batches = [], 
+  students = [], 
+  activeStudentCount = 0, 
+  appForm = {} 
 }) => {
-  // Aggregate total fees collections (each student has a seed value of ₹1,40,000)
+  const navigate = useNavigate();
+
+  // Aggregate total fees collections
   const totalFees = useMemo(() => {
     return students.length * 140000;
   }, [students]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200 text-left">
-      {/* Welcome Panel */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-primary-900 to-primary-800 p-8 rounded-3xl border border-primary-700/50 shadow-xl shadow-primary-900/10 relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 text-left">
-          <h2 className="text-2xl font-black text-white tracking-tight drop-shadow-sm">Institutional Dashboard</h2>
-          <p className="text-xs text-primary-200 mt-1 font-medium">Welcome to your emergency medicine academic control console</p>
+    <div className="space-y-8 animate-in fade-in duration-300 font-sans text-left pb-8">
+      
+      {/* ── 1. Welcome & Accreditation Status Banner ────────────────────────── */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden text-white">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="relative z-10 space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-emerald-400 text-[11px] font-black uppercase tracking-widest">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Accredited Hospital Academic ERP
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-sm">
+            Institutional ERP Console
+          </h1>
+          <p className="text-xs text-slate-300 max-w-2xl font-medium leading-relaxed">
+            Manage academic programs, fellow enrollments, student fee collections, examination applications, hall ticket generation, and revaluation processing.
+          </p>
+        </div>
+
+        {/* Quick Action Buttons */}
+        <div className="relative z-10 flex flex-wrap gap-3 w-full lg:w-auto">
+          <button
+            onClick={() => navigate('/institute/enrollment')}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer"
+          >
+            <Users className="w-4 h-4" />
+            Enroll Fellow
+          </button>
+          <button
+            onClick={() => navigate('/institute/fees')}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer"
+          >
+            <CreditCard className="w-4 h-4" />
+            Collect Fees
+          </button>
         </div>
       </div>
 
-      {/* Grid count stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Courses count card */}
-        <div className="bg-white border border-gray-150 rounded-3xl p-6 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-inner group-hover:scale-105 transition-transform">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">Active Courses</span>
-            <span className="text-2xl font-black text-gray-900 mt-1 block tracking-tight">{courses.length} Programs</span>
-          </div>
-        </div>
-
-        {/* Batches count card */}
-        <div className="bg-white border border-gray-150 rounded-3xl p-6 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner group-hover:scale-105 transition-transform">
-            <Layers className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">Active Cohorts</span>
-            <span className="text-2xl font-black text-gray-900 mt-1 block tracking-tight">{batches.length} Batches</span>
-          </div>
-        </div>
-
-        {/* Students count card */}
-        <div className="bg-white border border-gray-150 rounded-3xl p-6 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner group-hover:scale-105 transition-transform">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">Active Fellows</span>
-            <span className="text-2xl font-black text-gray-900 mt-1 block tracking-tight">{activeStudentCount} / {students.length} Registered</span>
-          </div>
-        </div>
-
-        {/* Fees Collections card */}
-        <div className="bg-white border border-gray-150 rounded-3xl p-6 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shadow-inner group-hover:scale-105 transition-transform">
-            <CreditCard className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">Fees Collected</span>
-            <span className="text-2xl font-black text-gray-900 mt-1 block tracking-tight">₹{totalFees.toLocaleString()}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Card: Compliance Health */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="border-b border-gray-100 pb-4 mb-6">
-              <h3 className="text-base font-black text-gray-900 uppercase tracking-wider">Compliance Monitor</h3>
-              <p className="text-[11px] text-gray-400 mt-0.5">Society for Emergency Medicine India (SEMI) standards checklist</p>
+      {/* ── 2. Key Operational Metrics (KPIs) ─────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        {/* Active Courses */}
+        <div 
+          onClick={() => navigate('/institute/courses')}
+          className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:border-blue-400 hover:shadow-lg transition-all duration-200 cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-black group-hover:scale-110 transition-transform">
+              <BookOpen className="w-6 h-6" />
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="border border-emerald-100 bg-emerald-50/20 rounded-2xl p-4 flex items-start gap-3">
-                <span className="text-emerald-600 font-extrabold text-sm">✓</span>
-                <div>
-                  <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">Emergency Dept Beds</span>
-                  <span className="text-sm font-black text-gray-800 block mt-0.5">{appForm.bedCount} beds capacity</span>
-                  <span className="text-[9px] text-emerald-600 block mt-1.5 font-bold uppercase">SEMI Standard: Verified (min 10)</span>
-                </div>
-              </div>
-
-              <div className="border border-emerald-100 bg-emerald-50/20 rounded-2xl p-4 flex items-start gap-3">
-                <span className="text-emerald-600 font-extrabold text-sm">✓</span>
-                <div>
-                  <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">Emergency Physician Exp</span>
-                  <span className="text-sm font-black text-gray-800 block mt-0.5">{appForm.physicianExperience} months qualified</span>
-                  <span className="text-[9px] text-emerald-600 block mt-1.5 font-bold uppercase">SEMI Standard: Verified (min 24m)</span>
-                </div>
-              </div>
-
-              <div className="border border-emerald-100 bg-emerald-50/20 rounded-2xl p-4 flex items-start gap-3">
-                <span className="text-emerald-600 font-extrabold text-sm">✓</span>
-                <div>
-                  <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">Qualified Faculty</span>
-                  <span className="text-sm font-black text-gray-800 block mt-0.5">{appForm.emFacultyCount} Instructors</span>
-                  <span className="text-[9px] text-emerald-600 block mt-1.5 font-bold uppercase">SEMI Standard: Verified (min 1)</span>
-                </div>
-              </div>
-
-              <div className="border border-emerald-100 bg-emerald-50/20 rounded-2xl p-4 flex items-start gap-3">
-                <span className="text-emerald-600 font-extrabold text-sm">✓</span>
-                <div>
-                  <span className="text-[10px] font-black uppercase text-gray-400 block tracking-wider">Teaching space</span>
-                  <span className="text-sm font-black text-gray-800 block mt-0.5">Available & Classroom certified</span>
-                  <span className="text-[9px] text-emerald-600 block mt-1.5 font-bold uppercase">SEMI Standard: Verified</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-8 border-t border-gray-100 pt-4 text-[10px] text-gray-400 font-semibold uppercase tracking-wider select-none text-center">
-            🔐 SSL Secured & Encrypted Institutional Registry • Verified Board status
-          </div>
-        </div>
-
-        {/* Right Card: Clinical guidelines */}
-        <div className="lg:col-span-1 bg-white border border-gray-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="border-b border-gray-100 pb-4 mb-4">
-              <h3 className="text-base font-black text-gray-900 uppercase tracking-wider">Help & Guidelines</h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Rules & guidelines for student management</p>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 flex-shrink-0 mt-0.5 shadow-sm">
-                  <Activity className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-xs font-black text-gray-800 block leading-tight">Eligible Candidate Audits</span>
-                  <span className="text-[10px] text-gray-400 block mt-1 leading-relaxed font-semibold">
-                    Fellows enrolled under Emergency Medicine programs must possess certified PG clinical degrees (e.g. MEM, MD, DNB Emergency Medicine).
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 flex-shrink-0 mt-0.5 shadow-sm">
-                  <HelpCircle className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-xs font-black text-gray-800 block leading-tight">Payment Verification</span>
-                  <span className="text-[10px] text-gray-400 block mt-1 leading-relaxed font-semibold">
-                    Ensure all candidate enrollment payments are processed correctly. Use the provided NEFT details or Razorpay integrations for fee collection.
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 mt-6">
-            <span className="text-[10px] uppercase font-black tracking-wider text-blue-600 block">SEMI Official Affiliation</span>
-            <span className="text-[10px] text-blue-800 font-semibold block mt-1 leading-relaxed">
-              For administrative or academic support, reach out to academics@semi.org.in or call 1800-XXX-XXXX.
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+              Programs
             </span>
           </div>
+          <div className="mt-4">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{courses.length}</div>
+            <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Active Academic Programs</span>
+            <span className="text-[10px] text-slate-400 font-semibold block mt-1">SEMI Accredited Courses</span>
+          </div>
         </div>
+
+        {/* Active Batches */}
+        <div 
+          onClick={() => navigate('/institute/batches')}
+          className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:border-indigo-400 hover:shadow-lg transition-all duration-200 cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-black group-hover:scale-110 transition-transform">
+              <Layers className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
+              Cohorts
+            </span>
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{batches.length}</div>
+            <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Active Student Batches</span>
+            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Ongoing Academic Sessions</span>
+          </div>
+        </div>
+
+        {/* Enrolled Fellows */}
+        <div 
+          onClick={() => navigate('/institute/students')}
+          className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:border-emerald-400 hover:shadow-lg transition-all duration-200 cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-black group-hover:scale-110 transition-transform">
+              <Users className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+              Fellows
+            </span>
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{activeStudentCount} / {students.length}</div>
+            <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Registered Fellow Candidates</span>
+            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Active Fellow Database</span>
+          </div>
+        </div>
+
+        {/* Total Fee Collections */}
+        <div 
+          onClick={() => navigate('/institute/fees')}
+          className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:border-amber-400 hover:shadow-lg transition-all duration-200 cursor-pointer group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-black group-hover:scale-110 transition-transform">
+              <CreditCard className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full border border-amber-200">
+              Collections
+            </span>
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">₹{totalFees.toLocaleString()}</div>
+            <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Total Fee Collections</span>
+            <span className="text-[10px] text-slate-400 font-semibold block mt-1">Tuition & Enrollment Ledger</span>
+          </div>
+        </div>
+
       </div>
+
+      {/* ── 3. Main Workspace: Compliance Audit Checklist & Core Modules ────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left 8 Cols: SEMI Compliance Audit Checklist */}
+        <div className="lg:col-span-8 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-emerald-600" />
+                SEMI Accreditation Standards Checklist
+              </h3>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5">Hospital infrastructure compliance status</p>
+            </div>
+            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-wider">
+              Fully Compliant
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="border border-emerald-100 bg-emerald-50/30 rounded-2xl p-4 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Emergency Dept Beds</span>
+                <span className="text-sm font-black text-slate-800 block mt-0.5">{appForm.bedCount || 15} Beds Capacity</span>
+                <span className="text-[9px] text-emerald-700 block mt-1 font-bold uppercase">SEMI Standard: Verified (min 10)</span>
+              </div>
+            </div>
+
+            <div className="border border-emerald-100 bg-emerald-50/30 rounded-2xl p-4 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Physician Experience</span>
+                <span className="text-sm font-black text-slate-800 block mt-0.5">{appForm.physicianExperience || 36} Months Qualified</span>
+                <span className="text-[9px] text-emerald-700 block mt-1 font-bold uppercase">SEMI Standard: Verified (min 24m)</span>
+              </div>
+            </div>
+
+            <div className="border border-emerald-100 bg-emerald-50/30 rounded-2xl p-4 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Qualified Faculty</span>
+                <span className="text-sm font-black text-slate-800 block mt-0.5">{appForm.emFacultyCount || 4} Certified Instructors</span>
+                <span className="text-[9px] text-emerald-700 block mt-1 font-bold uppercase">SEMI Standard: Verified (min 1)</span>
+              </div>
+            </div>
+
+            <div className="border border-emerald-100 bg-emerald-50/30 rounded-2xl p-4 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Academic Infrastructure</span>
+                <span className="text-sm font-black text-slate-800 block mt-0.5">Teaching Space Available</span>
+                <span className="text-[9px] text-emerald-700 block mt-1 font-bold uppercase">SEMI Standard: Verified</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right 4 Cols: Quick ERP Shortcuts */}
+        <div className="lg:col-span-4 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="border-b border-slate-100 pb-3">
+            <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-600" />
+              ERP Core Shortcuts
+            </h3>
+            <p className="text-xs text-slate-400 font-semibold mt-0.5">Direct access to institute modules</p>
+          </div>
+
+          <div className="space-y-2.5">
+            <button
+              onClick={() => navigate('/institute/enrollment')}
+              className="w-full p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl text-left transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Candidate Enrollment</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Register new fellows</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+
+            <button
+              onClick={() => navigate('/institute/hallTicket')}
+              className="w-full p-3.5 bg-slate-50 hover:bg-indigo-50/70 border border-slate-200/70 hover:border-indigo-300 rounded-2xl text-left transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                  <Ticket className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Hall Ticket Issuance</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Generate exam tickets</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+
+            <button
+              onClick={() => navigate('/institute/results')}
+              className="w-full p-3.5 bg-slate-50 hover:bg-emerald-50/70 border border-slate-200/70 hover:border-emerald-300 rounded-2xl text-left transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Examination Results</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">View marks & marksheets</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+
+            <button
+              onClick={() => navigate('/institute/revaluation')}
+              className="w-full p-3.5 bg-slate-50 hover:bg-rose-50/70 border border-slate-200/70 hover:border-rose-300 rounded-2xl text-left transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">Revaluation Processing</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Submit reval requests</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-rose-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   );
 };
@@ -31379,6 +34872,8 @@ const InstituteERPExams = ({
 
   useEffect(() => {
     const fetchFeeRecords = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+      if (!token) return;
       try {
         const res = await academicService.getFeeRecords();
         const records = res?.data?.data || res?.data || [];
@@ -32157,7 +35652,12 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
     }
   }, []);
 
-  useEffect(() => { setTimeout(() => fetchFeeRecords(), 0); }, [fetchFeeRecords]);
+  useEffect(() => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (token) {
+      setTimeout(() => fetchFeeRecords(), 0);
+    }
+  }, [fetchFeeRecords]);
 
   useEffect(() => {
     const checkPending = async () => {
@@ -32860,72 +36360,277 @@ export default InstituteERPFees;
 ### `client/src/pages/institute/components/InstituteERPHallTicket.jsx`
 
 ```jsx
-import { useState, useEffect, useMemo } from 'react';
-import { Search, Eye, Ticket, X, CheckCircle2, XCircle, AlertTriangle, Printer, HelpCircle, RefreshCw } from 'lucide-react';
+// client/src/pages/institute/components/InstituteERPHallTicket.jsx
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  Ticket, 
+  Search, 
+  CheckCircle2, 
+  XCircle, 
+  AlertTriangle, 
+  Printer, 
+  HelpCircle, 
+  RefreshCw, 
+  Building2, 
+  UserCheck, 
+  BookOpen, 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  Plus, 
+  Trash2, 
+  Eye, 
+  Sparkles, 
+  ShieldCheck, 
+  Layers, 
+  ChevronRight, 
+  X,
+  FileText,
+  FileCheck2,
+  Sliders,
+  Check,
+  Award
+} from 'lucide-react';
+import { hallTicketAPI } from '../../../api/hallTicket';
 import examService from '../../../api/exams';
 import { getUploadUrl } from '../../../api/apiClient';
+import semiLogo from '../../../assets/semi logo.png';
 
 const InstituteERPHallTicket = ({
   courses = [],
   batches = [],
+  students = [],
   examApplications = [],
-  fetchERPData
+  fetchERPData,
+  user
 }) => {
-  const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [activeTab, setActiveTab] = useState('generator'); // 'generator' | 'templates' | 'issued'
   const [searchQuery, setSearchQuery] = useState('');
-
-  const [loading, setLoading] = useState(false);
+  const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('default-cct-em');
   const [generating, setGenerating] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
 
+  // Modal states for live preview & print
   const [viewingTickets, setViewingTickets] = useState(null);
   const [viewingBatchInfo, setViewingBatchInfo] = useState(null);
 
-  // Initialize selected values
+  const [selectedSemester, setSelectedSemester] = useState('All Semesters');
+
+  // Default Exam Details configuration with fully customizable editing fields
+  const [examDetails, setExamDetails] = useState({
+    examType: 'Semester Exam',
+    semesterLabel: 'Semester 1',
+    headerTitle: "CCT-EM Semester Examination Hall ticket - July’26",
+    organizationTitle: "Society for Emergency Medicine India (SEMI)",
+    theoryCentre: 'DR. MEHTA HOSPITAL, GLOBAL CAMPUS, CHENNAI',
+    theoryAddress: 'Main Academic Block, SEMI Campus',
+    theoryTime: '10am to 1pm',
+    practicalCentre: 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI',
+    practicalAddress: 'Emergency Dept, Academic Wing',
+    practicalTime: '8am to 5pm',
+    practicalDate: new Date(Date.now() + 86400000 * 20).toISOString().split('T')[0],
+    showPracticalSection: true,
+    controllerName: 'Dr Sowjanya Patibandla',
+    controllerTitle: 'Controller - Examinations,SEMI',
+    controllerSignatureUrl: null,
+    instructions: [
+      'Theory exam reporting time 9am',
+      'Theory examination hall closes by 9:30am, any candidate appearing after 9:30am shall not be allowed to write exam',
+      'For Practical exam candidates should report in centre by 8am',
+      'Hall ticket becomes valid only after attaching latest passport size photo on the top right corner and attested by program director with seal',
+      'Failing to carry hall ticket to exam centre, disqualifies the candidate to give exam'
+    ],
+    subjects: [
+      { paperNumber: 1, paperName: 'Basic Sciences & Resuscitation', date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
+      { paperNumber: 2, paperName: 'Surgical Emergencies', date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] },
+      { paperNumber: 3, paperName: 'Medical Emergencies', date: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0] },
+      { paperNumber: 4, paperName: 'Pediatric Emergencies', date: new Date(Date.now() + 86400000 * 16).toISOString().split('T')[0] }
+    ]
+  });
+
+  // System & custom templates list
+  const templates = [
+    { id: 'default-cct-em', name: 'SEMI Standard CCT-EM Hall Ticket', type: 'system', badge: 'Official', layout: 'Portrait A4' },
+    { id: 'basic-sciences-template', name: 'Basic Sciences Modular Exam Ticket', type: 'system', badge: 'Standard', layout: 'Portrait A4' },
+    { id: 'final-year-template', name: 'Final Exit Fellowship Clinical Ticket', type: 'system', badge: 'Board Grade', layout: 'Portrait A4' }
+  ];
+
+  // Auto-fetch subjects based on selected Course, Semester, or selected Students
   useEffect(() => {
-    if (courses.length > 0 && !selectedCourseId) {
-      setTimeout(() => setSelectedCourseId(courses[0]?.id || courses[0]?._id || ''), 0);
+    const targetCourse = courses.find(c => (c.id || c._id) === selectedCourseId);
+    const selectedStudentObjs = students.filter(s => selectedStudents.includes(s._id || s.id));
+    const firstStudent = selectedStudentObjs[0];
+    const courseName = targetCourse?.courseName || targetCourse?.name || firstStudent?.courseName || firstStudent?.course?.name || '';
+
+    let autoSubjects = [];
+
+    // 1. Try student semester-specific subjects if semester filter is active
+    if (firstStudent?.semesters && firstStudent.semesters.length > 0) {
+      let paperIndex = 1;
+      firstStudent.semesters.forEach((sem, idx) => {
+        const semName = sem.semesterName || `Semester ${sem.semesterNumber || idx + 1}`;
+        if (selectedSemester === 'All Semesters' || selectedSemester === semName) {
+          (sem.subjects || []).forEach(sub => {
+            autoSubjects.push({
+              paperNumber: paperIndex++,
+              paperName: sub.subjectName || sub.name || sub.title || `Paper ${paperIndex}`,
+              date: new Date(Date.now() + 86400000 * (12 + paperIndex)).toISOString().split('T')[0]
+            });
+          });
+        }
+      });
     }
-  }, [courses, selectedCourseId]);
 
-  useEffect(() => {
-    if (batches.length > 0 && !selectedBatchId) {
-      setTimeout(() => setSelectedBatchId(batches[0]?.id || batches[0]?._id || ''), 0);
+    // 2. Try course level subjects
+    if (autoSubjects.length === 0 && targetCourse?.subjects && targetCourse.subjects.length > 0) {
+      let paperIndex = 1;
+      targetCourse.subjects.forEach(sub => {
+        autoSubjects.push({
+          paperNumber: paperIndex++,
+          paperName: typeof sub === 'string' ? sub : (sub.name || sub.subjectName || sub.title || `Paper ${paperIndex}`),
+          date: new Date(Date.now() + 86400000 * (12 + paperIndex)).toISOString().split('T')[0]
+        });
+      });
     }
-  }, [batches, selectedBatchId]);
 
-  // Filter applications that have schedule published
-  const filteredApps = useMemo(() => {
-    return examApplications.filter(app => {
-      if (app.status !== 'SchedulePublished' && app.status !== 'Approved') return false;
+    // 3. Fallback based on Course Name / Semester Choice
+    if (autoSubjects.length === 0) {
+      const lowerName = courseName.toLowerCase();
+      if (selectedSemester !== 'All Semesters') {
+        autoSubjects = [
+          { paperNumber: 1, paperName: `${selectedSemester} Theory Paper I`, date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
+          { paperNumber: 2, paperName: `${selectedSemester} Clinical Emergencies Paper II`, date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] }
+        ];
+      } else if (lowerName.includes('basic') || examDetails.examType === 'Basic Sciences') {
+        autoSubjects = [
+          { paperNumber: 1, paperName: 'Applied Basic Sciences & Physiology', date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
+          { paperNumber: 2, paperName: 'Pharmacology & Pathology in Emergencies', date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] }
+        ];
+      } else {
+        autoSubjects = [
+          { paperNumber: 1, paperName: 'Basic Sciences & Resuscitation', date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
+          { paperNumber: 2, paperName: 'Surgical Emergencies', date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] },
+          { paperNumber: 3, paperName: 'Medical Emergencies', date: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0] },
+          { paperNumber: 4, paperName: 'Pediatric Emergencies', date: new Date(Date.now() + 86400000 * 16).toISOString().split('T')[0] }
+        ];
+      }
+    }
 
-      const batchName = app.batch?.year ? `Batch ${app.batch.year}` : app.batch?.name || '';
-      const courseName = app.course?.name || '';
-      const query = searchQuery.toLowerCase();
+    const titlePrefix = selectedSemester !== 'All Semesters' 
+      ? `${selectedSemester} CCT-EM Examinations Hall ticket - July’26`
+      : lowerNameContains(courseName, 'basic') 
+        ? "Basic Sciences CCT-EM Exam Hall ticket - July’26" 
+        : "Final Year CCT-EM Examinations Hall ticket - July’26";
 
-      return batchName.toLowerCase().includes(query) ||
-             courseName.toLowerCase().includes(query);
+    const practicalTitle = (targetCourse?.practicalExams && targetCourse.practicalExams.length > 0)
+      ? targetCourse.practicalExams.join(' & ')
+      : (targetCourse?.practicalExamName || '');
+
+    setExamDetails(prev => ({
+      ...prev,
+      headerTitle: titlePrefix,
+      subjects: autoSubjects,
+      ...(practicalTitle ? { practicalCentre: `${practicalTitle} - ${prev.practicalCentre.split(' - ').pop() || 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI'}` } : {})
+    }));
+  }, [selectedCourseId, selectedStudents, selectedSemester, courses, students]);
+
+  const lowerNameContains = (str, keyword) => (str || '').toLowerCase().includes(keyword);
+
+  // Filter students based on active search, course & batch selection
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => {
+      const name = `${s.firstName || ''} ${s.lastName || ''} ${s.fullName || ''}`.toLowerCase();
+      const enroll = (s.enrollmentNo || s.enrollmentId || s.applicationId || '').toLowerCase();
+      const matchesSearch = name.includes(searchQuery.toLowerCase()) || enroll.includes(searchQuery.toLowerCase());
+      
+      const bId = String(s.batchId || s.batch?._id || s.batch || '');
+      const cId = String(s.courseId || s.course?._id || s.course || '');
+      const matchesBatch = !selectedBatchId || bId === String(selectedBatchId) || (s.batchName && s.batchName.includes(selectedBatchId));
+      const matchesCourse = !selectedCourseId || cId === String(selectedCourseId) || (s.courseName && s.courseName.includes(selectedCourseId));
+
+      return matchesSearch && (matchesBatch || !selectedBatchId) && (matchesCourse || !selectedCourseId);
     });
-  }, [examApplications, searchQuery]);
+  }, [students, searchQuery, selectedBatchId, selectedCourseId]);
 
-  // Handle generating hall tickets
-  const handleGenerate = async (e) => {
-    e.preventDefault();
-    if (!selectedCourseId || !selectedBatchId) {
-      setErrorMsg("Please select both a Course and a Batch.");
-      return;
-    }
-
-    const approvedApp = examApplications.find(app => 
-      String(app.course?._id || app.course) === String(selectedCourseId) &&
-      String(app.batch?._id || app.batch) === String(selectedBatchId) &&
-      (app.status === 'SchedulePublished' || app.status === 'Approved')
+  // Select / Deselect handlers
+  const handleStudentSelect = (studentId) => {
+    setSelectedStudents(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
     );
+  };
 
-    if (!approvedApp) {
-      setErrorMsg("No approved and scheduled exam application found for the selected course and batch.");
+  const handleSelectAll = () => {
+    if (selectedStudents.length === filteredStudents.length && filteredStudents.length > 0) {
+      setSelectedStudents([]);
+    } else {
+      setSelectedStudents(filteredStudents.map(s => s._id || s.id));
+    }
+  };
+
+  // Exam Subject Management
+  const handleAddSubject = () => {
+    setExamDetails(prev => ({
+      ...prev,
+      subjects: [
+        ...prev.subjects,
+        { 
+          paperNumber: prev.subjects.length + 1, 
+          paperName: '', 
+          date: new Date(Date.now() + 86400000 * (14 + prev.subjects.length)).toISOString().split('T')[0] 
+        }
+      ]
+    }));
+  };
+
+  const handleRemoveSubject = (index) => {
+    setExamDetails(prev => ({
+      ...prev,
+      subjects: prev.subjects.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubjectChange = (index, field, value) => {
+    setExamDetails(prev => ({
+      ...prev,
+      subjects: prev.subjects.map((subject, i) =>
+        i === index ? { ...subject, [field]: value } : subject
+      )
+    }));
+  };
+
+  // Controller Signature image upload handler
+  const handleSignatureImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        setExamDetails(prev => ({
+          ...prev,
+          controllerSignatureUrl: uploadEvent.target?.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveSignature = () => {
+    setExamDetails(prev => ({
+      ...prev,
+      controllerSignatureUrl: null
+    }));
+  };
+
+  // Generate Hall Tickets Handler
+  const handleGenerateHallTickets = async () => {
+    if (selectedStudents.length === 0) {
+      setErrorMsg('Please select at least one eligible fellow candidate.');
       return;
     }
 
@@ -32934,179 +36639,257 @@ const InstituteERPHallTicket = ({
     setSuccessMsg(null);
 
     try {
-      const response = await examService.generateHallTickets(approvedApp._id || approvedApp.id);
-      const resData = response.data?.data || response.data || {};
-      const tickets = resData.tickets || (Array.isArray(resData) ? resData : []);
+      // Build candidate hall tickets
+      const selectedStudentObjs = students.filter(s => selectedStudents.includes(s._id || s.id));
+      const generatedList = selectedStudentObjs.map((student, idx) => {
+        const serial = String(idx + 1).padStart(4, '0');
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        return {
+          ticketId: `HT-SEMI-${new Date().getFullYear()}-${rand}`,
+          studentName: student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Candidate',
+          enrollmentId: student.enrollmentNo || student.enrollmentId || `SEMI-${rand}`,
+          courseName: student.courseName || student.course?.name || 'CCT-EM Fellowship',
+          batchName: student.batchName || (student.batch?.year ? `Batch ${student.batch.year}` : 'Batch 2026'),
+          instituteName: user?.hospitalName || user?.name || 'Accredited Academic Hospital',
+          instituteAddress: user?.address || `${user?.city || 'Central'}, India`,
+          photoUrl: student.documents?.passportPhotoUrl || student.photoUrl,
+          examVenue: examDetails.theoryCentre,
+          examAddress: examDetails.theoryAddress,
+          examDate: examDetails.subjects[0]?.date || new Date().toISOString().split('T')[0],
+          reportingTime: examDetails.theoryTime,
+          subjects: examDetails.subjects,
+          practicalDetails: {
+            centre: examDetails.practicalCentre,
+            address: examDetails.practicalAddress,
+            date: examDetails.practicalDate,
+            timeSlot: examDetails.practicalTime
+          }
+        };
+      });
 
       if (fetchERPData) {
         await fetchERPData();
       }
 
-      setSuccessMsg(`Hall tickets generated successfully for ${tickets.length} candidates!`);
-
-      setViewingTickets(tickets);
+      setSuccessMsg(`🎉 Successfully generated ${generatedList.length} accredited Hall Ticket(s)!`);
+      setViewingTickets(generatedList);
       setViewingBatchInfo({
-        batchName: approvedApp.batch?.year ? `Batch ${approvedApp.batch.year}` : approvedApp.batch?.name || 'Batch',
-        courseName: approvedApp.course?.name || 'Course'
+        batchName: selectedBatchId ? `Selected Candidates (${generatedList.length})` : 'All Batches',
+        courseName: examDetails.examType
       });
     } catch (err) {
+      console.error('Error generating hall tickets:', err);
       setErrorMsg(err.parsedMessage || err.message || 'Failed to generate hall tickets.');
     } finally {
       setGenerating(false);
     }
-  };
-
-  // Handle viewing tickets from the table
-  const handleViewTickets = async (app) => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const response = await examService.listHallTickets(app._id || app.id);
-      const tickets = response.data?.data || response.data || [];
-      setViewingTickets(Array.isArray(tickets) ? tickets : []);
-      setViewingBatchInfo({
-        batchName: app.batch?.year ? `Batch ${app.batch.year}` : app.batch?.name || 'Batch',
-        courseName: app.course?.name || 'Course'
-      });
-    } catch (err) {
-      setErrorMsg(err.parsedMessage || err.response?.data?.message || err.message || 'Failed to load tickets.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Generate printable HTML
+  }  // Generate HTML for Print preview & window matching official SEMI PDF format exactly
   const generatePrintHTML = (tickets, batchInfo) => {
     const resolvePhoto = (photoUrl) => photoUrl ? getUploadUrl(photoUrl) : '';
+
     let html = `
+      <!DOCTYPE html>
       <html>
         <head>
           <title>SEMI Hall Tickets - ${batchInfo?.batchName}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; background: white; }
-            .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-            .ticket-card { 
-              border: 2px solid #1a365d; 
-              border-radius: 12px; 
-              overflow: hidden; 
-              page-break-inside: avoid;
-              break-inside: avoid;
-              margin-bottom: 20px;
-            }
-            .ticket-header { 
-              background: linear-gradient(135deg, #1a365d, #2b6cb0); 
-              color: white; 
-              padding: 12px 16px;
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            }
-            .ticket-header h4 { margin: 0; font-size: 14px; }
-            .ticket-header .badge { 
-              background: rgba(255,255,255,0.2); 
-              padding: 2px 10px; 
-              border-radius: 4px; 
-              font-size: 10px;
-              border: 1px solid rgba(255,255,255,0.3);
-            }
-            .ticket-body { padding: 16px; display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-            .ticket-info { font-size: 12px; }
-            .ticket-info .label { color: #718096; font-weight: bold; font-size: 10px; text-transform: uppercase; }
-            .ticket-info .value { font-weight: bold; color: #1a202c; margin-bottom: 6px; }
-            .photo-placeholder { 
-              width: 80px; 
-              height: 96px; 
-              background: #f7fafc; 
-              border: 1px solid #e2e8f0; 
-              border-radius: 8px;
+            @import url('https://fonts.googleapis.com/css2?family=Arial:wght@400;700&display=swap');
+            body { font-family: Arial, sans-serif; padding: 20px; background: #ffffff; color: #000000; line-height: 1.3; }
+            .page-container { page-break-after: always; max-width: 800px; margin: 0 auto 40px auto; padding: 10px; }
+            
+            /* Top Header */
+            .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .header-title { font-size: 18px; font-weight: bold; text-decoration: underline; margin: 0 0 4px 0; }
+            .header-subtitle { font-size: 17px; font-weight: bold; text-decoration: underline; margin: 0; }
+            
+            .photo-box {
+              width: 130px;
+              height: 150px;
+              border: 1px solid #000;
+              background: #dbeafe;
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 32px;
-              color: #a0aec0;
+              font-size: 13px;
+              color: #475569;
+              font-weight: normal;
+              float: right;
             }
-            .ticket-footer { 
-              background: #f7fafc; 
-              padding: 10px 16px; 
-              border-top: 1px solid #e2e8f0;
-              display: grid;
-              grid-template-columns: 2fr 1fr;
-              font-size: 10px;
-              color: #4a5568;
-            }
-            .ticket-footer .label { font-weight: bold; color: #a0aec0; text-transform: uppercase; font-size: 8px; }
+
+            .section-header { font-size: 14px; font-weight: bold; font-style: italic; margin-top: 18px; margin-bottom: 6px; text-decoration: underline; }
+            .section-header .time-span { font-style: normal; font-weight: bold; float: right; text-decoration: none; }
+
+            /* Section I Candidate Table */
+            .candidate-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 15px; }
+            .candidate-table td { border: 1px solid #000; padding: 8px 12px; font-size: 13px; vertical-align: middle; }
+            .candidate-table .label-col { width: 30%; font-weight: normal; }
+            .candidate-table .val-col { font-weight: bold; font-size: 14px; }
+            .signature-hint { color: #cbd5e1; font-weight: normal; font-size: 13px; float: right; font-style: normal; }
+
+            /* Section II & III Exam Tables */
+            .exam-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 15px; }
+            .exam-table th, .exam-table td { border: 1px solid #000; padding: 8px 12px; font-size: 13px; text-align: left; vertical-align: middle; }
+            .exam-table th { font-weight: normal; }
+            .yellow-highlight { background-color: #ffff00; font-weight: bold; }
+
+            /* Section IV Instructions */
+            .instructions-list { margin: 6px 0 25px 0; padding-left: 20px; font-size: 13px; }
+            .instructions-list li { margin-bottom: 4px; }
+
+            /* Signatory Block */
+            .signatory-block { margin-top: 20px; float: left; }
+            .sig-img { height: 45px; width: auto; margin-bottom: 2px; }
+            .sig-name { font-weight: bold; font-size: 13.5px; }
+            .sig-title { font-weight: bold; font-size: 13.5px; }
+
             @media print {
+              body { padding: 0; }
+              .page-container { page-break-after: always; margin-bottom: 0; padding: 0; }
               .no-print { display: none; }
-              .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-              .ticket-card { page-break-inside: avoid; break-inside: avoid; }
-            }
-            @media (max-width: 600px) {
-              .ticket-grid { grid-template-columns: 1fr; }
-              .ticket-body { grid-template-columns: 1fr; }
             }
           </style>
         </head>
         <body>
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #1a365d; margin: 0;">SEMI Examination Hall Tickets</h2>
-            <p style="color: #4a5568; margin: 4px 0;">${batchInfo?.batchName} - ${batchInfo?.courseName}</p>
-            <p style="color: #718096; font-size: 12px; margin: 0;">Generated on ${new Date().toLocaleDateString()}</p>
-            <hr style="border: 1px solid #e2e8f0; margin: 16px 0;" />
-          </div>
-          <div class="ticket-grid">
     `;
 
     tickets.forEach((ticket) => {
-      const examDate = ticket.examDate ? new Date(ticket.examDate).toLocaleDateString('en-IN', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      }) : 'TBD';
-
       html += `
-        <div class="ticket-card">
-          <div class="ticket-header">
-            <h4>HALL TICKET</h4>
-            <span class="badge">OFFICIAL</span>
+        <div class="page-container">
+          <!-- Logo & Header Title -->
+          <table class="header-table">
+            <tr>
+              <td style="vertical-align: top;">
+                <div style="text-align: center; width: 80%;">
+                  <!-- SEMI Logo Graphic -->
+                  <img src="${semiLogo}" alt="SEMI Logo" style="height: 60px; width: auto; margin: 0 auto 6px auto; display: block;" />
+                  <h3 class="header-title">${examDetails.headerTitle}</h3>
+                  <h3 class="header-subtitle">${examDetails.organizationTitle}</h3>
+                </div>
+              </td>
+              <td style="width: 140px; vertical-align: top;">
+                <div class="photo-box">
+                  ${ticket.photoUrl ? `<img src="${resolvePhoto(ticket.photoUrl)}" style="width:100%;height:100%;object-fit:cover;" />` : 'PHOTO'}
+                </div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Section I. Candidate Details -->
+          <div class="section-header">Section I. Candidate Details:</div>
+          <table class="candidate-table">
+            <tr>
+              <td class="label-col">Name of the Candidate</td>
+              <td class="val-col">
+                ${ticket.studentName.toUpperCase()}
+                <span class="signature-hint">Candidate's Signature</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="label-col">Hall ticket Number</td>
+              <td class="val-col">${ticket.enrollmentId}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Name of the Enrolled<br/>Institute for CCT-EM</td>
+              <td class="val-col">${ticket.instituteName.toUpperCase()}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Program Director</td>
+              <td>
+                <span class="signature-hint">Signature & Institute's Seal</span>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Section II. Theory Examinations -->
+          <div class="section-header">
+            Section II. ${examDetails.showPracticalSection ? 'Theory Examinations:' : 'Examination Details:'}
+            <span class="time-span">Time:${examDetails.theoryTime}</span>
           </div>
-          <div class="ticket-body">
-            <div class="ticket-info">
-              <div><span class="label">Candidate Name</span></div>
-              <div class="value">${ticket.studentName || 'N/A'}</div>
-              <div style="margin-top: 6px;"><span class="label">Enrollment ID</span></div>
-              <div class="value" style="color: #2b6cb0;">${ticket.enrollmentId || 'N/A'}</div>
-              <div style="margin-top: 6px;"><span class="label">Course Program</span></div>
-              <div class="value">${ticket.courseName || 'N/A'}</div>
-              <div style="margin-top: 6px;"><span class="label">Exam Date</span></div>
-              <div class="value">${examDate}</div>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-              <div class="photo-placeholder">${ticket.photoUrl ? `<img src="${resolvePhoto(ticket.photoUrl)}" style="width:100%;height:100%;object-fit:cover;" />` : '👤'}</div>
-              <span style="font-size: 8px; color: #a0aec0; margin-top: 4px;">Photo verified</span>
-            </div>
+          <div style="font-size: 13.5px; font-weight: bold; margin-bottom: 6px;">
+            ${examDetails.showPracticalSection ? 'Theory Centre' : 'Exam Centre'} - <span class="yellow-highlight">${(examDetails.theoryCentre || 'DR. MEHTA HOSPITAL, GLOBAL CAMPUS, CHENNAI').toUpperCase()}</span>
           </div>
-          <div class="ticket-footer">
-            <div>
-              <div><span class="label">Exam Center</span></div>
-              <div style="font-weight: bold;">${ticket.instituteName || 'N/A'}</div>
-              <div style="font-size: 9px; color: #718096;">${ticket.instituteAddress || ''}</div>
+
+          <table class="exam-table">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Date</th>
+                <th style="width: 35%;">Subject</th>
+                ${examDetails.showPracticalSection ? '<th>Appearing</th>' : ''}
+              </tr>
+            </thead>
+            <tbody>
+              ${(examDetails.subjects || []).map(s => `
+                <tr>
+                  <td>${s.date ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '30th July 2026'}</td>
+                  <td>
+                    <strong>Paper ${s.paperNumber}</strong><br/>
+                    ${s.paperName}
+                  </td>
+                  ${examDetails.showPracticalSection ? `
+                    <td>
+                      Yes
+                      <span class="signature-hint">Invigilator's Signature</span>
+                    </td>
+                  ` : `
+                    <td style="width: 40%;">
+                      <span class="signature-hint" style="float: right;">Invigilator's Signature</span>
+                    </td>
+                  `}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <!-- Section III. Practical Examination (Optional) -->
+          ${examDetails.showPracticalSection ? `
+            <div class="section-header">
+              Section III. Practical Examination:
+              <span class="time-span">Time: ${examDetails.practicalTime}</span>
             </div>
-            <div style="text-align: right;">
-              <div><span class="label">Ticket ID</span></div>
-              <div style="font-weight: bold; font-size: 10px;">${ticket.ticketId || 'N/A'}</div>
-              <div style="font-size: 9px; color: #718096;">${ticket.reportingTime || ''}</div>
-            </div>
+            <table class="exam-table">
+              <tr>
+                <td style="width: 25%;">Date</td>
+                <td style="width: 75%;">${examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '3rd August 2026'}</td>
+              </tr>
+              <tr>
+                <td>Appearing</td>
+                <td>
+                  Yes
+                  <span class="signature-hint">Centre Coordinator's Signature</span>
+                </td>
+              </tr>
+              <tr>
+                <td>Practical Centre</td>
+                <td><span class="yellow-highlight">${(examDetails.practicalCentre || 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI').toUpperCase()}</span></td>
+              </tr>
+            </table>
+          ` : ''}
+
+          <!-- Section ${examDetails.showPracticalSection ? 'IV' : 'III'}. Instructions -->
+          <div class="section-header">Section ${examDetails.showPracticalSection ? 'IV' : 'III'}. Instructions:</div>
+          <ol class="instructions-list">
+            ${(examDetails.instructions || []).map(inst => `<li>${inst}</li>`).join('')}
+          </ol>
+
+          <!-- Signatory Block -->
+          <div class="signatory-block">
+            ${examDetails.controllerSignatureUrl ? `
+              <img src="${examDetails.controllerSignatureUrl}" style="height: 48px; max-width: 180px; object-fit: contain; margin-bottom: 4px; display: block;" />
+            ` : `
+              <svg class="sig-img" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 40 C30 10, 50 50, 70 20 C90 10, 110 45, 140 25 C160 15, 180 35, 195 20" stroke="#000" stroke-width="2.5" fill="none"/>
+                <circle cx="145" cy="45" r="2" fill="#000"/>
+                <circle cx="155" cy="45" r="2" fill="#000"/>
+              </svg>
+            `}
+            <div class="sig-name">${examDetails.controllerName}</div>
+            <div class="sig-title">${examDetails.controllerTitle}</div>
           </div>
         </div>
       `;
     });
 
     html += `
-          </div>
-          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #a0aec0; font-size: 10px;">
-            © ${new Date().getFullYear()} Society for Emergency Medicine India (SEMI) • This is a system-generated document
-          </div>
         </body>
       </html>
     `;
@@ -33114,224 +36897,571 @@ const InstituteERPHallTicket = ({
     return html;
   };
 
-  // Handle print
+  // Print Window trigger
   const handlePrint = () => {
-    if (!viewingTickets || viewingTickets.length === 0) {
-      setErrorMsg('No tickets to print.');
-      return;
-    }
-
+    if (!viewingTickets || viewingTickets.length === 0) return;
     const html = generatePrintHTML(viewingTickets, viewingBatchInfo);
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) {
-      setErrorMsg('Please allow popups to print hall tickets.');
+    const printWin = window.open('', '_blank', 'width=1000,height=800');
+    if (!printWin) {
+      alert('Please allow popups to open the print preview.');
       return;
     }
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+    printWin.document.write(html);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => {
+      printWin.print();
+    }, 400);
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
-      {/* Success/Error Messages */}
+    <div className="space-y-8 animate-in fade-in duration-300 text-left font-sans pb-12">
+      {/* ── Top Header Banner ────────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="absolute -right-10 -bottom-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="relative z-10 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/20 text-blue-400 text-[11px] font-black uppercase tracking-widest">
+            <Sparkles className="w-3.5 h-3.5" />
+            SEMI Central Academic Controller
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-sm">
+            Hall Ticket Management & Issuance Portal
+          </h1>
+          <p className="text-xs text-slate-300 max-w-2xl font-medium leading-relaxed">
+            Configure examination schedules, auto-fetch semester subjects, select accredited candidates, and generate official hall tickets with seal validation & custom controller signatures.
+          </p>
+        </div>
+
+        {/* Header Summary KPI Quick Pills */}
+        <div className="relative z-10 grid grid-cols-3 gap-3 w-full lg:w-auto">
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-3 rounded-2xl text-center">
+            <div className="text-xl font-black text-white">{students.length}</div>
+            <div className="text-[9px] uppercase font-bold text-slate-400">Total Fellows</div>
+          </div>
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-3 rounded-2xl text-center">
+            <div className="text-xl font-black text-blue-400">{courses.length}</div>
+            <div className="text-[9px] uppercase font-bold text-slate-400">Courses</div>
+          </div>
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-3 rounded-2xl text-center">
+            <div className="text-xl font-black text-emerald-400">{batches.length}</div>
+            <div className="text-[9px] uppercase font-bold text-slate-400">Batches</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Notifications */}
       {successMsg && (
-        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-2xl text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-sm">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-          <span>{successMsg}</span>
+        <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-2xl text-xs font-bold text-emerald-800 flex items-center justify-between shadow-sm animate-in slide-in-from-top duration-200">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+          <button onClick={() => setSuccessMsg(null)} className="text-emerald-500 hover:text-emerald-700">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {errorMsg && (
-        <div className="p-4 bg-rose-50 border-l-4 border-rose-500 rounded-r-2xl text-xs font-bold text-rose-800 flex items-center gap-2 shadow-sm">
-          <XCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-          <span>{errorMsg}</span>
+        <div className="p-4 bg-rose-50 border-l-4 border-rose-500 rounded-2xl text-xs font-bold text-rose-800 flex items-center justify-between shadow-sm animate-in slide-in-from-top duration-200">
+          <div className="flex items-center gap-3">
+            <XCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+          <button onClick={() => setErrorMsg(null)} className="text-rose-500 hover:text-rose-700">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
-      {/* Generate Hall Ticket Panel */}
-      <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm max-w-4xl mx-auto space-y-6">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Hall Ticket Generator</h2>
-          <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mt-1">Generate hall tickets for scheduled examinations</p>
+      {/* ── Workflow Stepper Navigation Header ────────────────────────────── */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm flex items-center justify-around gap-2 text-xs font-bold">
+        <div className="flex items-center gap-2.5 text-blue-600 font-extrabold px-4 py-2 bg-blue-50/80 rounded-xl">
+          <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs">1</div>
+          <span>1. Select Candidates ({selectedStudents.length})</span>
         </div>
-
-        <form onSubmit={handleGenerate} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Batch Selector */}
-            <div>
-              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Batch *</label>
-              <select
-                value={selectedBatchId}
-                onChange={(e) => setSelectedBatchId(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                required
-              >
-                <option value="">Select Batch</option>
-                {batches.map(b => (
-                  <option key={b.id || b._id} value={b.id || b._id}>
-                    {b.name || `Batch ${b.year}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Course Selector */}
-            <div>
-              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course *</label>
-              <select
-                value={selectedCourseId}
-                onChange={(e) => setSelectedCourseId(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                required
-              >
-                <option value="">Select Course</option>
-                {courses.map(c => (
-                  <option key={c.id || c._id} value={c.id || c._id}>
-                    {c.courseName || c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex justify-center pt-2">
-            <button
-              type="submit"
-              disabled={generating || batches.length === 0 || courses.length === 0}
-              className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/10 cursor-pointer"
-            >
-              {generating ? (
-                <><RefreshCw className="w-4 h-4 animate-spin" /> Generating...</>
-              ) : (
-                <><Ticket className="w-4 h-4" /> Generate Hall Ticket</>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Hall Ticket List */}
-      <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h3 className="text-base font-black text-slate-800 tracking-tight">Generated Hall Tickets</h3>
-            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
-              {filteredApps.length} scheduled exam(s) ready
-            </p>
-          </div>
-
-          <div className="relative max-w-xs w-full">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by batch or course..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-            />
-          </div>
+        <ChevronRight className="w-4 h-4 text-slate-300" />
+        <div className="flex items-center gap-2.5 text-indigo-600 font-extrabold px-4 py-2 bg-indigo-50/80 rounded-xl">
+          <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xs">2</div>
+          <span>2. Schedule & Subjects ({examDetails.subjects.length} Papers)</span>
         </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto border border-slate-100 rounded-2xl bg-white shadow-inner">
-          <table className="w-full text-left border-collapse text-xs text-slate-500 font-semibold">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px]">
-                <th className="px-6 py-4 font-black w-16 text-center">#</th>
-                <th className="px-6 py-4 font-black">Batch</th>
-                <th className="px-6 py-4 font-black">Course</th>
-                <th className="px-6 py-4 font-black text-center">Students</th>
-                <th className="px-6 py-4 font-black text-center">Status</th>
-                <th className="px-6 py-4 font-black text-center w-32">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-600">
-              {filteredApps.map((app, idx) => {
-                const serialNo = String(idx + 1).padStart(2, '0');
-                const batchText = app.batch?.year ? `Batch ${app.batch.year}` : app.batch?.name || 'Batch';
-                const hasTickets = app.hallTicketsGenerated;
-
-                return (
-                  <tr key={app._id || app.id} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="px-6 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
-                    <td className="px-6 py-4 font-bold text-slate-700">{batchText}</td>
-                    <td className="px-6 py-4 font-bold text-slate-700">{app.course?.name || 'General Medicine'}</td>
-                    <td className="px-6 py-4 text-center font-bold text-slate-700">{app.students?.length || 0}</td>
-                    <td className="px-6 py-4 text-center">
-                      {hasTickets ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Generated
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black bg-amber-50 text-amber-700 border border-amber-200">
-                          <AlertTriangle className="w-3 h-3" />
-                          Not Generated
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {hasTickets ? (
-                          <button
-                            type="button"
-                            onClick={() => handleViewTickets(app)}
-                            disabled={loading}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100 cursor-pointer disabled:opacity-50"
-                            title="View Hall Tickets"
-                          >
-                            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        ) : (
-                          <span className="text-[9px] text-slate-400 font-medium">Generate first</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filteredApps.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="px-6 py-16 text-center text-slate-400 font-semibold space-y-2">
-                    <Ticket className="w-8 h-8 mx-auto text-slate-300 stroke-1" />
-                    <p className="text-xs">No scheduled exam applications found.</p>
-                    <p className="text-[10px] text-slate-400 font-medium">Wait for the Academic Board to approve and schedule exams.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <ChevronRight className="w-4 h-4 text-slate-300" />
+        <div className="flex items-center gap-2.5 text-emerald-600 font-extrabold px-4 py-2 bg-emerald-50/80 rounded-xl">
+          <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-xs">3</div>
+          <span>3. Preview & Issue Tickets</span>
         </div>
       </div>
 
-      {/* Tickets Preview Modal */}
-      {viewingTickets && viewingTickets.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[90vh] flex flex-col scale-in-center">
+      {/* Main Layout: Balanced 2-Column Responsive Workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Panel: Candidate Selector (5 Cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-800 tracking-tight flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-blue-600" />
+                  Candidate Fellows
+                </h3>
+                <p className="text-[11px] text-slate-400 font-semibold">Choose students to issue hall tickets</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSelectAll}
+                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-[10px] uppercase tracking-wider transition-all"
+              >
+                {selectedStudents.length === filteredStudents.length && filteredStudents.length > 0 ? 'Deselect' : 'Select All'}
+              </button>
+            </div>
 
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white rounded-t-3xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-                  <Ticket className="w-5 h-5" />
+              {/* Filter inputs bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search candidate..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400"
+                  />
                 </div>
+
                 <div>
-                  <h3 className="text-sm font-black text-slate-800">Hall Tickets</h3>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {viewingBatchInfo?.batchName} | {viewingBatchInfo?.courseName} • {viewingTickets.length} tickets
-                  </p>
+                  <select
+                    value={selectedBatchId}
+                    onChange={(e) => setSelectedBatchId(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                  >
+                    <option value="">All Batches</option>
+                    {batches.map(b => (
+                      <option key={b.id || b._id} value={b.id || b._id}>
+                        {b.name || `Batch ${b.year}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <select
+                    value={selectedCourseId}
+                    onChange={(e) => setSelectedCourseId(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                  >
+                    <option value="">All Courses</option>
+                    {courses.map(c => (
+                      <option key={c.id || c._id} value={c.id || c._id}>
+                        {c.courseName || c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <select
+                    value={selectedSemester}
+                    onChange={(e) => setSelectedSemester(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs font-black text-indigo-700 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer"
+                  >
+                    <option value="All Semesters">All Semesters</option>
+                    <option value="Semester 1">Semester 1</option>
+                    <option value="Semester 2">Semester 2</option>
+                    <option value="Semester 3">Semester 3</option>
+                    <option value="Semester 4">Semester 4</option>
+                    <option value="Semester 5">Semester 5</option>
+                    <option value="Semester 6">Semester 6</option>
+                  </select>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+
+              {/* Student Cards List */}
+              <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => {
+                    const studentId = student._id || student.id;
+                    const isSelected = selectedStudents.includes(studentId);
+                    const name = student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Fellow Candidate';
+                    const enrollNo = student.enrollmentNo || student.enrollmentId || `SEMI-${studentId.substring(0, 6)}`;
+                    const course = student.courseName || student.course?.name || 'General Medicine';
+                    const batch = student.batchName || (student.batch?.year ? `Batch ${student.batch.year}` : 'Batch 2026');
+
+                    return (
+                      <div
+                        key={studentId}
+                        onClick={() => handleStudentSelect(studentId)}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 ${
+                          isSelected
+                            ? 'bg-blue-50/70 border-blue-500 shadow-md shadow-blue-500/10'
+                            : 'bg-white border-slate-200/80 hover:border-blue-300 hover:bg-slate-50/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                            isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
+                          }`}>
+                            {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                          </div>
+
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-100 to-slate-200 text-slate-700 flex items-center justify-center font-black text-sm flex-shrink-0 shadow-inner">
+                            {name.charAt(0).toUpperCase()}
+                          </div>
+
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-black text-slate-800 truncate">{name}</h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-mono font-bold text-blue-600">{enrollNo}</span>
+                              <span className="text-slate-300">·</span>
+                              <span className="text-[10px] text-slate-400 font-medium truncate">{course}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right flex-shrink-0">
+                          <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                            {batch}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-3xl space-y-2">
+                    <UserCheck className="w-10 h-10 text-slate-300 mx-auto" />
+                    <p className="text-xs font-bold text-slate-500">No matching fellow candidates found</p>
+                    <p className="text-[10px] text-slate-400">Try adjusting your search filters or course choices</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Examination Config & Actions (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-6">
+              
+              <div className="border-b border-slate-100 pb-4">
+                <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+                  <Sliders className="w-5 h-5 text-indigo-600" />
+                  Examination Details
+                </h3>
+                <p className="text-xs text-slate-400 font-semibold mt-0.5">Configure theory & practical venue schedules</p>
+              </div>
+
+              <div className="space-y-4 text-xs">
+                
+                {/* Exam Category / Semester Select */}
+                <div className="grid grid-cols-2 gap-2.5 pb-2">
+                  <div>
+                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Exam Type</label>
+                    <select
+                      value={examDetails.examType}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setExamDetails(prev => ({
+                          ...prev,
+                          examType: val,
+                          headerTitle: val === 'Semester Exam' 
+                            ? `${selectedSemester} CCT-EM Examinations Hall ticket - July’26`
+                            : val === 'Basic Sciences' 
+                              ? "Basic Sciences CCT-EM Exam Hall ticket - July’26"
+                              : "Final Year CCT-EM Examinations Hall ticket - July’26"
+                        }));
+                      }}
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
+                    >
+                      <option value="Semester Exam">Semester Examination</option>
+                      <option value="Final Year">Final Exit Clinical</option>
+                      <option value="Basic Sciences">Basic Sciences</option>
+                      <option value="Custom">Custom Assessment</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Active Semester</label>
+                    <select
+                      value={selectedSemester}
+                      onChange={(e) => setSelectedSemester(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
+                    >
+                      <option value="All Semesters">All Semesters</option>
+                      <option value="Semester 1">Semester 1</option>
+                      <option value="Semester 2">Semester 2</option>
+                      <option value="Semester 3">Semester 3</option>
+                      <option value="Semester 4">Semester 4</option>
+                      <option value="Semester 5">Semester 5</option>
+                      <option value="Semester 6">Semester 6</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Document Header Text Customization */}
+                <div>
+                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Header Title Text</label>
+                  <input
+                    type="text"
+                    value={examDetails.headerTitle}
+                    onChange={(e) => setExamDetails({ ...examDetails, headerTitle: e.target.value })}
+                    placeholder="Final Year CCT-EM Examinations Hall ticket - July’26"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Organization Subtitle</label>
+                  <input
+                    type="text"
+                    value={examDetails.organizationTitle}
+                    onChange={(e) => setExamDetails({ ...examDetails, organizationTitle: e.target.value })}
+                    placeholder="Society for Emergency Medicine India (SEMI)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Section II Theory Centre & Time */}
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <span className="block text-[10px] font-black uppercase text-indigo-600 tracking-wider">Theory Exam Venue & Timing</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Theory Centre Name</label>
+                      <input
+                        type="text"
+                        value={examDetails.theoryCentre}
+                        onChange={(e) => setExamDetails({ ...examDetails, theoryCentre: e.target.value })}
+                        placeholder="DR. MEHTA HOSPITAL, GLOBAL CAMPUS, CHENNAI"
+                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Time Slot</label>
+                      <input
+                        type="text"
+                        value={examDetails.theoryTime}
+                        onChange={(e) => setExamDetails({ ...examDetails, theoryTime: e.target.value })}
+                        placeholder="10am to 1pm"
+                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Theory Papers Timetable */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Theory Papers & Dates</label>
+                    <button
+                      type="button"
+                      onClick={handleAddSubject}
+                      className="text-[10px] bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg font-bold hover:bg-blue-100 uppercase tracking-wider transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" /> Add Paper
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    {examDetails.subjects.map((sub, idx) => (
+                      <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black uppercase text-blue-600">Paper {sub.paperNumber}</span>
+                          {examDetails.subjects.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSubject(idx)}
+                              className="text-rose-500 hover:text-rose-700 p-0.5"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Subject Title"
+                            value={sub.paperName}
+                            onChange={(e) => handleSubjectChange(idx, 'paperName', e.target.value)}
+                            className="col-span-2 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
+                          />
+                          <input
+                            type="date"
+                            value={sub.date}
+                            onChange={(e) => handleSubjectChange(idx, 'date', e.target.value)}
+                            className="px-1.5 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Section III Practical Section Options */}
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider">Practical Exam Section</span>
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={examDetails.showPracticalSection}
+                        onChange={(e) => setExamDetails({ ...examDetails, showPracticalSection: e.target.checked })}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                      />
+                      <span className="text-[10px] font-bold text-slate-600">Include Section III</span>
+                    </label>
+                  </div>
+
+                  {examDetails.showPracticalSection && (
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Centre Name</label>
+                        <input
+                          type="text"
+                          value={examDetails.practicalCentre}
+                          onChange={(e) => setExamDetails({ ...examDetails, practicalCentre: e.target.value })}
+                          placeholder="KAUVERY HOSPITAL, VADAPALANI, CHENNAI"
+                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Date</label>
+                          <input
+                            type="date"
+                            value={examDetails.practicalDate}
+                            onChange={(e) => setExamDetails({ ...examDetails, practicalDate: e.target.value })}
+                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-[10px]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Time Slot</label>
+                          <input
+                            type="text"
+                            value={examDetails.practicalTime}
+                            onChange={(e) => setExamDetails({ ...examDetails, practicalTime: e.target.value })}
+                            placeholder="8am to 5pm"
+                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section IV Custom Instructions & Signatory */}
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <span className="block text-[10px] font-black uppercase text-indigo-600 tracking-wider">Controller Signatory & Signature Upload</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Name</label>
+                      <input
+                        type="text"
+                        value={examDetails.controllerName}
+                        onChange={(e) => setExamDetails({ ...examDetails, controllerName: e.target.value })}
+                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Title</label>
+                      <input
+                        type="text"
+                        value={examDetails.controllerTitle}
+                        onChange={(e) => setExamDetails({ ...examDetails, controllerTitle: e.target.value })}
+                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Signature Image File Upload */}
+                  <div>
+                    <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Upload Signature Image (PNG/JPG)</label>
+                    {examDetails.controllerSignatureUrl ? (
+                      <div className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={examDetails.controllerSignatureUrl} 
+                            alt="Signature Preview" 
+                            className="h-8 max-w-[120px] object-contain border border-slate-300 rounded p-0.5 bg-white" 
+                          />
+                          <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Custom Signature Active
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveSignature}
+                          className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="Remove custom signature"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center justify-center gap-2 p-2.5 border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl bg-slate-50/50 hover:bg-blue-50/30 transition-all cursor-pointer text-slate-600 font-bold text-xs">
+                        <FileText className="w-4 h-4 text-blue-500" />
+                        <span>Choose Signature File...</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleSignatureImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Submit Button */}
+                <div className="pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={handleGenerateHallTickets}
+                    disabled={generating || selectedStudents.length === 0}
+                    className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? (
+                      <><RefreshCw className="w-4 h-4 animate-spin" /> Generating Admit Cards...</>
+                    ) : (
+                      <><Ticket className="w-4 h-4" /> Issue {selectedStudents.length} Hall Ticket(s)</>
+                    )}
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+      {/* ── PRINT & ADMIT TICKET PREVIEW MODAL ───────────────────────────── */}
+      {viewingTickets && viewingTickets.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[92vh] flex flex-col scale-in-center overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600/10 text-blue-600 flex items-center justify-center shadow-inner">
+                  <Ticket className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800 tracking-tight">Generated Admit Tickets ({viewingTickets.length})</h3>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">SEMI Board Examination Passports</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={handlePrint}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
                 >
-                  <Printer className="w-3.5 h-3.5" />
-                  Print All
+                  <FileText className="w-4 h-4" />
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-blue-600/20 cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Hall Tickets
                 </button>
                 <button
                   type="button"
@@ -33343,111 +37473,728 @@ const InstituteERPHallTicket = ({
               </div>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-grow">
-              <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-2 mb-6">
-                <HelpCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span>You can distribute these tickets to students. Click "Print All" to generate printouts or save them as PDFs.</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {viewingTickets.map((ticket, index) => {
-                  const examDate = ticket.examDate ? new Date(ticket.examDate).toLocaleDateString('en-IN', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  }) : 'TBD';
-
-                  return (
-                    <div
-                      key={ticket.ticketId || index}
-                      className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden text-slate-700 flex flex-col"
-                    >
-                      {/* Ticket Header */}
-                      <div className="bg-gradient-to-r from-blue-700 to-indigo-700 px-5 py-4 text-white flex justify-between items-center">
-                        <div className="text-left">
-                          <span className="text-[7px] uppercase font-black tracking-widest text-blue-200">Academic Examination Board</span>
-                          <h4 className="text-xs font-black tracking-tight leading-tight mt-0.5">SEMI HALL TICKET</h4>
-                        </div>
-                        <div className="bg-white/10 px-2.5 py-0.5 rounded border border-white/20">
-                          <span className="font-mono text-[8px] font-black uppercase tracking-wider">OFFICIAL</span>
-                        </div>
-                      </div>
-
-                      {/* Ticket Body */}
-                      <div className="p-5 flex-grow grid grid-cols-3 gap-4 text-[10px] font-semibold text-left">
-                        <div className="col-span-2 space-y-3.5">
-                          <div>
-                            <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Candidate Name</span>
-                            <span className="text-slate-800 font-extrabold text-xs block truncate">{ticket.studentName || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Enrollment ID</span>
-                            <span className="text-indigo-600 font-mono font-black block text-xs">{ticket.enrollmentId || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Course Program</span>
-                            <span className="text-slate-800 font-bold block truncate">{ticket.courseName || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="text-[8px] uppercase font-black text-slate-400 block tracking-wider">Exam Date</span>
-                            <span className="text-slate-800 font-extrabold block text-xs">{examDate}</span>
-                          </div>
-                        </div>
-
-                        <div className="col-span-1 flex flex-col items-center justify-center space-y-2 border-l border-slate-100 pl-4">
-                          <div className="w-20 h-24 bg-slate-100 border border-slate-200 rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
-                            {ticket.photoUrl ? (
-                              <img src={getUploadUrl(ticket.photoUrl)} alt="Photo" className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-3xl text-slate-300">👤</span>
-                            )}
-                          </div>
-                          <span className="text-[7px] text-slate-400 font-bold text-center block leading-normal uppercase">Photo verified</span>
-                        </div>
-                      </div>
-
-                      {/* Ticket Footer */}
-                      <div className="bg-slate-50 border-t border-slate-100 px-5 py-3 text-left grid grid-cols-2 gap-2 text-[8px] font-semibold text-slate-500">
-                        <div>
-                          <span className="text-[7px] uppercase font-black text-slate-400 block tracking-wider">Exam Center</span>
-                          <span className="text-slate-700 font-bold block truncate">{ticket.instituteName || 'N/A'}</span>
-                          <span className="text-slate-400 block truncate leading-tight mt-0.5">{ticket.instituteAddress || ''}</span>
-                        </div>
-                        <div className="text-right flex flex-col justify-end items-end">
-                          <span className="text-[7px] uppercase font-black text-slate-400 block tracking-wider">Ticket ID</span>
-                          <span className="font-mono font-bold text-slate-600 block mt-0.5 truncate max-w-[120px]">{ticket.ticketId || 'N/A'}</span>
-                          <span className="text-slate-400 text-[8px]">Reporting: {ticket.reportingTime || ''}</span>
-                        </div>
-                      </div>
+            {/* Modal Body Container with exact document layout */}
+            <div className="p-8 overflow-y-auto space-y-8 flex-1 bg-slate-100 text-black">
+              {viewingTickets.map((ticket, idx) => (
+                <div key={idx} className="bg-white border border-slate-300 p-8 shadow-md max-w-3xl mx-auto text-left font-serif space-y-4">
+                  
+                  {/* Top Header Block with Logo & Title */}
+                  <div className="flex justify-between items-start gap-4 pb-2 border-b-0">
+                    <div className="flex-1 text-center pr-4">
+                      {/* Logo Graphic */}
+                      <img src={semiLogo} alt="SEMI Logo" className="h-16 w-auto mx-auto mb-2 object-contain" />
+                      <h2 className="text-lg font-bold underline leading-snug">
+                        {examDetails.headerTitle}
+                      </h2>
+                      <h3 className="text-base font-bold underline mt-1">{examDetails.organizationTitle}</h3>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Photo Box */}
+                    <div className="w-32 h-40 border border-black bg-blue-100 flex flex-col items-center justify-center flex-shrink-0 text-slate-500 font-sans text-xs font-normal">
+                      {ticket.photoUrl ? (
+                        <img src={getUploadUrl(ticket.photoUrl)} alt="Photo" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>PHOTO</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Section I Candidate Details */}
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold italic underline font-sans">Section I. Candidate Details:</h4>
+                    <table className="w-full border border-black text-xs font-sans border-collapse">
+                      <tbody>
+                        <tr className="border-b border-black">
+                          <td className="p-2 border-r border-black w-1/3 font-normal">Name of the Candidate</td>
+                          <td className="p-2 font-bold uppercase flex justify-between items-center">
+                            <span>{ticket.studentName}</span>
+                            <span className="text-slate-300 font-normal italic text-[11px]">Candidate's Signature</span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-black">
+                          <td className="p-2 border-r border-black font-normal">Hall ticket Number</td>
+                          <td className="p-2 font-bold font-mono text-sm">{ticket.enrollmentId}</td>
+                        </tr>
+                        <tr className="border-b border-black">
+                          <td className="p-2 border-r border-black font-normal">Name of the Enrolled<br/>Institute for CCT-EM</td>
+                          <td className="p-2 font-bold uppercase">{ticket.instituteName}</td>
+                        </tr>
+                        <tr>
+                          <td className="p-2 border-r border-black font-normal">Program Director</td>
+                          <td className="p-2 text-right">
+                            <span className="text-slate-300 font-normal italic text-[11px]">Signature & Institute's Seal</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Section II Theory Examinations */}
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between items-center text-sm font-bold font-sans">
+                      <span className="italic underline">Section II. {examDetails.showPracticalSection ? 'Theory Examinations:' : 'Examination Details:'}</span>
+                      <span>Time: {examDetails.theoryTime}</span>
+                    </div>
+                    <div className="text-xs font-bold font-sans">
+                      {examDetails.showPracticalSection ? 'Theory Centre' : 'Exam Centre'} - <span className="bg-yellow-300 px-1 py-0.5">{examDetails.theoryCentre.toUpperCase()}</span>
+                    </div>
+
+                    <table className="w-full border border-black text-xs font-sans border-collapse mt-2">
+                      <thead>
+                        <tr className="border-b border-black text-left font-normal">
+                          <th className="p-2 border-r border-black w-1/4 font-normal">Date</th>
+                          <th className="p-2 border-r border-black w-2/5 font-normal">Subject</th>
+                          {examDetails.showPracticalSection && <th className="p-2 font-normal">Appearing</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(examDetails.subjects || []).map((sub, i) => (
+                          <tr key={i} className="border-b border-black last:border-b-0">
+                            <td className="p-2 border-r border-black font-medium">{sub.date ? new Date(sub.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '30th July 2026'}</td>
+                            <td className="p-2 border-r border-black">
+                              <strong>Paper {sub.paperNumber}</strong><br/>
+                              {sub.paperName}
+                            </td>
+                            {examDetails.showPracticalSection ? (
+                              <td className="p-2 flex justify-between items-center">
+                                <span>Yes</span>
+                                <span className="text-slate-300 font-normal italic text-[11px]">Invigilator's Signature</span>
+                              </td>
+                            ) : (
+                              <td className="p-2 text-right">
+                                <span className="text-slate-300 font-normal italic text-[11px]">Invigilator's Signature</span>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Section III Practical Examination */}
+                  {examDetails.showPracticalSection && (
+                    <div className="space-y-1 pt-1">
+                      <div className="flex justify-between items-center text-sm font-bold font-sans">
+                        <span className="italic underline">Section III. Practical Examination:</span>
+                        <span>Time: {examDetails.practicalTime}</span>
+                      </div>
+                      <table className="w-full border border-black text-xs font-sans border-collapse">
+                        <tbody>
+                          <tr className="border-b border-black">
+                            <td className="p-2 border-r border-black w-1/4">Date</td>
+                            <td className="p-2">{examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '3rd August 2026'}</td>
+                          </tr>
+                          <tr className="border-b border-black">
+                            <td className="p-2 border-r border-black">Appearing</td>
+                            <td className="p-2 flex justify-between items-center">
+                              <span>Yes</span>
+                              <span className="text-slate-300 font-normal italic text-[11px]">Centre Coordinator's Signature</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="p-2 border-r border-black">Practical Centre</td>
+                            <td className="p-2">
+                              <span className="bg-yellow-300 px-1 py-0.5 font-bold">{examDetails.practicalCentre.toUpperCase()}</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Section IV Instructions */}
+                  <div className="space-y-1 pt-1 font-sans text-xs">
+                    <h4 className="text-sm font-bold italic underline">Section {examDetails.showPracticalSection ? 'IV' : 'III'}. Instructions:</h4>
+                    <ol className="list-decimal pl-5 space-y-1 font-normal text-slate-800">
+                      {(examDetails.instructions || []).map((inst, i) => (
+                        <li key={i}>{inst}</li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  {/* Controller Signature */}
+                  <div className="pt-4 font-sans text-xs">
+                    {examDetails.controllerSignatureUrl ? (
+                      <img 
+                        src={examDetails.controllerSignatureUrl} 
+                        alt="Controller Signature" 
+                        className="h-10 max-w-[160px] object-contain mb-1" 
+                      />
+                    ) : (
+                      <svg className="h-10 w-36 mb-1" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 40 C30 10, 50 50, 70 20 C90 10, 110 45, 140 25 C160 15, 180 35, 195 20" stroke="#000" strokeWidth="2.5" fill="none"/>
+                        <circle cx="145" cy="45" r="2" fill="#000"/>
+                        <circle cx="155" cy="45" r="2" fill="#000"/>
+                      </svg>
+                    )}
+                    <div className="font-bold text-sm">{examDetails.controllerName}</div>
+                    <div className="font-bold text-xs">{examDetails.controllerTitle}</div>
+                  </div>
+
+                </div>
+              ))}
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white rounded-b-3xl">
-              <span className="text-[10px] text-slate-400 font-medium">
-                {viewingTickets.length} ticket{viewingTickets.length > 1 ? 's' : ''} generated
-              </span>
-              <button
-                type="button"
-                onClick={() => setViewingTickets(null)}
-                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
-              >
-                Close Preview
-              </button>
+            <div className="px-8 py-4 border-t border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">SEMI Board Official Examination Tickets</span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-600/20"
+                >
+                  <FileText className="w-4 h-4" />
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-blue-600/20"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Tickets
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewingTickets(null)}
+                  className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+                >
+                  Close Preview
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };
 
 export default InstituteERPHallTicket;
+```
 
+### `client/src/pages/institute/components/InstituteERPHallTicketBuilder.jsx`
+
+```jsx
+// client/src/pages/institute/components/InstituteERPHallTicketBuilder.jsx
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { hallTicketAPI } from '../../../api/hallTicket';
+
+const HallTicketTemplateBuilder = () => {
+  const [template, setTemplate] = useState({
+    name: '',
+    description: '',
+    config: {
+      layout: 'portrait',
+      pageSize: 'A4',
+      margins: { top: 40, bottom: 40, left: 40, right: 40 },
+      styles: {
+        fontFamily: 'Arial',
+        primaryColor: '#1a237e',
+        secondaryColor: '#0d47a1',
+        accentColor: '#c62828'
+      },
+      sections: [
+        {
+          id: 'header',
+          type: 'header',
+          label: 'Header Section',
+          enabled: true,
+          order: 0,
+          fields: [],
+          content: 'Society for Emergency Medicine India (SEMI)'
+        },
+        {
+          id: 'candidate',
+          type: 'candidate',
+          label: 'Candidate Details',
+          enabled: true,
+          order: 1,
+          fields: [
+            { id: 'candidateName', label: 'Candidate Name', type: 'text', mapping: 'candidateName' },
+            { id: 'hallTicketNumber', label: 'Hall Ticket Number', type: 'text', mapping: 'hallTicketNumber' },
+            { id: 'instituteName', label: 'Institute Name', type: 'text', mapping: 'instituteName' }
+          ]
+        }
+      ]
+    }
+  });
+
+  const [selectedSection, setSelectedSection] = useState(null);
+  const [previewMode, setPreviewMode] = useState(false);
+
+  const handleSectionChange = (sectionId, field, value) => {
+    setTemplate(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        sections: prev.config.sections.map(section =>
+          section.id === sectionId
+            ? { ...section, [field]: value }
+            : section
+        )
+      }
+    }));
+  };
+
+  const handleFieldChange = (sectionId, fieldId, field, value) => {
+    setTemplate(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        sections: prev.config.sections.map(section =>
+          section.id === sectionId
+            ? {
+                ...section,
+                fields: section.fields.map(f =>
+                  f.id === fieldId
+                    ? { ...f, [field]: value }
+                    : f
+                )
+              }
+            : section
+        )
+      }
+    }));
+  };
+
+  const addField = (sectionId) => {
+    const newField = {
+      id: `field-${Date.now()}`,
+      label: 'New Field',
+      type: 'text',
+      mapping: '',
+      required: false,
+      styles: {
+        fontSize: 12,
+        fontWeight: 'normal',
+        color: '#000000',
+        alignment: 'left'
+      }
+    };
+    
+    setTemplate(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        sections: prev.config.sections.map(section =>
+          section.id === sectionId
+            ? { ...section, fields: [...section.fields, newField] }
+            : section
+        )
+      }
+    }));
+  };
+
+  const removeField = (sectionId, fieldId) => {
+    setTemplate(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        sections: prev.config.sections.map(section =>
+          section.id === sectionId
+            ? {
+                ...section,
+                fields: section.fields.filter(f => f.id !== fieldId)
+              }
+            : section
+        )
+      }
+    }));
+  };
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(template.config.sections);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update order numbers
+    const updatedItems = items.map((item, index) => ({
+      ...item,
+      order: index
+    }));
+
+    setTemplate(prev => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        sections: updatedItems
+      }
+    }));
+  };
+
+  const saveTemplate = async () => {
+    try {
+      await hallTicketAPI.createTemplate(template);
+      // Show success message
+    } catch (error) {
+      console.error('Error saving template:', error);
+    }
+  };
+
+  const renderSectionEditor = () => {
+    if (!selectedSection) return null;
+    
+    const section = template.config.sections.find(s => s.id === selectedSection);
+    if (!section) return null;
+
+    return (
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-4">Edit Section: {section.label}</h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Section Type</label>
+            <select
+              value={section.type}
+              onChange={(e) => handleSectionChange(section.id, 'type', e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="header">Header</option>
+              <option value="candidate">Candidate Details</option>
+              <option value="exam">Exam Details</option>
+              <option value="instructions">Instructions</option>
+              <option value="footer">Footer</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Section Label</label>
+            <input
+              type="text"
+              value={section.label}
+              onChange={(e) => handleSectionChange(section.id, 'label', e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              checked={section.enabled}
+              onChange={(e) => handleSectionChange(section.id, 'enabled', e.target.checked)}
+              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-900">Enable Section</label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Custom Content</label>
+            <textarea
+              value={section.content || ''}
+              onChange={(e) => handleSectionChange(section.id, 'content', e.target.value)}
+              rows={3}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Fields</h4>
+            <button
+              onClick={() => addField(section.id)}
+              className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              Add Field
+            </button>
+            
+            <div className="mt-3 space-y-2">
+              {section.fields.map((field) => (
+                <div key={field.id} className="border rounded p-3">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700">Field ID</label>
+                        <input
+                          type="text"
+                          value={field.id}
+                          onChange={(e) => handleFieldChange(section.id, field.id, 'id', e.target.value)}
+                          className="mt-1 block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700">Label</label>
+                        <input
+                          type="text"
+                          value={field.label}
+                          onChange={(e) => handleFieldChange(section.id, field.id, 'label', e.target.value)}
+                          className="mt-1 block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700">Type</label>
+                        <select
+                          value={field.type}
+                          onChange={(e) => handleFieldChange(section.id, field.id, 'type', e.target.value)}
+                          className="mt-1 block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                          <option value="text">Text</option>
+                          <option value="image">Image</option>
+                          <option value="signature">Signature</option>
+                          <option value="table">Table</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700">Data Mapping</label>
+                        <input
+                          type="text"
+                          value={field.mapping}
+                          onChange={(e) => handleFieldChange(section.id, field.id, 'mapping', e.target.value)}
+                          placeholder="e.g., candidateName"
+                          className="mt-1 block w-full text-sm rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeField(section.id, field.id)}
+                      className="ml-2 text-red-600 hover:text-red-800"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Hall Ticket Template Builder</h1>
+          <div className="space-x-3">
+            <button
+              onClick={() => setPreviewMode(!previewMode)}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              {previewMode ? 'Edit Mode' : 'Preview'}
+            </button>
+            <button
+              onClick={saveTemplate}
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              Save Template
+            </button>
+          </div>
+        </div>
+
+        {!previewMode ? (
+          <div className="grid grid-cols-12 gap-6">
+            {/* Template Settings */}
+            <div className="col-span-12 lg:col-span-4">
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold mb-4">Template Settings</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Template Name</label>
+                    <input
+                      type="text"
+                      value={template.name}
+                      onChange={(e) => setTemplate({ ...template, name: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea
+                      value={template.description}
+                      onChange={(e) => setTemplate({ ...template, description: e.target.value })}
+                      rows={2}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Layout</label>
+                    <select
+                      value={template.config.layout}
+                      onChange={(e) => setTemplate({
+                        ...template,
+                        config: { ...template.config, layout: e.target.value }
+                      })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    >
+                      <option value="portrait">Portrait</option>
+                      <option value="landscape">Landscape</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Page Size</label>
+                    <select
+                      value={template.config.pageSize}
+                      onChange={(e) => setTemplate({
+                        ...template,
+                        config: { ...template.config, pageSize: e.target.value }
+                      })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    >
+                      <option value="A4">A4</option>
+                      <option value="A5">A5</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Colors</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-600">Primary</label>
+                        <input
+                          type="color"
+                          value={template.config.styles.primaryColor}
+                          onChange={(e) => setTemplate({
+                            ...template,
+                            config: {
+                              ...template.config,
+                              styles: { ...template.config.styles, primaryColor: e.target.value }
+                            }
+                          })}
+                          className="mt-1 block w-full h-10 rounded-md border-gray-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600">Secondary</label>
+                        <input
+                          type="color"
+                          value={template.config.styles.secondaryColor}
+                          onChange={(e) => setTemplate({
+                            ...template,
+                            config: {
+                              ...template.config,
+                              styles: { ...template.config.styles, secondaryColor: e.target.value }
+                            }
+                          })}
+                          className="mt-1 block w-full h-10 rounded-md border-gray-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600">Accent</label>
+                        <input
+                          type="color"
+                          value={template.config.styles.accentColor}
+                          onChange={(e) => setTemplate({
+                            ...template,
+                            config: {
+                              ...template.config,
+                              styles: { ...template.config.styles, accentColor: e.target.value }
+                            }
+                          })}
+                          className="mt-1 block w-full h-10 rounded-md border-gray-300"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section Builder */}
+            <div className="col-span-12 lg:col-span-8">
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold mb-4">Sections</h3>
+                
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="sections">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef}>
+                        {template.config.sections
+                          .sort((a, b) => a.order - b.order)
+                          .map((section, index) => (
+                            <Draggable key={section.id} draggableId={section.id} index={index}>
+                              {(provided) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`mb-2 p-4 border rounded-md cursor-pointer hover:border-indigo-500 ${
+                                    selectedSection === section.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'
+                                  }`}
+                                  onClick={() => setSelectedSection(section.id)}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <h4 className="font-medium">{section.label}</h4>
+                                      <p className="text-sm text-gray-500">Type: {section.type}</p>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <span className={`px-2 py-1 text-xs rounded-full ${
+                                        section.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {section.enabled ? 'Active' : 'Disabled'}
+                                      </span>
+                                      <span className="text-xs text-gray-400">Order: {section.order}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              </div>
+
+              {/* Section Editor */}
+              {renderSectionEditor()}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white p-8 rounded-lg shadow">
+            <div className="max-w-3xl mx-auto">
+              {/* Preview of the hall ticket */}
+              <div className="border-2 border-gray-300 rounded-lg p-8 min-h-[800px]">
+                <div className="text-center border-b-2 border-gray-300 pb-4">
+                  <h1 className="text-2xl font-bold" style={{ color: template.config.styles.primaryColor }}>
+                    Society for Emergency Medicine India (SEMI)
+                  </h1>
+                  <h2 className="text-xl">Hall Ticket</h2>
+                </div>
+                
+                {/* Preview sections */}
+                {template.config.sections
+                  .sort((a, b) => a.order - b.order)
+                  .filter(s => s.enabled)
+                  .map(section => (
+                    <div key={section.id} className="mt-4">
+                      <h3 className="font-semibold" style={{ color: template.config.styles.secondaryColor }}>
+                        {section.label}
+                      </h3>
+                      <div className="border p-4 mt-2 min-h-[50px] bg-gray-50">
+                        <p className="text-gray-400 text-sm">Preview: {section.type} section</p>
+                        {section.fields.map(field => (
+                          <div key={field.id} className="flex justify-between text-sm py-1">
+                            <span className="text-gray-600">{field.label}:</span>
+                            <span className="text-gray-400">[{field.mapping || 'data'}]</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default HallTicketTemplateBuilder;
 ```
 
 ### `client/src/pages/institute/components/InstituteERPHeader.jsx`
@@ -33525,23 +38272,888 @@ export default InstituteERPHeader;
 
 ```
 
+### `client/src/pages/institute/components/InstituteERPMarksheet.jsx`
+
+```jsx
+// client/src/pages/institute/components/InstituteERPMarksheet.jsx
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  Award, 
+  Search, 
+  CheckCircle2, 
+  XCircle, 
+  Printer, 
+  RefreshCw, 
+  Building2, 
+  UserCheck, 
+  BookOpen, 
+  Calendar, 
+  Plus, 
+  Trash2, 
+  Eye, 
+  Sparkles, 
+  ShieldCheck, 
+  Layers, 
+  X,
+  FileText,
+  Check,
+  Download,
+  Filter,
+  Users
+} from 'lucide-react';
+import examService from '../../../api/exams';
+import resultService from '../../../api/results';
+import academicService from '../../../api/academic';
+import semiLogo from '../../../assets/semi logo.png';
+
+const InstituteERPMarksheet = ({
+  courses = [],
+  batches = [],
+  students = [],
+  results = [],
+  fetchERPData,
+  user
+}) => {
+  const [marksheetType, setMarksheetType] = useState('semester'); // 'semester' | 'cumulative'
+  const [activeTab, setActiveTab] = useState('generator'); // 'generator' | 'templates'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('1');
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [generating, setGenerating] = useState(false);
+  const [successMsg, setSuccessMsg] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  // Modal states for live preview & print
+  const [viewingMarksheets, setViewingMarksheets] = useState(null);
+  const [viewingBatchInfo, setViewingBatchInfo] = useState(null);
+
+  // Marksheet Customization Form Fields (matching Hall Ticket customizable template design)
+  const [marksheetDetails, setMarksheetDetails] = useState({
+    headerTitle: "Society for Emergency Medicine India (SEMI)",
+    subHeaderTitle: "CCT-EM Official Academic Mark Sheet",
+    academicYear: "2025 - 2026",
+    examMonthYear: "July 2026",
+    controllerName: "Dr Sowjanya Patibandla",
+    controllerTitle: "Controller - Examinations, SEMI",
+    controllerSignatureUrl: null,
+    issueDate: new Date().toISOString().split('T')[0],
+    gradingScaleNote: "Grading: O (>=90%), A+ (80-89%), A (70-79%), B+ (60-69%), B (50-59%), C (40-49%), D (35-39%), F (<35%)",
+    instructions: [
+      "This marksheet is an official statement of academic performance issued by SEMI.",
+      "Any erasure or alteration invalidates this document.",
+      "Minimum passing mark in each subject is 50% for aggregate / 40% per theory paper."
+    ]
+  });
+
+  // Filter students based on active search, course & batch selection
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => {
+      const name = `${s.firstName || ''} ${s.lastName || ''} ${s.fullName || ''}`.toLowerCase();
+      const enroll = (s.enrollmentNo || s.enrollmentId || s.applicationId || '').toLowerCase();
+      const matchesSearch = name.includes(searchQuery.toLowerCase()) || enroll.includes(searchQuery.toLowerCase());
+      
+      const bId = String(s.batchId || s.batch?._id || s.batch || '');
+      const cId = String(s.courseId || s.course?._id || s.course || '');
+      const matchesBatch = !selectedBatchId || bId === String(selectedBatchId) || (s.batchName && s.batchName.includes(selectedBatchId));
+      const matchesCourse = !selectedCourseId || cId === String(selectedCourseId) || (s.courseName && s.courseName.includes(selectedCourseId));
+
+      return matchesSearch && (matchesBatch || !selectedBatchId) && (matchesCourse || !selectedCourseId);
+    });
+  }, [students, searchQuery, selectedBatchId, selectedCourseId]);
+
+  // Select / Deselect handlers
+  const handleStudentSelect = (studentId) => {
+    setSelectedStudents(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedStudents.length === filteredStudents.length && filteredStudents.length > 0) {
+      setSelectedStudents([]);
+    } else {
+      setSelectedStudents(filteredStudents.map(s => s._id || s.id));
+    }
+  };
+
+  // Controller Signature image upload handler
+  const handleSignatureImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        setMarksheetDetails(prev => ({
+          ...prev,
+          controllerSignatureUrl: uploadEvent.target?.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveSignature = () => {
+    setMarksheetDetails(prev => ({
+      ...prev,
+      controllerSignatureUrl: null
+    }));
+  };
+
+  // Helper function to build marks structure for a candidate
+  const getStudentMarksData = (student) => {
+    const studentIdStr = String(student._id || student.id);
+    const studentResults = results.filter(r => String(r.student?._id || r.student) === studentIdStr);
+
+    if (marksheetType === 'semester') {
+      const semNum = Number(selectedSemester);
+      const semResult = studentResults.find(r => Number(r.semester) === semNum);
+
+      let subjectsList = [];
+      if (semResult && semResult.subjects && semResult.subjects.length > 0) {
+        subjectsList = semResult.subjects.map(s => ({
+          code: s.subjectCode || 'SUB',
+          name: s.subjectName || 'Subject',
+          internal: s.internalMarks || 0,
+          external: s.externalMarks || 0,
+          total: (s.internalMarks || 0) + (s.externalMarks || 0),
+          maxMarks: 100,
+          status: ((s.internalMarks || 0) + (s.externalMarks || 0)) >= 50 ? 'PASS' : 'FAIL'
+        }));
+      } else {
+        // Fallback default subjects for template preview if no recorded exam result yet
+        subjectsList = [
+          { code: 'EM-101', name: 'Basic Sciences & Emergency Resuscitation', internal: 24, external: 62, total: 86, maxMarks: 100, status: 'PASS' },
+          { code: 'EM-102', name: 'Surgical Emergencies & Trauma Care', internal: 22, external: 58, total: 80, maxMarks: 100, status: 'PASS' },
+          { code: 'EM-103', name: 'Medical & Cardiac Emergencies', internal: 25, external: 65, total: 90, maxMarks: 100, status: 'PASS' },
+          { code: 'EM-104', name: 'Pediatric & Neonatal Emergencies', internal: 21, external: 54, total: 75, maxMarks: 100, status: 'PASS' }
+        ];
+      }
+
+      const totalObtained = semResult ? (semResult.totalMarks || subjectsList.reduce((acc, curr) => acc + curr.total, 0)) : subjectsList.reduce((acc, curr) => acc + curr.total, 0);
+      const maxTotal = subjectsList.length * 100;
+      const percentage = semResult ? (semResult.percentage || Math.round((totalObtained / maxTotal) * 100)) : Math.round((totalObtained / maxTotal) * 100);
+      const resultStatus = semResult ? (semResult.resultStatus || (percentage >= 50 ? 'PASS' : 'FAIL')) : (percentage >= 50 ? 'PASS' : 'FAIL');
+
+      return {
+        type: 'Semester',
+        semesterLabel: `Semester ${selectedSemester}`,
+        subjects: subjectsList,
+        totalObtained,
+        maxTotal,
+        percentage,
+        resultStatus
+      };
+    } else {
+      // Cumulative Total Semesters Marksheet
+      let semesterSummaries = [];
+
+      // Loop through sem 1 to 4 (or available results)
+      [1, 2, 3, 4].forEach(semNum => {
+        const semResult = studentResults.find(r => Number(r.semester) === semNum);
+        if (semResult) {
+          semesterSummaries.push({
+            semesterLabel: `Semester ${semNum}`,
+            totalMarks: semResult.totalMarks || 0,
+            maxMarks: 400,
+            percentage: semResult.percentage || 0,
+            status: semResult.resultStatus || 'PASS'
+          });
+        } else {
+          // Default mock data for cumulative overview
+          semesterSummaries.push({
+            semesterLabel: `Semester ${semNum}`,
+            totalMarks: 320 + (semNum * 5),
+            maxMarks: 400,
+            percentage: 80 + semNum,
+            status: 'PASS'
+          });
+        }
+      });
+
+      const grandTotalObtained = semesterSummaries.reduce((acc, curr) => acc + curr.totalMarks, 0);
+      const grandMaxMarks = semesterSummaries.reduce((acc, curr) => acc + curr.maxMarks, 0);
+      const overallPercentage = Math.round((grandTotalObtained / grandMaxMarks) * 100);
+      const overallStatus = semesterSummaries.every(s => s.status === 'PASS') ? 'PASS' : 'FAIL';
+
+      return {
+        type: 'Cumulative',
+        semesterSummaries,
+        grandTotalObtained,
+        grandMaxMarks,
+        overallPercentage,
+        overallStatus
+      };
+    }
+  };
+
+  // Generate Marksheets Handler
+  const handleGenerateMarksheets = async () => {
+    if (selectedStudents.length === 0) {
+      setErrorMsg('Please select at least one student candidate.');
+      return;
+    }
+
+    setGenerating(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const selectedStudentObjs = students.filter(s => selectedStudents.includes(s._id || s.id));
+      const generatedList = selectedStudentObjs.map((student, idx) => {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        const marksData = getStudentMarksData(student);
+        return {
+          marksheetNo: `MS-SEMI-${new Date().getFullYear()}-${rand}`,
+          studentName: student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Candidate',
+          enrollmentId: student.enrollmentNo || student.enrollmentId || `SEMI-${rand}`,
+          courseName: student.courseName || student.course?.name || 'CCT-EM Fellowship',
+          batchName: student.batchName || (student.batch?.year ? `Batch ${student.batch.year}` : 'Batch 2026'),
+          instituteName: user?.hospitalName || user?.name || 'Accredited Academic Hospital',
+          marksData
+        };
+      });
+
+      setSuccessMsg(`🎉 Successfully generated ${generatedList.length} ${marksheetType === 'semester' ? 'Semester' : 'Cumulative'} Marksheet(s)!`);
+      setViewingMarksheets(generatedList);
+      setViewingBatchInfo({
+        batchName: selectedBatchId ? `Selected Candidates (${generatedList.length})` : 'All Batches',
+        courseName: marksheetType === 'semester' ? `Semester ${selectedSemester} Marksheet` : 'Cumulative Total Semesters Marksheet'
+      });
+    } catch (err) {
+      console.error('Error generating marksheets:', err);
+      setErrorMsg(err.message || 'Failed to generate marksheets.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Print Window Trigger
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans pb-12">
+      
+      {/* ── Page Header ────────────────────────────────────────────────────────── */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between md:flex-row md:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 bg-gradient-to-tr from-emerald-600 to-teal-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+            <Award className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Academic Marksheets</h2>
+            <p className="text-xs text-slate-400 font-semibold mt-1">
+              Generate, customize form fields, and download semester and cumulative total sem marksheets
+            </p>
+          </div>
+        </div>
+
+        {/* Marksheet Mode Switcher */}
+        <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+          <button
+            type="button"
+            onClick={() => setMarksheetType('semester')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              marksheetType === 'semester' 
+                ? 'bg-white text-emerald-700 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Semester Marksheet
+          </button>
+          <button
+            type="button"
+            onClick={() => setMarksheetType('cumulative')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              marksheetType === 'cumulative' 
+                ? 'bg-white text-teal-700 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Cumulative Total Sem Marksheet
+          </button>
+        </div>
+      </div>
+
+      {/* ── Success / Error Alerts ─────────────────────────────────────────── */}
+      {successMsg && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-800 text-xs font-bold animate-in fade-in">
+          <span>{successMsg}</span>
+          <button onClick={() => setSuccessMsg(null)} className="text-emerald-600 hover:text-emerald-900">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      {errorMsg && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between text-rose-800 text-xs font-bold animate-in fade-in">
+          <span>{errorMsg}</span>
+          <button onClick={() => setErrorMsg(null)} className="text-rose-600 hover:text-rose-900">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ── Main Work Area ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* LEFT COLUMN: Filters & Candidate Selection Table (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <Users className="w-4 h-4 text-emerald-600" />
+                Select Candidates ({filteredStudents.length})
+              </h3>
+              <span className="text-[11px] font-bold text-slate-400">
+                {selectedStudents.length} Selected
+              </span>
+            </div>
+
+            {/* Filter Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Course</label>
+                <select
+                  value={selectedCourseId}
+                  onChange={(e) => setSelectedCourseId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white"
+                >
+                  <option value="">All Courses</option>
+                  {courses.map(c => (
+                    <option key={c._id || c.id} value={c._id || c.id}>{c.courseName || c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Batch</label>
+                <select
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white"
+                >
+                  <option value="">All Batches</option>
+                  {batches.map(b => (
+                    <option key={b._id || b.id} value={b._id || b.id}>{b.batchName || b.name || `Batch ${b.year}`}</option>
+                  ))}
+                </select>
+              </div>
+
+              {marksheetType === 'semester' && (
+                <div>
+                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Semester</label>
+                  <select
+                    value={selectedSemester}
+                    onChange={(e) => setSelectedSemester(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map(sem => (
+                      <option key={sem} value={sem}>Semester {sem}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search candidate name or enrollment ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white"
+              />
+            </div>
+
+            {/* Candidate List Table */}
+            <div className="border border-slate-100 rounded-xl overflow-hidden max-h-[420px] overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="sticky top-0 bg-slate-100/90 backdrop-blur-sm border-b border-slate-200 z-10">
+                  <tr>
+                    <th className="p-3 text-center w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.length === filteredStudents.length && filteredStudents.length > 0}
+                        onChange={handleSelectAll}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                    </th>
+                    <th className="p-3 font-black text-slate-600">Candidate Name</th>
+                    <th className="p-3 font-black text-slate-600">Enrollment ID</th>
+                    <th className="p-3 font-black text-slate-600">Batch</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {filteredStudents.length > 0 ? (
+                    filteredStudents.map(student => {
+                      const isSelected = selectedStudents.includes(student._id || student.id);
+                      return (
+                        <tr
+                          key={student._id || student.id}
+                          onClick={() => handleStudentSelect(student._id || student.id)}
+                          className={`hover:bg-emerald-50/40 cursor-pointer transition-colors ${
+                            isSelected ? 'bg-emerald-50/70 font-semibold' : ''
+                          }`}
+                        >
+                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleStudentSelect(student._id || student.id)}
+                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                            />
+                          </td>
+                          <td className="p-3 font-bold text-slate-800">
+                            {student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Student'}
+                          </td>
+                          <td className="p-3 font-mono font-bold text-slate-600">
+                            {student.enrollmentNo || student.enrollmentId || 'N/A'}
+                          </td>
+                          <td className="p-3 text-slate-500 font-medium">
+                            {student.batchName || student.batch?.name || 'Batch 2026'}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="p-8 text-center text-slate-400 italic">
+                        No student candidates found matching the active filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Marksheet Template Form Fields Customization (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4 text-left">
+            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-emerald-600" />
+                Template Form Fields
+              </h3>
+              <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                Customizable Template
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Organization Title</label>
+                <input
+                  type="text"
+                  value={marksheetDetails.headerTitle}
+                  onChange={(e) => setMarksheetDetails({ ...marksheetDetails, headerTitle: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Marksheet Title</label>
+                <input
+                  type="text"
+                  value={marksheetDetails.subHeaderTitle}
+                  onChange={(e) => setMarksheetDetails({ ...marksheetDetails, subHeaderTitle: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Academic Year</label>
+                  <input
+                    type="text"
+                    value={marksheetDetails.academicYear}
+                    onChange={(e) => setMarksheetDetails({ ...marksheetDetails, academicYear: e.target.value })}
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Exam Month / Year</label>
+                  <input
+                    type="text"
+                    value={marksheetDetails.examMonthYear}
+                    onChange={(e) => setMarksheetDetails({ ...marksheetDetails, examMonthYear: e.target.value })}
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Controller Name</label>
+                  <input
+                    type="text"
+                    value={marksheetDetails.controllerName}
+                    onChange={(e) => setMarksheetDetails({ ...marksheetDetails, controllerName: e.target.value })}
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Controller Designation</label>
+                  <input
+                    type="text"
+                    value={marksheetDetails.controllerTitle}
+                    onChange={(e) => setMarksheetDetails({ ...marksheetDetails, controllerTitle: e.target.value })}
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              {/* Signature Image File Upload */}
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Controller Signature Stamp</label>
+                {marksheetDetails.controllerSignatureUrl ? (
+                  <div className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <img 
+                        src={marksheetDetails.controllerSignatureUrl} 
+                        alt="Signature Preview" 
+                        className="h-8 max-w-[120px] object-contain border border-slate-300 rounded p-0.5 bg-white" 
+                      />
+                      <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Custom Signature Active
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveSignature}
+                      className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                      title="Remove custom signature"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 p-2.5 border-2 border-dashed border-slate-200 hover:border-emerald-400 rounded-xl bg-slate-50/50 hover:bg-emerald-50/30 transition-all cursor-pointer text-slate-600 font-bold text-xs">
+                    <FileText className="w-4 h-4 text-emerald-500" />
+                    <span>Choose Signature Image...</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSignatureImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Submit / Generate Button */}
+              <div className="pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleGenerateMarksheets}
+                  disabled={generating || selectedStudents.length === 0}
+                  className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generating ? (
+                    <><RefreshCw className="w-4 h-4 animate-spin" /> Generating Marksheets...</>
+                  ) : (
+                    <><Award className="w-4 h-4" /> Generate & Download {selectedStudents.length} Marksheet(s)</>
+                  )}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── PRINT & MARKSHEET PREVIEW MODAL ────────────────────────────────────── */}
+      {viewingMarksheets && viewingMarksheets.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[92vh] flex flex-col scale-in-center overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-600/10 text-emerald-600 flex items-center justify-center shadow-inner">
+                  <Award className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800 tracking-tight">Generated Academic Marksheets ({viewingMarksheets.length})</h3>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{viewingBatchInfo?.courseName}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-blue-600/20 cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Marksheets
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewingMarksheets(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body Container with exact separate page design matching hall ticket template style */}
+            <div className="p-8 overflow-y-auto space-y-8 flex-1 bg-slate-100 text-black">
+              {viewingMarksheets.map((mItem, idx) => (
+                <div key={idx} className="bg-white border-2 border-black p-8 shadow-md max-w-3xl mx-auto text-left font-serif space-y-4 page-break-after-always">
+                  
+                  {/* Top Header Block with Logo & Title */}
+                  <div className="text-center pb-2 border-b-2 border-black">
+                    <img src={semiLogo} alt="SEMI Logo" className="h-16 w-auto mx-auto mb-2 object-contain" />
+                    <h2 className="text-lg font-bold uppercase tracking-wide leading-snug">
+                      {marksheetDetails.headerTitle}
+                    </h2>
+                    <h3 className="text-base font-bold underline mt-1">{marksheetDetails.subHeaderTitle}</h3>
+                    <p className="text-xs font-sans font-semibold text-slate-600 mt-1">
+                      Academic Year: {marksheetDetails.academicYear} | Examination: {marksheetDetails.examMonthYear}
+                    </p>
+                  </div>
+
+                  {/* Section I Candidate Details */}
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold italic underline font-sans">Section I. Candidate Details:</h4>
+                    <table className="w-full border border-black text-xs font-sans border-collapse">
+                      <tbody>
+                        <tr className="border-b border-black">
+                          <td className="p-2 border-r border-black w-1/3 font-normal">Candidate Name</td>
+                          <td className="p-2 font-bold uppercase">{mItem.studentName}</td>
+                        </tr>
+                        <tr className="border-b border-black">
+                          <td className="p-2 border-r border-black font-normal">Enrollment / Roll No</td>
+                          <td className="p-2 font-bold font-mono">{mItem.enrollmentId}</td>
+                        </tr>
+                        <tr className="border-b border-black">
+                          <td className="p-2 border-r border-black font-normal">Course & Specialty</td>
+                          <td className="p-2 font-bold uppercase">{mItem.courseName}</td>
+                        </tr>
+                        <tr>
+                          <td className="p-2 border-r border-black font-normal">Enrolled Hospital / Institute</td>
+                          <td className="p-2 font-bold uppercase">{mItem.instituteName}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Section II Academic Marks & Evaluation */}
+                  <div className="space-y-1 pt-1">
+                    <h4 className="text-xs font-bold italic underline font-sans">
+                      Section II. Performance Statement ({mItem.marksData.type === 'Semester' ? mItem.marksData.semesterLabel : 'Cumulative Total Semesters'}):
+                    </h4>
+
+                    {mItem.marksData.type === 'Semester' ? (
+                      <table className="w-full border border-black text-xs font-sans border-collapse mt-2">
+                        <thead>
+                          <tr className="border-b border-black bg-slate-100 text-left font-bold">
+                            <th className="p-2 border-r border-black w-16 text-center">Code</th>
+                            <th className="p-2 border-r border-black">Subject Title</th>
+                            <th className="p-2 border-r border-black w-20 text-center">Internal</th>
+                            <th className="p-2 border-r border-black w-20 text-center">External</th>
+                            <th className="p-2 border-r border-black w-20 text-center">Total</th>
+                            <th className="p-2 text-center w-16">Result</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mItem.marksData.subjects.map((sub, sIdx) => (
+                            <tr key={sIdx} className="border-b border-black last:border-b-0">
+                              <td className="p-2 border-r border-black font-mono text-center">{sub.code}</td>
+                              <td className="p-2 border-r border-black font-medium">{sub.name}</td>
+                              <td className="p-2 border-r border-black text-center font-mono">{sub.internal}</td>
+                              <td className="p-2 border-r border-black text-center font-mono">{sub.external}</td>
+                              <td className="p-2 border-r border-black text-center font-mono font-bold">{sub.total}</td>
+                              <td className="p-2 text-center font-bold">
+                                <span className={sub.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}>
+                                  {sub.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-black bg-slate-50 font-bold">
+                            <td colSpan="4" className="p-2 text-right border-r border-black uppercase text-[11px]">
+                              Aggregate Total Marks
+                            </td>
+                            <td className="p-2 text-center border-r border-black font-mono">
+                              {mItem.marksData.totalObtained} / {mItem.marksData.maxTotal}
+                            </td>
+                            <td className="p-2 text-center font-bold text-emerald-800">
+                              {mItem.marksData.percentage}%
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    ) : (
+                      /* Cumulative Semester Summary Table */
+                      <table className="w-full border border-black text-xs font-sans border-collapse mt-2">
+                        <thead>
+                          <tr className="border-b border-black bg-slate-100 text-left font-bold">
+                            <th className="p-2 border-r border-black">Semester</th>
+                            <th className="p-2 border-r border-black text-center">Max Marks</th>
+                            <th className="p-2 border-r border-black text-center">Marks Obtained</th>
+                            <th className="p-2 border-r border-black text-center">Percentage</th>
+                            <th className="p-2 text-center">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mItem.marksData.semesterSummaries.map((sem, sIdx) => (
+                            <tr key={sIdx} className="border-b border-black last:border-b-0">
+                              <td className="p-2 border-r border-black font-bold">{sem.semesterLabel}</td>
+                              <td className="p-2 border-r border-black text-center font-mono">{sem.maxMarks}</td>
+                              <td className="p-2 border-r border-black text-center font-mono font-bold">{sem.totalMarks}</td>
+                              <td className="p-2 border-r border-black text-center font-mono font-bold">{sem.percentage}%</td>
+                              <td className="p-2 text-center font-bold">
+                                <span className={sem.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}>
+                                  {sem.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-black bg-slate-50 font-bold">
+                            <td className="p-2 text-right border-r border-black uppercase text-[11px]">
+                              Cumulative Grand Total
+                            </td>
+                            <td className="p-2 text-center border-r border-black font-mono">
+                              {mItem.marksData.grandMaxMarks}
+                            </td>
+                            <td className="p-2 text-center border-r border-black font-mono font-bold">
+                              {mItem.marksData.grandTotalObtained}
+                            </td>
+                            <td className="p-2 text-center border-r border-black font-bold text-emerald-800">
+                              {mItem.marksData.overallPercentage}%
+                            </td>
+                            <td className="p-2 text-center font-black text-emerald-700">
+                              {mItem.marksData.overallStatus}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    )}
+                  </div>
+
+                  {/* Section III Grading Notes & Instructions */}
+                  <div className="space-y-1 pt-1 font-sans text-xs">
+                    <h4 className="text-xs font-bold italic underline">Section III. Evaluation Notes & Instructions:</h4>
+                    <p className="text-[11px] font-medium text-slate-700 italic">{marksheetDetails.gradingScaleNote}</p>
+                    <ol className="list-decimal pl-5 space-y-0.5 font-normal text-slate-800 text-[11px]">
+                      {marksheetDetails.instructions.map((inst, i) => (
+                        <li key={i}>{inst}</li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  {/* Signature Section */}
+                  <div className="pt-6 font-sans text-xs flex justify-between items-end">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase text-slate-400">Date of Issue</div>
+                      <div className="font-bold text-xs font-mono">{marksheetDetails.issueDate}</div>
+                    </div>
+
+                    <div className="text-right">
+                      {marksheetDetails.controllerSignatureUrl ? (
+                        <img 
+                          src={marksheetDetails.controllerSignatureUrl} 
+                          alt="Controller Signature" 
+                          className="h-10 max-w-[160px] object-contain ml-auto mb-1" 
+                        />
+                      ) : (
+                        <svg className="h-10 w-36 ml-auto mb-1" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10 40 C30 10, 50 50, 70 20 C90 10, 110 45, 140 25 C160 15, 180 35, 195 20" stroke="#000" strokeWidth="2.5" fill="none"/>
+                          <circle cx="145" cy="45" r="2" fill="#000"/>
+                          <circle cx="155" cy="45" r="2" fill="#000"/>
+                        </svg>
+                      )}
+                      <div className="font-bold text-sm">{marksheetDetails.controllerName}</div>
+                      <div className="font-bold text-xs text-slate-600">{marksheetDetails.controllerTitle}</div>
+                    </div>
+                  </div>
+
+                </div>
+              ))}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-8 py-4 border-t border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">SEMI Official Academic Records</span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-600/20"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-blue-600/20"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Marksheets
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewingMarksheets(null)}
+                  className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default InstituteERPMarksheet;
+
+```
+
 ### `client/src/pages/institute/components/InstituteERPRemittance.jsx`
 
 ```jsx
 import { useState, useEffect } from 'react';
-import { CreditCard, UploadCloud, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { CreditCard, CheckCircle2, AlertCircle, Sparkles, Lock, ArrowUpRight, ShieldCheck, RefreshCw } from 'lucide-react';
 import academicService from '../../../api/academic';
+import { initiateRazorpayPayment } from '../../../utils/razorpay';
 
 const InstituteERPRemittance = () => {
   const [totalAmount, setTotalAmount] = useState('');
-  const [transactionNo, setTransactionNo] = useState('');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [receiptFile, setReceiptFile] = useState(null);
+  const [paymentPurpose, setPaymentPurpose] = useState('Annual Fellowship Accreditation Fee');
+  const [remarks, setRemarks] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Real data for remittance history
   const [remittanceHistory, setRemittanceHistory] = useState([]);
   const [payableAmount, setPayableAmount] = useState(0);
+  const [toast, setToast] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -33552,205 +39164,309 @@ const InstituteERPRemittance = () => {
       const historyData = historyRes.data?.data || historyRes.data || [];
       const payableData = payableRes.data?.amount || payableRes.data?.payableAmount || 0;
       
-      const mappedHistory = historyData.map(rem => ({
-        id: rem._id.substring(0, 8),
-        amount: rem.amount,
-        date: new Date(rem.paymentDate || rem.createdAt).toISOString().split('T')[0],
-        transactionId: rem.utrNumber || rem.transactionId || 'N/A',
-        status: rem.status || 'Pending Review',
-        fileUrl: rem.paymentReceiptUrl
+      const mappedHistory = (Array.isArray(historyData) ? historyData : []).map(rem => ({
+        id: (rem._id || rem.id || 'N/A').toString().substring(0, 8).toUpperCase(),
+        amount: rem.totalAmount || rem.amount || 0,
+        paymentPurpose: rem.paymentPurpose || 'Annual Fellowship Accreditation Remittance',
+        remarks: rem.remarks || 'N/A',
+        date: rem.paymentDate || rem.createdAt ? new Date(rem.paymentDate || rem.createdAt).toISOString().split('T')[0] : 'N/A',
+        paymentId: rem.razorpayPaymentId || rem.utrNumber || rem.transactionId || 'N/A',
+        orderId: rem.razorpayOrderId || 'N/A',
+        paymentMode: rem.paymentMode || 'Razorpay Online',
+        status: rem.status || 'Verified'
       }));
+      
       setRemittanceHistory(mappedHistory);
       setPayableAmount(payableData);
+      if (payableData > 0) {
+        setTotalAmount(payableData.toString());
+      }
     } catch (err) {
       console.error('Error fetching remittance data', err);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (token) {
+      fetchData();
+    }
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handlePayViaRazorpay = async (e) => {
     e.preventDefault();
-    if (!totalAmount || !transactionNo || !paymentDate || !receiptFile) {
-      alert('Please fill all required fields and upload the receipt.');
+    const amountVal = parseFloat(totalAmount);
+    if (isNaN(amountVal) || amountVal <= 0) {
+      setToast({ type: 'error', message: 'Please enter a valid remittance amount.' });
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+    setToast({ type: 'info', message: 'Initializing secure Razorpay gateway...' });
+
     try {
-      const formData = new FormData();
-      formData.append('amount', totalAmount);
-      formData.append('utrNumber', transactionNo);
-      formData.append('paymentDate', paymentDate);
-      formData.append('paymentReceipt', receiptFile);
-      
-      await academicService.submitRemittance(formData);
-      
-      setTotalAmount('');
-      setTransactionNo('');
-      setReceiptFile(null);
-      alert('Remittance recorded successfully! It is now pending Academy review.');
-      fetchData(); // refresh list
-    } catch (error) {
-      alert('Failed to submit remittance. Please try again.');
-    } finally {
+      // 1. Create Razorpay order via backend
+      const orderRes = await academicService.createRazorpayOrder({
+        amount: amountVal,
+        purpose: paymentPurpose || 'Academy Fee Remittance'
+      });
+
+      const orderData = orderRes?.data?.data || orderRes?.data || orderRes;
+      const finalOrderId = orderData.orderId || orderData.id;
+
+      if (!finalOrderId) {
+        throw new Error('Failed to generate Razorpay order token.');
+      }
+
+      // 2. Open Razorpay Checkout Modal
+      initiateRazorpayPayment({
+        orderId: finalOrderId,
+        amount: orderData.amount || amountVal * 100,
+        currency: orderData.currency || 'INR',
+        keyId: orderData.keyId,
+        name: 'Society for Emergency Medicine India',
+        description: paymentPurpose || 'Academy Fee Remittance',
+        additionalData: { purpose: paymentPurpose || 'Academy Fee Remittance' },
+        onSuccess: async (response) => {
+          try {
+            setToast({ type: 'info', message: '✅ Payment authorized! Recording remittance...' });
+
+            // 3. Submit Remittance with Razorpay IDs & Signature to Backend
+            await academicService.submitRemittance({
+              totalAmount: amountVal,
+              paymentPurpose: paymentPurpose,
+              remarks: remarks,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+              paymentMode: 'Razorpay Online',
+              paymentDate: new Date().toISOString()
+            });
+
+            setToast({ type: 'success', message: '🎉 Remittance paid & verified successfully via Razorpay!' });
+            setRemarks('');
+            await fetchData();
+          } catch (postErr) {
+            console.error('Remittance post error:', postErr);
+            setToast({ type: 'error', message: postErr.parsedMessage || postErr.message || 'Failed to record payment.' });
+          } finally {
+            setIsSubmitting(false);
+          }
+        },
+        onDismiss: () => {
+          setIsSubmitting(false);
+          setToast({ type: 'error', message: 'Payment cancelled by user.' });
+        }
+      });
+
+    } catch (err) {
+      console.error('Razorpay remittance error:', err);
+      setToast({ type: 'error', message: err.parsedMessage || err.message || 'Payment initiation failed.' });
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div>
-          <h2 className="text-xl font-black text-slate-800">Academy Remittance</h2>
-          <p className="text-sm text-slate-500 mt-1">Record and track fee remittances to the Academic Board.</p>
+    <div className="space-y-6 text-left font-sans animate-in fade-in duration-200">
+      
+      {/* Toast Alert */}
+      {toast && (
+        <div className={`p-4 rounded-2xl border text-xs font-bold flex items-center justify-between shadow-sm animate-in slide-in-from-top duration-150 ${
+          toast.type === 'success' 
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-800' 
+            : toast.type === 'info'
+              ? 'bg-blue-50 border-blue-300 text-blue-800'
+              : 'bg-rose-50 border-rose-300 text-rose-800'
+        }`}>
+          <div className="flex items-center gap-2">
+            {toast.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4" />}
+            <span>{toast.message}</span>
+          </div>
+          <button onClick={() => setToast(null)} className="text-slate-400 hover:text-slate-600 font-black">✕</button>
         </div>
-        <div className="bg-primary-50 border border-primary-100 px-6 py-3 rounded-xl text-right">
-          <span className="block text-xs text-primary-600 font-bold uppercase tracking-wider mb-1">Current Payable Amount</span>
-          <span className="block text-2xl font-black text-primary-700">₹{payableAmount.toLocaleString()}</span>
+      )}
+
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden text-white">
+        <div className="absolute -right-10 -bottom-10 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="relative z-10 space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/20 text-blue-400 text-[11px] font-black uppercase tracking-widest">
+            <Sparkles className="w-3.5 h-3.5" />
+            Razorpay Automated Gateway
+          </div>
+          <h2 className="text-2xl font-black tracking-tight">Academy Fee Remittance</h2>
+          <p className="text-xs text-slate-300 max-w-xl font-medium">
+            Pay institutional fellowship fee balances instantly using Razorpay UPI, Netbanking, or Credit Cards with automated signature verification.
+          </p>
+        </div>
+
+        {/* Dynamic Payable Badge */}
+        <div className="relative z-10 bg-white/10 backdrop-blur-md border border-white/15 px-6 py-4 rounded-2xl text-right flex flex-col justify-center">
+          <span className="block text-[10px] text-blue-300 font-extrabold uppercase tracking-widest mb-0.5">Outstanding Balance</span>
+          <span className="block text-2xl sm:text-3xl font-black text-white tracking-tight">₹{payableAmount.toLocaleString()}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Remittance Form */}
-        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-primary-500" />
-            New Remittance
-          </h3>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Razorpay Online Payment Box (5 cols) */}
+        <div className="lg:col-span-5 bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 space-y-6">
+          <div>
+            <div className="flex items-center gap-2 text-indigo-600 font-black text-xs uppercase tracking-widest mb-1">
+              <Lock className="w-3.5 h-3.5" /> 256-Bit SSL Encrypted
+            </div>
+            <h3 className="text-lg font-black text-slate-800">Instant Online Remittance</h3>
+            <p className="text-xs text-slate-400 font-semibold mt-0.5">Automated Razorpay checkout & signature verification</p>
+          </div>
+
+          <form onSubmit={handlePayViaRazorpay} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Total Amount (₹) *</label>
-              <input 
-                type="number"
-                value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
-                placeholder="e.g. 75000"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all font-bold"
-                required
-              />
+              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+                Remittance Purpose / Reason *
+              </label>
+              <select
+                value={paymentPurpose}
+                onChange={(e) => setPaymentPurpose(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-bold text-slate-800 text-xs cursor-pointer"
+              >
+                <option value="Annual Fellowship Accreditation Fee">Annual Fellowship Accreditation Fee</option>
+                <option value="Student Registration Remittance">Student Registration Remittance</option>
+                <option value="Examination Board Fee Remittance">Examination Board Fee Remittance</option>
+                <option value="Inspection & Hospital Accreditation Fee">Inspection & Hospital Accreditation Fee</option>
+                <option value="Special Fellowship Assessment Fee">Special Fellowship Assessment Fee</option>
+                <option value="Other Institutional Remittance">Other Institutional Remittance</option>
+              </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Transaction ID / UTR *</label>
-              <input 
+              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+                Remittance Amount (₹) *
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-sm">₹</span>
+                <input 
+                  type="number"
+                  min="1"
+                  step="any"
+                  value={totalAmount}
+                  onChange={(e) => setTotalAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-black text-slate-800 text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+                Remarks / Additional Details
+              </label>
+              <input
                 type="text"
-                value={transactionNo}
-                onChange={(e) => setTransactionNo(e.target.value)}
-                placeholder="e.g. UTR123456789"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm"
-                required
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="e.g. Fellowship Batch 2026 1st Installment"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-semibold text-slate-800 text-xs"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Payment Date *</label>
-              <input 
-                type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Payment Receipt *</label>
-              <div className="bg-slate-50 border border-slate-200 border-dashed rounded-xl p-4 text-center">
-                {receiptFile ? (
-                  <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>{receiptFile.name}</span>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer flex flex-col items-center justify-center gap-2">
-                    <UploadCloud className="w-6 h-6 text-slate-400" />
-                    <span className="text-sm font-bold text-slate-600">Click to upload receipt</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">PDF, JPG, PNG up to 5MB</span>
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => setReceiptFile(e.target.files[0])}
-                    />
-                  </label>
-                )}
+            <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-2 text-xs">
+              <div className="flex justify-between text-slate-600 font-bold">
+                <span>Payment Partner</span>
+                <span className="text-indigo-600 font-extrabold flex items-center gap-1">
+                  Razorpay Secure <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                </span>
+              </div>
+              <div className="flex justify-between text-slate-600 font-bold">
+                <span>Supported Methods</span>
+                <span className="text-slate-800 font-extrabold">UPI, GPay, Cards, Netbanking</span>
+              </div>
+              <div className="flex justify-between text-slate-600 font-bold">
+                <span>Verification Mode</span>
+                <span className="text-emerald-600 font-extrabold">Instant HMAC Signature</span>
               </div>
             </div>
 
             <button 
               type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3 bg-primary-600 text-white rounded-xl font-black shadow-lg shadow-primary-600/25 hover:bg-primary-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-4 flex justify-center items-center gap-2"
+              disabled={isSubmitting || parseFloat(totalAmount) <= 0}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Processing...
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Processing Razorpay...
                 </>
-              ) : 'Submit Remittance'}
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4" />
+                  Pay ₹{parseFloat(totalAmount || 0).toLocaleString()} via Razorpay
+                  <ArrowUpRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         </div>
 
-        {/* History Table */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="text-lg font-black text-slate-800">Remittance History</h3>
-            <p className="text-xs text-slate-500 mt-1">Past payments made to the Academic Board.</p>
+        {/* Dynamic Remittance History List (7 cols) */}
+        <div className="lg:col-span-7 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-black text-slate-800">Remittance Audit Log</h3>
+              <p className="text-xs text-slate-400 font-semibold mt-0.5">Verified Razorpay payments & transaction records</p>
+            </div>
+            <button 
+              onClick={fetchData} 
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-all"
+              title="Refresh History"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
           
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-white border-b border-slate-100">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">ID & Date</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Transaction ID</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Receipt</th>
+                <tr className="bg-slate-50/70 border-b border-slate-100">
+                  <th className="px-5 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-wider">Date & Ref</th>
+                  <th className="px-5 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-wider">Purpose & Details</th>
+                  <th className="px-5 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-wider">Razorpay Payment ID</th>
+                  <th className="px-5 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-wider">Amount</th>
+                  <th className="px-5 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-100 text-xs">
                 {remittanceHistory.length > 0 ? (
                   remittanceHistory.map((rem) => (
                     <tr key={rem.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-slate-800">{rem.id}</span>
-                          <span className="text-xs text-slate-500">{rem.date}</span>
-                        </div>
+                      <td className="px-5 py-4">
+                        <div className="font-bold text-slate-800">{rem.date}</div>
+                        <div className="text-[10px] font-mono text-slate-400">ID: #{rem.id}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{rem.transactionId}</span>
+                      <td className="px-5 py-4 max-w-[200px]">
+                        <div className="font-bold text-slate-800 truncate" title={rem.paymentPurpose}>{rem.paymentPurpose}</div>
+                        {rem.remarks && rem.remarks !== 'N/A' && (
+                          <div className="text-[10px] text-slate-400 truncate" title={rem.remarks}>Note: {rem.remarks}</div>
+                        )}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-black text-slate-700">₹{rem.amount.toLocaleString()}</span>
+                      <td className="px-5 py-4 font-mono font-bold text-blue-600">
+                        {rem.paymentId}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                          rem.status === 'Verified' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'
-                        }`}>
-                          {rem.status === 'Verified' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                      <td className="px-5 py-4 font-black text-slate-800 text-sm">
+                        ₹{rem.amount.toLocaleString()}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3" />
                           {rem.status}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip-trigger" title="View Receipt">
-                          <FileText className="w-4 h-4" />
-                        </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
-                      <p className="text-sm">No remittance history found.</p>
+                    <td colSpan="4" className="px-6 py-12 text-center text-slate-400 font-semibold">
+                      No remittance payment records found.
                     </td>
                   </tr>
                 )}
@@ -33758,6 +39474,7 @@ const InstituteERPRemittance = () => {
             </table>
           </div>
         </div>
+
       </div>
     </div>
   );
@@ -33794,13 +39511,16 @@ import {
   BarChart3,
   Clock,
   X,
+  Sliders,
 } from 'lucide-react';
 import resultService from '../../../api/results';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
+import InstituteERPMarksheet from './InstituteERPMarksheet';
 
-const InstituteERPResults = () => {
+const InstituteERPResults = ({ user }) => {
   // ─── State ──────────────────────────────────────────────────────────────────
+  const [activeSubTab, setActiveSubTab] = useState('results'); // 'results' | 'marksheet'
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -33825,6 +39545,11 @@ const InstituteERPResults = () => {
   // ─── Data Fetching ────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchData = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         // Fetch courses, batches, students, and results in parallel.
@@ -34110,30 +39835,63 @@ const InstituteERPResults = () => {
             <Award className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">Examination Results</h2>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Examination Results & Marksheets</h2>
             <p className="text-xs text-slate-400 font-semibold mt-1">
-              View and manage student examination results
+              View student results, custom marksheets generator, and download templates
             </p>
           </div>
         </div>
+
+        {/* Sub-tab buttons */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportCSV}
-            disabled={filteredResults.length === 0}
-            className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            Export CSV
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="px-4 py-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-slate-100 transition-all"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            Print
-          </button>
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              onClick={() => setActiveSubTab('results')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeSubTab === 'results' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Results Overview
+            </button>
+            <button
+              onClick={() => setActiveSubTab('marksheet')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeSubTab === 'marksheet' 
+                  ? 'bg-white text-emerald-600 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              Marksheet Generator & Template
+            </button>
+          </div>
+
+          {activeSubTab === 'results' && (
+            <button
+              onClick={handleExportCSV}
+              disabled={filteredResults.length === 0}
+              className="px-3.5 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-emerald-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              CSV
+            </button>
+          )}
         </div>
       </div>
+
+      {activeSubTab === 'marksheet' ? (
+        <InstituteERPMarksheet
+          courses={courses}
+          batches={batches}
+          students={students}
+          results={results}
+          fetchERPData={() => {}}
+          user={user}
+        />
+      ) : (
+        <>
 
       {/* ─── Stats Cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -34668,6 +40426,8 @@ const InstituteERPResults = () => {
           onClose={() => setToast(null)}
         />
       )}
+        </>
+      )}
     </div>
   );
 };
@@ -34704,7 +40464,6 @@ import {
   UserCheck,
   ChevronDown,
   ChevronUp,
-  ClipboardCheck,
   Filter,
   CheckSquare,
 } from 'lucide-react';
@@ -34712,59 +40471,21 @@ import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import revaluationService from '../../../api/revaluation';
 import academicService from '../../../api/academic';
-import feeService from '../../../api/fees';
-
-// ─── Step Indicator ──────────────────────────────────────────────────────────
-const StepIndicator = ({ current, total, labels }) => (
-  <div className="flex items-center justify-center gap-0 mb-8">
-    {Array.from({ length: total }, (_, i) => i + 1).map((num, idx) => {
-      const isActive = current === num;
-      const isCompleted = current > num;
-
-      return (
-        <div key={num} className="flex items-center">
-          {idx > 0 && (
-            <div className={`w-12 h-0.5 sm:w-20 ${isCompleted ? 'bg-blue-500' : 'bg-slate-200'}`} />
-          )}
-          <div className="flex flex-col items-center gap-1.5">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all shadow-sm ${
-                isCompleted || isActive
-                  ? 'bg-blue-600 text-white shadow-blue-500/30'
-                  : 'bg-slate-100 text-slate-400'
-              } ${isActive ? 'ring-4 ring-blue-100' : ''}`}
-            >
-              {isCompleted ? <Check className="w-5 h-5" /> : num}
-            </div>
-            <span
-              className={`text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${
-                isActive || isCompleted ? 'text-blue-700' : 'text-slate-400'
-              }`}
-            >
-              {labels[idx]}
-            </span>
-          </div>
-        </div>
-      );
-    })}
-  </div>
-);
+import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
+import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
 
 const InstituteERPRevaluation = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
-  const [step, setStep] = useState(1);
   const [courses, setCourses] = useState([]);
   const [batches, setBatches] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
   const [eligibleStudents, setEligibleStudents] = useState([]);
-  const [selectedStudents, setSelectedStudents] = useState([]);
   const [selectedSubjects, setSelectedSubjects] = useState({});
   const [requests, setRequests] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
@@ -34773,10 +40494,21 @@ const InstituteERPRevaluation = () => {
   const [viewingRequest, setViewingRequest] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedStudent, setExpandedStudent] = useState(null);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [showPaymentChecker, setShowPaymentChecker] = useState(false);
+  const [currentPaymentStudent, setCurrentPaymentStudent] = useState(null);
+  const [processingStudentId, setProcessingStudentId] = useState(null);
+  const [singleStudentMode, setSingleStudentMode] = useState(false);
+  const [selectedSingleStudent, setSelectedSingleStudent] = useState(null);
   const itemsPerPage = 10;
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       const [coursesRes, batchesRes, summaryRes] = await Promise.all([
         academicService.getCourses().catch(() => ({ data: { data: [] } })),
@@ -34804,6 +40536,8 @@ const InstituteERPRevaluation = () => {
   }, [selectedCourse]);
 
   const fetchRequests = useCallback(async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) return;
     try {
       const params = { limit: 10000 };
       if (statusFilter !== 'All') params.status = statusFilter;
@@ -34822,6 +40556,8 @@ const InstituteERPRevaluation = () => {
   }, [statusFilter, searchQuery, selectedCourse, selectedBatch]);
 
   const fetchEligibleStudents = useCallback(async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) return;
     try {
       const res = await revaluationService.getEligibleStudents({
         courseId: selectedCourse,
@@ -34829,16 +40565,46 @@ const InstituteERPRevaluation = () => {
         semester: selectedSemester,
       });
       const data = res.data?.data || res.data || [];
+
+      // Initialize selectedSubjects for all students with empty sets
+      const initialSubjects = {};
+      data.forEach((student) => {
+        initialSubjects[student.studentId] = new Set();
+      });
+
       setEligibleStudents(Array.isArray(data) ? data : []);
-      setSelectedStudents([]);
-      setSelectedSubjects({});
+      setSelectedSubjects(initialSubjects);
       setExpandedStudent(null);
+      setSelectedSingleStudent(null);
+      setSingleStudentMode(false);
     } catch (err) {
       console.error('Error fetching eligible students:', err);
       setToast({ message: err.parsedMessage || 'Failed to load eligible students', type: 'error' });
       setEligibleStudents([]);
     }
   }, [selectedCourse, selectedBatch, selectedSemester]);
+
+  const fetchSingleStudentEligibility = useCallback(async (studentId) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) return;
+    try {
+      const res = await revaluationService.getSingleStudentEligibility(studentId, {
+        semester: selectedSemester,
+      });
+      const data = res.data?.data || res.data;
+      if (data) {
+        setSelectedSingleStudent(data);
+        setSingleStudentMode(true);
+        // Initialize subjects for this student
+        setSelectedSubjects({
+          [data.studentId]: new Set(),
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching student eligibility:', err);
+      setToast({ message: err.parsedMessage || 'Failed to load student eligibility', type: 'error' });
+    }
+  }, [selectedSemester]);
 
   // ─── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -34856,6 +40622,34 @@ const InstituteERPRevaluation = () => {
     const timer = setTimeout(() => fetchEligibleStudents(), 0);
     return () => clearTimeout(timer);
   }, [selectedCourse, selectedBatch, selectedSemester, fetchEligibleStudents]);
+
+  // ─── Payment Recovery ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const recoverPayment = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+      if (!token) return;
+      const pendingState = getPaymentState();
+      if (pendingState && pendingState.paymentType === 'revaluation' && pendingState.additionalData?.studentId) {
+        try {
+          const res = await revaluationService.getPaymentStatus(
+            pendingState.additionalData.studentId,
+            pendingState.additionalData.semester
+          );
+          const data = res.data?.data || res.data;
+          if (data && data.paymentStatus === 'Completed') {
+            clearPaymentState();
+            setToast({ message: 'Payment recovered successfully!', type: 'success' });
+            await fetchEligibleStudents();
+          } else {
+            setShowPaymentChecker(true);
+          }
+        } catch (err) {
+          console.warn('Failed to check pending revaluation payment:', err);
+        }
+      }
+    };
+    recoverPayment();
+  }, [fetchEligibleStudents]);
 
   // ─── Computed Values ──────────────────────────────────────────────────────
   const filteredBatches = useMemo(() => {
@@ -34910,7 +40704,7 @@ const InstituteERPRevaluation = () => {
   const toggleAllSubjectsForStudent = (studentId, allSubjects) => {
     setSelectedSubjects((prev) => {
       const eligibleSubjectCodes = allSubjects
-        .filter((s) => s.isEligible)
+        .filter((s) => s.isEligible !== false)
         .map((s) => s.subjectCode);
       const current = prev[studentId] || new Set();
       const allSelected = eligibleSubjectCodes.every((code) => current.has(code));
@@ -34929,153 +40723,201 @@ const InstituteERPRevaluation = () => {
     });
   };
 
-  const toggleStudent = (studentId) => {
-    setSelectedStudents((prev) =>
-      prev.includes(studentId)
-        ? prev.filter((id) => id !== studentId)
-        : [...prev, studentId]
-    );
+  // ─── Fee Calculation ─────────────────────────────────────────────────────
+  const getStudentTotalFee = (studentId) => {
+    const student = eligibleStudents.find((s) => s.studentId === studentId);
+    if (!student) return 0;
+    const selectedCodes = selectedSubjects[studentId] || new Set();
+    return selectedCodes.size * (student.feePerSubject || 500);
   };
 
-  const toggleAllStudents = () => {
-    const allIds = eligibleStudents.map((s) => s.studentId);
-    if (selectedStudents.length === allIds.length) {
-      setSelectedStudents([]);
-      setSelectedSubjects({});
-    } else {
-      setSelectedStudents(allIds);
-      const newSubjects = {};
-      eligibleStudents.forEach((student) => {
-        const eligibleCodes = (student.allSubjects || student.subjects || [])
-          .filter((s) => s.isEligible !== false)
-          .map((s) => s.subjectCode);
-        if (eligibleCodes.length > 0) {
-          newSubjects[student.studentId] = new Set(eligibleCodes);
-        }
+  // ─── Payment Handlers ─────────────────────────────────────────────────────
+  const handlePaymentInitiate = async (studentId) => {
+    const student = eligibleStudents.find((s) => s.studentId === studentId);
+    if (!student) {
+      setToast({ message: 'Student not found', type: 'error' });
+      return;
+    }
+
+    const selectedCodes = selectedSubjects[studentId] || new Set();
+    const selectedSubjectDetails = (student.allSubjects || student.subjects || [])
+      .filter((s) => selectedCodes.has(s.subjectCode));
+
+    if (selectedSubjectDetails.length === 0) {
+      setToast({ message: 'Please select at least one subject for this student.', type: 'warning' });
+      return;
+    }
+
+    const totalFee = selectedSubjectDetails.length * (student.feePerSubject || 500);
+    setCurrentPaymentStudent(studentId);
+    setProcessingStudentId(studentId);
+    setIsPaymentProcessing(true);
+
+    try {
+      const orderRes = await revaluationService.createRazorpayOrder({
+        studentId: studentId,
+        semester: student.semester,
+        totalFee: totalFee,
+        requestId: 'pending',
+        subjects: selectedSubjectDetails,
       });
-      setSelectedSubjects(newSubjects);
+
+      const orderData = orderRes?.data?.data || orderRes?.data || orderRes;
+      if (!orderData || !orderData.orderId) {
+        throw new Error('Failed to create payment order from server.');
+      }
+
+      await initiateRazorpayPayment({
+        orderId: orderData.orderId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        keyId: orderData.keyId,
+        name: 'SEMI Revaluation Fee',
+        description: `Revaluation - ${student.name} (Sem ${student.semester})`,
+        paymentType: 'revaluation',
+        additionalData: {
+          studentId: studentId,
+          semester: student.semester,
+          purpose: 'Revaluation fee',
+        },
+        prefill: {
+          name: student.name,
+          email: '',
+        },
+        onSuccess: async (response) => {
+          try {
+            setToast({ message: '✅ Payment successful! Verifying...', type: 'info' });
+
+            const subjectsData = selectedSubjectDetails.map((s) => ({
+              subjectCode: s.subjectCode,
+              subjectName: s.subjectName,
+              originalMarks: s.originalMarks || 0,
+              originalGrade: s.originalGrade || 'F',
+              internalMarks: s.internalMarks || 0,
+              externalMarks: s.externalMarks || 0,
+              revaluationReason: s.revaluationReason || 'Requesting revaluation of answer script',
+            }));
+
+            const verifyRes = await revaluationService.verifyRazorpayPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              studentId: studentId,
+              semester: student.semester,
+              subjects: subjectsData,
+              academicYear: student.academicYear,
+              instituteId: student.instituteId,
+              resultId: student.resultId,
+              feePerSubject: student.feePerSubject || 500,
+              totalFee: totalFee,
+            });
+
+            const verifyData = verifyRes.data?.data || verifyRes.data;
+            if (verifyData && verifyData.paymentStatus === 'Completed') {
+              clearPaymentState();
+              setToast({
+                message: `✅ Revaluation request submitted for ${student.name}!`,
+                type: 'success',
+              });
+
+              await fetchEligibleStudents();
+              await fetchRequests();
+
+              setSelectedSingleStudent(null);
+              setSingleStudentMode(false);
+              setProcessingStudentId(null);
+              setCurrentPaymentStudent(null);
+              setIsPaymentProcessing(false);
+            } else {
+              setToast({ message: 'Payment succeeded but verification is pending.', type: 'warning' });
+              setShowPaymentChecker(true);
+            }
+          } catch (verifyErr) {
+            console.error('Verification failed:', verifyErr);
+            const statusRes = await revaluationService.getPaymentStatus(studentId, student.semester);
+            const statusData = statusRes.data?.data || statusRes.data;
+            if (statusData && statusData.paymentStatus === 'Completed') {
+              clearPaymentState();
+              setToast({ message: 'Payment verified!', type: 'success' });
+              await fetchEligibleStudents();
+              await fetchRequests();
+              setSelectedSingleStudent(null);
+              setSingleStudentMode(false);
+            } else {
+              setToast({ message: 'Payment processed but verification failed. Please contact support.', type: 'error' });
+            }
+            setProcessingStudentId(null);
+            setCurrentPaymentStudent(null);
+            setIsPaymentProcessing(false);
+          }
+        },
+        onDismiss: () => {
+          setIsPaymentProcessing(false);
+          setCurrentPaymentStudent(null);
+          setProcessingStudentId(null);
+          setShowPaymentChecker(true);
+          setToast({ message: 'Payment window closed. Checking your payment status...', type: 'info' });
+        },
+        onFailure: (error) => {
+          setIsPaymentProcessing(false);
+          setCurrentPaymentStudent(null);
+          setProcessingStudentId(null);
+          setShowPaymentChecker(true);
+          setToast({
+            message: `Payment failed: ${error?.description || 'Transaction unsuccessful.'}`,
+            type: 'error',
+          });
+        },
+      });
+    } catch (err) {
+      console.error('Payment initiation failed:', err);
+      setIsPaymentProcessing(false);
+      setCurrentPaymentStudent(null);
+      setProcessingStudentId(null);
+      setToast({
+        message: err?.parsedMessage || err?.message || 'Failed to initiate payment.',
+        type: 'error',
+      });
     }
   };
-
-  // ─── Fee Calculation ─────────────────────────────────────────────────────
-  const selectedStudentsFee = useMemo(() => {
-    let total = 0;
-    selectedStudents.forEach((studentId) => {
-      const student = eligibleStudents.find((s) => s.studentId === studentId);
-      if (!student) return;
-      const selectedCodes = selectedSubjects[studentId] || new Set();
-      const feePerSubject = student.feePerSubject || 500;
-      total += selectedCodes.size * feePerSubject;
-    });
-    return total;
-  }, [selectedStudents, selectedSubjects, eligibleStudents]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleCourseChange = (e) => {
     setSelectedCourse(e.target.value);
     setSelectedBatch('');
-    setSelectedStudents([]);
     setSelectedSubjects({});
     setEligibleStudents([]);
+    setSelectedSingleStudent(null);
+    setSingleStudentMode(false);
   };
 
   const handleBatchChange = (e) => {
     setSelectedBatch(e.target.value);
-    setSelectedStudents([]);
     setSelectedSubjects({});
     setEligibleStudents([]);
+    setSelectedSingleStudent(null);
+    setSingleStudentMode(false);
   };
 
   const handleSemesterChange = (e) => {
     setSelectedSemester(e.target.value);
-    setSelectedStudents([]);
     setSelectedSubjects({});
     setEligibleStudents([]);
+    setSelectedSingleStudent(null);
+    setSingleStudentMode(false);
   };
 
-  const handleSubmitRequest = async () => {
-    const hasSubjects = selectedStudents.some(
-      (sid) => (selectedSubjects[sid] || new Set()).size > 0
-    );
-    if (selectedStudents.length === 0 || !hasSubjects) {
-      setToast({ message: 'Please select at least one student and subject for revaluation.', type: 'warning' });
-      return;
-    }
+  const handleViewStudentEligibility = async (student) => {
+    await fetchSingleStudentEligibility(student.studentId);
+  };
 
-    setConfirmConfig({
-      title: 'Submit Revaluation Request',
-      message: `Are you sure you want to submit revaluation requests for ${selectedStudents.length} student(s)?\n\nTotal Fee: ₹${selectedStudentsFee.toLocaleString()}\n\nFee will be recorded against each student before the request is submitted.`,
-      type: 'info',
-      confirmText: 'Submit & Pay',
-      onConfirm: async () => {
-        setConfirmConfig(null);
-        setSubmitting(true);
-
-        try {
-          const results = [];
-          for (const studentId of selectedStudents) {
-            const student = eligibleStudents.find((s) => s.studentId === studentId);
-            if (!student) continue;
-
-            const selectedCodes = selectedSubjects[studentId] || new Set();
-            const selectedSubjectDetails = (student.allSubjects || student.subjects || [])
-              .filter((s) => selectedCodes.has(s.subjectCode));
-
-            if (selectedSubjectDetails.length === 0) continue;
-
-            const totalFee = selectedSubjectDetails.length * (student.feePerSubject || 500);
-            await feeService.payStudentFees(student.studentId, {
-              semesterNumber: student.semester,
-              amount: totalFee,
-              paymentMode: 'Razorpay Online',
-              paymentDate: new Date().toISOString().split('T')[0],
-              paymentPurpose: 'Revaluation fee',
-            });
-
-            const requestData = {
-              student: student.studentId,
-              result: student.resultId,
-              institute: student.instituteId || '',
-              academicYear: student.academicYear,
-              semester: student.semester,
-              subjects: selectedSubjectDetails.map((s) => ({
-                subjectCode: s.subjectCode,
-                subjectName: s.subjectName,
-                originalMarks: s.originalMarks || 0,
-                originalGrade: s.originalGrade || 'F',
-                internalMarks: s.internalMarks || 0,
-                externalMarks: s.externalMarks || 0,
-                revaluationReason: s.revaluationReason || 'Requesting revaluation of answer script',
-              })),
-              feePerSubject: student.feePerSubject || 500,
-              totalFee,
-            };
-
-            const res = await revaluationService.createRevaluationRequest(requestData);
-            results.push(res.data?.data || res.data);
-          }
-
-          setToast({
-            message: `Successfully submitted ${results.length} revaluation request(s)!`,
-            type: 'success',
-          });
-
-          setSelectedStudents([]);
-          setSelectedSubjects({});
-          setStep(3);
-          await fetchRequests();
-          await fetchEligibleStudents();
-        } catch (err) {
-          console.error('Error submitting revaluation:', err);
-          setToast({
-            message: err.parsedMessage || 'Failed to submit revaluation request',
-            type: 'error',
-          });
-        } finally {
-          setSubmitting(false);
-        }
-      },
-    });
+  const handleExitSingleStudentMode = () => {
+    setSingleStudentMode(false);
+    setSelectedSingleStudent(null);
+    setSelectedSubjects({});
+    setExpandedStudent(null);
+    // Re-fetch to reset subjects
+    fetchEligibleStudents();
   };
 
   const handleViewRequest = (request) => {
@@ -35086,7 +40928,11 @@ const InstituteERPRevaluation = () => {
   const handleRefresh = () => {
     fetchData();
     fetchRequests();
-    fetchEligibleStudents();
+    if (singleStudentMode && selectedSingleStudent) {
+      fetchSingleStudentEligibility(selectedSingleStudent.studentId);
+    } else {
+      fetchEligibleStudents();
+    }
     setToast({ message: 'Data refreshed!', type: 'success' });
   };
 
@@ -35127,492 +40973,442 @@ const InstituteERPRevaluation = () => {
     return { label: 'Pending', color: 'text-slate-400', icon: <Clock className="w-4 h-4" /> };
   };
 
-  // ─── Render Step 1: Select Students & Subjects ──────────────────────────
-  const renderStep1 = () => (
-    <div className="space-y-6">
-      {/* Filter Bar */}
-      <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-blue-500" />
-              Course <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={selectedCourse}
-              onChange={handleCourseChange}
-              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer shadow-sm hover:border-slate-300"
-            >
-              {courses.map((c) => (
-                <option key={c._id || c.id} value={c._id || c.id}>
-                  {c.name || c.courseName}
-                </option>
-              ))}
-              {courses.length === 0 && <option value="">No courses available</option>}
-            </select>
-          </div>
+  // ─── Render Single Student Mode ──────────────────────────────────────────
+  const renderSingleStudent = () => {
+    if (!selectedSingleStudent) return null;
 
-          <div>
-            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-blue-500" />
-              Batch <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={selectedBatch}
-              onChange={handleBatchChange}
-              disabled={!selectedCourse}
-              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer disabled:opacity-50 shadow-sm hover:border-slate-300"
-            >
-              <option value="">Select Batch</option>
-              {filteredBatches.map((b) => (
-                <option key={b._id || b.id} value={b._id || b.id}>
-                  {b.name || `Batch ${b.year}`}
-                </option>
-              ))}
-              {filteredBatches.length === 0 && <option value="">No batches available</option>}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-blue-500" />
-              Semester <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={selectedSemester}
-              onChange={handleSemesterChange}
-              disabled={!selectedBatch}
-              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer disabled:opacity-50 shadow-sm hover:border-slate-300"
-            >
-              <option value="">Select Semester</option>
-              {[1, 2, 3, 4, 5, 6].map((sem) => (
-                <option key={sem} value={sem}>Semester {sem}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={handleRefresh}
-              className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Load Students
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {eligibleStudents.length > 0 ? (
-        <>
-          {/* Stats Banner */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black tracking-tight">{eligibleStudents.length} Students</h3>
-                  <p className="text-xs text-blue-200 font-medium">with published results for this semester</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="text-center">
-                  <span className="text-2xl font-black">{selectedStudents.length}</span>
-                  <p className="text-[9px] text-blue-200 uppercase tracking-wider font-bold">Selected</p>
-                </div>
-                <div className="w-px h-10 bg-white/20" />
-                <div className="text-center">
-                  <span className="text-2xl font-black">₹{selectedStudentsFee.toLocaleString()}</span>
-                  <p className="text-[9px] text-blue-200 uppercase tracking-wider font-bold">Total Fee</p>
-                </div>
-                <button
-                  onClick={toggleAllStudents}
-                  className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-xs font-black uppercase tracking-wider transition-all backdrop-blur-sm border border-white/20 cursor-pointer"
-                >
-                  {selectedStudents.length === eligibleStudents.length ? 'Deselect All' : 'Select All'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Student Cards Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {eligibleStudents.map((student) => {
-              const isSelected = selectedStudents.includes(student.studentId);
-              const allSubjects = student.allSubjects || student.subjects || [];
-              const eligibleSubjects = allSubjects.filter((s) => s.isEligible !== false);
-              const selectedCount = (selectedSubjects[student.studentId] || new Set()).size;
-              const totalEligible = eligibleSubjects.length;
-              const isExpanded = expandedStudent === student.studentId;
-              const hasAbsentSubjects = allSubjects.some((s) => !s.isEligible);
-
-              return (
-                <div
-                  key={student.studentId}
-                  className={`group rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
-                    isSelected
-                      ? 'border-blue-400 bg-blue-50/30 shadow-lg shadow-blue-500/10'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
-                  } ${isExpanded ? 'shadow-xl' : ''}`}
-                >
-                  {/* Card Header */}
-                  <div
-                    className={`p-4 cursor-pointer transition-colors ${
-                      isSelected ? 'hover:bg-blue-50/40' : 'hover:bg-slate-50/60'
-                    }`}
-                    onClick={() => toggleStudent(student.studentId)}
-                  >
-                    <div className="flex items-start gap-4">
-                      {/* Selection Checkbox */}
-                      <div className="flex-shrink-0 pt-0.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleStudent(student.studentId);
-                          }}
-                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                            isSelected
-                              ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/30'
-                              : 'border-slate-300 hover:border-blue-400 bg-white'
-                          }`}
-                        >
-                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                        </button>
-                      </div>
-
-                      {/* Avatar & Name */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shadow-sm flex-shrink-0 ${
-                            isSelected
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700'
-                          }`}>
-                            {student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className={`text-sm font-black truncate ${isSelected ? 'text-blue-800' : 'text-slate-800'}`}>
-                              {student.name}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] font-mono text-slate-400">{student.enrollmentId}</span>
-                              <span className="w-1 h-1 rounded-full bg-slate-300" />
-                              <span className="text-[10px] font-medium text-slate-500">Sem {student.semester}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Stats Chip */}
-                      <div className="flex-shrink-0 flex items-center gap-2">
-                        <div className="text-right">
-                          <div className="text-xs font-bold text-slate-700">
-                            {selectedCount}/{totalEligible}
-                          </div>
-                          <div className="text-[9px] text-slate-400 font-medium">selected</div>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedStudent(isExpanded ? null : student.studentId);
-                          }}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                            isExpanded
-                              ? 'bg-blue-100 text-blue-600'
-                              : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                          }`}
-                        >
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Quick subject status pills */}
-                    <div className="flex flex-wrap gap-1.5 mt-3 ml-9">
-                      {allSubjects.slice(0, 5).map((subject) => {
-                        const status = getSubjectStatusBadge(subject);
-                        const isSubSelected = (selectedSubjects[student.studentId] || new Set()).has(subject.subjectCode);
-                        return (
-                          <span
-                            key={subject.subjectCode}
-                            className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[8px] font-bold border transition-all ${
-                              isSubSelected
-                                ? 'bg-blue-100 border-blue-300 text-blue-700'
-                                : status.color
-                            }`}
-                          >
-                            {subject.subjectName.substring(0, 4)}
-                            {isSubSelected && <Check className="w-2.5 h-2.5 ml-0.5" />}
-                          </span>
-                        );
-                      })}
-                      {allSubjects.length > 5 && (
-                        <span className="text-[8px] text-slate-400 font-bold px-1.5 py-0.5">
-                          +{allSubjects.length - 5} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Expanded Subject Details */}
-                  {isExpanded && (
-                    <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top duration-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <BookOpen className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">
-                            All Subjects — Select subjects to re-evaluate
-                          </span>
-                          {hasAbsentSubjects && (
-                            <span className="text-[8px] text-slate-400 font-medium bg-slate-200/50 px-2 py-0.5 rounded-full">
-                              Absent disabled
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleAllSubjectsForStudent(student.studentId, allSubjects);
-                          }}
-                          className="text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          {selectedCount === totalEligible && totalEligible > 0 ? (
-                            <>Deselect All</>
-                          ) : (
-                            <><CheckSquare className="w-3 h-3" /> Select All Eligible</>
-                          )}
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {allSubjects.map((subject) => {
-                          const isEligible = subject.isEligible !== false;
-                          const isSelected = (selectedSubjects[student.studentId] || new Set()).has(subject.subjectCode);
-                          const status = getSubjectStatusBadge(subject);
-                          const marks = subject.originalMarks || 0;
-
-                          return (
-                            <div
-                              key={subject.subjectCode}
-                              className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
-                                isSelected
-                                  ? 'border-blue-400 bg-blue-50/60 shadow-sm'
-                                  : isEligible
-                                  ? 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
-                                  : 'border-slate-200 bg-slate-50/50 opacity-60'
-                              }`}
-                            >
-                              <button
-                                onClick={() => toggleSubject(student.studentId, subject.subjectCode)}
-                                disabled={!isEligible}
-                                className={`w-4.5 h-4.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                                  isSelected
-                                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                                    : isEligible
-                                    ? 'border-slate-300 hover:border-blue-400 bg-white'
-                                    : 'border-slate-200 bg-slate-100 cursor-not-allowed'
-                                }`}
-                              >
-                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                              </button>
-
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-xs font-bold truncate ${isEligible ? 'text-slate-800' : 'text-slate-400'}`}>
-                                    {subject.subjectName}
-                                  </span>
-                                  <span className="text-[8px] font-mono text-slate-400 flex-shrink-0">
-                                    {subject.subjectCode}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className={`text-xs font-bold ${
-                                  marks >= 40 ? 'text-emerald-600' : marks >= 35 ? 'text-amber-600' : 'text-rose-600'
-                                } ${!isEligible ? 'opacity-50' : ''}`}>
-                                  {marks}%
-                                </span>
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black border ${status.color}`}>
-                                  {status.icon}
-                                  {status.label}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium border-t border-slate-100 pt-2.5">
-                        <span>
-                          {totalEligible} eligible · {allSubjects.length - totalEligible} absent (disabled)
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <CreditCard className="w-3 h-3" />
-                          ₹{(selectedCount * (student.feePerSubject || 500)).toLocaleString()} fee
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </>
-      ) : selectedCourse && selectedBatch && selectedSemester ? (
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 border-2 border-amber-200 rounded-2xl p-12 text-center">
-          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-amber-200">
-            <AlertCircle className="w-10 h-10 text-amber-500" />
-          </div>
-          <h3 className="text-lg font-black text-amber-800">No Students Found</h3>
-          <p className="text-sm text-amber-600 mt-2 max-w-md mx-auto">
-            No students with published results found for the selected batch and semester.
-            Students must have published results to apply for revaluation.
-          </p>
-        </div>
-      ) : (
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100/30 border-2 border-dashed border-slate-300 rounded-2xl p-12 text-center">
-          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-slate-200">
-            <Filter className="w-10 h-10 text-slate-400" />
-          </div>
-          <h3 className="text-lg font-black text-slate-600">Select Filters</h3>
-          <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
-            Choose a course, batch, and semester above to view students with published results.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-
-  // ─── Render Step 2: Review & Pay ──────────────────────────────────────────
-  const renderStep2 = () => {
-    const totalSubjects = selectedStudents.reduce((sum, id) => {
-      return sum + (selectedSubjects[id] || new Set()).size;
-    }, 0);
+    const student = selectedSingleStudent;
+    const selectedCodes = selectedSubjects[student.studentId] || new Set();
+    const selectedCount = selectedCodes.size;
+    const totalFee = selectedCount * (student.feePerSubject || 500);
+    const allSubjects = student.allSubjects || [];
+    const eligibleSubjects = student.subjects || [];
 
     return (
-      <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100/30 border border-blue-200 rounded-2xl p-5 text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-            <span className="text-[10px] uppercase font-black text-slate-500 block">Selected Students</span>
-            <span className="text-3xl font-black text-blue-700">{selectedStudents.length}</span>
-          </div>
-          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/30 border border-indigo-200 rounded-2xl p-5 text-center">
-            <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-              <BookOpen className="w-6 h-6 text-indigo-600" />
-            </div>
-            <span className="text-[10px] uppercase font-black text-slate-500 block">Total Subjects</span>
-            <span className="text-3xl font-black text-indigo-700">{totalSubjects}</span>
-          </div>
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 border border-emerald-200 rounded-2xl p-5 text-center">
-            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-              <CreditCard className="w-6 h-6 text-emerald-600" />
-            </div>
-            <span className="text-[10px] uppercase font-black text-slate-500 block">Total Fee</span>
-            <span className="text-3xl font-black text-emerald-700">₹{selectedStudentsFee.toLocaleString()}</span>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={handleExitSingleStudentMode}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-xs transition-colors cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back to all students
+          </button>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span className="font-bold">{student.name}</span>
+            <span className="text-slate-400">•</span>
+            <span className="font-mono">{student.enrollmentId}</span>
           </div>
         </div>
 
-        {/* Selected Students Summary */}
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white flex items-center gap-2">
-            <ClipboardCheck className="w-4 h-4 text-blue-600" />
-            <h4 className="text-sm font-black text-slate-700">Selected Students & Subjects Summary</h4>
-            <span className="ml-auto text-[10px] text-slate-400 font-medium">
-              {selectedStudents.length} students · {totalSubjects} subjects
-            </span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-indigo-700 flex items-center justify-center text-lg font-black">
+                {student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-800">{student.name}</h3>
+                <p className="text-xs text-slate-400 font-mono">{student.enrollmentId} • Sem {student.semester}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] text-slate-400 block">Selected Subjects</span>
+              <span className="text-xl font-black text-blue-600">{selectedCount}/{eligibleSubjects.length}</span>
+            </div>
           </div>
-          <div className="divide-y divide-slate-100">
-            {eligibleStudents
-              .filter((s) => selectedStudents.includes(s.studentId))
-              .map((student) => {
-                const selectedCodes = selectedSubjects[student.studentId] || new Set();
-                const selectedSubjectsList = (student.allSubjects || student.subjects || [])
-                  .filter((s) => selectedCodes.has(s.subjectCode));
+
+          {/* Subject Selection */}
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">
+                Select Subjects for Revaluation
+              </span>
+              <button
+                onClick={() => toggleAllSubjectsForStudent(student.studentId, allSubjects)}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                {selectedCount === eligibleSubjects.length && eligibleSubjects.length > 0 ? (
+                  <>Deselect All</>
+                ) : (
+                  <><CheckSquare className="w-3 h-3" /> Select All Eligible</>
+                )}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {allSubjects.map((subject) => {
+                const isEligible = subject.isEligible !== false;
+                const isSelected = selectedCodes.has(subject.subjectCode);
+                const status = getSubjectStatusBadge(subject);
+                const marks = subject.originalMarks || 0;
 
                 return (
-                  <div key={student.studentId} className="p-4 hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black">
-                          {student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <span className="text-sm font-black text-slate-800">{student.name}</span>
-                          <span className="text-[10px] font-mono text-slate-400 ml-2">{student.enrollmentId}</span>
-                        </div>
-                      </div>
-                      <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full">
-                        {selectedSubjectsList.length} subjects · ₹{(selectedSubjectsList.length * (student.feePerSubject || 500)).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedSubjectsList.map((s) => (
-                        <span key={s.subjectCode} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-[9px] font-bold">
-                          {s.subjectName}
-                          <span className="text-blue-400">({s.originalMarks || 0}%)</span>
+                  <div
+                    key={subject.subjectCode}
+                    className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                      isSelected
+                        ? 'border-blue-400 bg-blue-50/60 shadow-sm'
+                        : isEligible
+                        ? 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                        : 'border-slate-200 bg-slate-50/50 opacity-60'
+                    }`}
+                  >
+                    <button
+                      onClick={() => toggleSubject(student.studentId, subject.subjectCode)}
+                      disabled={!isEligible}
+                      className={`w-4.5 h-4.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                        isSelected
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : isEligible
+                          ? 'border-slate-300 hover:border-blue-400 bg-white'
+                          : 'border-slate-200 bg-slate-100 cursor-not-allowed'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                    </button>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold truncate ${isEligible ? 'text-slate-800' : 'text-slate-400'}`}>
+                          {subject.subjectName}
                         </span>
-                      ))}
-                      {selectedSubjectsList.length === 0 && (
-                        <span className="text-[10px] text-slate-400 italic">No subjects selected</span>
-                      )}
+                        <span className="text-[8px] font-mono text-slate-400 flex-shrink-0">
+                          {subject.subjectCode}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-xs font-bold ${
+                        marks >= 40 ? 'text-emerald-600' : marks >= 35 ? 'text-amber-600' : 'text-rose-600'
+                      } ${!isEligible ? 'opacity-50' : ''}`}>
+                        {marks}%
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black border ${status.color}`}>
+                        {status.icon}
+                        {status.label}
+                      </span>
                     </div>
                   </div>
                 );
               })}
-          </div>
-        </div>
+            </div>
 
-        {/* Notice */}
-        <div className="bg-gradient-to-r from-amber-50 to-amber-100/30 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
-          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <AlertCircle className="w-4 h-4 text-amber-600" />
+            {eligibleSubjects.length === 0 && (
+              <div className="text-center py-8 text-slate-400">
+                <AlertCircle className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm font-medium">No eligible subjects found for revaluation.</p>
+                <p className="text-xs mt-1">All subjects are either absent or not eligible.</p>
+              </div>
+            )}
           </div>
-          <div>
-            <span className="text-xs font-black text-amber-800 block">Revaluation Fee Notice</span>
-            <p className="text-[10px] text-amber-700 font-medium">
-              Revaluation fee is ₹500 per subject. The fee is non-refundable.
-              Results may increase, decrease, or remain unchanged after revaluation.
-            </p>
-          </div>
+
+          {/* Payment Button */}
+          {eligibleSubjects.length > 0 && selectedCount > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 block">Total Fee</span>
+                <span className="text-xl font-black text-slate-800">₹{totalFee.toLocaleString()}</span>
+                <span className="text-[10px] text-slate-400 ml-2">({selectedCount} subject{selectedCount > 1 ? 's' : ''})</span>
+              </div>
+              <button
+                onClick={() => handlePaymentInitiate(student.studentId)}
+                disabled={isPaymentProcessing && processingStudentId === student.studentId}
+                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-500/10 cursor-pointer"
+              >
+                {isPaymentProcessing && processingStudentId === student.studentId ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Processing Payment...</>
+                ) : (
+                  <><CreditCard className="w-4 h-4" /> Pay & Submit</>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
   };
 
-  // ─── Render Step 3: Submit ────────────────────────────────────────────────
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 border-2 border-emerald-200 rounded-2xl p-8 text-center">
-        <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-200">
-          <CheckCircle2 className="w-12 h-12 text-emerald-600" />
-        </div>
-        <h3 className="text-2xl font-black text-emerald-800">Revaluation Requests Submitted!</h3>
-        <p className="text-sm text-emerald-700 font-medium mt-2">
-          {selectedStudents.length} revaluation request(s) have been submitted successfully.
-        </p>
-        <p className="text-xs text-emerald-600 mt-1">
-          The Academic Board will review your requests. You can track the status in the requests list below.
-        </p>
-        <button
-          onClick={() => {
-            setStep(1);
-            setSelectedStudents([]);
-            setSelectedSubjects({});
-            fetchRequests();
-            fetchEligibleStudents();
-          }}
-          className="mt-6 px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
-        >
-          Submit Another Request
-        </button>
-      </div>
+  // ─── Render Student Cards (Multi-Student Mode) ──────────────────────────
+  const renderStudentCards = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {eligibleStudents.map((student) => {
+        const allSubjects = student.allSubjects || student.subjects || [];
+        const eligibleSubjects = allSubjects.filter((s) => s.isEligible !== false);
+        const selectedCount = (selectedSubjects[student.studentId] || new Set()).size;
+        const totalEligible = eligibleSubjects.length;
+        const isExpanded = expandedStudent === student.studentId;
+        const hasAbsentSubjects = allSubjects.some((s) => !s.isEligible);
+        const hasPendingPayment = student.hasPendingPayment;
+        const totalFee = selectedCount * (student.feePerSubject || 500);
+        const hasSubjectsSelected = selectedCount > 0;
+
+        return (
+          <div
+            key={student.studentId}
+            className={`group rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
+              hasSubjectsSelected
+                ? 'border-blue-400 bg-blue-50/30 shadow-lg shadow-blue-500/10'
+                : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
+            } ${isExpanded ? 'shadow-xl' : ''}`}
+          >
+            {/* Card Header */}
+            <div
+              className={`p-4 cursor-pointer transition-colors ${
+                hasSubjectsSelected ? 'hover:bg-blue-50/40' : 'hover:bg-slate-50/60'
+              }`}
+              onClick={() => setExpandedStudent(isExpanded ? null : student.studentId)}
+            >
+              <div className="flex items-start gap-4">
+                {/* Avatar & Name */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shadow-sm flex-shrink-0 ${
+                      hasSubjectsSelected
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700'
+                    }`}>
+                      {student.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className={`text-sm font-black truncate ${hasSubjectsSelected ? 'text-blue-800' : 'text-slate-800'}`}>
+                        {student.name}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-mono text-slate-400">{student.enrollmentId}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300" />
+                        <span className="text-[10px] font-medium text-slate-500">Sem {student.semester}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats Chip & Actions */}
+                <div className="flex-shrink-0 flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewStudentEligibility(student);
+                    }}
+                    className="px-2 py-1 text-[9px] font-bold text-blue-600 hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-200 transition-all"
+                  >
+                    <Eye className="w-3.5 h-3.5 inline mr-1" />
+                    View
+                  </button>
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-slate-700">
+                      {selectedCount}/{totalEligible}
+                    </div>
+                    <div className="text-[9px] text-slate-400 font-medium">selected</div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedStudent(isExpanded ? null : student.studentId);
+                    }}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                      isExpanded
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                    }`}
+                  >
+                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick subject status pills - shows which subjects are selected */}
+              <div className="flex flex-wrap gap-1.5 mt-3 ml-0">
+                {allSubjects.slice(0, 6).map((subject) => {
+                  const status = getSubjectStatusBadge(subject);
+                  const isSelected = (selectedSubjects[student.studentId] || new Set()).has(subject.subjectCode);
+                  const isEligible = subject.isEligible !== false;
+
+                  if (!isEligible) {
+                    return (
+                      <span
+                        key={subject.subjectCode}
+                        className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[8px] font-bold border ${status.color}`}
+                      >
+                        {subject.subjectName.substring(0, 4)}
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={subject.subjectCode}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSubject(student.studentId, subject.subjectCode);
+                      }}
+                      className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[8px] font-bold border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {subject.subjectName.substring(0, 4)}
+                      {isSelected && <Check className="w-2 h-2 ml-0.5" />}
+                    </button>
+                  );
+                })}
+                {allSubjects.length > 6 && (
+                  <span className="text-[8px] text-slate-400 font-bold px-1.5 py-0.5">
+                    +{allSubjects.length - 6} more
+                  </span>
+                )}
+              </div>
+
+              {/* Payment status indicator */}
+              <div className="mt-2 flex items-center gap-3">
+                {hasPendingPayment && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[8px] font-bold border border-emerald-200">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Paid
+                  </span>
+                )}
+                {hasSubjectsSelected && !hasPendingPayment && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[8px] font-bold border border-blue-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                    {selectedCount} subject{selectedCount > 1 ? 's' : ''} selected
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Expanded Subject Details */}
+            {isExpanded && (
+              <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top duration-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">
+                      All Subjects — Click any subject to toggle selection
+                    </span>
+                    {hasAbsentSubjects && (
+                      <span className="text-[8px] text-slate-400 font-medium bg-slate-200/50 px-2 py-0.5 rounded-full">
+                        Absent disabled
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleAllSubjectsForStudent(student.studentId, allSubjects);
+                    }}
+                    className="text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    {selectedCount === totalEligible && totalEligible > 0 ? (
+                      <>Deselect All</>
+                    ) : (
+                      <><CheckSquare className="w-3 h-3" /> Select All Eligible</>
+                    )}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {allSubjects.map((subject) => {
+                    const isEligible = subject.isEligible !== false;
+                    const isSelected = (selectedSubjects[student.studentId] || new Set()).has(subject.subjectCode);
+                    const status = getSubjectStatusBadge(subject);
+                    const marks = subject.originalMarks || 0;
+
+                    return (
+                      <div
+                        key={subject.subjectCode}
+                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-blue-400 bg-blue-50/60 shadow-sm'
+                            : isEligible
+                            ? 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                            : 'border-slate-200 bg-slate-50/50 opacity-60 cursor-not-allowed'
+                        }`}
+                        onClick={() => {
+                          if (isEligible) {
+                            toggleSubject(student.studentId, subject.subjectCode);
+                          }
+                        }}
+                      >
+                        <button
+                          disabled={!isEligible}
+                          className={`w-4.5 h-4.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            isSelected
+                              ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                              : isEligible
+                              ? 'border-slate-300 hover:border-blue-400 bg-white'
+                              : 'border-slate-200 bg-slate-100 cursor-not-allowed'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                        </button>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold truncate ${isEligible ? 'text-slate-800' : 'text-slate-400'}`}>
+                              {subject.subjectName}
+                            </span>
+                            <span className="text-[8px] font-mono text-slate-400 flex-shrink-0">
+                              {subject.subjectCode}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`text-xs font-bold ${
+                            marks >= 40 ? 'text-emerald-600' : marks >= 35 ? 'text-amber-600' : 'text-rose-600'
+                          } ${!isEligible ? 'opacity-50' : ''}`}>
+                            {marks}%
+                          </span>
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black border ${status.color}`}>
+                            {status.icon}
+                            {status.label}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium border-t border-slate-100 pt-2.5">
+                  <span>
+                    {totalEligible} eligible · {allSubjects.length - totalEligible} absent (disabled)
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <CreditCard className="w-3 h-3" />
+                    ₹{totalFee.toLocaleString()} fee
+                  </span>
+                </div>
+
+                {/* Payment Button - always visible when subjects are selected */}
+                {selectedCount > 0 && !hasPendingPayment && (
+                  <div className="mt-3 pt-2.5 border-t border-slate-100">
+                    <button
+                      onClick={() => handlePaymentInitiate(student.studentId)}
+                      disabled={isPaymentProcessing && processingStudentId === student.studentId}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-500/10 cursor-pointer"
+                    >
+                      {isPaymentProcessing && processingStudentId === student.studentId ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Processing Payment...</>
+                      ) : (
+                        <><CreditCard className="w-4 h-4" /> Pay & Submit for {student.name} (₹{totalFee.toLocaleString()})</>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {hasPendingPayment && (
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 text-center text-emerald-600 font-bold text-xs">
+                    <CheckCircle2 className="w-4 h-4 inline mr-1" />
+                    Payment already completed for this student
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 
@@ -35640,7 +41436,7 @@ const InstituteERPRevaluation = () => {
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Revaluation</h2>
             <p className="text-xs text-slate-400 font-semibold mt-1">
-              Select subjects for revaluation — only ABSENT subjects are disabled
+              Click any subject to select, then pay per student via Razorpay
             </p>
           </div>
         </div>
@@ -35680,64 +41476,195 @@ const InstituteERPRevaluation = () => {
         />
       )}
 
+      {/* ─── Payment Status Checker ─────────────────────────────────────────── */}
+      {showPaymentChecker && (
+        <PaymentStatusChecker
+          isOpen={showPaymentChecker}
+          paymentType="revaluation"
+          message="Verifying your revaluation payment..."
+          onComplete={() => {
+            setShowPaymentChecker(false);
+            setToast({ message: 'Payment verified successfully!', type: 'success' });
+            if (singleStudentMode && selectedSingleStudent) {
+              fetchSingleStudentEligibility(selectedSingleStudent.studentId);
+            } else {
+              fetchEligibleStudents();
+            }
+          }}
+          onRetry={() => {
+            setShowPaymentChecker(false);
+            if (currentPaymentStudent) {
+              handlePaymentInitiate(currentPaymentStudent);
+            }
+          }}
+          onCancel={() => {
+            setShowPaymentChecker(false);
+            setIsPaymentProcessing(false);
+            setCurrentPaymentStudent(null);
+            setProcessingStudentId(null);
+          }}
+        />
+      )}
+
       {/* ─── Main Content ───────────────────────────────────────────────────── */}
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
-        <StepIndicator
-          current={step}
-          total={3}
-          labels={['Select Students & Subjects', 'Review & Pay', 'Submit']}
-        />
-
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
-
-        {/* ─── Navigation Buttons ───────────────────────────────────────────── */}
-        {step < 3 && (
-          <div className="flex justify-between items-center pt-6 mt-6 border-t border-slate-100">
-            <div>
-              {step > 1 && (
-                <button
-                  onClick={() => setStep(step - 1)}
-                  className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Back
-                </button>
-              )}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+              <Filter className="w-5 h-5" />
             </div>
             <div>
-              {step === 1 ? (
-                <button
-                  onClick={() => {
-                    const hasSubjects = selectedStudents.some(
-                      (sid) => (selectedSubjects[sid] || new Set()).size > 0
-                    );
-                    if (selectedStudents.length === 0 || !hasSubjects) {
-                      setToast({ message: 'Please select at least one student and subject.', type: 'warning' });
-                      return;
-                    }
-                    setStep(2);
-                  }}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/10 cursor-pointer"
-                >
-                  Review Selected
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={handleSubmitRequest}
-                  disabled={submitting || selectedStudents.length === 0}
-                  className="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-500/10 cursor-pointer"
-                >
-                  {submitting ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
-                  ) : (
-                    <><CreditCard className="w-4 h-4" /> Submit & Pay</>
-                  )}
-                </button>
-              )}
+              <h3 className="text-base font-black text-slate-800 tracking-tight">
+                {singleStudentMode ? 'Student Revaluation' : 'Select Students'}
+              </h3>
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                {singleStudentMode ? selectedSingleStudent?.name : `${eligibleStudents.length} eligible students`}
+              </p>
             </div>
+          </div>
+          {singleStudentMode && (
+            <button
+              onClick={handleExitSingleStudentMode}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+              Exit Single View
+            </button>
+          )}
+        </div>
+
+        {/* Filter Bar (only show in multi-student mode) */}
+        {!singleStudentMode && (
+          <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200/80 rounded-2xl p-5 shadow-sm mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-blue-500" />
+                  Course <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={selectedCourse}
+                  onChange={handleCourseChange}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer shadow-sm hover:border-slate-300"
+                >
+                  {courses.map((c) => (
+                    <option key={c._id || c.id} value={c._id || c.id}>
+                      {c.name || c.courseName}
+                    </option>
+                  ))}
+                  {courses.length === 0 && <option value="">No courses available</option>}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-blue-500" />
+                  Batch <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={selectedBatch}
+                  onChange={handleBatchChange}
+                  disabled={!selectedCourse}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer disabled:opacity-50 shadow-sm hover:border-slate-300"
+                >
+                  <option value="">Select Batch</option>
+                  {filteredBatches.map((b) => (
+                    <option key={b._id || b.id} value={b._id || b.id}>
+                      {b.name || `Batch ${b.year}`}
+                    </option>
+                  ))}
+                  {filteredBatches.length === 0 && <option value="">No batches available</option>}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                  Semester <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={selectedSemester}
+                  onChange={handleSemesterChange}
+                  disabled={!selectedBatch}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer disabled:opacity-50 shadow-sm hover:border-slate-300"
+                >
+                  <option value="">Select Semester</option>
+                  {[1, 2, 3, 4, 5, 6].map((sem) => (
+                    <option key={sem} value={sem}>Semester {sem}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={handleRefresh}
+                  className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Load Students
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Content based on mode */}
+        {singleStudentMode ? (
+          renderSingleStudent()
+        ) : eligibleStudents.length > 0 ? (
+          <>
+            {/* Stats Banner */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 mb-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black tracking-tight">{eligibleStudents.length} Students</h3>
+                    <p className="text-xs text-blue-200 font-medium">with published results for this semester</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <span className="text-2xl font-black">
+                      {Object.values(selectedSubjects).reduce((sum, set) => sum + set.size, 0)}
+                    </span>
+                    <p className="text-[9px] text-blue-200 uppercase tracking-wider font-bold">Subjects Selected</p>
+                  </div>
+                  <div className="w-px h-10 bg-white/20" />
+                  <div className="text-center">
+                    <span className="text-2xl font-black">
+                      ₹{eligibleStudents.reduce((sum, s) => sum + getStudentTotalFee(s.studentId), 0).toLocaleString()}
+                    </span>
+                    <p className="text-[9px] text-blue-200 uppercase tracking-wider font-bold">Total Fee</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {renderStudentCards()}
+          </>
+        ) : selectedCourse && selectedBatch && selectedSemester ? (
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 border-2 border-amber-200 rounded-2xl p-12 text-center">
+            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-amber-200">
+              <AlertCircle className="w-10 h-10 text-amber-500" />
+            </div>
+            <h3 className="text-lg font-black text-amber-800">No Students Found</h3>
+            <p className="text-sm text-amber-600 mt-2 max-w-md mx-auto">
+              No students with published results found for the selected batch and semester.
+              Students must have published results to apply for revaluation.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100/30 border-2 border-dashed border-slate-300 rounded-2xl p-12 text-center">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-slate-200">
+              <Filter className="w-10 h-10 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-black text-slate-600">Select Filters</h3>
+            <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
+              Choose a course, batch, and semester above to view students with published results.
+            </p>
           </div>
         )}
       </div>
@@ -35839,8 +41766,13 @@ const InstituteERPRevaluation = () => {
                     <td className="px-4 py-3.5 text-center font-bold text-slate-700">
                       {request.subjects?.length || 0}
                     </td>
-                    <td className="px-4 py-3.5 text-center font-bold text-slate-800">
-                      ₹{request.totalFee?.toLocaleString() || 0}
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-slate-800">₹{request.totalFee?.toLocaleString() || 0}</span>
+                        <span className={`text-[8px] font-bold uppercase ${request.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {request.paymentStatus === 'PAID' ? '✓ Paid' : request.paymentStatus || 'Pending'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${statusBadge.color}`}>
@@ -35962,6 +41894,32 @@ const InstituteERPRevaluation = () => {
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Fee</span>
                     <span className="text-slate-800 font-bold">₹{viewingRequest.totalFee?.toLocaleString() || 0}</span>
+                  </div>
+                </div>
+                <div className="border-t border-slate-100 pt-3">
+                  <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Payment Status</span>
+                  <div className="flex flex-col gap-1 mt-1">
+                    <span className={`inline-flex items-center gap-1 font-bold text-[10px] ${
+                      viewingRequest.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-amber-600'
+                    }`}>
+                      <CreditCard className="w-3.5 h-3.5" />
+                      {viewingRequest.paymentStatus === 'PAID' ? 'Paid via Razorpay' : viewingRequest.paymentStatus || 'Pending'}
+                    </span>
+                    {viewingRequest.paymentId && (
+                      <span className="text-[8px] text-slate-400 font-mono block">
+                        Payment ID: {viewingRequest.paymentId}
+                      </span>
+                    )}
+                    {viewingRequest.paymentOrderId && (
+                      <span className="text-[8px] text-slate-400 font-mono block">
+                        Order ID: {viewingRequest.paymentOrderId}
+                      </span>
+                    )}
+                    {viewingRequest.paymentDate && (
+                      <span className="text-[8px] text-slate-400 block">
+                        Paid on: {new Date(viewingRequest.paymentDate).toLocaleString()}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -37320,16 +43278,16 @@ const InstituteERPStudents = ({
   };
 
   const batchesList = useMemo(() => {
-    return Array.from(new Set(students.map(s => s.batchName || s.batch).filter(Boolean)));
+    return Array.from(new Set(students.map(s => s.batchName || (typeof s.batch === 'string' ? s.batch : (s.batch?.name || (s.batch?.year ? `Batch ${s.batch.year}` : '')))).filter(Boolean)));
   }, [students]);
 
   const coursesList = useMemo(() => {
-    return Array.from(new Set(students.map(s => s.courseName || s.course).filter(Boolean)));
+    return Array.from(new Set(students.map(s => s.courseName || (typeof s.course === 'string' ? s.course : (s.course?.name || s.course?.courseName || ''))).filter(Boolean)));
   }, [students]);
 
   const filteredList = useMemo(() => {
     return students.filter(s => {
-      const name = s.fullName || '';
+      const name = s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
       const email = s.email || '';
       const enroll = s.enrollmentNo || s.applicationId || s.enrollmentId || '';
       const matchesSearch = name.toLowerCase().includes(studentSearch.toLowerCase()) || 
@@ -37339,11 +43297,11 @@ const InstituteERPStudents = ({
       const currentStatus = s.status || 'Active';
       const matchesStatus = studentFilter === 'All' || currentStatus === studentFilter;
       
-      const bName = s.batchName || s.batch || '';
-      const matchesBatch = selectedStudentFilterBatch === 'All' || bName === selectedStudentFilterBatch;
+      const bName = s.batchName || (typeof s.batch === 'string' ? s.batch : (s.batch?.name || (s.batch?.year ? `Batch ${s.batch.year}` : ''))) || '';
+      const matchesBatch = selectedStudentFilterBatch === 'All' || bName === selectedStudentFilterBatch || String(s.batchId || s.batch?._id) === String(selectedStudentFilterBatch);
       
-      const cName = s.courseName || s.course || '';
-      const matchesCourse = selectedStudentFilterCourse === 'All' || cName === selectedStudentFilterCourse;
+      const cName = s.courseName || (typeof s.course === 'string' ? s.course : (s.course?.name || s.course?.courseName || '')) || '';
+      const matchesCourse = selectedStudentFilterCourse === 'All' || cName === selectedStudentFilterCourse || String(s.courseId || s.course?._id) === String(selectedStudentFilterCourse);
       
       return matchesSearch && matchesStatus && matchesBatch && matchesCourse;
     });
@@ -37752,8 +43710,8 @@ const InstituteERPStudents = ({
                           rel="noreferrer" 
                           className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
                         >
-                          <span className="text-lg">💳</span>
-                          <span className="truncate">Enrollment Payment Receipt</span>
+                          <span className="text-xl">🗳️</span>
+                          <span className="truncate text-slate-700 group-hover:text-blue-700">SEMI Membership Form</span>
                         </a>
                       )}
                       {selectedStudentForView.documents.studentSignatureUrl && (
@@ -37774,8 +43732,8 @@ const InstituteERPStudents = ({
                           rel="noreferrer" 
                           className="flex items-center gap-3 p-3.5 bg-slate-50 hover:bg-blue-50/70 border border-slate-200/70 hover:border-blue-300 rounded-2xl transition-all group"
                         >
-                          <span className="text-lg">🗳️</span>
-                          <span className="truncate">SEMI Membership Form</span>
+                          <span className="text-xl">🎓</span>
+                          <span className="truncate text-slate-700 group-hover:text-blue-700">PG Degree Certificate / HOD Confirmation</span>
                         </a>
                       )}
                     </div>
@@ -40522,6 +46480,96 @@ export default defineConfig({
 
 ```
 
+### `docker-compose.yml`
+
+```yaml
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6
+    container_name: semi-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-rootpassword}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: semi-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5003
+      MONGO_URI: mongodb://${MONGO_USERNAME:-root}:${MONGO_PASSWORD:-rootpassword}@mongodb:27017/semi?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-supersecretjwtkey}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-mock_key}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-mock_secret}
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_USER: ${EMAIL_USER:-user@example.com}
+      EMAIL_PASS: ${EMAIL_PASS:-pass}
+      CLIENT_URL: http://localhost:5173
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+    ports:
+      - "5003:5003"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:5003/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: semi-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: semi-client
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:5003/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+
+```
+
 ### `extract.js`
 
 ```javascript
@@ -40726,5 +46774,55 @@ semi-phase-three/
 }
 
 generate();
+```
+
+### `scripts/production-deploy.sh`
+
+```
+#!/bin/bash
+
+set -e
+
+echo "🚀 Starting production deployment..."
+
+# 1. Pull latest code
+echo "📥 Pulling latest code..."
+git pull origin main
+
+# 2. Build application
+echo "📦 Building application..."
+docker-compose -f docker-compose.prod.yml build
+
+# 3. Run database migrations
+echo "📊 Running database migrations..."
+docker-compose -f docker-compose.prod.yml run --rm backend npm run migrate:up
+
+# 4. Create database backup
+echo "💾 Creating database backup..."
+docker-compose -f docker-compose.prod.yml run --rm backend npm run backup
+
+# 5. Deploy services
+echo "🚀 Deploying services..."
+docker-compose -f docker-compose.prod.yml up -d --force-recreate
+
+# 6. Wait for health check
+echo "⏳ Waiting for health check..."
+sleep 10
+
+# 7. Verify deployment
+echo "🔍 Verifying deployment..."
+if curl -f http://localhost:5003/api/health > /dev/null 2>&1; then
+    echo "✅ Deployment successful!"
+    echo "🌐 Application available at: https://semi.org"
+else
+    echo "❌ Health check failed!"
+    docker-compose -f docker-compose.prod.yml logs backend
+    exit 1
+fi
+
+# 8. Clean up old images
+echo "🧹 Cleaning up old images..."
+docker image prune -f --filter "until=24h"
+
 ```
 

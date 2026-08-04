@@ -20,6 +20,12 @@ import AcademyRejectionModal from './components/AcademyRejectionModal';
 import AcademyEligibility from './components/AcademyEligibility';
 import AcademyVerification from './components/AcademyVerification';
 import AcademyStudentModal from './components/AcademyStudentModal';
+import AcademyRemittance from './components/AcademyRemittance';
+import AcademyMarksUpdating from './components/AcademyMarksUpdating';
+import AcademyStudentMarks from './components/AcademyStudentMarks';
+import AcademyPublishResults from './components/AcademyPublishResults';
+import AcademyPublishingDetails from './components/AcademyPublishingDetails';
+import AcademyRevaluation from './components/AcademyRevaluation';
 
 const STEP_ROUTES = {
   login: '/academy/login',
@@ -32,7 +38,13 @@ const DASHBOARD_PATHS = [
   '/academy/applications',
   '/academy/students',
   '/academy/eligibility',
-  '/academy/verification'
+  '/academy/verification',
+  '/academy/marks',
+  '/academy/student-marks',
+  '/academy/publish-results',
+  '/academy/publish-details',
+  '/academy/revaluation',
+  '/academy/remittance'
 ];
 
 // Derive which tab to show from the current path
@@ -41,10 +53,15 @@ const getTabFromPath = (pathname) => {
   if (pathname === '/academy/students') return 'students';
   if (pathname === '/academy/eligibility') return 'eligibility';
   if (pathname === '/academy/verification') return 'verification';
+  if (pathname === '/academy/marks') return 'marks';
+  if (pathname === '/academy/student-marks') return 'student-marks';
+  if (pathname === '/academy/publish-results') return 'publish-results';
+  if (pathname === '/academy/publish-details') return 'publish-details';
+  if (pathname === '/academy/revaluation') return 'revaluation';
+  if (pathname === '/academy/remittance') return 'remittance';
   return 'dashboard';
 };
 
-// Helper to safely extract data from API responses
 const extractData = (response) => {
   if (!response) return null;
   const data = response.data || response;
@@ -82,7 +99,13 @@ const AcademyPortal = () => {
       applications: '/academy/applications',
       students: '/academy/students',
       eligibility: '/academy/eligibility',
-      verification: '/academy/verification'
+      verification: '/academy/verification',
+      marks: '/academy/marks',
+      'student-marks': '/academy/student-marks',
+      'publish-results': '/academy/publish-results',
+      'publish-details': '/academy/publish-details',
+      revaluation: '/academy/revaluation',
+      remittance: '/academy/remittance'
     };
     navigate(tabRoutes[tab] || '/academy/dashboard');
   }, [navigate]);
@@ -538,6 +561,30 @@ const AcademyPortal = () => {
                     onVerifyStudent={handleVerifyStudentEligibility}
                     fetchBoardData={fetchBoardData}
                   />
+                )}
+
+                {activeTab === 'remittance' && (
+                  <AcademyRemittance />
+                )}
+
+                {activeTab === 'marks' && (
+                  <AcademyMarksUpdating />
+                )}
+
+                {activeTab === 'student-marks' && (
+                  <AcademyStudentMarks />
+                )}
+
+                {activeTab === 'publish-results' && (
+                  <AcademyPublishResults />
+                )}
+
+                {activeTab === 'publish-details' && (
+                  <AcademyPublishingDetails />
+                )}
+
+                {activeTab === 'revaluation' && (
+                  <AcademyRevaluation />
                 )}
 
               </div>

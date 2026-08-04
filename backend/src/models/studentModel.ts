@@ -191,4 +191,15 @@ const studentSchema: Schema = new Schema(
   }
 );
 
+studentSchema.index({ enrollmentId: 1 }, { unique: true });
+studentSchema.index({ enrollmentId: 1, institute: 1 });
+studentSchema.index({ instituteId: 1, courseId: 1 });
+studentSchema.index({ institute: 1, course: 1 });
+studentSchema.index({ institute: 1, batch: 1 });
+studentSchema.index({ isEligible: 1 });
+studentSchema.index({ email: 1 });
+studentSchema.index({ 'semesters.eligibilityStatus': 1 });
+
+
 export const Student = mongoose.model<IStudent>('Student', studentSchema);
+

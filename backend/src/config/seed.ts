@@ -7,13 +7,19 @@ dotenv.config();
 
 export const seedSuperAdmin = async () => {
   try {
-    const superAdminEmail = 'superadmin@academy.com';
+    const superAdminEmail = process.env.ADMIN_EMAIL || 'superadmin@academy.com';
+    const defaultPassword = process.env.ADMIN_PASSWORD || 'SuperAdmin123!';
+
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ Running seed in production! Ensure process.env.ADMIN_PASSWORD is set.');
+    }
+
     const superAdminExists = await User.findOne({ email: superAdminEmail });
 
     if (!superAdminExists) {
       console.log('Seeding Academy Super Admin...');
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('SuperAdmin123!', salt);
+      const hashedPassword = await bcrypt.hash(defaultPassword, salt);
 
       await User.create({
         name: 'Academy Super Admin',

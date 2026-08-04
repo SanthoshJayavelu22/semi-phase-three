@@ -67,18 +67,40 @@ if (isCloudinaryConfigured) {
 
 const memoryStorage = multer.memoryStorage();
 
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/jpg',
+  'image/webp'
+];
+
+const fileFilter = (req: any, file: any, cb: any) => {
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    return cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: PDF, JPEG, PNG, WEBP`), false);
+  }
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
+  if (!allowedExts.includes(ext)) {
+    return cb(new Error(`Invalid file extension: ${ext}`), false);
+  }
+  cb(null, true);
+};
+
 export const upload = multer({ 
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
+  },
+  fileFilter
 });
 
 export const uploadMemory = multer({
   storage: memoryStorage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
+  },
+  fileFilter
 });
 
 export { cloudinary };

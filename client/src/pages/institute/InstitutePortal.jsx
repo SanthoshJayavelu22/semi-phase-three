@@ -508,20 +508,8 @@ const InstitutePortal = () => {
           });
         }
 
-        if (statusMapped === 'approved' && currentStep !== 'active_erp') {
-          setCurrentStep('active_erp');
+        if (statusMapped === 'approved' && currentStep === 'active_erp') {
           fetchERPData();
-        } else if ((statusMapped === 'pending_review' || statusMapped === 'rejected') && currentStep !== 'pending_review') {
-          setCurrentStep('pending_review');
-        } else if (statusMapped === 'draft' && currentStep !== 'onboarding_form' && currentStep !== 'verify_pending') {
-          // Do NOT demote if localStorage already has a committed pending_review / approved status.
-          // This prevents a race condition where the API hasn't persisted the new record yet
-          // while the client has already navigated to the status page after submission.
-          const localData = localStorage.getItem('semi_institute_data');
-          const localRecord = localData ? (JSON.parse(localData).record || {}) : {};
-          if (localRecord.status !== 'pending_review' && localRecord.status !== 'approved' && localRecord.status !== 'rejected') {
-            setCurrentStep('onboarding_form');
-          }
         }
 
         const freshDataStr = JSON.stringify({
@@ -582,20 +570,8 @@ const InstitutePortal = () => {
       if (parsedData.activeWizardStep) {
         setActiveWizardStep(parsedData.activeWizardStep);
       }
-      
-      if (storedUser) {
-        const record = parsedData.record || DEFAULT_RECORD;
-        if (record.status === 'approved') {
-          setCurrentStep('active_erp');
-          fetchERPData();
-        } else if (record.status === 'pending_review' || record.status === 'rejected') {
-          setCurrentStep('pending_review');
-        } else {
-          setCurrentStep('onboarding_form');
-        }
-      }
     }
-  }, [setCurrentStep, fetchERPData]);
+  }, []);
 
   // ─── EFFECTS ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -608,7 +584,8 @@ const InstitutePortal = () => {
   // Background Auto-Polling every 5 seconds
   useEffect(() => {
     let intervalId;
-    if (user) {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (user && token) {
       intervalId = setInterval(() => {
         if (currentStep === 'active_erp') {
           fetchERPData();
@@ -642,8 +619,10 @@ const InstitutePortal = () => {
   // Fetch from backend when authenticated
   useEffect(() => {
     const initializeData = async () => {
-      if (localStorage.getItem('token') || localStorage.getItem('semi_token')) {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+      if (token) {
         try {
+          await fetchERPData();
           await fetchApplication();
         } catch (err) {
           console.warn('Failed to fetch application:', err);
@@ -658,9 +637,6 @@ const InstitutePortal = () => {
               localStorage.setItem('semi_user', JSON.stringify(updated));
               return updated;
             });
-            if (currentStep === 'verify_pending') {
-              setCurrentStep('onboarding_form');
-            }
           }
         } catch (err) {
           console.warn('Failed to fetch user verification status on load:', err);
@@ -669,14 +645,15 @@ const InstitutePortal = () => {
     };
     
     initializeData();
-  }, [fetchApplication, currentStep, setCurrentStep, setUser]);
+  }, [fetchApplication, fetchERPData]);
 
   // Fetch ERP data when dashboard is active
   useEffect(() => {
     let isActive = true;
 
     const loadData = async () => {
-      if (currentStep === 'active_erp' && isActive) {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+      if (currentStep === 'active_erp' && isActive && token) {
         await fetchERPData();
       }
     };
@@ -695,29 +672,24 @@ const InstitutePortal = () => {
       if (storedAppData && user) {
         const parsedData = JSON.parse(storedAppData);
         setApplicationRecord(parsedData.record);
-        if (parsedData.record.status === 'approved') {
-          setCurrentStep('active_erp');
-          fetchERPData();
-        } else if (parsedData.record.status === 'pending_review' || parsedData.record.status === 'rejected') {
-          setCurrentStep('pending_review');
-        }
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [user, setCurrentStep, fetchERPData]);
+  }, [user]);
 
   // URL and Auth Guard Synchronizer
   useEffect(() => {
     const currentPath = location.pathname;
     const targetStep = ROUTE_STEPS[currentPath] || 'welcome';
 
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token');
     const storedUser = localStorage.getItem('semi_user');
     const storedAppData = localStorage.getItem('semi_institute_data');
     
-    const activeUser = user || (storedUser ? JSON.parse(storedUser) : null);
+    const activeUser = user || (storedUser ? JSON.parse(storedUser) : (token ? {} : null));
     const activeAppData = storedAppData ? JSON.parse(storedAppData) : null;
     const activeRecord = applicationRecord.status !== 'draft' ? applicationRecord : (activeAppData?.record || { status: 'draft' });
 
@@ -735,7 +707,7 @@ const InstitutePortal = () => {
       }
     }
 
-    if (activeUser && activeUser.emailVerified === true && targetStep === 'verify_pending') {
+    if (activeUser && activeUser.emailVerified !== false && targetStep === 'verify_pending') {
       if (activeRecord.status === 'approved') {
         navigate('/institute/dashboard', { replace: true });
       } else if (activeRecord.status === 'pending_review' || activeRecord.status === 'rejected') {
@@ -747,7 +719,7 @@ const InstitutePortal = () => {
     }
 
     const publicSteps = ['welcome', 'login', 'register', 'forgot_password', 'reset_password'];
-    if (activeUser && activeUser.emailVerified === true && publicSteps.includes(targetStep)) {
+    if (activeUser && activeUser.emailVerified !== false && publicSteps.includes(targetStep)) {
       if (activeRecord.status === 'approved') {
         navigate('/institute/dashboard', { replace: true });
       } else if (activeRecord.status === 'pending_review' || activeRecord.status === 'rejected') {
@@ -758,7 +730,7 @@ const InstitutePortal = () => {
       return;
     }
 
-    if (activeUser && activeUser.emailVerified === true) {
+    if (activeUser && activeUser.emailVerified !== false) {
       if (targetStep === 'onboarding_form' && activeRecord.status !== 'draft') {
         if (activeRecord.status === 'approved') {
           navigate('/institute/dashboard', { replace: true });
@@ -784,12 +756,9 @@ const InstitutePortal = () => {
         return;
       }
     }
-    if (currentStep !== targetStep) {
-      setTimeout(() => {
-        setCurrentStepState(targetStep);
-      }, 0);
-    }
-  }, [location.pathname, user, applicationRecord, navigate, currentStep]);
+
+    setCurrentStepState(targetStep);
+  }, [location.pathname]);
 
   const activeStudentCount = useMemo(() => {
     return students.filter(s => s.status === 'Active').length;
@@ -965,6 +934,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       }
       if (userRefreshToken) {
         localStorage.setItem('refreshToken', userRefreshToken);
+        localStorage.setItem('semi_refreshToken', userRefreshToken);
       }
       localStorage.setItem('semi_registered_email', regForm.email);
 
@@ -1071,6 +1041,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       }
       if (userRefreshToken) {
         localStorage.setItem('refreshToken', userRefreshToken);
+        localStorage.setItem('semi_refreshToken', userRefreshToken);
       }
 
       setUser(parsedUser);

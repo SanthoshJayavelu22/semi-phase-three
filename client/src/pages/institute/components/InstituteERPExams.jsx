@@ -30,6 +30,8 @@ const InstituteERPExams = ({
 
   useEffect(() => {
     const fetchFeeRecords = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+      if (!token) return;
       try {
         const res = await academicService.getFeeRecords();
         const records = res?.data?.data || res?.data || [];

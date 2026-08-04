@@ -1,13 +1,13 @@
 // backend/src/routes/hallTicketRoutes.ts
 import express from 'express';
 import hallTicketController from '../controllers/hallTicketController';
-import { authMiddleware } from '../middlewares/authMiddleware';
-import { uploadMiddleware } from '../middlewares/uploadMiddleware';
+import { protect } from '../middlewares/authMiddleware';
+import { upload } from '../middlewares/uploadMiddleware';
 
 const router = express.Router();
 
 // Protected routes
-router.use(authMiddleware);
+router.use(protect);
 
 // Hall ticket management
 router.post('/create', hallTicketController.createHallTicket);
