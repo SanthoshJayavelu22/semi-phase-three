@@ -1,7 +1,7 @@
 import React from 'react';
-import { Mail, Lock, LogIn, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, LogIn, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 
-const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrentStep, errorMsg }) => {
+const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrentStep, errorMsg, isSubmitting }) => {
   const [showPassword, setShowPassword] = React.useState(false);
 
   return (
@@ -35,10 +35,11 @@ const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrent
             <input
               type="email"
               required
+              disabled={isSubmitting}
               placeholder="e.g. registration@apollohospitals.com"
               value={loginForm.email}
               onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-              className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm"
+              className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm disabled:opacity-60"
             />
           </div>
         </div>
@@ -59,10 +60,11 @@ const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrent
             <input
               type={showPassword ? "text" : "password"}
               required
+              disabled={isSubmitting}
               placeholder="Enter passcode"
               value={loginForm.password}
               onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-              className="w-full pl-12 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm"
+              className="w-full pl-12 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm disabled:opacity-60"
             />
             <button
               type="button"
@@ -76,10 +78,20 @@ const InstituteLogin = ({ loginForm, setLoginForm, handleLoginSubmit, setCurrent
 
         <button
           type="submit"
-          className="w-full py-4 mt-2 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-colors shadow-md text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+          disabled={isSubmitting}
+          className="w-full py-4 mt-2 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-colors shadow-md text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
         >
-          <LogIn className="w-5 h-5" />
-          Authenticate Dashboard
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Authenticating...
+            </>
+          ) : (
+            <>
+              <LogIn className="w-5 h-5" />
+              Authenticate Dashboard
+            </>
+          )}
         </button>
       </form>
       

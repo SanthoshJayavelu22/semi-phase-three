@@ -999,19 +999,24 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     }
   };
 
+  const [loginSubmitting, setLoginSubmitting] = useState(false);
+
   // ─── LOGIN HANDLER ────────────────────────────────────────────────────────────
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErrorBanner(null);
     setSuccessBanner(null);
+    setLoginSubmitting(true);
 
     if (!loginForm.email || !loginForm.password) {
       setErrorBanner('Please enter your email and password.');
+      setLoginSubmitting(false);
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(loginForm.email)) {
       setErrorBanner('Invalid email format. Please enter a valid email address.');
+      setLoginSubmitting(false);
       return;
     }
 
@@ -1049,10 +1054,23 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       localStorage.setItem('semi_registered_email', parsedUser.email);
 
       await fetchApplication();
+      await fetchERPData();
 
       setSuccessBanner('Login authenticated successfully!');
+
+      // Redirect user to their appropriate landing step immediately
+      const appRecord = applicationRecord.status !== 'draft' ? applicationRecord : null;
+      if (appRecord?.status === 'approved' || data.user?.role === 'institute') {
+        navigate('/institute/dashboard', { replace: true });
+      } else if (appRecord?.status === 'pending_review' || appRecord?.status === 'rejected') {
+        navigate('/institute/status', { replace: true });
+      } else {
+        navigate('/institute/dashboard', { replace: true });
+      }
     } catch (err) {
       setErrorBanner(extractErrorMessage(err, 'Invalid credentials. Email or password do not match.'));
+    } finally {
+      setLoginSubmitting(false);
     }
   };
 
@@ -2215,6 +2233,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             handleLoginSubmit={handleLoginSubmit} 
             setCurrentStep={setCurrentStep} 
             errorMsg={errorBanner}
+            isSubmitting={loginSubmitting}
           />
         )}
 
