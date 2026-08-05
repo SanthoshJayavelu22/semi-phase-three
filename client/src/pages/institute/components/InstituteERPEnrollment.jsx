@@ -288,6 +288,18 @@ const InstituteERPEnrollment = ({
     }
 
     try {
+      // 0. Pre-payment duplicate check (email / medical council reg no)
+      const checkRes = await academicService.checkStudentExists({
+        email: enrollForm.emailAddress,
+        medicalCouncilRegistrationNumber: enrollForm.medCouncilRegNo,
+      });
+      const checkData = checkRes?.data?.data || checkRes?.data || checkRes;
+      if (checkData?.exists) {
+        setLocalError('🚨 A student with this Email Address or Medical Council Registration Number already exists in the system.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
       // 1. Create Razorpay order (Using 1 INR for testing to avoid test limit errors)
       const orderRes = await academicService.createRazorpayOrder({ amount: 1, purpose: 'Student Enrollment' });
       const orderData = orderRes?.data?.data || orderRes?.data || orderRes;

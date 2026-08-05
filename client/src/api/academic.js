@@ -20,6 +20,7 @@ export const academicService = {
   deleteBatch: (batchId) => apiClient.delete(`/academic/batches/${batchId}`),
 
   // ─── STUDENT MANAGEMENT ──────────────────────────────────────────────────────
+  checkStudentExists: (data) => apiClient.post('/academic/students/check-existing', data),
   enrollStudent: (studentData) => {
     let payload = studentData;
     let headers = {};

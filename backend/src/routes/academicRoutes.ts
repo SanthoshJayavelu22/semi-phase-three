@@ -14,6 +14,7 @@ import {
   deleteBatch,
   getBatchesByCourse,
   addStudent,
+  checkStudentExists,
   recordStudentFee,
   listFeeRecords,
   getPayableAmount,
@@ -65,6 +66,14 @@ router.delete('/batches/:batchId', protect, authorize('institute', 'admin', 'sup
 // ==========================================
 // STUDENT MANAGEMENT Routes
 // ==========================================
+// Pre-payment duplicate check (email / medical council reg no)
+router.post(
+  '/students/check-existing',
+  protect,
+  authorize('institute'),
+  checkStudentExists
+);
+
 router.post(
   '/students',
   protect,

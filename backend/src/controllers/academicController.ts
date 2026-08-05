@@ -584,6 +584,41 @@ export const getBatchesByCourse = async (req: Request, res: Response) => {
 // STUDENT MANAGEMENT (Existing)
 // ==========================================
 
+// Pre-payment duplicate check: verify that a student with the given email or
+// medical council registration number does NOT already exist before the user
+// is allowed to pay the enrollment fee.
+export const checkStudentExists = async (req: Request, res: Response) => {
+  try {
+    const { email, medicalCouncilRegistrationNumber } = req.body;
+
+    if (!email && !medicalCouncilRegistrationNumber) {
+      return sendError({ req, res, statusCode: 400, message: 'Email or Medical Council Registration Number is required' });
+    }
+
+    const query: any[] = [];
+    if (email) query.push({ email: String(email).trim() });
+    if (medicalCouncilRegistrationNumber) {
+      query.push({ medicalCouncilRegistrationNumber: String(medicalCouncilRegistrationNumber).trim() });
+    }
+
+    const existingStudent = query.length > 0
+      ? await Student.findOne({ $or: query })
+      : null;
+
+    return sendSuccess({
+      req,
+      res,
+      statusCode: 200,
+      message: existingStudent
+        ? 'A student with this Email Address or Medical Council Registration Number already exists in the system.'
+        : 'No existing student found',
+      data: { exists: !!existingStudent },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
 export const addStudent = async (req: Request, res: Response) => {
   try {
     const validatedData = studentAddSchema.parse(req.body);

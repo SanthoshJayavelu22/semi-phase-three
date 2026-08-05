@@ -73,19 +73,46 @@ const memoryStorage = multer.memoryStorage();
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
-  'image/png',
   'image/jpg',
-  'image/webp'
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/tiff',
+  'image/tif',
+  'image/heic',
+  'image/heif',
+  'image/svg+xml',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+  'application/rtf',
+  'text/plain',
+  'text/csv',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.openxmlformats-officedocument.presentationml.template',
+];
+
+const ALLOWED_EXTENSIONS = [
+  '.pdf',
+  '.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.tiff', '.tif', '.heic', '.heif', '.svg',
+  '.doc', '.docx', '.rtf', '.txt', '.odt', '.ods', '.odp', '.csv', '.xls', '.xlsx', '.ppt', '.pptx',
 ];
 
 const fileFilter = (req: any, file: any, cb: any) => {
-  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-    return cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: PDF, JPEG, PNG, WEBP`), false);
-  }
   const ext = path.extname(file.originalname).toLowerCase();
-  const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
-  if (!allowedExts.includes(ext)) {
-    return cb(new Error(`Invalid file extension: ${ext}`), false);
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    return cb(new Error(`Invalid file extension: ${ext || '(none)'}. Allowed types: PDF, DOC, DOCX, Excel, PowerPoint, Text, JPEG, PNG, WEBP, GIF, BMP, TIFF, HEIC, SVG`), false);
+  }
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    return cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: PDF, DOC, DOCX, Excel, PowerPoint, Text, JPEG, PNG, WEBP, GIF, BMP, TIFF, HEIC, SVG`), false);
   }
   cb(null, true);
 };
