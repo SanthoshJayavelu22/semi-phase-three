@@ -11,7 +11,7 @@ export const seedSuperAdmin = async () => {
     const defaultPassword = process.env.ADMIN_PASSWORD || 'SuperAdmin123!';
 
     if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️ Running seed in production! Ensure process.env.ADMIN_PASSWORD is set.');
+      console.warn('⚠️ Running seed in production! Ensure process.env.ADMIN_PASSWORD is set.');   
     }
 
     const superAdminExists = await User.findOne({ email: superAdminEmail });

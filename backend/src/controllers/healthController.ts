@@ -48,8 +48,8 @@ export const healthCheck = async (req: Request, res: Response) => {
   const responseTime = Date.now() - startTime;
   (health as any).responseTime = `${responseTime}ms`;
 
-  const statusCode = health.status === 'healthy' ? 200 : 
-                     health.status === 'degraded' ? 503 : 500;
+  // Return 200 OK for healthy or degraded so client health ping doesn't crash UI, 500 for unhandled exceptions
+  const statusCode = health.status === 'unhealthy' ? 500 : 200;
   
   res.status(statusCode).json(health);
 };

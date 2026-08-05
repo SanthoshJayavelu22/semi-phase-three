@@ -76,7 +76,7 @@ export default function AcademyLoginPage() {
         <AcademyLoginForm
           loginForm={loginForm}
           setLoginForm={setLoginForm}
-          errorMsg={null}       /* errors shown via Toast below */
+          errorMsg={errorMsg}
           handleLogin={handleLogin}
           isLoading={isLoading}
         />
