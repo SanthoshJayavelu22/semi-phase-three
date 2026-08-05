@@ -48,13 +48,13 @@ export const createRateLimiter = (options: { windowMs: number; max: number; mess
 };
 
 export const authLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per 15 minutes
-  message: 'Too many authentication attempts, please try again after 15 minutes.',
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 30, // 5 attempts per 5 minutes
+  message: 'Too many authentication attempts, please try again after 5 minutes.',
 });
 
 export const generalLimiter = createRateLimiter({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 200, // 200 requests per minute
+  max: 2000, // 200 requests per minute
   message: 'Too many requests, please slow down.',
 });

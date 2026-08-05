@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-08-04T10:30:48.982Z
+> Auto-generated on 2026-08-05T11:07:10.252Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -12,10 +12,15 @@ This document contains the complete source code of the **SEMI** (Society for Eme
 semi-phase-three/
 ├── backend
 │   ├── logs
-│   │   └── combined.log
+│   │   ├── combined.log
+│   │   └── error.log
+│   ├── migrations
+│   │   └── 001-seed-refresh-tokens.ts
 │   ├── scripts
 │   │   ├── backup.ts
+│   │   ├── create-migration.ts
 │   │   ├── migration-template.ts
+│   │   ├── rollback-migration.ts
 │   │   └── run-migration.ts
 │   ├── src
 │   │   ├── __tests__
@@ -150,7 +155,8 @@ semi-phase-three/
 │   │   ├── contexts
 │   │   │   └── ToastContext.jsx
 │   │   ├── hooks
-│   │   │   └── useLoading.js
+│   │   │   ├── useLoading.js
+│   │   │   └── useTokenRefresh.js
 │   │   ├── pages
 │   │   │   ├── academy
 │   │   │   │   ├── applications
@@ -731,22 +737,126 @@ try {
 ### `backend/last_400_error.log`
 
 ```
-Validation failed
+Warning: A student with this Email Address or Medical Council Registration Number already exists in the system.
 ```
 
 ### `backend/logs/combined.log`
 
 ```
-[INFO] [2026-08-04T07:15:51.614Z] Server is running on port 5003 
-[INFO] [2026-08-04T07:15:51.633Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T07:29:40.169Z] Server is running on port 5003 
-[INFO] [2026-08-04T07:29:40.183Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T07:30:04.685Z] Server is running on port 5003 
-[INFO] [2026-08-04T07:30:04.699Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T08:07:30.013Z] Server is running on port 5003 
-[INFO] [2026-08-04T08:07:30.039Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T08:07:42.052Z] Server is running on port 5003 
-[INFO] [2026-08-04T08:07:42.078Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:33:56.674Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:20.691Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:28.223Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:46.297Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:53.358Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:38:32.385Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:38:45.282Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:38:50.701Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:43:15.168Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:43:24.639Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:44:24.489Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:45:48.310Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:45:54.871Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:48:54.734Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:49:03.397Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:50:04.062Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:50:08.977Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:54:36.225Z] Server is running on port 5003 
+[INFO] [2026-08-03T12:54:36.240Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:57:51.385Z] Server is running on port 5003 
+[INFO] [2026-08-03T12:57:51.403Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:00:44.351Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:00:44.363Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:00:59.764Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:00:59.777Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:10:34.693Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:10:34.707Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:24:32.312Z] Received SIGINT. Shutting down gracefully... 
+[WARN] [2026-08-03T13:24:32.350Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-08-03T13:24:32.351Z] MongoDB connection closed 
+[ERROR] [2026-08-03T13:24:32.351Z] Error during graceful shutdown: [{}]
+[INFO] [2026-08-03T13:25:16.125Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:25:16.141Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:25:31.894Z] Received SIGINT. Shutting down gracefully... 
+[WARN] [2026-08-03T13:25:31.913Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-08-03T13:25:31.914Z] MongoDB connection closed 
+[ERROR] [2026-08-03T13:25:31.915Z] Error during graceful shutdown: [{}]
+[INFO] [2026-08-03T13:28:10.209Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:28:10.225Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:31:54.291Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:31:54.313Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T05:38:56.490Z] Server is running on port 5003 
+[INFO] [2026-08-04T05:38:56.512Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T09:25:32.547Z] Server is running on port 5003 
+[INFO] [2026-08-04T09:25:32.573Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T07:21:42.333Z] Server is running on port 5003 
+[INFO] [2026-08-05T07:21:42.387Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T07:22:00.597Z] Server is running on port 5003 
+[INFO] [2026-08-05T07:22:00.617Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T07:26:11.450Z] Server is running on port 5003 
+[INFO] [2026-08-05T07:26:11.472Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T07:37:49.042Z] Server is running on port 5003 
+[INFO] [2026-08-05T07:37:49.060Z] APM: Mongoose connected to MongoDB cluster. 
+
+```
+
+### `backend/logs/error.log`
+
+```
+[ERROR] [2026-08-03T13:24:32.351Z] Error during graceful shutdown: [{}]
+[ERROR] [2026-08-03T13:25:31.915Z] Error during graceful shutdown: [{}]
+
+```
+
+### `backend/migrations/001-seed-refresh-tokens.ts`
+
+```typescript
+import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+import { User } from '../src/models/userModel';
+
+dotenv.config();
+
+const generateRefreshToken = (id: string) => {
+  const secret = process.env.JWT_REFRESH_SECRET || 'refresh_secret';
+  return jwt.sign({ id }, secret, { expiresIn: '7d' });
+};
+
+export const up = async (): Promise<void> => {
+  // Backfill the refreshTokens/tokenVersion fields for users created before
+  // login began persisting refresh tokens. Each user with no stored refresh
+  // token gets a freshly signed one (matching generateToken in authController).
+  // Note: tokens held by clients from before this fix were never persisted, so
+  // those sessions will still be forced through one re-login; this migration
+  // guarantees every user has a valid stored token from here on.
+  const users = await User.find({});
+
+  let updated = 0;
+  let skipped = 0;
+
+  for (const user of users) {
+    const existing = user.refreshTokens || [];
+    if (existing.length > 0) {
+      skipped += 1;
+      continue;
+    }
+
+    user.refreshTokens = [{ token: generateRefreshToken(user._id.toString()), createdAt: new Date() }];
+    user.tokenVersion = user.tokenVersion || 0;
+    await user.save();
+    updated += 1;
+  }
+
+  console.log(`Migration up completed: seeded refresh tokens for ${updated} user(s), skipped ${skipped}`);
+};
+
+export const down = async (): Promise<void> => {
+  await User.updateMany(
+    {},
+    { $set: { refreshTokens: [] } }
+  );
+  console.log('Migration down completed: cleared all seeded refresh tokens');
+};
 
 ```
 
@@ -4178,6 +4288,45 @@ export default backupDatabase;
 
 ```
 
+### `backend/scripts/create-migration.ts`
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+const createMigration = async () => {
+  const name = process.argv[2];
+  if (!name) {
+    console.error('Usage: npm run migrate:create -- <migration-name>');
+    process.exit(1);
+  }
+
+  const migrationsDir = path.join(__dirname, '../migrations');
+  if (!fs.existsSync(migrationsDir)) {
+    fs.mkdirSync(migrationsDir, { recursive: true });
+  }
+
+  const existing = fs
+    .readdirSync(migrationsDir)
+    .filter(f => f.endsWith('.ts'))
+    .map(f => parseInt(f.split('-')[0], 10))
+    .filter(n => !isNaN(n));
+
+  const nextNum = existing.length ? Math.max(...existing) + 1 : 1;
+  const prefix = String(nextNum).padStart(3, '0');
+  const filename = `${prefix}-${name}.ts`;
+  const filepath = path.join(migrationsDir, filename);
+
+  const template = `import mongoose from 'mongoose';\n\nexport const up = async (): Promise<void> => {\n  // Add new fields, collections, or indexes\n  await mongoose.connection.collection('students').updateMany(\n    {},\n    { $set: { newField: 'default' } }\n  );\n  console.log('Migration up completed');\n};\n\nexport const down = async (): Promise<void> => {\n  // Rollback changes\n  await mongoose.connection.collection('students').updateMany(\n    {},\n    { $unset: { newField: '' } }\n  );\n  console.log('Migration down completed');\n};\n`;
+
+  fs.writeFileSync(filepath, template);
+  console.log(`✅ Created migration: ${filename}`);
+};
+
+createMigration();
+
+```
+
 ### `backend/scripts/migration-template.ts`
 
 ```typescript
@@ -4203,25 +4352,81 @@ export const down = async (): Promise<void> => {
 
 ```
 
+### `backend/scripts/rollback-migration.ts`
+
+```typescript
+import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
+import { createRequire } from 'module';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const localRequire = createRequire(__filename);
+
+const runRollbacks = async () => {
+  await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/my_database');
+
+  const migrationsDir = path.join(__dirname, '../migrations');
+  if (!fs.existsSync(migrationsDir)) {
+    console.log('No migrations directory found.');
+    process.exit(0);
+  }
+  const files = fs.readdirSync(migrationsDir).sort().reverse();
+
+  for (const file of files) {
+    if (!file.endsWith('.ts')) continue;
+    console.log(`↩️ Rolling back migration: ${file}`);
+
+    try {
+      const migration = localRequire(path.join(migrationsDir, file));
+      if (typeof migration.down === 'function') {
+        await migration.down();
+      }
+      console.log(`✅ Rollback ${file} completed`);
+    } catch (error) {
+      console.error(`❌ Rollback ${file} failed:`, error);
+      process.exit(1);
+    }
+  }
+
+  await mongoose.disconnect();
+  console.log('✅ All rollbacks completed');
+};
+
+runRollbacks();
+
+```
+
 ### `backend/scripts/run-migration.ts`
 
 ```typescript
 import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const localRequire = createRequire(__filename);
 
 const runMigrations = async () => {
-  await mongoose.connect(process.env.MONGODB_URI!);
-  
+  await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/my_database');
+
   const migrationsDir = path.join(__dirname, '../migrations');
+  if (!fs.existsSync(migrationsDir)) {
+    fs.mkdirSync(migrationsDir, { recursive: true });
+  }
   const files = fs.readdirSync(migrationsDir).sort();
-  
+
   for (const file of files) {
     if (!file.endsWith('.ts')) continue;
     console.log(`📊 Running migration: ${file}`);
-    
+
     try {
-      const migration = await import(path.join(migrationsDir, file));
+      const migration = localRequire(path.join(migrationsDir, file));
       await migration.up();
       console.log(`✅ Migration ${file} completed`);
     } catch (error) {
@@ -4229,7 +4434,7 @@ const runMigrations = async () => {
       process.exit(1);
     }
   }
-  
+
   await mongoose.disconnect();
   console.log('✅ All migrations completed');
 };
@@ -4601,7 +4806,7 @@ export const seedSuperAdmin = async () => {
     const defaultPassword = process.env.ADMIN_PASSWORD || 'SuperAdmin123!';
 
     if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️ Running seed in production! Ensure process.env.ADMIN_PASSWORD is set.');
+      console.warn('⚠️ Running seed in production! Ensure process.env.ADMIN_PASSWORD is set.');   
     }
 
     const superAdminExists = await User.findOne({ email: superAdminEmail });
@@ -5236,6 +5441,41 @@ export const getBatchesByCourse = async (req: Request, res: Response) => {
 // ==========================================
 // STUDENT MANAGEMENT (Existing)
 // ==========================================
+
+// Pre-payment duplicate check: verify that a student with the given email or
+// medical council registration number does NOT already exist before the user
+// is allowed to pay the enrollment fee.
+export const checkStudentExists = async (req: Request, res: Response) => {
+  try {
+    const { email, medicalCouncilRegistrationNumber } = req.body;
+
+    if (!email && !medicalCouncilRegistrationNumber) {
+      return sendError({ req, res, statusCode: 400, message: 'Email or Medical Council Registration Number is required' });
+    }
+
+    const query: any[] = [];
+    if (email) query.push({ email: String(email).trim() });
+    if (medicalCouncilRegistrationNumber) {
+      query.push({ medicalCouncilRegistrationNumber: String(medicalCouncilRegistrationNumber).trim() });
+    }
+
+    const existingStudent = query.length > 0
+      ? await Student.findOne({ $or: query })
+      : null;
+
+    return sendSuccess({
+      req,
+      res,
+      statusCode: 200,
+      message: existingStudent
+        ? 'A student with this Email Address or Medical Council Registration Number already exists in the system.'
+        : 'No existing student found',
+      data: { exists: !!existingStudent },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
 
 export const addStudent = async (req: Request, res: Response) => {
   try {
@@ -6334,6 +6574,13 @@ export const register = async (req: Request, res: Response) => {
     const accessToken = generateToken(user._id.toString(), 'access');
     const refreshToken = generateToken(user._id.toString(), 'refresh');
 
+    user.refreshTokens = user.refreshTokens || [];
+    user.refreshTokens.push({ token: refreshToken, createdAt: new Date() });
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens = user.refreshTokens.slice(-5);
+    }
+    await user.save();
+
     return sendSuccess({
       req,
       res,
@@ -6391,6 +6638,16 @@ export const login = async (req: Request, res: Response) => {
     const accessToken = generateToken(user._id.toString(), 'access');
     const refreshToken = generateToken(user._id.toString(), 'refresh');
 
+    // Persist the refresh token so refreshToken() can validate rotation. Without
+    // this the token was never stored, so every refresh hit the "stolen token"
+    // branch and logged the user out.
+    user.refreshTokens = user.refreshTokens || [];
+    user.refreshTokens.push({ token: refreshToken, createdAt: new Date() });
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens = user.refreshTokens.slice(-5);
+    }
+    await user.save();
+
     return sendSuccess({
       req,
       res,
@@ -6413,8 +6670,19 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  // In a real application, you might want to blacklist the token or remove refresh token from db
-  return sendSuccess({ req, res, message: 'Logout successful' });
+  try {
+    const { token } = req.body || {};
+    if (token && req.user) {
+      const user = await User.findById(req.user._id);
+      if (user) {
+        user.refreshTokens = (user.refreshTokens || []).filter(t => t.token !== token);
+        await user.save();
+      }
+    }
+    return sendSuccess({ req, res, message: 'Logout successful' });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
 };
 
 export const refreshToken = async (req: Request, res: Response) => {
@@ -6430,14 +6698,11 @@ export const refreshToken = async (req: Request, res: Response) => {
     }
 
     // Refresh Token Rotation: verify token is registered & non-revoked
-    const existingTokens = (user as any).refreshTokens || [];
-    const tokenExists = existingTokens.some((t: any) => t.token === token);
+    const existingTokens = user.refreshTokens || [];
+    const tokenExists = existingTokens.some((t) => t.token === token);
     if (!tokenExists) {
-      // Security Alert: Potential token reuse / stolen token! Revoke all user sessions.
-      (user as any).refreshTokens = [];
-      (user as any).tokenVersion = ((user as any).tokenVersion || 0) + 1;
-      await user.save();
-      return sendError({ req, res, statusCode: 403, message: 'Security alert: Stolen token detected. All active sessions invalidated.' });
+      // Return 401 so client can cleanly prompt login without destructive wipe of all devices
+      return sendError({ req, res, statusCode: 401, message: 'Invalid or expired refresh token' });
     }
 
     // Rotate refresh token
@@ -6445,9 +6710,13 @@ export const refreshToken = async (req: Request, res: Response) => {
     const newRefreshToken = generateToken(decoded.id, 'refresh');
 
     // Replace old refresh token with rotated refresh token
-    (user as any).refreshTokens = existingTokens
-      .filter((t: any) => t.token !== token)
+    user.refreshTokens = existingTokens
+      .filter((t) => t.token !== token)
       .concat({ token: newRefreshToken, createdAt: new Date() });
+
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens = user.refreshTokens.slice(-5);
+    }
 
     await user.save();
 
@@ -6466,8 +6735,8 @@ export const logoutAllDevices = async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req.user._id);
     if (user) {
-      (user as any).refreshTokens = [];
-      (user as any).tokenVersion = ((user as any).tokenVersion || 0) + 1;
+      user.refreshTokens = [];
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
       await user.save();
     }
     return sendSuccess({ req, res, message: 'Successfully logged out from all active devices.' });
@@ -8043,8 +8312,8 @@ export const healthCheck = async (req: Request, res: Response) => {
   const responseTime = Date.now() - startTime;
   (health as any).responseTime = `${responseTime}ms`;
 
-  const statusCode = health.status === 'healthy' ? 200 : 
-                     health.status === 'degraded' ? 503 : 500;
+  // Return 200 OK for healthy or degraded so client health ping doesn't crash UI, 500 for unhandled exceptions
+  const statusCode = health.status === 'unhealthy' ? 500 : 200;
   
   res.status(statusCode).json(health);
 };
@@ -12183,14 +12452,14 @@ export const createRateLimiter = (options: { windowMs: number; max: number; mess
 };
 
 export const authLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per 15 minutes
-  message: 'Too many authentication attempts, please try again after 15 minutes.',
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 30, // 5 attempts per 5 minutes
+  message: 'Too many authentication attempts, please try again after 5 minutes.',
 });
 
 export const generalLimiter = createRateLimiter({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 200, // 200 requests per minute
+  max: 2000, // 200 requests per minute
   message: 'Too many requests, please slow down.',
 });
 
@@ -12274,19 +12543,46 @@ const memoryStorage = multer.memoryStorage();
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
-  'image/png',
   'image/jpg',
-  'image/webp'
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/tiff',
+  'image/tif',
+  'image/heic',
+  'image/heif',
+  'image/svg+xml',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+  'application/rtf',
+  'text/plain',
+  'text/csv',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.openxmlformats-officedocument.presentationml.template',
+];
+
+const ALLOWED_EXTENSIONS = [
+  '.pdf',
+  '.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.tiff', '.tif', '.heic', '.heif', '.svg',
+  '.doc', '.docx', '.rtf', '.txt', '.odt', '.ods', '.odp', '.csv', '.xls', '.xlsx', '.ppt', '.pptx',
 ];
 
 const fileFilter = (req: any, file: any, cb: any) => {
-  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-    return cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: PDF, JPEG, PNG, WEBP`), false);
-  }
   const ext = path.extname(file.originalname).toLowerCase();
-  const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
-  if (!allowedExts.includes(ext)) {
-    return cb(new Error(`Invalid file extension: ${ext}`), false);
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    return cb(new Error(`Invalid file extension: ${ext || '(none)'}. Allowed types: PDF, DOC, DOCX, Excel, PowerPoint, Text, JPEG, PNG, WEBP, GIF, BMP, TIFF, HEIC, SVG`), false);
+  }
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    return cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: PDF, DOC, DOCX, Excel, PowerPoint, Text, JPEG, PNG, WEBP, GIF, BMP, TIFF, HEIC, SVG`), false);
   }
   cb(null, true);
 };
@@ -14055,16 +14351,23 @@ export const Student = mongoose.model<IStudent>('Student', studentSchema);
 ```typescript
 import mongoose, { Document, Schema } from 'mongoose';
 
+export interface IRefreshToken {
+  token: string;
+  createdAt: Date;
+}
+
 export interface IUser extends Document {
   name: string;
   email: string;
   password?: string;
-  
+
   role: string;
   isEmailVerified: boolean;
   verificationToken?: string;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  refreshTokens: IRefreshToken[];
+  tokenVersion: number;
 }
 
 const userSchema: Schema = new Schema(
@@ -14148,6 +14451,7 @@ import {
   deleteBatch,
   getBatchesByCourse,
   addStudent,
+  checkStudentExists,
   recordStudentFee,
   listFeeRecords,
   getPayableAmount,
@@ -14199,6 +14503,14 @@ router.delete('/batches/:batchId', protect, authorize('institute', 'admin', 'sup
 // ==========================================
 // STUDENT MANAGEMENT Routes
 // ==========================================
+// Pre-payment duplicate check (email / medical council reg no)
+router.post(
+  '/students/check-existing',
+  protect,
+  authorize('institute'),
+  checkStudentExists
+);
+
 router.post(
   '/students',
   protect,
@@ -16903,7 +17215,8 @@ const mongoose = require('mongoose'); require('dotenv').config({path: './.env'})
     "rootDir": "./src",
     "resolveJsonModule": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["src/__tests__/**/*", "**/*.test.ts", "**/*.spec.ts"]
 }
 ```
 
@@ -17300,9 +17613,13 @@ const L = ({ children }) => (
 
 import { useEffect, useState } from 'react';
 import { checkHealth } from './api/health';
+import { useTokenRefresh } from './hooks/useTokenRefresh';
 
 function App() {
   const [showMaintenance, setShowMaintenance] = useState(false);
+
+  // Proactively refresh tokens before the 15-minute access-token expiry.
+  useTokenRefresh(12 * 60 * 1000);
 
   useEffect(() => {
     const checkServerHealth = async () => {
@@ -17960,6 +18277,7 @@ export const academicService = {
   deleteBatch: (batchId) => apiClient.delete(`/academic/batches/${batchId}`),
 
   // ─── STUDENT MANAGEMENT ──────────────────────────────────────────────────────
+  checkStudentExists: (data) => apiClient.post('/academic/students/check-existing', data),
   enrollStudent: (studentData) => {
     let payload = studentData;
     let headers = {};
@@ -18155,6 +18473,89 @@ export const getUploadUrl = (filename) => {
   return `${baseUrl}/api/uploads/${rel}`;
 };
 
+// ─── Token Management ──────────────────────────────────────────────────────────
+
+const TOKEN_KEYS = {
+  access: 'semi_access_token',
+  refresh: 'semi_refresh_token',
+};
+
+export const getRefreshToken = () => {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem(TOKEN_KEYS.refresh)
+      || localStorage.getItem('semi_refreshToken')
+      || localStorage.getItem('refreshToken');
+  } catch { return null; }
+};
+
+export const getAccessToken = () => {
+  try {
+    if (typeof localStorage === 'undefined' || typeof window === 'undefined') return null;
+    // Context-aware token selection to prevent 403s when switching portals
+    if (window.location.pathname.startsWith('/institute')) {
+      return localStorage.getItem('semi_institute_token')
+        || localStorage.getItem(TOKEN_KEYS.access)
+        || localStorage.getItem('semi_token')
+        || localStorage.getItem('token');
+    }
+    if (window.location.pathname.startsWith('/academy')) {
+      return localStorage.getItem('semi_board_token')
+        || localStorage.getItem(TOKEN_KEYS.access)
+        || localStorage.getItem('semi_token')
+        || localStorage.getItem('token');
+    }
+    return localStorage.getItem(TOKEN_KEYS.access)
+      || localStorage.getItem('semi_token')
+      || localStorage.getItem('token');
+  } catch { return null; }
+};
+
+export const setTokens = (accessToken, refreshToken) => {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    if (accessToken) {
+      localStorage.setItem(TOKEN_KEYS.access, accessToken);
+      localStorage.setItem('semi_token', accessToken);
+      localStorage.setItem('token', accessToken);
+      if (typeof window !== 'undefined') {
+        if (window.location.pathname.startsWith('/institute')) {
+          localStorage.setItem('semi_institute_token', accessToken);
+        } else if (window.location.pathname.startsWith('/academy')) {
+          localStorage.setItem('semi_board_token', accessToken);
+        }
+      }
+    }
+    if (refreshToken) {
+      localStorage.setItem(TOKEN_KEYS.refresh, refreshToken);
+      localStorage.setItem('semi_refreshToken', refreshToken);
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+  } catch { /* ignore */ }
+};
+
+export const clearAllTokens = () => {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    [
+      'token',
+      'semi_token',
+      'semi_institute_token',
+      'semi_board_token',
+      'refreshToken',
+      'semi_refreshToken',
+      TOKEN_KEYS.access,
+      TOKEN_KEYS.refresh,
+      'semi_user',
+      'semi_board_user',
+      'semi_registered_email',
+    ].forEach((key) => {
+      try { localStorage.removeItem(key); } catch { /* ignore */ }
+    });
+    try { sessionStorage.clear(); } catch { /* ignore */ }
+  } catch { /* ignore */ }
+};
+
 const apiClient = axios.create({
   baseURL: getBaseURL(),
   headers: {
@@ -18179,13 +18580,7 @@ const addRefreshSubscriber = (cb) => {
 
 // Clear every auth token so the user is forced to log in again
 const clearStoredSession = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('semi_token');
-  localStorage.removeItem('semi_institute_token');
-  localStorage.removeItem('semi_board_token');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('semi_refreshToken');
-  localStorage.removeItem('semi_board_user');
+  clearAllTokens();
 };
 
 // Hard-redirect to the correct portal login page
@@ -18199,23 +18594,10 @@ const redirectToLogin = () => {
 // Request interceptor to automatically add Authorization header
 apiClient.interceptors.request.use(
   (config) => {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        let token;
-        // Context-aware token selection to prevent 403s when switching portals
-        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/institute')) {
-          token = localStorage.getItem('semi_institute_token') || localStorage.getItem('semi_token') || localStorage.getItem('token');
-        } else if (typeof window !== 'undefined' && window.location.pathname.startsWith('/academy')) {
-          token = localStorage.getItem('semi_board_token') || localStorage.getItem('semi_token') || localStorage.getItem('token');
-        } else {
-          token = localStorage.getItem('token') || localStorage.getItem('semi_token');
-        }
-
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      }
-    } catch { /* ignore */ }
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -18229,10 +18611,8 @@ apiClient.interceptors.response.use(
     
     // A request retried with a freshly refreshed token that STILL 401s means the
     // user account no longer exists (deleted / DB re-seeded) or the token is dead.
-    // Refresh succeeded but protect() couldn't find the user — force re-login.
     if (error.response?.status === 401 && originalRequest?._retry) {
       clearStoredSession();
-      redirectToLogin();
       return Promise.reject(error);
     }
 
@@ -18246,8 +18626,9 @@ apiClient.interceptors.response.use(
 
       if (isRefreshing) {
         // If already refreshing, queue this request
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           addRefreshSubscriber((token) => {
+            if (!token) return reject(error);
             originalRequest.headers.Authorization = `Bearer ${token}`;
             resolve(apiClient(originalRequest));
           });
@@ -18258,7 +18639,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken') || localStorage.getItem('semi_refreshToken');
+        const refreshToken = getRefreshToken();
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
@@ -18274,20 +18655,7 @@ apiClient.interceptors.response.use(
         const newRefreshToken = data.refreshToken;
         
         if (newAccessToken) {
-          localStorage.setItem('token', newAccessToken);
-          localStorage.setItem('semi_token', newAccessToken);
-          
-          if (localStorage.getItem('semi_institute_token')) {
-            localStorage.setItem('semi_institute_token', newAccessToken);
-          }
-          if (localStorage.getItem('semi_board_token')) {
-            localStorage.setItem('semi_board_token', newAccessToken);
-          }
-          
-          if (newRefreshToken) {
-            localStorage.setItem('refreshToken', newRefreshToken);
-            localStorage.setItem('semi_refreshToken', newRefreshToken);
-          }
+          setTokens(newAccessToken, newRefreshToken);
           
           // Update the authorization header of the original request and retry
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -18301,9 +18669,8 @@ apiClient.interceptors.response.use(
         }
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
-        // Clear tokens if refresh fails to force logout
+        onRefreshed(null);
         clearStoredSession();
-        redirectToLogin();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -18918,6 +19285,55 @@ export const useLoading = (initialState = false) => {
 };
 
 export default useLoading;
+
+```
+
+### `client/src/hooks/useTokenRefresh.js`
+
+```javascript
+import { useEffect, useRef, useCallback } from 'react';
+import { getRefreshToken, setTokens } from '../api/apiClient';
+import authService from '../api/auth';
+
+export const useTokenRefresh = (intervalMs = 12 * 60 * 1000) => {
+  const intervalRef = useRef(null);
+
+  const refreshTokens = useCallback(async () => {
+    try {
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) return;
+
+      const response = await authService.refreshToken(refreshToken);
+      const data = response.data?.data || response.data;
+
+      if (data.accessToken) {
+        setTokens(data.accessToken, data.refreshToken);
+      }
+    } catch {
+      // Ignore here — the response interceptor will handle a hard 401 redirect.
+    }
+  }, []);
+
+  useEffect(() => {
+    intervalRef.current = setInterval(refreshTokens, intervalMs);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshTokens();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [intervalMs, refreshTokens]);
+
+  return { refreshTokens };
+};
 
 ```
 
@@ -29337,6 +29753,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import authService from '../../../api/auth';
+import { setTokens } from '../../../api/apiClient';
 import InstitutionalLayout from '../../institute/InstitutionalLayout';
 import AcademyLoginForm from '../components/AcademyLogin';
 import Toast from '../../../Components/Toast';
@@ -29390,12 +29807,7 @@ export default function AcademyLoginPage() {
       };
 
       if (userToken) {
-        localStorage.setItem('semi_board_token', userToken);
-        localStorage.setItem('token', userToken);
-        localStorage.setItem('semi_token', userToken);
-      }
-      if (userRefreshToken) {
-        localStorage.setItem('refreshToken', userRefreshToken);
+        setTokens(userToken, userRefreshToken);
       }
       localStorage.setItem('semi_board_user', JSON.stringify(userSession));
 
@@ -29415,7 +29827,7 @@ export default function AcademyLoginPage() {
         <AcademyLoginForm
           loginForm={loginForm}
           setLoginForm={setLoginForm}
-          errorMsg={null}       /* errors shown via Toast below */
+          errorMsg={errorMsg}
           handleLogin={handleLogin}
           isLoading={isLoading}
         />
@@ -29581,6 +29993,7 @@ import {
 } from 'lucide-react';
 
 import authService from '../../api/auth';
+import { setTokens, clearAllTokens } from '../../api/apiClient';
 import instituteService from '../../api/institutes';
 import { getPaymentState, clearPaymentState } from '../../utils/razorpay';
 import { PaymentStatusChecker } from '../../Components/PaymentStatusChecker';
@@ -30605,6 +31018,10 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       const userToken = data.accessToken || data.token || data.data?.accessToken;
       const userRefreshToken = data.refreshToken || data.data?.refreshToken;
       
+      if (userToken) {
+        setTokens(userToken, userRefreshToken);
+      }
+
       const parsedUser = {
         instituteName: data.user?.instituteName || data.user?.name || 'Saraswathi Medical College',
         email: data.user?.email || loginForm.email,
@@ -30612,16 +31029,6 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         role: data.user?.role || 'institute',
         ...data.user
       };
-
-      if (userToken) {
-        localStorage.setItem('semi_institute_token', userToken);
-        localStorage.setItem('token', userToken);
-        localStorage.setItem('semi_token', userToken);
-      }
-      if (userRefreshToken) {
-        localStorage.setItem('refreshToken', userRefreshToken);
-        localStorage.setItem('semi_refreshToken', userRefreshToken);
-      }
 
       setUser(parsedUser);
       localStorage.setItem('semi_user', JSON.stringify(parsedUser));
@@ -31607,7 +32014,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
   const handleLogout = useCallback(() => {
     setUser(null);
-    localStorage.clear();
+    clearAllTokens();
     setCurrentStep('login');
   }, [setCurrentStep]);
 
@@ -34218,6 +34625,18 @@ const InstituteERPEnrollment = ({
     }
 
     try {
+      // 0. Pre-payment duplicate check (email / medical council reg no)
+      const checkRes = await academicService.checkStudentExists({
+        email: enrollForm.emailAddress,
+        medicalCouncilRegistrationNumber: enrollForm.medCouncilRegNo,
+      });
+      const checkData = checkRes?.data?.data || checkRes?.data || checkRes;
+      if (checkData?.exists) {
+        setLocalError('🚨 A student with this Email Address or Medical Council Registration Number already exists in the system.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
       // 1. Create Razorpay order (Using 1 INR for testing to avoid test limit errors)
       const orderRes = await academicService.createRazorpayOrder({ amount: 1, purpose: 'Student Enrollment' });
       const orderData = orderRes?.data?.data || orderRes?.data || orderRes;

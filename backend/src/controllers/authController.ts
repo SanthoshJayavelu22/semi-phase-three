@@ -208,11 +208,8 @@ export const refreshToken = async (req: Request, res: Response) => {
     const existingTokens = user.refreshTokens || [];
     const tokenExists = existingTokens.some((t) => t.token === token);
     if (!tokenExists) {
-      // Security Alert: Potential token reuse / stolen token! Revoke all user sessions.
-      user.refreshTokens = [];
-      user.tokenVersion = (user.tokenVersion || 0) + 1;
-      await user.save();
-      return sendError({ req, res, statusCode: 403, message: 'Security alert: Stolen token detected. All active sessions invalidated.' });
+      // Return 401 so client can cleanly prompt login without destructive wipe of all devices
+      return sendError({ req, res, statusCode: 401, message: 'Invalid or expired refresh token' });
     }
 
     // Rotate refresh token

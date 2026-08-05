@@ -181,10 +181,8 @@ apiClient.interceptors.response.use(
     
     // A request retried with a freshly refreshed token that STILL 401s means the
     // user account no longer exists (deleted / DB re-seeded) or the token is dead.
-    // Refresh succeeded but protect() couldn't find the user — force re-login.
     if (error.response?.status === 401 && originalRequest?._retry) {
       clearStoredSession();
-      redirectToLogin();
       return Promise.reject(error);
     }
 
@@ -198,8 +196,9 @@ apiClient.interceptors.response.use(
 
       if (isRefreshing) {
         // If already refreshing, queue this request
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           addRefreshSubscriber((token) => {
+            if (!token) return reject(error);
             originalRequest.headers.Authorization = `Bearer ${token}`;
             resolve(apiClient(originalRequest));
           });
@@ -240,9 +239,8 @@ apiClient.interceptors.response.use(
         }
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
-        // Clear tokens if refresh fails to force logout
+        onRefreshed(null);
         clearStoredSession();
-        redirectToLogin();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
