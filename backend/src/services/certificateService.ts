@@ -60,7 +60,10 @@ class CertificateService {
       }
     } catch { /* ignore cache read error */ }
 
-    const certificate = await Certificate.findOne({ certificateNumber });
+    const certificate: any = await Certificate.findOne({ certificateNumber }).populate({
+      path: 'student',
+      populate: { path: 'course' },
+    });
     if (!certificate) {
       const res = { valid: false, message: 'Certificate not found' };
       try { await redis.set(cacheKey, JSON.stringify(res), 'EX', 300); } catch {}
@@ -73,14 +76,18 @@ class CertificateService {
       return res;
     }
 
+    const studentObj = certificate.student;
+    const studentName = certificate.studentName || (studentObj ? `${studentObj.firstName || ''} ${studentObj.lastName || ''}`.trim() : '');
+    const courseName = certificate.courseName || (studentObj?.course ? (typeof studentObj.course === 'object' ? studentObj.course.name || studentObj.course.courseName : studentObj.course) : '');
+
     const res = {
       valid: true,
       message: 'Certificate is valid',
       certificate: {
         certificateNumber: certificate.certificateNumber,
-        studentName: certificate.studentName,
-        courseName: certificate.courseName,
-        issueDate: certificate.issueDate,
+        studentName,
+        courseName,
+        issueDate: certificate.issuedDate,
         type: certificate.type,
       },
     };

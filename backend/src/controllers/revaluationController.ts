@@ -475,7 +475,7 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
       RevaluationRequest.find({
         student: { $in: studentIds },
         semester: semNum,
-        status: { $nin: ['Rejected', 'Cancelled'] },
+        status: { $nin: ['REJECTED', 'CANCELLED'] },
       }).lean(),
     ]);
 
@@ -541,7 +541,7 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
         allSubjects,
         feePerSubject,
         totalFee,
-        hasPendingPayment: !!existingPayment,
+        hasPendingPayment: paidSet.has(studentIdStr),
         submittedDate: new Date(),
       });
     }

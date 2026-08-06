@@ -76,14 +76,13 @@ userSchema.index({ resetPasswordExpires: 1 }, { expires: '1h' });
 userSchema.index({ email: 1, role: 1 });
 
 // XSS Sanitization & Trimming Pre-Save Hook
-userSchema.pre<IUser>('save', function (next) {
+userSchema.pre('save', function (this: IUser) {
   if (this.name) {
     this.name = this.name.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
   if (this.email) {
     this.email = this.email.trim().toLowerCase();
   }
-  next();
 });
 
 export const User = mongoose.model<IUser>('User', userSchema);
