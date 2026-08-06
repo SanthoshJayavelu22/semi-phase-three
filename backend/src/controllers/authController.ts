@@ -119,8 +119,11 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const validatedData = loginSchema.parse(req.body);
+    const email = validatedData.email.trim().toLowerCase();
 
-    const user = await User.findOne({ email: validatedData.email });
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${email.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') },
+    });
     if (!user || !user.password) {
       return sendError({ req, res, statusCode: 401, message: 'Invalid email or password' });
     }
@@ -154,15 +157,11 @@ export const login = async (req: Request, res: Response) => {
     const accessToken = generateToken(user._id.toString(), 'access');
     const refreshToken = generateToken(user._id.toString(), 'refresh');
 
-    // Persist the refresh token so refreshToken() can validate rotation. Without
-    // this the token was never stored, so every refresh hit the "stolen token"
-    // branch and logged the user out.
-    user.refreshTokens = user.refreshTokens || [];
-    user.refreshTokens.push({ token: refreshToken, createdAt: new Date() });
-    if (user.refreshTokens.length > 5) {
-      user.refreshTokens = user.refreshTokens.slice(-5);
-    }
-    await user.save();
+    const existingTokens = user.refreshTokens || [];
+    existingTokens.push({ token: refreshToken, createdAt: new Date() });
+    const finalTokens = existingTokens.length > 5 ? existingTokens.slice(-5) : existingTokens;
+
+    await User.updateOne({ _id: user._id }, { $set: { refreshTokens: finalTokens } });
 
     return sendSuccess({
       req,

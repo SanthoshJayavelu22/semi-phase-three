@@ -15,9 +15,9 @@ const updateMarksSchema = z.object({
       z.object({
         subjectCode: z.string().min(1, 'Subject code is required'),
         subjectName: z.string().min(1, 'Subject name is required'),
-        marksObtained: z.number().nullable().optional(),
+        marksObtained: z.union([z.coerce.number(), z.null()]).optional(),
         isAbsent: z.boolean().default(false),
-        totalMarks: z.number().default(100),
+        totalMarks: z.coerce.number().default(100),
       })
     )
     .min(1, 'At least one subject is required'),
@@ -34,9 +34,9 @@ const bulkUpdateMarksSchema = z.object({
             z.object({
               subjectCode: z.string().min(1),
               subjectName: z.string().min(1),
-              marksObtained: z.number().nullable().optional(),
+              marksObtained: z.union([z.coerce.number(), z.null()]).optional(),
               isAbsent: z.boolean().default(false),
-              totalMarks: z.number().default(100),
+              totalMarks: z.coerce.number().default(100),
             })
           )
           .min(1),
@@ -74,7 +74,7 @@ const getGradePoints = (marks: number | null, totalMarks: number = 100): number 
 };
 
 const getInstituteId = async (userId: string) => {
-  const institute = await Institute.findOne({ user: userId, status: 'Approved' });
+  const institute = await Institute.findOne({ user: userId });
   return institute?._id || null;
 };
 
@@ -323,9 +323,8 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
       }
     }
 
-    // Only the semesters array is modified — validate just that path so
-    // pre-existing incomplete student documents (e.g. missing homeAddress)
-    // don't block saving marks.
+    // Mark semesters array as modified so Mongoose persists nested updates
+    student.markModified('semesters');
     await student.save({ validateModifiedOnly: true });
 
     return sendSuccess({
@@ -407,8 +406,8 @@ export const bulkUpdateMarks = async (req: Request, res: Response) => {
           }
         }
 
-        // Only the semesters array is modified — validate just that path so
-        // pre-existing incomplete student documents don't block saving marks.
+        // Mark semesters array as modified so Mongoose persists nested updates
+        student.markModified('semesters');
         await student.save({ validateModifiedOnly: true });
         results.push({
           studentId: studentData.studentId,

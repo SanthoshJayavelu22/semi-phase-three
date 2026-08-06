@@ -253,7 +253,8 @@ const AcademyMarksUpdating = () => {
 
   // ─── Save Marks ────────────────────────────────────────────────────────────
   const handleSaveMarks = useCallback(async () => {
-    if (!selectedStudent) {
+    const studentId = selectedStudent?._id || selectedStudent?.id;
+    if (!selectedStudent || !studentId) {
       setToast({ message: 'Please select a student first.', type: 'warning' });
       return;
     }
@@ -278,21 +279,28 @@ const AcademyMarksUpdating = () => {
     setIsSubmitting(true);
     try {
       const payload = {
-        semesterNumber: selectedSemester,
-        subjects: marks.map((m) => ({
-          subjectCode: m.subjectCode,
-          subjectName: m.subjectName,
-          marksObtained: m.isAbsent === true ? null : m.marksObtained,
-          isAbsent: m.isAbsent === true,
-          totalMarks: m.totalMarks || 100,
-        })),
+        semesterNumber: Number(selectedSemester),
+        subjects: marks.map((m) => {
+          const isAbs = m.isAbsent === true;
+          let val = null;
+          if (!isAbs && m.marksObtained !== null && m.marksObtained !== undefined && m.marksObtained !== '') {
+            val = Number(m.marksObtained);
+          }
+          return {
+            subjectCode: m.subjectCode,
+            subjectName: m.subjectName,
+            marksObtained: val,
+            isAbsent: isAbs,
+            totalMarks: Number(m.totalMarks) || 100,
+          };
+        }),
       };
 
-      await marksService.updateStudentMarks(selectedStudent._id, payload);
+      await marksService.updateStudentMarks(studentId, payload);
 
       await fetchStudents();
 
-      const updatedRes = await marksService.getStudentMarks(selectedStudent._id, selectedSemester);
+      const updatedRes = await marksService.getStudentMarks(studentId, selectedSemester);
       const updatedData = updatedRes.data?.data || updatedRes.data;
       if (updatedData) {
         setSelectedStudent(updatedData);
@@ -301,7 +309,7 @@ const AcademyMarksUpdating = () => {
       setToast({ message: 'Marks saved successfully!', type: 'success' });
     } catch (err) {
       console.error('Error saving marks:', err);
-      setToast({ message: err.parsedMessage || 'Failed to save marks.', type: 'error' });
+      setToast({ message: err.parsedMessage || err.response?.data?.message || 'Failed to save marks.', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }

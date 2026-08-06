@@ -43,7 +43,7 @@ router.get(
 router.put(
   '/students/:studentId',
   protect,
-  authorize('admin', 'super_admin', 'board'),
+  authorize('admin', 'super_admin', 'board', 'institute'),
   updateStudentMarks
 );
 
@@ -51,7 +51,7 @@ router.put(
 router.post(
   '/students/bulk',
   protect,
-  authorize('admin', 'super_admin', 'board'),
+  authorize('admin', 'super_admin', 'board', 'institute'),
   bulkUpdateMarks
 );
 
