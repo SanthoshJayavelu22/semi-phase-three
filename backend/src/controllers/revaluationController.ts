@@ -9,6 +9,7 @@ import { Institute } from '../models/instituteModel';
 import { FeeRecord } from '../models/feeRecordModel';
 import revaluationService from '../services/revaluationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
+import { emitEvent } from '../config/socket';
 import razorpayInstance, { isRazorpayConfigured, keyId } from '../config/razorpay';
 import crypto from 'crypto';
 import {
@@ -414,6 +415,8 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
     };
 
     const revaluationRequest = await RevaluationRequest.create(requestData);
+
+    emitEvent('REVALUATION_UPDATED', { requestId: revaluationRequest._id, status: 'PENDING' });
 
     await Result.findByIdAndUpdate(validatedData.result, {
       $push: { revaluationRequests: revaluationRequest._id },

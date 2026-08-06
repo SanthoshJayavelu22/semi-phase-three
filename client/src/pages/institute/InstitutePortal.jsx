@@ -9,6 +9,7 @@ import {
 import authService from '../../api/auth';
 import { setTokens, clearAllTokens } from '../../api/apiClient';
 import instituteService from '../../api/institutes';
+import socket from '../../socket';
 import { getPaymentState, clearPaymentState } from '../../utils/razorpay';
 import { PaymentStatusChecker } from '../../Components/PaymentStatusChecker';
 import academicService from '../../api/academic';
@@ -616,6 +617,34 @@ const InstitutePortal = () => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [user, currentStep, fetchERPData, fetchApplication, setCurrentStep]);
+
+  // Real-Time Socket Listener for Instant Live Updates
+  useEffect(() => {
+    if (!user) return;
+
+    const handleLiveUpdate = () => {
+      if (currentStep === 'active_erp') {
+        fetchERPData().catch(() => {});
+      }
+      fetchApplication().catch(() => {});
+    };
+
+    socket.on('INSTITUTE_APPLICATION_UPDATED', handleLiveUpdate);
+    socket.on('MARKS_UPDATED', handleLiveUpdate);
+    socket.on('RESULTS_PUBLISHED', handleLiveUpdate);
+    socket.on('REVALUATION_UPDATED', handleLiveUpdate);
+    socket.on('EXAM_APPLICATION_UPDATED', handleLiveUpdate);
+    socket.on('HALL_TICKET_UPDATED', handleLiveUpdate);
+
+    return () => {
+      socket.off('INSTITUTE_APPLICATION_UPDATED', handleLiveUpdate);
+      socket.off('MARKS_UPDATED', handleLiveUpdate);
+      socket.off('RESULTS_PUBLISHED', handleLiveUpdate);
+      socket.off('REVALUATION_UPDATED', handleLiveUpdate);
+      socket.off('EXAM_APPLICATION_UPDATED', handleLiveUpdate);
+      socket.off('HALL_TICKET_UPDATED', handleLiveUpdate);
+    };
+  }, [user, currentStep, fetchERPData, fetchApplication]);
 
   // Fetch from backend when authenticated
   useEffect(() => {

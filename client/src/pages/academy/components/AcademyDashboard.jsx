@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }) => {
+const AcademyDashboard = ({ dynamicMetrics = {}, setActiveTab, allApplications = [] }) => {
   const navigate = useNavigate();
 
   // Quick navigation helper (supports both prop tab setter and router navigation)
@@ -54,7 +54,7 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer"
           >
             <Building2 className="w-4 h-4" />
-            Applications ({dynamicMetrics.pending || 0})
+            Applications ({dynamicMetrics?.pending || 0})
           </button>
           <button
             onClick={() => handleNavigate('/academy/remittance', 'remittance')}
@@ -82,7 +82,7 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
             </span>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics.approved || 0}</div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics?.approved || 0}</div>
             <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Approved Hospital Institutes</span>
             <span className="text-[10px] text-slate-400 font-semibold block mt-1">Certified for Fellowship Training</span>
           </div>
@@ -102,7 +102,7 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
             </span>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics.pending || 0}</div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics?.pending || 0}</div>
             <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Pending Accreditation Reviews</span>
             <span className="text-[10px] text-slate-400 font-semibold block mt-1">Awaiting inspection & board audit</span>
           </div>
@@ -122,7 +122,7 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
             </span>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics.total || 0}</div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics?.total || 0}</div>
             <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Total Hospital Applicants</span>
             <span className="text-[10px] text-slate-400 font-semibold block mt-1">Integrated SEMI Database</span>
           </div>
@@ -142,7 +142,7 @@ const AcademyDashboard = ({ dynamicMetrics, setActiveTab, allApplications = [] }
             </span>
           </div>
           <div className="mt-4">
-            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics.rejected || 0}</div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{dynamicMetrics?.rejected || 0}</div>
             <span className="text-xs font-extrabold text-slate-700 block mt-0.5">Rejected Applications</span>
             <span className="text-[10px] text-slate-400 font-semibold block mt-1">Did not meet minimum criteria</span>
           </div>

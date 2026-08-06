@@ -7,7 +7,9 @@ import AcademyDashboard from '../components/AcademyDashboard';
  */
 export default function AcademyDashboardPage() {
   const navigate = useNavigate();
-  const { dynamicMetrics } = useOutletContext();
+  const context = useOutletContext() || {};
+  const dynamicMetrics = context.dynamicMetrics || {};
+  const allApplications = context.allApplications || [];
 
   const setActiveTab = tab => {
     const routes = {
@@ -25,5 +27,5 @@ export default function AcademyDashboardPage() {
     navigate(routes[tab] || '/academy/dashboard');
   };
 
-  return <AcademyDashboard dynamicMetrics={dynamicMetrics} setActiveTab={setActiveTab} />;
+  return <AcademyDashboard dynamicMetrics={dynamicMetrics} allApplications={allApplications} setActiveTab={setActiveTab} />;
 }

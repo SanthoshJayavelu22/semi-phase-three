@@ -5,6 +5,7 @@ import { Course } from '../models/courseModel';
 import { Institute } from '../models/instituteModel';
 import { Result } from '../models/resultModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
+import { emitEvent } from '../config/socket';
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
@@ -326,6 +327,8 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
     // Mark semesters array as modified so Mongoose persists nested updates
     student.markModified('semesters');
     await student.save({ validateModifiedOnly: true });
+
+    emitEvent('MARKS_UPDATED', { studentId: student._id, semesterNumber: semNum });
 
     return sendSuccess({
       req,

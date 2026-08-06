@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { randomUUID as uuidv4 } from 'crypto';
@@ -9,6 +10,7 @@ import { seedSuperAdmin } from './config/seed';
 import { Batch } from './models/batchModel';
 import getRedisClient from './config/redis';
 import logger from './config/logger';
+import { initSocket } from './config/socket';
 
 import v1Routes from './routes/v1';
 import { notFound, errorHandler } from './middlewares/errorMiddleware';
@@ -190,7 +192,10 @@ if (process.env.SENTRY_DSN && Sentry?.Handlers?.errorHandler) {
 app.use(notFound);
 app.use(errorHandler);
 
-const server = app.listen(PORT, () => {
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
 });
 

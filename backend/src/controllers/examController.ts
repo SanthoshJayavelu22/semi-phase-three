@@ -8,6 +8,7 @@ import { Course } from '../models/courseModel';
 import { Batch } from '../models/batchModel';
 import { FeeRecord } from '../models/feeRecordModel';  // ← ADD THIS IMPORT
 import { sendSuccess, sendError } from '../utils/responseFormatter';
+import { emitEvent } from '../config/socket';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -164,6 +165,8 @@ export const applyForExam = async (req: Request, res: Response) => {
       utrNumber: validatedData.utrNumber,
       examFeeReceiptUrl,
     });
+
+    emitEvent('EXAM_APPLICATION_UPDATED', { applicationId: application._id, status: 'Pending' });
 
     return sendSuccess({ req, res, statusCode: 201, message: 'Exam application submitted successfully', data: application });
   } catch (error: any) {
