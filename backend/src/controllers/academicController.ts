@@ -78,7 +78,7 @@ const studentAddSchema = z.object({
   universityName: z.string().min(1, 'University Name is required'),
   medicalCouncilRegistrationNumber: z.string().min(1, 'Medical Council Registration Number is required'),
   isForeignGraduate: z.preprocess(
-    (val) => val === 'true' || val === true,
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
     z.boolean()
   ),
   fmgeClearanceStatus: z.enum(['Cleared', 'Not Applicable', 'Failed']).default('Not Applicable'),
@@ -104,7 +104,7 @@ const studentUpdateSchema = z.object({
   universityName: z.string().min(1, 'University Name is required').optional(),
   medicalCouncilRegistrationNumber: z.string().min(1, 'Medical Council Registration Number is required').optional(),
   isForeignGraduate: z.preprocess(
-    (val) => val === 'true' || val === true,
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
     z.boolean()
   ).optional(),
   fmgeClearanceStatus: z.enum(['Cleared', 'Not Applicable', 'Failed']).optional(),
@@ -628,6 +628,19 @@ export const addStudent = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
     }
 
+    // Idempotency check: prevent duplicate payment processing
+    if (validatedData.razorpayPaymentId) {
+      const existingPayment = await Student.findOne({ razorpayPaymentId: validatedData.razorpayPaymentId });
+      if (existingPayment) {
+        return sendError({
+          req,
+          res,
+          statusCode: 400,
+          message: 'Payment already processed and recorded for this student enrollment.',
+        });
+      }
+    }
+
     const course = await Course.findOne({ _id: validatedData.courseId, institute: institute._id });
     if (!course) {
       return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist or does not belong to this institute.' });
@@ -855,7 +868,7 @@ export const getPayableAmount = async (req: Request, res: Response) => {
     const pendingStudents = await Student.find({ institute: institute._id, remittedToAcademy: false })
       .select('firstName lastName enrollmentId email');
 
-    const ACADEMY_STUDENT_FEE = 50000;
+    const ACADEMY_STUDENT_FEE = Number(process.env.STUDENT_REMITTANCE_FEE_INR) || 50000;
     const count = pendingStudents.length;
     const payableAmount = count * ACADEMY_STUDENT_FEE;
 

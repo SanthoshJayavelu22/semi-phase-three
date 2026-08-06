@@ -56,7 +56,10 @@ function App() {
   useEffect(() => {
     const checkServerHealth = async () => {
       try {
-        await checkHealth();
+        const health = await checkHealth();
+        if (health?.status === 'unhealthy') {
+          setShowMaintenance(true);
+        }
       } catch (error) {
         console.warn('Initial server health check failed:', error);
       }

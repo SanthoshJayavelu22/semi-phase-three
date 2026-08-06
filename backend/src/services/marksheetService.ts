@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Marksheet } from '../models/marksheetModel';
 import { Result } from '../models/resultModel';
 
@@ -50,9 +51,15 @@ class MarksheetService {
 
   async bulkGenerate(resultIds: string[]) {
     const generated: any[] = [];
+    if (!Array.isArray(resultIds)) return generated;
 
     for (const resultId of resultIds) {
       try {
+        if (!resultId || !mongoose.Types.ObjectId.isValid(resultId)) {
+          console.warn(`Skipping invalid resultId: ${resultId}`);
+          continue;
+        }
+
         const result = await Result.findById(resultId).populate('student');
         if (!result) continue;
 

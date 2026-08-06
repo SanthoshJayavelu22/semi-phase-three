@@ -393,16 +393,21 @@ const InstituteERPRevaluation = () => {
             }
           } catch (verifyErr) {
             console.error('Verification failed:', verifyErr);
-            const statusRes = await revaluationService.getPaymentStatus(studentId, student.semester);
-            const statusData = statusRes.data?.data || statusRes.data;
-            if (statusData && statusData.paymentStatus === 'Completed') {
-              clearPaymentState();
-              setToast({ message: 'Payment verified!', type: 'success' });
-              await fetchEligibleStudents();
-              await fetchRequests();
-              setSelectedSingleStudent(null);
-              setSingleStudentMode(false);
-            } else {
+            try {
+              const statusRes = await revaluationService.getPaymentStatus(studentId, student.semester);
+              const statusData = statusRes.data?.data || statusRes.data;
+              if (statusData && statusData.paymentStatus === 'Completed') {
+                clearPaymentState();
+                setToast({ message: 'Payment verified!', type: 'success' });
+                await fetchEligibleStudents();
+                await fetchRequests();
+                setSelectedSingleStudent(null);
+                setSingleStudentMode(false);
+              } else {
+                setToast({ message: 'Payment processed but verification failed. Please contact support.', type: 'error' });
+              }
+            } catch (statusErr) {
+              console.error('Payment status check failed:', statusErr);
               setToast({ message: 'Payment processed but verification failed. Please contact support.', type: 'error' });
             }
             setProcessingStudentId(null);
@@ -604,7 +609,7 @@ const InstituteERPRevaluation = () => {
 
                 return (
                   <div
-                    key={subject.subjectCode}
+                    key={`${student.studentId}-${subject.subjectCode}`}
                     className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
                       isSelected
                         ? 'border-blue-400 bg-blue-50/60 shadow-sm'

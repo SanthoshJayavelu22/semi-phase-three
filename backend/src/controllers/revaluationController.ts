@@ -454,27 +454,47 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
     const students = await Student.find(studentFilter).populate('course', 'name');
 
     const semNum = parseInt(semester as string);
-    const eligibleStudents: any[] = [];
+    if (students.length === 0) {
+      return sendSuccess({ req, res, message: 'Eligible students retrieved successfully', data: [] });
+    }
 
-    for (const student of students) {
-      const result = await Result.findOne({
-        student: student._id,
+    const studentIds = students.map(s => s._id);
+
+    const [results, feeRecords, existingRequests] = await Promise.all([
+      Result.find({
+        student: { $in: studentIds },
         semester: semNum,
         isPublished: true,
-      });
+        isRevaluationActive: true,
+      }).lean(),
+      FeeRecord.find({
+        student: { $in: studentIds },
+        paymentPurpose: 'Revaluation fee',
+        semesterNumber: semNum,
+      }).lean(),
+      RevaluationRequest.find({
+        student: { $in: studentIds },
+        semester: semNum,
+        status: { $nin: ['Rejected', 'Cancelled'] },
+      }).lean(),
+    ]);
 
+    const resultMap = new Map(results.map(r => [r.student.toString(), r]));
+    const paidSet = new Set(feeRecords.map(f => f.student.toString()));
+    const requestMap = new Map(existingRequests.map(er => [er.student.toString(), er]));
+
+    const eligibleStudents: any[] = [];
+    const now = new Date();
+
+    for (const student of students) {
+      const studentIdStr = student._id.toString();
+      const result = resultMap.get(studentIdStr);
       if (!result) continue;
 
-      if (!result.isRevaluationActive || (result.revaluationDeadline && new Date() > result.revaluationDeadline)) {
+      if (result.revaluationDeadline && now > new Date(result.revaluationDeadline)) {
         continue;
       }
 
-      // Check if already paid
-      const existingPayment = await FeeRecord.findOne({
-        student: student._id,
-        paymentPurpose: 'Revaluation fee',
-        semesterNumber: semNum,
-      });
 
       // Check if request already exists
       const existingRequest = await RevaluationRequest.findOne({
@@ -505,7 +525,7 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
 
       if (eligibleSubjects.length === 0) continue;
 
-      const feePerSubject = 500;
+      const feePerSubject = Number(process.env.REVALUATION_FEE_PER_SUBJECT_INR) || 500;
       const totalFee = eligibleSubjects.length * feePerSubject;
 
       eligibleStudents.push({
@@ -612,7 +632,7 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
       return sendError({ req, res, statusCode: 400, message: 'No eligible subjects found for revaluation' });
     }
 
-    const feePerSubject = 500;
+    const feePerSubject = Number(process.env.REVALUATION_FEE_PER_SUBJECT_INR) || 500;
     const totalFee = eligibleSubjects.length * feePerSubject;
 
     return sendSuccess({

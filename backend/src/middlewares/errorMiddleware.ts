@@ -39,11 +39,25 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
   ) {
     let message;
     if (err.name === 'MulterError') {
-      message = err.code === 'LIMIT_FILE_SIZE' ? 'File is too large. Maximum allowed size is 10MB.' : `Upload error: ${err.message}`;
+      switch (err.code) {
+        case 'LIMIT_FILE_SIZE':
+          message = 'File is too large. Maximum allowed size is 10MB.';
+          break;
+        case 'LIMIT_UNEXPECTED_FILE':
+          message = 'Unexpected file field encountered in upload payload.';
+          break;
+        case 'LIMIT_FILE_COUNT':
+          message = 'Too many files uploaded for this field.';
+          break;
+        default:
+          message = `Upload error: ${err.message}`;
+      }
+    } else if (typeof err.http_code === 'number') {
+      message = `Cloudinary Upload Failure: ${err.message || 'Image processing error'}`;
     } else {
       const raw = err.message || '';
       if (/unknown file format|format not allowed|not allowed/i.test(raw)) {
-        message = 'This file could not be uploaded. Please check the file and try again.';
+        message = 'This file could not be uploaded. Please check the file format and try again.';
       } else {
         message = err.message || 'Upload failed. Please check the file and try again.';
       }

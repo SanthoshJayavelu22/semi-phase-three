@@ -6,6 +6,12 @@ const envSchema = z.object({
   PORT: z.string().or(z.number()).default(5003),
   MONGO_URI: z.string().min(1, 'MONGO_URI is required'),
   JWT_SECRET: z.string().min(8, 'JWT_SECRET must be at least 8 characters'),
+  JWT_REFRESH_SECRET: z.string().min(16, 'JWT_REFRESH_SECRET must be at least 16 characters').optional(),
+  // Business fee constants — optional, defaults are applied in code
+  INSPECTION_FEE_INR: z.coerce.number().positive().optional(),
+  STUDENT_REMITTANCE_FEE_INR: z.coerce.number().positive().optional(),
+  REVALUATION_FEE_PER_SUBJECT_INR: z.coerce.number().positive().optional(),
+  ATTENDANCE_MIN_PERCENTAGE: z.coerce.number().min(1).max(100).optional(),
 });
 
 export const validateEnv = () => {

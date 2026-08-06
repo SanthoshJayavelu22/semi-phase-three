@@ -48,6 +48,8 @@ export interface IInstitute extends Document {
   paymentCompletedAt?: Date;
   paymentAmount?: number;
   approvedSeats?: number;
+  isDeleted?: boolean;
+  deletedAt?: Date;
 }
 
 const instituteSchema: Schema = new Schema(
@@ -143,6 +145,15 @@ const instituteSchema: Schema = new Schema(
     approvedSeats: {
       type: Number,
       default: 5,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     }
   },
   {
@@ -156,6 +167,7 @@ instituteSchema.index({ emailAddress: 1 });
 instituteSchema.index({ orgName: 'text' });
 instituteSchema.index({ phoneNumber: 1 });
 instituteSchema.index({ paymentStatus: 1 });
+instituteSchema.index({ isDeleted: 1 });
 
 
 export const Institute = mongoose.model<IInstitute>('Institute', instituteSchema);

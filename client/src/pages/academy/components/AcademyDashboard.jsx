@@ -10,10 +10,8 @@ import {
   UserCheck, 
   Clock, 
   DollarSign, 
-  ArrowUpRight,
   Sparkles,
   ShieldCheck,
-  TrendingUp,
   Receipt
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

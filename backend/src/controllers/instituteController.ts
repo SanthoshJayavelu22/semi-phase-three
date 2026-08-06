@@ -180,8 +180,9 @@ export const createRazorpayOrder = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 400, message: 'Payment has already been completed for this application.' });
     }
 
-    const AMOUNT_INR = 5000;
-    const AMOUNT_PAISE = AMOUNT_INR * 100; // 500000 paise
+    // Fee amount is configurable via INSPECTION_FEE_INR env var (default 5000)
+    const AMOUNT_INR = Number(process.env.INSPECTION_FEE_INR) || 5000;
+    const AMOUNT_PAISE = AMOUNT_INR * 100;
 
     const options = {
       amount: AMOUNT_PAISE,
@@ -300,7 +301,7 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
         await sendEmail({
           email: req.user.email,
           subject: 'Payment Receipt Confirmation - Semi Phase 3',
-          message: `Hello ${req.user.name},\n\nWe have successfully received your payment.\nReceipt Number: ${receiptNumber}\nPayment ID: ${paymentIdToVerify}\nOrder ID: ${orderIdToVerify}\nAmount: INR 5,000.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
+          message: `Hello ${req.user.name},\n\nWe have successfully received your payment.\nReceipt Number: ${receiptNumber}\nPayment ID: ${paymentIdToVerify}\nOrder ID: ${orderIdToVerify}\nAmount: INR ${(Number(process.env.INSPECTION_FEE_INR) || 5000).toLocaleString('en-IN')}.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
               <h2 style="color: #2ecc71; text-align: center;">Payment Receipt Confirmation</h2>
@@ -324,7 +325,7 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
                   </tr>
                   <tr>
                     <td style="padding: 5px 0; color: #666; font-weight: bold;">Amount Paid:</td>
-                    <td style="padding: 5px 0; color: #333;">INR 5,000.00</td>
+                    <td style="padding: 5px 0; color: #333;">INR ${(Number(process.env.INSPECTION_FEE_INR) || 5000).toLocaleString('en-IN')}.00</td>
                   </tr>
                   <tr>
                     <td style="padding: 5px 0; color: #666; font-weight: bold;">Status:</td>
@@ -501,7 +502,43 @@ export const getMyApplication = async (req: Request, res: Response) => {
 
 export const listApplications = async (req: Request, res: Response) => {
   try {
-    const applications = await Institute.find({})
+    const isPaginated = req.query.page || req.query.limit;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const skip = (page - 1) * limit;
+
+    const query: any = { isDeleted: { $ne: true } };
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+
+    if (isPaginated) {
+      const [applications, total] = await Promise.all([
+        Institute.find(query)
+          .populate('user', 'name email')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        Institute.countDocuments(query),
+      ]);
+
+      return sendSuccess({
+        req,
+        res,
+        message: 'All institute applications retrieved successfully',
+        data: {
+          applications,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+          },
+        },
+      });
+    }
+
+    const applications = await Institute.find(query)
       .populate('user', 'name email')
       .sort({ createdAt: -1 });
 

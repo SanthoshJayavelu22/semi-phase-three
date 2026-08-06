@@ -12,6 +12,20 @@ class ErrorBoundary extends React.Component {
     return { hasError: true, error };
   }
 
+  componentDidMount() {
+    this.handleUnhandledRejection = (event) => {
+      console.error('Async unhandled promise rejection:', event.reason);
+      this.setState({ hasError: true, error: event.reason || new Error('Unhandled Promise Rejection') });
+    };
+    window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
+  }
+
+  componentWillUnmount() {
+    if (this.handleUnhandledRejection) {
+      window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
+    }
+  }
+
   componentDidCatch(error, errorInfo) {
     console.error('Error caught by React ErrorBoundary:', error, errorInfo);
   }

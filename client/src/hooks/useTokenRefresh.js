@@ -4,21 +4,36 @@ import authService from '../api/auth';
 
 export const useTokenRefresh = (intervalMs = 12 * 60 * 1000) => {
   const intervalRef = useRef(null);
+  // Use a Promise-based lock instead of a simple boolean to correctly
+  // serialise concurrent refresh calls from multiple tab-focus events or
+  // interval ticks that fire while a refresh is already in-flight.
+  const refreshPromiseRef = useRef(null);
 
   const refreshTokens = useCallback(async () => {
-    try {
-      const refreshToken = getRefreshToken();
-      if (!refreshToken) return;
+    // If a refresh is already in-flight return that same promise so callers
+    // share the result instead of triggering a second request.
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
 
-      const response = await authService.refreshToken(refreshToken);
-      const data = response.data?.data || response.data;
+    const doRefresh = async () => {
+      try {
+        const refreshToken = getRefreshToken();
+        if (!refreshToken) return;
 
-      if (data.accessToken) {
-        setTokens(data.accessToken, data.refreshToken);
+        const response = await authService.refreshToken(refreshToken);
+        const data = response.data?.data || response.data;
+
+        if (data?.accessToken) {
+          setTokens(data.accessToken, data.refreshToken);
+        }
+      } catch {
+        // Ignore — response interceptor handles auth errors cleanly
+      } finally {
+        refreshPromiseRef.current = null;
       }
-    } catch {
-      // Ignore here — the response interceptor will handle a hard 401 redirect.
-    }
+    };
+
+    refreshPromiseRef.current = doRefresh();
+    return refreshPromiseRef.current;
   }, []);
 
   useEffect(() => {

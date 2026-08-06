@@ -30,9 +30,12 @@ import { getUploadUrl } from '../../../api/apiClient';
 import Toast from '../../../Components/Toast';
 import academicService from '../../../api/academic';
 
+import ConfirmModal from '../../../Components/ConfirmModal';
+
 const InstituteERPStudentDetails = ({
   students = [],
-  fetchERPData
+  fetchERPData,
+  loading = false
 }) => {
   // ─── State ──────────────────────────────────────────────────────────────────
   const [selectedStudentId, setSelectedStudentId] = useState('');
@@ -43,6 +46,7 @@ const InstituteERPStudentDetails = ({
   const [filterBatch, setFilterBatch] = useState('All');
   const [filterCourse, setFilterCourse] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [confirmConfig, setConfirmConfig] = useState(null);
   const [expandedStudentId, setExpandedStudentId] = useState(null);
 
   // File upload state
@@ -293,25 +297,32 @@ const InstituteERPStudentDetails = ({
   };
 
   // ─── Delete Record ─────────────────────────────────────────────────────────
-  const handleDeleteRecord = async (studentId, semNum) => {
-    if (!window.confirm(`Are you sure you want to clear this student's attendance and thesis records for Semester ${semNum}?`)) return;
-
-    setIsSubmitting(true);
-    try {
-      await academicService.updateAcademicMetrics(studentId, {
-        semesterNumber: semNum,
-        clearAttendance: true,
-        clearThesis: true,
-      });
-      setSuccessMsg('Academic records cleared successfully.');
-      setTimeout(() => setSuccessMsg(null), 4000);
-      if (fetchERPData) await fetchERPData();
-    } catch (err) {
-      setErrorMsg(err.response?.data?.message || err.message || 'Failed to clear details');
-      setTimeout(() => setErrorMsg(null), 4000);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleDeleteRecord = (studentId, semNum) => {
+    setConfirmConfig({
+      title: 'Clear Academic Record',
+      message: `Are you sure you want to clear this student's attendance and thesis records for Semester ${semNum}?`,
+      type: 'danger',
+      confirmText: 'Clear Record',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setIsSubmitting(true);
+        try {
+          await academicService.updateAcademicMetrics(studentId, {
+            semesterNumber: semNum,
+            clearAttendance: true,
+            clearThesis: true,
+          });
+          setSuccessMsg('Academic records cleared successfully.');
+          setTimeout(() => setSuccessMsg(null), 4000);
+          if (fetchERPData) await fetchERPData();
+        } catch (err) {
+          setErrorMsg(err.response?.data?.message || err.message || 'Failed to clear details');
+          setTimeout(() => setErrorMsg(null), 4000);
+        } finally {
+          setIsSubmitting(false);
+        }
+      },
+    });
   };
 
   // ─── Toggle Expand ─────────────────────────────────────────────────────────
@@ -350,6 +361,16 @@ const InstituteERPStudentDetails = ({
     }
     return { label: 'Incomplete', color: 'bg-rose-100 text-rose-700 border-rose-200' };
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[350px] bg-white border border-slate-100 rounded-3xl p-12 shadow-sm text-center">
+        <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+        <p className="text-sm font-black text-slate-800 tracking-tight">Loading Student Details...</p>
+        <p className="text-xs text-slate-400 font-medium mt-1">Fetching latest academic records from backend</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
@@ -469,11 +490,12 @@ const InstituteERPStudentDetails = ({
           <div className="space-y-3">
             {paginatedGroups.map((group) => {
               const overallStatus = getOverallStatus(group.semesters);
+              const studentKey = group._id || group.id || group.enrollmentNo;
               const isExpanded = expandedStudentId === (group._id || group.id);
 
               return (
                 <div 
-                  key={group._id || group.id} 
+                  key={studentKey} 
                   className={`border rounded-2xl transition-all duration-200 ${
                     isExpanded ? 'border-blue-300 shadow-md shadow-blue-100/50' : 'border-slate-200 hover:border-slate-300'
                   }`}
@@ -515,7 +537,7 @@ const InstituteERPStudentDetails = ({
                           const isComplete = sem.attendancePercentage >= 75 && sem.thesisApproved;
                           return (
                             <div 
-                              key={idx}
+                              key={sem._id || sem.semesterNumber || `sem-dot-${idx}`}
                               className={`w-2.5 h-2.5 rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-amber-500'}`}
                               title={`Sem ${sem.semesterNumber}: ${isComplete ? 'Complete' : 'Incomplete'}`}
                             />
@@ -962,6 +984,19 @@ const InstituteERPStudentDetails = ({
         </div>
         );
       })()}
+
+      {/* ─── CONFIRM MODAL ─────────────────────────────────────────────────── */}
+      {confirmConfig && (
+        <ConfirmModal
+          isOpen={!!confirmConfig}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          type={confirmConfig.type || 'danger'}
+          confirmText={confirmConfig.confirmText || 'Confirm'}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
 
       {/* ─── TOASTS ──────────────────────────────────────────────────────────── */}
       {toast && (

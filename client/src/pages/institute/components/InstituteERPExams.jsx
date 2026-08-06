@@ -23,7 +23,6 @@ const InstituteERPExams = ({
   const [viewingApp, setViewingApp] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [feeRecords, setFeeRecords] = useState([]);
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +42,7 @@ const InstituteERPExams = ({
       }
     };
     fetchFeeRecords();
-  }, []);
+  }, [selectedSemester, selectedCourseId]);
 
   const [activePage, setActivePage] = useState(1);
   const itemsPerPage = 5;

@@ -71,10 +71,10 @@ const Toast = ({ message, type = 'error', onClose, duration = 6000 }) => {
     return String(msg);
   };
 
-  const displayMessage = formatMessage(message);
+  const displayMessage = formatMessage(message).replace(/^[\u{1F300}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2705}\u{274C}\u{26A0}\u{2139}\u{1F914}\u{1F4A1}\u{1F4E3}]+\s*/u, '');
 
   return (
-    <div className={`fixed bottom-6 right-6 z-[9999] max-w-md w-full p-4 rounded-2xl border shadow-2xl ${config.bg} flex items-start gap-3.5 animate-in slide-in-from-bottom-6 fade-in duration-300 overflow-hidden`}>
+    <div className={`fixed bottom-6 right-6 z-[9999] max-w-md w-full p-4 rounded-2xl border shadow-2xl ${config.bg} flex items-start gap-3.5 animate-in slide-in-from-bottom-6 fade-in duration-300 overflow-hidden`} role="alert">
       {/* Dynamic Progress indicator bar at bottom */}
       {duration && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200/50">
@@ -106,6 +106,7 @@ const Toast = ({ message, type = 'error', onClose, duration = 6000 }) => {
       <button 
         type="button" 
         onClick={onClose}
+        aria-label="Close notification"
         className="p-1 hover:bg-black/5 rounded-lg text-gray-500 hover:text-gray-900 transition-colors flex-shrink-0 mt-0.5"
       >
         <X className="w-4 h-4" />

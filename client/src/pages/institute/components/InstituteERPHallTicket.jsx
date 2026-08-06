@@ -458,7 +458,7 @@ const InstituteERPHallTicket = ({
             <tbody>
               ${(examDetails.subjects || []).map(s => `
                 <tr>
-                  <td>${s.date ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '30th July 2026'}</td>
+                  <td>${s.date ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                   <td>
                     <strong>Paper ${s.paperNumber}</strong><br/>
                     ${s.paperName}
@@ -487,7 +487,7 @@ const InstituteERPHallTicket = ({
             <table class="exam-table">
               <tr>
                 <td style="width: 25%;">Date</td>
-                <td style="width: 75%;">${examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '3rd August 2026'}</td>
+                <td style="width: 75%;">${examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
               </tr>
               <tr>
                 <td>Appearing</td>
@@ -1188,7 +1188,7 @@ const InstituteERPHallTicket = ({
                       <tbody>
                         {(examDetails.subjects || []).map((sub, i) => (
                           <tr key={i} className="border-b border-black last:border-b-0">
-                            <td className="p-2 border-r border-black font-medium">{sub.date ? new Date(sub.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '30th July 2026'}</td>
+                            <td className="p-2 border-r border-black font-medium">{sub.date ? new Date(sub.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                             <td className="p-2 border-r border-black">
                               <strong>Paper {sub.paperNumber}</strong><br/>
                               {sub.paperName}
@@ -1220,7 +1220,7 @@ const InstituteERPHallTicket = ({
                         <tbody>
                           <tr className="border-b border-black">
                             <td className="p-2 border-r border-black w-1/4">Date</td>
-                            <td className="p-2">{examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '3rd August 2026'}</td>
+                            <td className="p-2">{examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                           </tr>
                           <tr className="border-b border-black">
                             <td className="p-2 border-r border-black">Appearing</td>

@@ -3,11 +3,34 @@ import axios from 'axios';
 export const getBaseURL = () => {
   try {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
-      return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5003/api';
+      const url = import.meta.env.VITE_API_BASE_URL;
+      if (url) return url;
+
+      // In production builds the env var MUST be set. Failing loudly here
+      // prevents the app from silently hitting localhost:5003 in prod, which
+      // would result in every API request failing with a network error.
+      if (import.meta.env.PROD) {
+        const msg =
+          '[Config Error]: VITE_API_BASE_URL is not set in the production build environment. ' +
+          'Set this variable in your CI/CD pipeline or hosting provider before deploying.';
+        console.error(msg);
+        // Surface via a banner if the document is already loaded
+        if (typeof document !== 'undefined' && document.body) {
+          const banner = document.createElement('div');
+          banner.style.cssText =
+            'position:fixed;top:0;left:0;right:0;z-index:99999;padding:12px 16px;background:#dc2626;color:#fff;font:bold 13px/1.4 sans-serif;text-align:center;';
+          banner.textContent = 'API misconfiguration: VITE_API_BASE_URL is not set. Contact the administrator.';
+          document.body.prepend(banner);
+        }
+        // Fall through to localhost so the app can still boot in offline/demo scenarios
+      } else {
+        console.warn('[Config Warning]: VITE_API_BASE_URL is not set in environment. Falling back to http://localhost:5003/api');
+      }
     }
   } catch { /* ignore */ }
   return 'http://localhost:5003/api';
 };
+
 
 export const getUploadUrl = (filename) => {
   if (!filename) return '';

@@ -589,9 +589,9 @@ const InstitutePortal = () => {
     if (user && token) {
       intervalId = setInterval(() => {
         if (currentStep === 'active_erp') {
-          fetchERPData();
+          fetchERPData().catch(err => console.warn('Failed auto-polling ERP data:', err));
         } else if (currentStep === 'pending_review' || currentStep === 'status') {
-          fetchApplication();
+          fetchApplication().catch(err => console.warn('Failed auto-polling application status:', err));
         } else if (currentStep === 'verify_pending') {
           authService.checkStatus()
             .then(res => {

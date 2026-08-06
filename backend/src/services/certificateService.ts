@@ -1,4 +1,5 @@
 import { Certificate } from '../models/certificateModel';
+import getRedisClient from '../config/redis';
 
 function generateRandomString(length = 8): string {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -49,30 +50,45 @@ class CertificateService {
   }
 
   async verifyCertificate(certificateNumber: string) {
+    const redis = getRedisClient();
+    const cacheKey = `cert:verify:${certificateNumber}`;
+
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch { /* ignore cache read error */ }
+
     const certificate = await Certificate.findOne({ certificateNumber });
     if (!certificate) {
-      return { valid: false, message: 'Certificate not found' };
+      const res = { valid: false, message: 'Certificate not found' };
+      try { await redis.set(cacheKey, JSON.stringify(res), 'EX', 300); } catch {}
+      return res;
     }
 
     if (certificate.isRevoked) {
-      return { valid: false, message: 'Certificate has been revoked' };
+      const res = { valid: false, message: 'Certificate has been revoked' };
+      try { await redis.set(cacheKey, JSON.stringify(res), 'EX', 300); } catch {}
+      return res;
     }
 
-    if (!certificate.isVerified) {
-      return { valid: false, message: 'Certificate not verified' };
-    }
-
-    return {
+    const res = {
       valid: true,
       message: 'Certificate is valid',
       certificate: {
-        student: certificate.student,
+        certificateNumber: certificate.certificateNumber,
+        studentName: certificate.studentName,
+        courseName: certificate.courseName,
+        issueDate: certificate.issueDate,
         type: certificate.type,
-        issuedDate: certificate.issuedDate,
-        academicYear: certificate.academicYear,
       },
     };
+
+    try { await redis.set(cacheKey, JSON.stringify(res), 'EX', 1800); } catch {}
+    return res;
   }
 }
 
 export default new CertificateService();
+

@@ -60,11 +60,12 @@ const AcademyInspectorModal = ({
   ];
 
   const getDocUrlForField = (key) => {
+    if (!selectedApp) return '';
     const fileData = selectedApp.uploadedDocs?.[key];
     return getDocUrl(fileData?.url || selectedApp.form?.documents?.[key + 'Url'] || selectedApp.form?.[key + 'Url'] || selectedApp.form?.[key]);
   };
 
-  const isApproved = selectedApp.status === 'approved' || selectedApp.status === 'active_erp';
+  const isApproved = selectedApp?.status === 'approved' || selectedApp?.status === 'active_erp';
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -77,11 +78,11 @@ const AcademyInspectorModal = ({
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-black text-slate-800 truncate">{selectedApp.orgName}</h3>
+              <h3 className="text-sm font-black text-slate-800 truncate">{selectedApp?.orgName || selectedApp?.form?.orgName || 'Institute Application'}</h3>
               <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="font-medium">ID: {selectedApp.id}</span>
+                <span className="font-medium">ID: {selectedApp?.id || 'N/A'}</span>
                 <span className="text-slate-300">•</span>
-                <span className="font-medium">{selectedApp.email}</span>
+                <span className="font-medium">{selectedApp?.email || selectedApp?.form?.emailAddress || 'N/A'}</span>
               </div>
             </div>
           </div>

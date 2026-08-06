@@ -55,6 +55,14 @@ export const authLimiter = createRateLimiter({
 
 export const generalLimiter = createRateLimiter({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 2000, // 200 requests per minute
+  max: 2000, // 2000 requests per minute
   message: 'Too many requests, please slow down.',
 });
+
+export const passwordResetLimiter = createRateLimiter({
+  windowMs: 5 * 60 * 1000, // 15 minutes
+  max: 5, // 3 requests per 15 minutes
+  message: 'Too many password reset requests from this IP. Please try again after 15 minutes.',
+});
+
+

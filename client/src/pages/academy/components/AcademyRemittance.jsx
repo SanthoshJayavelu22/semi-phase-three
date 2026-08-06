@@ -51,7 +51,7 @@ const AcademyRemittance = () => {
 
   // ─── Data Aggregation ────────────────────────────────────────────────────────
   const fetchAllTreasuryRecords = async () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_board_user');
+    const token = localStorage.getItem('semi_board_token') || localStorage.getItem('semi_access_token') || localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_board_user');
     if (!token) {
       setLoading(false);
       return;

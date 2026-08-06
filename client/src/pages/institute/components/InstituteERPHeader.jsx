@@ -56,6 +56,7 @@ const InstituteERPHeader = ({ activeTab, user, appForm, handleLogout }) => {
             onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-all text-xs font-bold border border-slate-100 hover:border-rose-100 cursor-pointer"
             title="Logout Session"
+            aria-label="Logout Session"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Logout</span>

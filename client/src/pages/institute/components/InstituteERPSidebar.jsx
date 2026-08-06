@@ -55,6 +55,7 @@ const InstituteERPSidebar = ({
         <button
           type="button"
           onClick={() => handleTabClick('dashboard')}
+          aria-label="Dashboard"
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'dashboard'
               ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
@@ -70,6 +71,7 @@ const InstituteERPSidebar = ({
         <button
           type="button"
           onClick={() => handleTabClick('courses')}
+          aria-label="Courses"
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'courses'
               ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
@@ -83,6 +85,7 @@ const InstituteERPSidebar = ({
         <button
           type="button"
           onClick={() => handleTabClick('batches')}
+          aria-label="Batches"
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'batches'
               ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'

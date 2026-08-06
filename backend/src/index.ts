@@ -118,8 +118,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { dotfiles: 'ignore', index: false }));
+app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), { dotfiles: 'ignore', index: false }));
 
 app.use((req: any, res: any, next: any) => {
   const start = Date.now();
@@ -136,30 +136,24 @@ app.use((req: any, res: any, next) => {
   res.setHeader('X-Request-ID', req.requestId);
   
   const startTime = Date.now();
-  console.log(`\n--- 📥 [${req.requestId}] Incoming Request: ${req.method} ${req.originalUrl}`);
-  if (req.body && Object.keys(req.body).length > 0) {
-    const loggedBody = sanitizeLogData(req.body);
-    console.log(`[${req.requestId}] Request Body:`, JSON.stringify(loggedBody, null, 2));
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`\n--- 📥 [${req.requestId}] Incoming Request: ${req.method} ${req.originalUrl}`);
+    if (req.body && Object.keys(req.body).length > 0) {
+      const loggedBody = sanitizeLogData(req.body);
+      console.log(`[${req.requestId}] Request Body:`, JSON.stringify(loggedBody, null, 2));
+    }
   }
 
-  // Intercept res.json to log the response
+  // Intercept res.json to log the response in dev environment
   const originalJson = res.json;
   res.json = function (body: any) {
     const duration = Date.now() - startTime;
-    console.log(`--- 📤 [${req.requestId}] Response JSON Sent: ${res.statusCode} (took ${duration}ms)`);
-    console.log(`[${req.requestId}] Response Body:`, JSON.stringify(body, null, 2));
-    return originalJson.apply(this, arguments);
-  };
-
-  // Intercept res.send to log the response
-  const originalSend = res.send;
-  res.send = function (body: any) {
-    const duration = Date.now() - startTime;
-    console.log(`--- 📤 [${req.requestId}] Response Send Sent: ${res.statusCode} (took ${duration}ms)`);
-    if (typeof body === 'string') {
-      console.log(`[${req.requestId}] Response Body:`, body.length > 500 ? body.substring(0, 500) + '...' : body);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`--- 📤 [${req.requestId}] Response JSON Sent: ${res.statusCode} (took ${duration}ms)`);
+    } else {
+      console.log(`[${req.method} ${req.originalUrl}] -> ${res.statusCode} (${duration}ms)`);
     }
-    return originalSend.apply(this, arguments);
+    return originalJson.apply(this, arguments);
   };
 
   next();

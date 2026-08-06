@@ -655,7 +655,7 @@ const AcademyPublishResults = () => {
             <div className="mt-2 text-xs text-amber-700 bg-amber-50/80 p-2 rounded-xl border border-amber-200">
               <span className="font-bold">⚠️ {generatedResults.errors} students were skipped:</span>
               {generatedResults.errorDetails?.slice(0, 3).map((err, i) => (
-                <div key={i} className="mt-0.5">{err.name}: {err.reason}</div>
+                <div key={`${err.name || 'err'}-${i}`} className="mt-0.5">{err.name}: {err.reason}</div>
               ))}
               {generatedResults.errors > 3 && (
                 <div className="text-slate-500 text-[10px]">+ {generatedResults.errors - 3} more</div>

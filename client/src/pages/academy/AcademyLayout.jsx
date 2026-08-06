@@ -420,13 +420,12 @@ export default function AcademyLayout() {
   };
 
   // ─── Outlet Context ────────────────────────────────────────────────────────────
-  const outletContext = {
+  const outletContext = useMemo(() => ({
     boardUser,
-    students,
+    applications: filteredApplications,
+    students: filteredStudents,
     allApplications,
-    dynamicMetrics,
-    filteredApplications,
-    filteredStudents,
+    metrics: dynamicMetrics,
     searchQuery, setSearchQuery,
     studentSearchQuery, setStudentSearchQuery,
     statusFilter, setStatusFilter,
@@ -442,12 +441,29 @@ export default function AcademyLayout() {
     setSuccessMsg,
     examApplications,
     setExamApplications,
-     AcademyMarksUpdating,
-      AcademyStudentMarks,
-      AcademyPublishResults,
-      AcademyPublishDetails,
-      AcademyRevaluation,
-  };
+    AcademyMarksUpdating,
+    AcademyStudentMarks,
+    AcademyPublishResults,
+    AcademyPublishDetails,
+    AcademyRevaluation,
+  }), [
+    boardUser,
+    filteredApplications,
+    filteredStudents,
+    allApplications,
+    dynamicMetrics,
+    searchQuery,
+    studentSearchQuery,
+    statusFilter,
+    selectedStudentId,
+    selectedApp,
+    fetchBoardData,
+    handleViewStudent,
+    handleVerifyStudentEligibility,
+    handleApprove,
+    handleTriggerInspection,
+    examApplications,
+  ]);
 
   // ─── Auth Guard ───────────────────────────────────────────────────────────────
   if (!boardUser) {

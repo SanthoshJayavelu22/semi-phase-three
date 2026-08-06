@@ -52,16 +52,19 @@ export const register = async (req: Request, res: Response) => {
       role: 'institute',
     });
 
-    // In a real app, send an email with the verificationToken here
+    // Send verification email. We track delivery so the client can warn the
+    // user if the email failed without blocking the registration itself.
+    let emailSent = false;
+    let emailError: string | null = null;
     try {
       const verificationLink = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
       await sendEmail({
         email: user.email,
-        subject: 'Email Verification - Semi Phase 3',
-        message: `Welcome to Semi Phase 3! Please verify your email by clicking: ${verificationLink}`,
+        subject: 'Verify Your Email Address - Semi Phase 3',
+        message: `Hello ${user.name},\n\nPlease verify your email address by clicking the link below:\n${verificationLink}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #333333; text-align: center;">Verify Your Email</h2>
+            <h2 style="color: #333333; text-align: center;">Verify Your Email Address</h2>
             <p>Hello ${user.name},</p>
             <p>Thank you for registering. Please click the button below to verify your email address and activate your account:</p>
             <div style="text-align: center; margin: 30px 0;">
@@ -74,8 +77,10 @@ export const register = async (req: Request, res: Response) => {
           </div>
         `
       });
+      emailSent = true;
     } catch (emailErr: any) {
       console.error('Email verification sending failed:', emailErr.message);
+      emailError = 'Verification email could not be delivered. Please use "Resend Verification" from your dashboard.';
     }
 
     const accessToken = generateToken(user._id.toString(), 'access');
@@ -92,13 +97,17 @@ export const register = async (req: Request, res: Response) => {
       req,
       res,
       statusCode: 201,
-      message: 'Registration successful. Please verify your email.',
+      message: emailSent
+        ? 'Registration successful. Please verify your email.'
+        : 'Registration successful, but the verification email could not be sent.',
       data: {
         accessToken,
         refreshToken,
         userId: user._id,
         email: user.email,
         name: user.name,
+        emailSent,
+        ...(emailError ? { emailWarning: emailError } : {}),
       },
     });
   } catch (error: any) {
@@ -324,6 +333,8 @@ export const resetPassword = async (req: Request, res: Response) => {
     user.password = await bcrypt.hash(newPassword, salt);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    user.refreshTokens = [];
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
 
     return sendSuccess({ req, res, message: 'Password reset successful' });
@@ -514,7 +525,15 @@ const successHtml = (name: string) => `
       <p>Hello <strong>${name}</strong>, your email address has been confirmed and your account is now fully active.</p>
       <p>You can now sign in and begin your institute onboarding journey.</p>
       <div class="divider"></div>
-      <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" class="btn">
+      <a href="${(() => {
+        const raw = process.env.CLIENT_URL || process.env.FRONTEND_URL || '/institute/login';
+        try {
+          const parsed = new URL(raw, 'http://localhost:5173');
+          return parsed.href;
+        } catch {
+          return '/institute/login';
+        }
+      })()}" class="btn">
         Proceed to Login →
       </a>
       <div class="footer">Semi Phase 3 &mdash; Institute Onboarding Platform</div>

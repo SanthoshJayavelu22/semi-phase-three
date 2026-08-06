@@ -702,7 +702,7 @@ const AcademyMarksUpdating = () => {
 
                         return (
                           <tr
-                            key={subject.subjectCode || idx}
+                            key={subject.subjectCode || `subject-${selectedStudent._id}-${subject.subjectName}`}
                             className={`hover:bg-slate-50/70 transition-colors ${isAbsent ? 'bg-rose-50/40' : ''}`}
                           >
                             <td className="px-4 py-3.5 text-center font-bold text-slate-400 text-sm">

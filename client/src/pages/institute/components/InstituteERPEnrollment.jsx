@@ -53,6 +53,11 @@ const InstituteERPEnrollment = ({
   // Local state to track "Is FMG Candidate?" matching screenshot dropdown
   const [isFmgSelected, setIsFmgSelected] = useState(enrollForm.studentCategory === 'FMG' ? 'Yes' : 'No');
 
+  // Selected course object for dynamic fee / details
+  const selectedCourseObj = React.useMemo(() => {
+    return courses.find(c => (c.name || c.courseName || '').toLowerCase() === (enrollForm.course || '').toLowerCase());
+  }, [courses, enrollForm.course]);
+
   // Filter batches matching the selected course
   const filteredBatches = React.useMemo(() => {
     return batches.filter(b => {
@@ -317,7 +322,7 @@ const InstituteERPEnrollment = ({
         currency: orderData.currency || 'INR',
         keyId: orderData.keyId,
         name: 'SEMI Student Enrollment',
-        description: 'Enrollment Fee - ₹1,40,000',
+        description: `Enrollment Fee - ₹${(selectedCourseObj?.fee || 140000).toLocaleString('en-IN')}`,
         paymentType: 'enrollment',
         additionalData: { purpose: 'Student Enrollment' },
         prefill: {
@@ -421,7 +426,7 @@ const InstituteERPEnrollment = ({
         </div>
         <div className="bg-blue-600 text-white rounded-2xl px-6 py-3 shadow-md text-center flex flex-col items-center shadow-blue-500/15">
           <span className="text-[9px] text-blue-200 uppercase font-black tracking-widest block">App Fee Due</span>
-          <span className="text-lg font-black tracking-tight">₹1,40,000</span>
+          <span className="text-lg font-black tracking-tight">₹{(selectedCourseObj?.fee || 140000).toLocaleString('en-IN')}</span>
         </div>
       </div>``
 
@@ -870,7 +875,7 @@ const InstituteERPEnrollment = ({
                 {/* Remittance Info Removed */}
                 <div className="lg:col-span-2 space-y-4 bg-slate-50/50 border border-slate-100 p-5 rounded-2xl flex flex-col justify-center items-center text-center">
                   <div className="text-slate-400 font-medium text-sm mb-4">
-                    Secure payment is processed through Razorpay. You will be prompted to complete the ₹1,40,000 fee when you submit the application.
+                    Secure payment is processed through Razorpay. You will be prompted to complete the ₹{(selectedCourseObj?.fee || 140000).toLocaleString('en-IN')} fee when you submit the application.
                   </div>
                   <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4" />

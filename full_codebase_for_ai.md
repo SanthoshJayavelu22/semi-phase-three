@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-08-05T11:07:10.252Z
+> Auto-generated on 2026-08-05T13:23:04.841Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -15,8 +15,10 @@ semi-phase-three/
 │   │   ├── combined.log
 │   │   └── error.log
 │   ├── migrations
-│   │   └── 001-seed-refresh-tokens.ts
+│   │   ├── 001-seed-refresh-tokens.ts
+│   │   └── 002-add-user-institute-indexes.ts
 │   ├── scripts
+│   │   ├── add-auth-status.ts
 │   │   ├── backup.ts
 │   │   ├── create-migration.ts
 │   │   ├── migration-template.ts
@@ -28,6 +30,7 @@ semi-phase-three/
 │   │   │   └── health.test.ts
 │   │   ├── config
 │   │   │   ├── apm.ts
+│   │   │   ├── constants.ts
 │   │   │   ├── db.ts
 │   │   │   ├── envValidation.ts
 │   │   │   ├── logger.ts
@@ -101,6 +104,7 @@ semi-phase-three/
 │   │   │   └── index.ts
 │   │   ├── utils
 │   │   │   ├── errorHandler.ts
+│   │   │   ├── fileHelpers.ts
 │   │   │   ├── helpers.ts
 │   │   │   ├── responseFormatter.ts
 │   │   │   ├── sanitizeLogs.ts
@@ -730,8 +734,34 @@ try {
 ### `backend/ecosystem.config.js`
 
 ```javascript
-��m o d u l e . e x p o r t s   =   {   a p p s :   [ {   n a m e :   ' s e m i - b a c k e n d ' ,   s c r i p t :   ' . / d i s t / i n d e x . j s ' ,   i n s t a n c e s :   ' m a x ' ,   e x e c _ m o d e :   ' c l u s t e r ' ,   e n v _ p r o d u c t i o n :   {   N O D E _ E N V :   ' p r o d u c t i o n '   }   } ]   } ;  
- 
+module.exports = {
+  apps: [
+    {
+      name: 'semi-backend',
+      script: 'dist/index.js',
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      autorestart: true,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 5003
+      },
+      env_development: {
+        NODE_ENV: 'development',
+        PORT: 5003
+      },
+      error_file: './logs/error.log',
+      out_file: './logs/combined.log',
+      log_file: './logs/combined.log',
+      time: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    }
+  ]
+};
+
+
 ```
 
 ### `backend/last_400_error.log`
@@ -856,6 +886,30 @@ export const down = async (): Promise<void> => {
     { $set: { refreshTokens: [] } }
   );
   console.log('Migration down completed: cleared all seeded refresh tokens');
+};
+
+```
+
+### `backend/migrations/002-add-user-institute-indexes.ts`
+
+```typescript
+import mongoose from 'mongoose';
+
+export const up = async (): Promise<void> => {
+  // Add audit indexes to academic_records and users collections for query performance
+  await mongoose.connection.collection('users').createIndex({ email: 1, role: 1 });
+  await mongoose.connection.collection('institutes').createIndex({ status: 1 });
+  console.log('Migration up completed: Created indexes on users and institutes collections');
+};
+
+export const down = async (): Promise<void> => {
+  try {
+    await mongoose.connection.collection('users').dropIndex('email_1_role_1');
+    await mongoose.connection.collection('institutes').dropIndex('status_1');
+  } catch (err) {
+    console.warn('Migration down warning:', err);
+  }
+  console.log('Migration down completed');
 };
 
 ```
@@ -4253,6 +4307,57 @@ export const down = async (): Promise<void> => {
 }
 ```
 
+### `backend/scripts/add-auth-status.ts`
+
+```typescript
+import fs from 'fs';
+import path from 'path';
+
+const postmanPath = path.join(__dirname, '../../postman_collection.json');
+
+if (fs.existsSync(postmanPath)) {
+  const collection = JSON.parse(fs.readFileSync(postmanPath, 'utf8'));
+
+  // Find the Auth folder
+  const authFolder = collection.item.find((i: any) => i.name === '🔐 Auth');
+
+  if (authFolder) {
+    // Check if status exists
+    const exists = authFolder.item.find((req: any) => req.request.url.path.includes('status'));
+    if (!exists) {
+      authFolder.item.push({
+        name: "GET Auth Status",
+        request: {
+          method: "GET",
+          header: [
+            {
+              key: "Authorization",
+              value: "Bearer {{accessToken}}"
+            }
+          ],
+          url: {
+            raw: "{{base_url}}/api/auth/status",
+            host: ["{{base_url}}"],
+            path: ["api", "auth", "status"]
+          },
+          description: "Returns the current user's verification status, email, name, and role."
+        },
+        response: []
+      });
+      fs.writeFileSync(postmanPath, JSON.stringify(collection, null, 2));
+      console.log('Added GET /auth/status to postman collection');
+    } else {
+      console.log('GET /auth/status already exists in postman collection');
+    }
+  } else {
+    console.log('Could not find Auth folder');
+  }
+} else {
+  console.log('Postman collection file not found');
+}
+
+```
+
 ### `backend/scripts/backup.ts`
 
 ```typescript
@@ -4618,31 +4723,56 @@ export const initMonitoring = () => {
 
 ```
 
+### `backend/src/config/constants.ts`
+
+```typescript
+export const APP_CONSTANTS = {
+  ATTENDANCE_MIN_PERCENTAGE: Number(process.env.ATTENDANCE_MIN_PERCENTAGE) || 75,
+  STUDENT_REMITTANCE_FEE_INR: Number(process.env.STUDENT_REMITTANCE_FEE_INR) || 50000,
+  REVALUATION_FEE_PER_SUBJECT_INR: Number(process.env.REVALUATION_FEE_PER_SUBJECT_INR) || 500,
+  INSPECTION_FEE_INR: Number(process.env.INSPECTION_FEE_INR) || 25000,
+  DEFAULT_APPROVED_SEATS: Number(process.env.DEFAULT_APPROVED_SEATS) || 5,
+};
+
+```
+
 ### `backend/src/config/db.ts`
 
 ```typescript
 import mongoose from 'mongoose';
 
-export const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/my_database', {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+export const connectDB = async (retries = 5, delay = 5000): Promise<void> => {
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/my_database';
 
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
-    });
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const conn = await mongoose.connect(mongoUri, {
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+      });
+      console.log(`MongoDB Connected: ${conn.connection.host}`);
 
-    mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected. Connection lost.');
-    });
-  } catch (error: any) {
-    console.error(`MongoDB connection failed: ${error.message}`);
-    process.exit(1);
+      mongoose.connection.on('error', (err) => {
+        console.error('MongoDB connection error:', err);
+      });
+
+      mongoose.connection.on('disconnected', () => {
+        console.warn('MongoDB disconnected. Connection lost.');
+      });
+
+      return;
+    } catch (error: any) {
+      console.error(`MongoDB connection attempt ${attempt}/${retries} failed: ${error.message}`);
+      if (attempt === retries) {
+        console.error('All MongoDB connection retries exhausted. Exiting process.');
+        process.exit(1);
+      }
+      console.log(`Retrying MongoDB connection in ${delay / 1000}s...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
 };
+
 
 ```
 
@@ -4657,6 +4787,12 @@ const envSchema = z.object({
   PORT: z.string().or(z.number()).default(5003),
   MONGO_URI: z.string().min(1, 'MONGO_URI is required'),
   JWT_SECRET: z.string().min(8, 'JWT_SECRET must be at least 8 characters'),
+  JWT_REFRESH_SECRET: z.string().min(16, 'JWT_REFRESH_SECRET must be at least 16 characters').optional(),
+  // Business fee constants — optional, defaults are applied in code
+  INSPECTION_FEE_INR: z.coerce.number().positive().optional(),
+  STUDENT_REMITTANCE_FEE_INR: z.coerce.number().positive().optional(),
+  REVALUATION_FEE_PER_SUBJECT_INR: z.coerce.number().positive().optional(),
+  ATTENDANCE_MIN_PERCENTAGE: z.coerce.number().min(1).max(100).optional(),
 });
 
 export const validateEnv = () => {
@@ -4757,36 +4893,73 @@ export { keyId, keySecret };
 ### `backend/src/config/redis.ts`
 
 ```typescript
-// Lazy/Safe Redis client loader to prevent compilation issues when ioredis is not yet installed in local node_modules
+// Lazy/Safe Redis client loader with in-memory fallback
 let redisClient: any = null;
+const memoryStore = new Map<string, { value: string; expiry?: number }>();
+
+const memoryFallbackClient = {
+  isFallback: true,
+  async get(key: string) {
+    const item = memoryStore.get(key);
+    if (!item) return null;
+    if (item.expiry && item.expiry < Date.now()) {
+      memoryStore.delete(key);
+      return null;
+    }
+    return item.value;
+  },
+  async set(key: string, value: string, mode?: string, duration?: number) {
+    let expiry: number | undefined;
+    if (mode === 'EX' && typeof duration === 'number') {
+      expiry = Date.now() + duration * 1000;
+    }
+    memoryStore.set(key, { value: String(value), expiry });
+    return 'OK';
+  },
+  async del(key: string) {
+    memoryStore.delete(key);
+    return 1;
+  },
+  on() {},
+};
 
 export const getRedisClient = () => {
   if (!redisClient) {
     try {
       const Redis = require('ioredis');
-      redisClient = new Redis({
+      const client = new Redis({
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379'),
         password: process.env.REDIS_PASSWORD,
         lazyConnect: true,
-        retryStrategy: (times: number) => Math.min(times * 50, 2000),
+        retryStrategy: (times: number) => {
+          if (times > 3) {
+            console.warn('Redis reconnection retries exhausted. Using in-memory fallback.');
+            return null; // Stop reconnecting and fall back
+          }
+          return Math.min(times * 100, 2000);
+        },
       });
 
-      redisClient.on('connect', () => {
+      client.on('connect', () => {
         console.log('Redis client connected');
       });
 
-      redisClient.on('error', (err: any) => {
+      client.on('error', (err: any) => {
         console.error('Redis connection error:', err.message);
       });
+
+      redisClient = client;
     } catch (err: any) {
-      console.warn('Redis package (ioredis) not loaded local environment:', err.message);
+      console.warn('Redis package (ioredis) unavailable or failed. Fallback to in-memory cache:', err.message);
+      redisClient = memoryFallbackClient;
     }
   }
   return redisClient;
 };
 
 export default getRedisClient();
+
 
 ```
 
@@ -4936,7 +5109,7 @@ const studentAddSchema = z.object({
   universityName: z.string().min(1, 'University Name is required'),
   medicalCouncilRegistrationNumber: z.string().min(1, 'Medical Council Registration Number is required'),
   isForeignGraduate: z.preprocess(
-    (val) => val === 'true' || val === true,
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
     z.boolean()
   ),
   fmgeClearanceStatus: z.enum(['Cleared', 'Not Applicable', 'Failed']).default('Not Applicable'),
@@ -4962,7 +5135,7 @@ const studentUpdateSchema = z.object({
   universityName: z.string().min(1, 'University Name is required').optional(),
   medicalCouncilRegistrationNumber: z.string().min(1, 'Medical Council Registration Number is required').optional(),
   isForeignGraduate: z.preprocess(
-    (val) => val === 'true' || val === true,
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
     z.boolean()
   ).optional(),
   fmgeClearanceStatus: z.enum(['Cleared', 'Not Applicable', 'Failed']).optional(),
@@ -5486,6 +5659,19 @@ export const addStudent = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
     }
 
+    // Idempotency check: prevent duplicate payment processing
+    if (validatedData.razorpayPaymentId) {
+      const existingPayment = await Student.findOne({ razorpayPaymentId: validatedData.razorpayPaymentId });
+      if (existingPayment) {
+        return sendError({
+          req,
+          res,
+          statusCode: 400,
+          message: 'Payment already processed and recorded for this student enrollment.',
+        });
+      }
+    }
+
     const course = await Course.findOne({ _id: validatedData.courseId, institute: institute._id });
     if (!course) {
       return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist or does not belong to this institute.' });
@@ -5713,7 +5899,7 @@ export const getPayableAmount = async (req: Request, res: Response) => {
     const pendingStudents = await Student.find({ institute: institute._id, remittedToAcademy: false })
       .select('firstName lastName enrollmentId email');
 
-    const ACADEMY_STUDENT_FEE = 50000;
+    const ACADEMY_STUDENT_FEE = Number(process.env.STUDENT_REMITTANCE_FEE_INR) || 50000;
     const count = pendingStudents.length;
     const payableAmount = count * ACADEMY_STUDENT_FEE;
 
@@ -6545,16 +6731,19 @@ export const register = async (req: Request, res: Response) => {
       role: 'institute',
     });
 
-    // In a real app, send an email with the verificationToken here
+    // Send verification email. We track delivery so the client can warn the
+    // user if the email failed without blocking the registration itself.
+    let emailSent = false;
+    let emailError: string | null = null;
     try {
       const verificationLink = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
       await sendEmail({
         email: user.email,
-        subject: 'Email Verification - Semi Phase 3',
-        message: `Welcome to Semi Phase 3! Please verify your email by clicking: ${verificationLink}`,
+        subject: 'Verify Your Email Address - Semi Phase 3',
+        message: `Hello ${user.name},\n\nPlease verify your email address by clicking the link below:\n${verificationLink}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #333333; text-align: center;">Verify Your Email</h2>
+            <h2 style="color: #333333; text-align: center;">Verify Your Email Address</h2>
             <p>Hello ${user.name},</p>
             <p>Thank you for registering. Please click the button below to verify your email address and activate your account:</p>
             <div style="text-align: center; margin: 30px 0;">
@@ -6567,8 +6756,10 @@ export const register = async (req: Request, res: Response) => {
           </div>
         `
       });
+      emailSent = true;
     } catch (emailErr: any) {
       console.error('Email verification sending failed:', emailErr.message);
+      emailError = 'Verification email could not be delivered. Please use "Resend Verification" from your dashboard.';
     }
 
     const accessToken = generateToken(user._id.toString(), 'access');
@@ -6585,13 +6776,17 @@ export const register = async (req: Request, res: Response) => {
       req,
       res,
       statusCode: 201,
-      message: 'Registration successful. Please verify your email.',
+      message: emailSent
+        ? 'Registration successful. Please verify your email.'
+        : 'Registration successful, but the verification email could not be sent.',
       data: {
         accessToken,
         refreshToken,
         userId: user._id,
         email: user.email,
         name: user.name,
+        emailSent,
+        ...(emailError ? { emailWarning: emailError } : {}),
       },
     });
   } catch (error: any) {
@@ -6817,6 +7012,8 @@ export const resetPassword = async (req: Request, res: Response) => {
     user.password = await bcrypt.hash(newPassword, salt);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    user.refreshTokens = [];
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
 
     return sendSuccess({ req, res, message: 'Password reset successful' });
@@ -7007,7 +7204,15 @@ const successHtml = (name: string) => `
       <p>Hello <strong>${name}</strong>, your email address has been confirmed and your account is now fully active.</p>
       <p>You can now sign in and begin your institute onboarding journey.</p>
       <div class="divider"></div>
-      <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" class="btn">
+      <a href="${(() => {
+        const raw = process.env.CLIENT_URL || process.env.FRONTEND_URL || '/institute/login';
+        try {
+          const parsed = new URL(raw, 'http://localhost:5173');
+          return parsed.href;
+        } catch {
+          return '/institute/login';
+        }
+      })()}" class="btn">
         Proceed to Login →
       </a>
       <div class="footer">Semi Phase 3 &mdash; Institute Onboarding Platform</div>
@@ -8507,8 +8712,9 @@ export const createRazorpayOrder = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 400, message: 'Payment has already been completed for this application.' });
     }
 
-    const AMOUNT_INR = 5000;
-    const AMOUNT_PAISE = AMOUNT_INR * 100; // 500000 paise
+    // Fee amount is configurable via INSPECTION_FEE_INR env var (default 5000)
+    const AMOUNT_INR = Number(process.env.INSPECTION_FEE_INR) || 5000;
+    const AMOUNT_PAISE = AMOUNT_INR * 100;
 
     const options = {
       amount: AMOUNT_PAISE,
@@ -8627,7 +8833,7 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
         await sendEmail({
           email: req.user.email,
           subject: 'Payment Receipt Confirmation - Semi Phase 3',
-          message: `Hello ${req.user.name},\n\nWe have successfully received your payment.\nReceipt Number: ${receiptNumber}\nPayment ID: ${paymentIdToVerify}\nOrder ID: ${orderIdToVerify}\nAmount: INR 5,000.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
+          message: `Hello ${req.user.name},\n\nWe have successfully received your payment.\nReceipt Number: ${receiptNumber}\nPayment ID: ${paymentIdToVerify}\nOrder ID: ${orderIdToVerify}\nAmount: INR ${(Number(process.env.INSPECTION_FEE_INR) || 5000).toLocaleString('en-IN')}.00\nStatus: Completed\n\nYour application has been moved to the Academic Board for review.`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
               <h2 style="color: #2ecc71; text-align: center;">Payment Receipt Confirmation</h2>
@@ -8651,7 +8857,7 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
                   </tr>
                   <tr>
                     <td style="padding: 5px 0; color: #666; font-weight: bold;">Amount Paid:</td>
-                    <td style="padding: 5px 0; color: #333;">INR 5,000.00</td>
+                    <td style="padding: 5px 0; color: #333;">INR ${(Number(process.env.INSPECTION_FEE_INR) || 5000).toLocaleString('en-IN')}.00</td>
                   </tr>
                   <tr>
                     <td style="padding: 5px 0; color: #666; font-weight: bold;">Status:</td>
@@ -8828,7 +9034,43 @@ export const getMyApplication = async (req: Request, res: Response) => {
 
 export const listApplications = async (req: Request, res: Response) => {
   try {
-    const applications = await Institute.find({})
+    const isPaginated = req.query.page || req.query.limit;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const skip = (page - 1) * limit;
+
+    const query: any = { isDeleted: { $ne: true } };
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+
+    if (isPaginated) {
+      const [applications, total] = await Promise.all([
+        Institute.find(query)
+          .populate('user', 'name email')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        Institute.countDocuments(query),
+      ]);
+
+      return sendSuccess({
+        req,
+        res,
+        message: 'All institute applications retrieved successfully',
+        data: {
+          applications,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+          },
+        },
+      });
+    }
+
+    const applications = await Institute.find(query)
       .populate('user', 'name email')
       .sort({ createdAt: -1 });
 
@@ -11221,27 +11463,47 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
     const students = await Student.find(studentFilter).populate('course', 'name');
 
     const semNum = parseInt(semester as string);
-    const eligibleStudents: any[] = [];
+    if (students.length === 0) {
+      return sendSuccess({ req, res, message: 'Eligible students retrieved successfully', data: [] });
+    }
 
-    for (const student of students) {
-      const result = await Result.findOne({
-        student: student._id,
+    const studentIds = students.map(s => s._id);
+
+    const [results, feeRecords, existingRequests] = await Promise.all([
+      Result.find({
+        student: { $in: studentIds },
         semester: semNum,
         isPublished: true,
-      });
+        isRevaluationActive: true,
+      }).lean(),
+      FeeRecord.find({
+        student: { $in: studentIds },
+        paymentPurpose: 'Revaluation fee',
+        semesterNumber: semNum,
+      }).lean(),
+      RevaluationRequest.find({
+        student: { $in: studentIds },
+        semester: semNum,
+        status: { $nin: ['Rejected', 'Cancelled'] },
+      }).lean(),
+    ]);
 
+    const resultMap = new Map(results.map(r => [r.student.toString(), r]));
+    const paidSet = new Set(feeRecords.map(f => f.student.toString()));
+    const requestMap = new Map(existingRequests.map(er => [er.student.toString(), er]));
+
+    const eligibleStudents: any[] = [];
+    const now = new Date();
+
+    for (const student of students) {
+      const studentIdStr = student._id.toString();
+      const result = resultMap.get(studentIdStr);
       if (!result) continue;
 
-      if (!result.isRevaluationActive || (result.revaluationDeadline && new Date() > result.revaluationDeadline)) {
+      if (result.revaluationDeadline && now > new Date(result.revaluationDeadline)) {
         continue;
       }
 
-      // Check if already paid
-      const existingPayment = await FeeRecord.findOne({
-        student: student._id,
-        paymentPurpose: 'Revaluation fee',
-        semesterNumber: semNum,
-      });
 
       // Check if request already exists
       const existingRequest = await RevaluationRequest.findOne({
@@ -11272,7 +11534,7 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
 
       if (eligibleSubjects.length === 0) continue;
 
-      const feePerSubject = 500;
+      const feePerSubject = Number(process.env.REVALUATION_FEE_PER_SUBJECT_INR) || 500;
       const totalFee = eligibleSubjects.length * feePerSubject;
 
       eligibleStudents.push({
@@ -11379,7 +11641,7 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
       return sendError({ req, res, statusCode: 400, message: 'No eligible subjects found for revaluation' });
     }
 
-    const feePerSubject = 500;
+    const feePerSubject = Number(process.env.REVALUATION_FEE_PER_SUBJECT_INR) || 500;
     const totalFee = eligibleSubjects.length * feePerSubject;
 
     return sendSuccess({
@@ -12143,8 +12405,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { dotfiles: 'ignore', index: false }));
+app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), { dotfiles: 'ignore', index: false }));
 
 app.use((req: any, res: any, next: any) => {
   const start = Date.now();
@@ -12161,30 +12423,24 @@ app.use((req: any, res: any, next) => {
   res.setHeader('X-Request-ID', req.requestId);
   
   const startTime = Date.now();
-  console.log(`\n--- 📥 [${req.requestId}] Incoming Request: ${req.method} ${req.originalUrl}`);
-  if (req.body && Object.keys(req.body).length > 0) {
-    const loggedBody = sanitizeLogData(req.body);
-    console.log(`[${req.requestId}] Request Body:`, JSON.stringify(loggedBody, null, 2));
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`\n--- 📥 [${req.requestId}] Incoming Request: ${req.method} ${req.originalUrl}`);
+    if (req.body && Object.keys(req.body).length > 0) {
+      const loggedBody = sanitizeLogData(req.body);
+      console.log(`[${req.requestId}] Request Body:`, JSON.stringify(loggedBody, null, 2));
+    }
   }
 
-  // Intercept res.json to log the response
+  // Intercept res.json to log the response in dev environment
   const originalJson = res.json;
   res.json = function (body: any) {
     const duration = Date.now() - startTime;
-    console.log(`--- 📤 [${req.requestId}] Response JSON Sent: ${res.statusCode} (took ${duration}ms)`);
-    console.log(`[${req.requestId}] Response Body:`, JSON.stringify(body, null, 2));
-    return originalJson.apply(this, arguments);
-  };
-
-  // Intercept res.send to log the response
-  const originalSend = res.send;
-  res.send = function (body: any) {
-    const duration = Date.now() - startTime;
-    console.log(`--- 📤 [${req.requestId}] Response Send Sent: ${res.statusCode} (took ${duration}ms)`);
-    if (typeof body === 'string') {
-      console.log(`[${req.requestId}] Response Body:`, body.length > 500 ? body.substring(0, 500) + '...' : body);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`--- 📤 [${req.requestId}] Response JSON Sent: ${res.statusCode} (took ${duration}ms)`);
+    } else {
+      console.log(`[${req.method} ${req.originalUrl}] -> ${res.statusCode} (${duration}ms)`);
     }
-    return originalSend.apply(this, arguments);
+    return originalJson.apply(this, arguments);
   };
 
   next();
@@ -12376,11 +12632,25 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
   ) {
     let message;
     if (err.name === 'MulterError') {
-      message = err.code === 'LIMIT_FILE_SIZE' ? 'File is too large. Maximum allowed size is 10MB.' : `Upload error: ${err.message}`;
+      switch (err.code) {
+        case 'LIMIT_FILE_SIZE':
+          message = 'File is too large. Maximum allowed size is 10MB.';
+          break;
+        case 'LIMIT_UNEXPECTED_FILE':
+          message = 'Unexpected file field encountered in upload payload.';
+          break;
+        case 'LIMIT_FILE_COUNT':
+          message = 'Too many files uploaded for this field.';
+          break;
+        default:
+          message = `Upload error: ${err.message}`;
+      }
+    } else if (typeof err.http_code === 'number') {
+      message = `Cloudinary Upload Failure: ${err.message || 'Image processing error'}`;
     } else {
       const raw = err.message || '';
       if (/unknown file format|format not allowed|not allowed/i.test(raw)) {
-        message = 'This file could not be uploaded. Please check the file and try again.';
+        message = 'This file could not be uploaded. Please check the file format and try again.';
       } else {
         message = err.message || 'Upload failed. Please check the file and try again.';
       }
@@ -12459,9 +12729,17 @@ export const authLimiter = createRateLimiter({
 
 export const generalLimiter = createRateLimiter({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 2000, // 200 requests per minute
+  max: 2000, // 2000 requests per minute
   message: 'Too many requests, please slow down.',
 });
+
+export const passwordResetLimiter = createRateLimiter({
+  windowMs: 5 * 60 * 1000, // 15 minutes
+  max: 5, // 3 requests per 15 minutes
+  message: 'Too many password reset requests from this IP. Please try again after 15 minutes.',
+});
+
+
 
 ```
 
@@ -12471,6 +12749,7 @@ export const generalLimiter = createRateLimiter({
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -13440,6 +13719,8 @@ export interface IInstitute extends Document {
   paymentCompletedAt?: Date;
   paymentAmount?: number;
   approvedSeats?: number;
+  isDeleted?: boolean;
+  deletedAt?: Date;
 }
 
 const instituteSchema: Schema = new Schema(
@@ -13535,6 +13816,15 @@ const instituteSchema: Schema = new Schema(
     approvedSeats: {
       type: Number,
       default: 5,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     }
   },
   {
@@ -13548,6 +13838,7 @@ instituteSchema.index({ emailAddress: 1 });
 instituteSchema.index({ orgName: 'text' });
 instituteSchema.index({ phoneNumber: 1 });
 instituteSchema.index({ paymentStatus: 1 });
+instituteSchema.index({ isDeleted: 1 });
 
 
 export const Institute = mongoose.model<IInstitute>('Institute', instituteSchema);
@@ -14424,11 +14715,20 @@ userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ verificationToken: 1 }, { sparse: true });
 userSchema.index({ resetPasswordToken: 1 }, { sparse: true });
 userSchema.index({ resetPasswordExpires: 1 }, { expires: '1h' });
+userSchema.index({ email: 1, role: 1 });
 
+// XSS Sanitization & Trimming Pre-Save Hook
+userSchema.pre<IUser>('save', function (next) {
+  if (this.name) {
+    this.name = this.name.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  if (this.email) {
+    this.email = this.email.trim().toLowerCase();
+  }
+  next();
+});
 
 export const User = mongoose.model<IUser>('User', userSchema);
-
-
 
 ```
 
@@ -14616,6 +14916,7 @@ import {
   checkStatus,
 } from '../controllers/authController';
 import { protect } from '../middlewares/authMiddleware';
+import { passwordResetLimiter } from '../middlewares/rateLimiter';
 
 const router = express.Router();
 
@@ -14624,8 +14925,8 @@ router.post('/login', login);
 router.post('/logout', logout);
 router.post('/logout-all', protect, logoutAllDevices);
 router.post('/refresh-token', refreshToken);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/forgot-password', passwordResetLimiter, forgotPassword);
+router.post('/reset-password', passwordResetLimiter, resetPassword);
 router.get('/verify-email/:token', verifyEmail);
 router.get('/status', protect, checkStatus);
 
@@ -15511,6 +15812,7 @@ export const cleanupOldAuditLogs = async (daysToKeep: number = 30) => {
 
 ```typescript
 import { Certificate } from '../models/certificateModel';
+import getRedisClient from '../config/redis';
 
 function generateRandomString(length = 8): string {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -15561,33 +15863,48 @@ class CertificateService {
   }
 
   async verifyCertificate(certificateNumber: string) {
+    const redis = getRedisClient();
+    const cacheKey = `cert:verify:${certificateNumber}`;
+
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch { /* ignore cache read error */ }
+
     const certificate = await Certificate.findOne({ certificateNumber });
     if (!certificate) {
-      return { valid: false, message: 'Certificate not found' };
+      const res = { valid: false, message: 'Certificate not found' };
+      try { await redis.set(cacheKey, JSON.stringify(res), 'EX', 300); } catch {}
+      return res;
     }
 
     if (certificate.isRevoked) {
-      return { valid: false, message: 'Certificate has been revoked' };
+      const res = { valid: false, message: 'Certificate has been revoked' };
+      try { await redis.set(cacheKey, JSON.stringify(res), 'EX', 300); } catch {}
+      return res;
     }
 
-    if (!certificate.isVerified) {
-      return { valid: false, message: 'Certificate not verified' };
-    }
-
-    return {
+    const res = {
       valid: true,
       message: 'Certificate is valid',
       certificate: {
-        student: certificate.student,
+        certificateNumber: certificate.certificateNumber,
+        studentName: certificate.studentName,
+        courseName: certificate.courseName,
+        issueDate: certificate.issueDate,
         type: certificate.type,
-        issuedDate: certificate.issuedDate,
-        academicYear: certificate.academicYear,
       },
     };
+
+    try { await redis.set(cacheKey, JSON.stringify(res), 'EX', 1800); } catch {}
+    return res;
   }
 }
 
 export default new CertificateService();
+
 
 ```
 
@@ -15900,6 +16217,7 @@ export default new HallTicketService();
 ### `backend/src/services/marksheetService.ts`
 
 ```typescript
+import mongoose from 'mongoose';
 import { Marksheet } from '../models/marksheetModel';
 import { Result } from '../models/resultModel';
 
@@ -15952,9 +16270,15 @@ class MarksheetService {
 
   async bulkGenerate(resultIds: string[]) {
     const generated: any[] = [];
+    if (!Array.isArray(resultIds)) return generated;
 
     for (const resultId of resultIds) {
       try {
+        if (!resultId || !mongoose.Types.ObjectId.isValid(resultId)) {
+          console.warn(`Skipping invalid resultId: ${resultId}`);
+          continue;
+        }
+
         const result = await Result.findById(resultId).populate('student');
         if (!result) continue;
 
@@ -16650,6 +16974,22 @@ export const handleError = (err: any, req: Request, res: Response) => {
 
 ```
 
+### `backend/src/utils/fileHelpers.ts`
+
+```typescript
+import path from 'path';
+
+export const getFileUrl = (filePath: string): string => {
+  if (!filePath) return '';
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return filePath;
+  }
+  const filename = path.basename(filePath).replace(/\\/g, '/');
+  return `/api/uploads/${filename}`;
+};
+
+```
+
 ### `backend/src/utils/helpers.ts`
 
 ```typescript
@@ -16740,32 +17080,75 @@ export const sendError = ({ req, res, message = 'Internal Server Error', errors 
 
 ```typescript
 // backend/src/utils/sanitizeLogs.ts
-export const sanitizeLogData = (data: any): any => {
-  if (!data || typeof data !== 'object') return data;
-  
-  const sensitiveFields = [
-    'password', 
-    'token', 
-    'accessToken', 
-    'refreshToken', 
-    'verificationToken', 
-    'resetToken', 
-    'otp', 
-    'secret', 
-    'api_secret', 
-    'razorpay_signature'
-  ];
+const SENSITIVE_FIELDS = [
+  'password',
+  'token',
+  'accesstoken',
+  'refreshtoken',
+  'verificationtoken',
+  'resettoken',
+  'otp',
+  'secret',
+  'api_secret',
+  'razorpay_signature',
+  'authorization',
+  'cookie',
+  'cvv',
+  'cardnumber',
+  'creditcard',
+  'ssn',
+  'pan',
+  'privatekey',
+  'apikey',
+  'x-api-key',
+];
 
-  if (Array.isArray(data)) {
-    return data.map(item => sanitizeLogData(item));
+/**
+ * Escape HTML special characters so log data is safe if ever rendered in a
+ * web UI (addresses Issue 11 — XSS via log viewer output).
+ * NOTE: This is NOT a substitute for a proper output-encoding library in
+ * production HTML rendering — it is a defence-in-depth measure only.
+ */
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+
+/** Redact string values that look like JWT or Bearer tokens. */
+const looksLikeToken = (value: unknown): boolean => {
+  if (typeof value !== 'string') return false;
+  // JWT: three base64url segments separated by dots
+  if (/^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/.test(value)) return true;
+  // Bearer header value
+  if (/^Bearer\s+\S{20,}/i.test(value)) return true;
+  return false;
+};
+
+export const sanitizeLogData = (data: unknown): unknown => {
+  if (typeof data === 'string') {
+    if (looksLikeToken(data)) return '[REDACTED]';
+    return escapeHtml(data);
   }
 
-  const sanitized: Record<string, any> = { ...data };
+  if (!data || typeof data !== 'object') return data;
+
+  if (Array.isArray(data)) {
+    return (data as unknown[]).map(item => sanitizeLogData(item));
+  }
+
+  const sanitized: Record<string, unknown> = { ...(data as Record<string, unknown>) };
 
   Object.keys(sanitized).forEach(key => {
     const lowerKey = key.toLowerCase();
-    if (sensitiveFields.some(field => lowerKey.includes(field.toLowerCase()))) {
+    if (SENSITIVE_FIELDS.some(field => lowerKey.includes(field))) {
       sanitized[key] = '[REDACTED]';
+    } else if (looksLikeToken(sanitized[key])) {
+      sanitized[key] = '[REDACTED]';
+    } else if (typeof sanitized[key] === 'string') {
+      sanitized[key] = escapeHtml(sanitized[key] as string);
     } else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
       sanitized[key] = sanitizeLogData(sanitized[key]);
     }
@@ -17420,7 +17803,7 @@ console.log('Done fixing React imports!');
     <link rel="icon" type="image/png" href="/src/assets/semi logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Society for Emergency Medicine India (SEMI) Portals." />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://semi-phase-three.swiflare.com https://backend.semi.org.in http://localhost:5000 http://127.0.0.1:5000 http://localhost:5003 http://127.0.0.1:5003; connect-src 'self' https://semi-phase-three.swiflare.com wss://semi-phase-three.swiflare.com https://backend.semi.org.in wss://backend.semi.org.in http://localhost:5000 ws://localhost:5000 http://127.0.0.1:5000 ws://127.0.0.1:5000 http://localhost:5003 ws://localhost:5003 http://127.0.0.1:5003 ws://127.0.0.1:5003 https://lumberjack.razorpay.com https://api.razorpay.com; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://semi-phase-three.swiflare.com https://backend.semi.org.in http://localhost:5000 http://localhost:5003; connect-src 'self' https://semi-phase-three.swiflare.com wss://semi-phase-three.swiflare.com https://backend.semi.org.in wss://backend.semi.org.in http://localhost:5000 http://localhost:5003 https://lumberjack.razorpay.com https://api.razorpay.com; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://cdn.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
@@ -17624,7 +18007,10 @@ function App() {
   useEffect(() => {
     const checkServerHealth = async () => {
       try {
-        await checkHealth();
+        const health = await checkHealth();
+        if (health?.status === 'unhealthy') {
+          setShowMaintenance(true);
+        }
       } catch (error) {
         console.warn('Initial server health check failed:', error);
       }
@@ -17859,6 +18245,20 @@ class ErrorBoundary extends React.Component {
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
+  }
+
+  componentDidMount() {
+    this.handleUnhandledRejection = (event) => {
+      console.error('Async unhandled promise rejection:', event.reason);
+      this.setState({ hasError: true, error: event.reason || new Error('Unhandled Promise Rejection') });
+    };
+    window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
+  }
+
+  componentWillUnmount() {
+    if (this.handleUnhandledRejection) {
+      window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
+    }
   }
 
   componentDidCatch(error, errorInfo) {
@@ -18199,10 +18599,10 @@ const Toast = ({ message, type = 'error', onClose, duration = 6000 }) => {
     return String(msg);
   };
 
-  const displayMessage = formatMessage(message);
+  const displayMessage = formatMessage(message).replace(/^[\u{1F300}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2705}\u{274C}\u{26A0}\u{2139}\u{1F914}\u{1F4A1}\u{1F4E3}]+\s*/u, '');
 
   return (
-    <div className={`fixed bottom-6 right-6 z-[9999] max-w-md w-full p-4 rounded-2xl border shadow-2xl ${config.bg} flex items-start gap-3.5 animate-in slide-in-from-bottom-6 fade-in duration-300 overflow-hidden`}>
+    <div className={`fixed bottom-6 right-6 z-[9999] max-w-md w-full p-4 rounded-2xl border shadow-2xl ${config.bg} flex items-start gap-3.5 animate-in slide-in-from-bottom-6 fade-in duration-300 overflow-hidden`} role="alert">
       {/* Dynamic Progress indicator bar at bottom */}
       {duration && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200/50">
@@ -18234,6 +18634,7 @@ const Toast = ({ message, type = 'error', onClose, duration = 6000 }) => {
       <button 
         type="button" 
         onClick={onClose}
+        aria-label="Close notification"
         className="p-1 hover:bg-black/5 rounded-lg text-gray-500 hover:text-gray-900 transition-colors flex-shrink-0 mt-0.5"
       >
         <X className="w-4 h-4" />
@@ -18433,11 +18834,34 @@ import axios from 'axios';
 export const getBaseURL = () => {
   try {
     if (typeof import.meta !== 'undefined' && import.meta.env) {
-      return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5003/api';
+      const url = import.meta.env.VITE_API_BASE_URL;
+      if (url) return url;
+
+      // In production builds the env var MUST be set. Failing loudly here
+      // prevents the app from silently hitting localhost:5003 in prod, which
+      // would result in every API request failing with a network error.
+      if (import.meta.env.PROD) {
+        const msg =
+          '[Config Error]: VITE_API_BASE_URL is not set in the production build environment. ' +
+          'Set this variable in your CI/CD pipeline or hosting provider before deploying.';
+        console.error(msg);
+        // Surface via a banner if the document is already loaded
+        if (typeof document !== 'undefined' && document.body) {
+          const banner = document.createElement('div');
+          banner.style.cssText =
+            'position:fixed;top:0;left:0;right:0;z-index:99999;padding:12px 16px;background:#dc2626;color:#fff;font:bold 13px/1.4 sans-serif;text-align:center;';
+          banner.textContent = 'API misconfiguration: VITE_API_BASE_URL is not set. Contact the administrator.';
+          document.body.prepend(banner);
+        }
+        // Fall through to localhost so the app can still boot in offline/demo scenarios
+      } else {
+        console.warn('[Config Warning]: VITE_API_BASE_URL is not set in environment. Falling back to http://localhost:5003/api');
+      }
     }
   } catch { /* ignore */ }
   return 'http://localhost:5003/api';
 };
+
 
 export const getUploadUrl = (filename) => {
   if (!filename) return '';
@@ -19297,21 +19721,36 @@ import authService from '../api/auth';
 
 export const useTokenRefresh = (intervalMs = 12 * 60 * 1000) => {
   const intervalRef = useRef(null);
+  // Use a Promise-based lock instead of a simple boolean to correctly
+  // serialise concurrent refresh calls from multiple tab-focus events or
+  // interval ticks that fire while a refresh is already in-flight.
+  const refreshPromiseRef = useRef(null);
 
   const refreshTokens = useCallback(async () => {
-    try {
-      const refreshToken = getRefreshToken();
-      if (!refreshToken) return;
+    // If a refresh is already in-flight return that same promise so callers
+    // share the result instead of triggering a second request.
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
 
-      const response = await authService.refreshToken(refreshToken);
-      const data = response.data?.data || response.data;
+    const doRefresh = async () => {
+      try {
+        const refreshToken = getRefreshToken();
+        if (!refreshToken) return;
 
-      if (data.accessToken) {
-        setTokens(data.accessToken, data.refreshToken);
+        const response = await authService.refreshToken(refreshToken);
+        const data = response.data?.data || response.data;
+
+        if (data?.accessToken) {
+          setTokens(data.accessToken, data.refreshToken);
+        }
+      } catch {
+        // Ignore — response interceptor handles auth errors cleanly
+      } finally {
+        refreshPromiseRef.current = null;
       }
-    } catch {
-      // Ignore here — the response interceptor will handle a hard 401 redirect.
-    }
+    };
+
+    refreshPromiseRef.current = doRefresh();
+    return refreshPromiseRef.current;
   }, []);
 
   useEffect(() => {
@@ -21036,10 +21475,8 @@ import {
   UserCheck, 
   Clock, 
   DollarSign, 
-  ArrowUpRight,
   Sparkles,
   ShieldCheck,
-  TrendingUp,
   Receipt
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -22203,11 +22640,12 @@ const AcademyInspectorModal = ({
   ];
 
   const getDocUrlForField = (key) => {
+    if (!selectedApp) return '';
     const fileData = selectedApp.uploadedDocs?.[key];
     return getDocUrl(fileData?.url || selectedApp.form?.documents?.[key + 'Url'] || selectedApp.form?.[key + 'Url'] || selectedApp.form?.[key]);
   };
 
-  const isApproved = selectedApp.status === 'approved' || selectedApp.status === 'active_erp';
+  const isApproved = selectedApp?.status === 'approved' || selectedApp?.status === 'active_erp';
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -22220,11 +22658,11 @@ const AcademyInspectorModal = ({
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-black text-slate-800 truncate">{selectedApp.orgName}</h3>
+              <h3 className="text-sm font-black text-slate-800 truncate">{selectedApp?.orgName || selectedApp?.form?.orgName || 'Institute Application'}</h3>
               <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="font-medium">ID: {selectedApp.id}</span>
+                <span className="font-medium">ID: {selectedApp?.id || 'N/A'}</span>
                 <span className="text-slate-300">•</span>
-                <span className="font-medium">{selectedApp.email}</span>
+                <span className="font-medium">{selectedApp?.email || selectedApp?.form?.emailAddress || 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -23360,7 +23798,7 @@ const AcademyMarksUpdating = () => {
 
                         return (
                           <tr
-                            key={subject.subjectCode || idx}
+                            key={subject.subjectCode || `subject-${selectedStudent._id}-${subject.subjectName}`}
                             className={`hover:bg-slate-50/70 transition-colors ${isAbsent ? 'bg-rose-50/40' : ''}`}
                           >
                             <td className="px-4 py-3.5 text-center font-bold text-slate-400 text-sm">
@@ -24257,7 +24695,7 @@ const AcademyPublishResults = () => {
             <div className="mt-2 text-xs text-amber-700 bg-amber-50/80 p-2 rounded-xl border border-amber-200">
               <span className="font-bold">⚠️ {generatedResults.errors} students were skipped:</span>
               {generatedResults.errorDetails?.slice(0, 3).map((err, i) => (
-                <div key={i} className="mt-0.5">{err.name}: {err.reason}</div>
+                <div key={`${err.name || 'err'}-${i}`} className="mt-0.5">{err.name}: {err.reason}</div>
               ))}
               {generatedResults.errors > 3 && (
                 <div className="text-slate-500 text-[10px]">+ {generatedResults.errors - 3} more</div>
@@ -25523,7 +25961,7 @@ const AcademyRemittance = () => {
 
   // ─── Data Aggregation ────────────────────────────────────────────────────────
   const fetchAllTreasuryRecords = async () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_board_user');
+    const token = localStorage.getItem('semi_board_token') || localStorage.getItem('semi_access_token') || localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_board_user');
     if (!token) {
       setLoading(false);
       return;
@@ -27633,6 +28071,7 @@ const AcademySidebar = ({ boardUser }) => {
               key={id}
               type="button"
               onClick={() => navigate(path)}
+              aria-label={label}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
                 isActive
                   ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
@@ -30575,9 +31014,9 @@ const InstitutePortal = () => {
     if (user && token) {
       intervalId = setInterval(() => {
         if (currentStep === 'active_erp') {
-          fetchERPData();
+          fetchERPData().catch(err => console.warn('Failed auto-polling ERP data:', err));
         } else if (currentStep === 'pending_review' || currentStep === 'status') {
-          fetchApplication();
+          fetchApplication().catch(err => console.warn('Failed auto-polling application status:', err));
         } else if (currentStep === 'verify_pending') {
           authService.checkStatus()
             .then(res => {
@@ -34390,6 +34829,11 @@ const InstituteERPEnrollment = ({
   // Local state to track "Is FMG Candidate?" matching screenshot dropdown
   const [isFmgSelected, setIsFmgSelected] = useState(enrollForm.studentCategory === 'FMG' ? 'Yes' : 'No');
 
+  // Selected course object for dynamic fee / details
+  const selectedCourseObj = React.useMemo(() => {
+    return courses.find(c => (c.name || c.courseName || '').toLowerCase() === (enrollForm.course || '').toLowerCase());
+  }, [courses, enrollForm.course]);
+
   // Filter batches matching the selected course
   const filteredBatches = React.useMemo(() => {
     return batches.filter(b => {
@@ -34654,7 +35098,7 @@ const InstituteERPEnrollment = ({
         currency: orderData.currency || 'INR',
         keyId: orderData.keyId,
         name: 'SEMI Student Enrollment',
-        description: 'Enrollment Fee - ₹1,40,000',
+        description: `Enrollment Fee - ₹${(selectedCourseObj?.fee || 140000).toLocaleString('en-IN')}`,
         paymentType: 'enrollment',
         additionalData: { purpose: 'Student Enrollment' },
         prefill: {
@@ -34758,7 +35202,7 @@ const InstituteERPEnrollment = ({
         </div>
         <div className="bg-blue-600 text-white rounded-2xl px-6 py-3 shadow-md text-center flex flex-col items-center shadow-blue-500/15">
           <span className="text-[9px] text-blue-200 uppercase font-black tracking-widest block">App Fee Due</span>
-          <span className="text-lg font-black tracking-tight">₹1,40,000</span>
+          <span className="text-lg font-black tracking-tight">₹{(selectedCourseObj?.fee || 140000).toLocaleString('en-IN')}</span>
         </div>
       </div>``
 
@@ -35207,7 +35651,7 @@ const InstituteERPEnrollment = ({
                 {/* Remittance Info Removed */}
                 <div className="lg:col-span-2 space-y-4 bg-slate-50/50 border border-slate-100 p-5 rounded-2xl flex flex-col justify-center items-center text-center">
                   <div className="text-slate-400 font-medium text-sm mb-4">
-                    Secure payment is processed through Razorpay. You will be prompted to complete the ₹1,40,000 fee when you submit the application.
+                    Secure payment is processed through Razorpay. You will be prompted to complete the ₹{(selectedCourseObj?.fee || 140000).toLocaleString('en-IN')} fee when you submit the application.
                   </div>
                   <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4" />
@@ -35390,7 +35834,6 @@ const InstituteERPExams = ({
   const [viewingApp, setViewingApp] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [feeRecords, setFeeRecords] = useState([]);
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -35410,7 +35853,7 @@ const InstituteERPExams = ({
       }
     };
     fetchFeeRecords();
-  }, []);
+  }, [selectedSemester, selectedCourseId]);
 
   const [activePage, setActivePage] = useState(1);
   const itemsPerPage = 5;
@@ -37345,7 +37788,7 @@ const InstituteERPHallTicket = ({
             <tbody>
               ${(examDetails.subjects || []).map(s => `
                 <tr>
-                  <td>${s.date ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '30th July 2026'}</td>
+                  <td>${s.date ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                   <td>
                     <strong>Paper ${s.paperNumber}</strong><br/>
                     ${s.paperName}
@@ -37374,7 +37817,7 @@ const InstituteERPHallTicket = ({
             <table class="exam-table">
               <tr>
                 <td style="width: 25%;">Date</td>
-                <td style="width: 75%;">${examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '3rd August 2026'}</td>
+                <td style="width: 75%;">${examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
               </tr>
               <tr>
                 <td>Appearing</td>
@@ -38075,7 +38518,7 @@ const InstituteERPHallTicket = ({
                       <tbody>
                         {(examDetails.subjects || []).map((sub, i) => (
                           <tr key={i} className="border-b border-black last:border-b-0">
-                            <td className="p-2 border-r border-black font-medium">{sub.date ? new Date(sub.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '30th July 2026'}</td>
+                            <td className="p-2 border-r border-black font-medium">{sub.date ? new Date(sub.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                             <td className="p-2 border-r border-black">
                               <strong>Paper {sub.paperNumber}</strong><br/>
                               {sub.paperName}
@@ -38107,7 +38550,7 @@ const InstituteERPHallTicket = ({
                         <tbody>
                           <tr className="border-b border-black">
                             <td className="p-2 border-r border-black w-1/4">Date</td>
-                            <td className="p-2">{examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '3rd August 2026'}</td>
+                            <td className="p-2">{examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                           </tr>
                           <tr className="border-b border-black">
                             <td className="p-2 border-r border-black">Appearing</td>
@@ -38783,6 +39226,7 @@ const InstituteERPHeader = ({ activeTab, user, appForm, handleLogout }) => {
             onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-all text-xs font-bold border border-slate-100 hover:border-rose-100 cursor-pointer"
             title="Logout Session"
+            aria-label="Logout Session"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Logout</span>
@@ -41359,16 +41803,21 @@ const InstituteERPRevaluation = () => {
             }
           } catch (verifyErr) {
             console.error('Verification failed:', verifyErr);
-            const statusRes = await revaluationService.getPaymentStatus(studentId, student.semester);
-            const statusData = statusRes.data?.data || statusRes.data;
-            if (statusData && statusData.paymentStatus === 'Completed') {
-              clearPaymentState();
-              setToast({ message: 'Payment verified!', type: 'success' });
-              await fetchEligibleStudents();
-              await fetchRequests();
-              setSelectedSingleStudent(null);
-              setSingleStudentMode(false);
-            } else {
+            try {
+              const statusRes = await revaluationService.getPaymentStatus(studentId, student.semester);
+              const statusData = statusRes.data?.data || statusRes.data;
+              if (statusData && statusData.paymentStatus === 'Completed') {
+                clearPaymentState();
+                setToast({ message: 'Payment verified!', type: 'success' });
+                await fetchEligibleStudents();
+                await fetchRequests();
+                setSelectedSingleStudent(null);
+                setSingleStudentMode(false);
+              } else {
+                setToast({ message: 'Payment processed but verification failed. Please contact support.', type: 'error' });
+              }
+            } catch (statusErr) {
+              console.error('Payment status check failed:', statusErr);
               setToast({ message: 'Payment processed but verification failed. Please contact support.', type: 'error' });
             }
             setProcessingStudentId(null);
@@ -41570,7 +42019,7 @@ const InstituteERPRevaluation = () => {
 
                 return (
                   <div
-                    key={subject.subjectCode}
+                    key={`${student.studentId}-${subject.subjectCode}`}
                     className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
                       isSelected
                         ? 'border-blue-400 bg-blue-50/60 shadow-sm'
@@ -42619,6 +43068,7 @@ const InstituteERPSidebar = ({
         <button
           type="button"
           onClick={() => handleTabClick('dashboard')}
+          aria-label="Dashboard"
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'dashboard'
               ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
@@ -42634,6 +43084,7 @@ const InstituteERPSidebar = ({
         <button
           type="button"
           onClick={() => handleTabClick('courses')}
+          aria-label="Courses"
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'courses'
               ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
@@ -42647,6 +43098,7 @@ const InstituteERPSidebar = ({
         <button
           type="button"
           onClick={() => handleTabClick('batches')}
+          aria-label="Batches"
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
             activeTab === 'batches'
               ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25 translate-x-0.5'
@@ -42819,9 +43271,12 @@ import { getUploadUrl } from '../../../api/apiClient';
 import Toast from '../../../Components/Toast';
 import academicService from '../../../api/academic';
 
+import ConfirmModal from '../../../Components/ConfirmModal';
+
 const InstituteERPStudentDetails = ({
   students = [],
-  fetchERPData
+  fetchERPData,
+  loading = false
 }) => {
   // ─── State ──────────────────────────────────────────────────────────────────
   const [selectedStudentId, setSelectedStudentId] = useState('');
@@ -42832,6 +43287,7 @@ const InstituteERPStudentDetails = ({
   const [filterBatch, setFilterBatch] = useState('All');
   const [filterCourse, setFilterCourse] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [confirmConfig, setConfirmConfig] = useState(null);
   const [expandedStudentId, setExpandedStudentId] = useState(null);
 
   // File upload state
@@ -43082,25 +43538,32 @@ const InstituteERPStudentDetails = ({
   };
 
   // ─── Delete Record ─────────────────────────────────────────────────────────
-  const handleDeleteRecord = async (studentId, semNum) => {
-    if (!window.confirm(`Are you sure you want to clear this student's attendance and thesis records for Semester ${semNum}?`)) return;
-
-    setIsSubmitting(true);
-    try {
-      await academicService.updateAcademicMetrics(studentId, {
-        semesterNumber: semNum,
-        clearAttendance: true,
-        clearThesis: true,
-      });
-      setSuccessMsg('Academic records cleared successfully.');
-      setTimeout(() => setSuccessMsg(null), 4000);
-      if (fetchERPData) await fetchERPData();
-    } catch (err) {
-      setErrorMsg(err.response?.data?.message || err.message || 'Failed to clear details');
-      setTimeout(() => setErrorMsg(null), 4000);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleDeleteRecord = (studentId, semNum) => {
+    setConfirmConfig({
+      title: 'Clear Academic Record',
+      message: `Are you sure you want to clear this student's attendance and thesis records for Semester ${semNum}?`,
+      type: 'danger',
+      confirmText: 'Clear Record',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        setIsSubmitting(true);
+        try {
+          await academicService.updateAcademicMetrics(studentId, {
+            semesterNumber: semNum,
+            clearAttendance: true,
+            clearThesis: true,
+          });
+          setSuccessMsg('Academic records cleared successfully.');
+          setTimeout(() => setSuccessMsg(null), 4000);
+          if (fetchERPData) await fetchERPData();
+        } catch (err) {
+          setErrorMsg(err.response?.data?.message || err.message || 'Failed to clear details');
+          setTimeout(() => setErrorMsg(null), 4000);
+        } finally {
+          setIsSubmitting(false);
+        }
+      },
+    });
   };
 
   // ─── Toggle Expand ─────────────────────────────────────────────────────────
@@ -43139,6 +43602,16 @@ const InstituteERPStudentDetails = ({
     }
     return { label: 'Incomplete', color: 'bg-rose-100 text-rose-700 border-rose-200' };
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[350px] bg-white border border-slate-100 rounded-3xl p-12 shadow-sm text-center">
+        <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+        <p className="text-sm font-black text-slate-800 tracking-tight">Loading Student Details...</p>
+        <p className="text-xs text-slate-400 font-medium mt-1">Fetching latest academic records from backend</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
@@ -43258,11 +43731,12 @@ const InstituteERPStudentDetails = ({
           <div className="space-y-3">
             {paginatedGroups.map((group) => {
               const overallStatus = getOverallStatus(group.semesters);
+              const studentKey = group._id || group.id || group.enrollmentNo;
               const isExpanded = expandedStudentId === (group._id || group.id);
 
               return (
                 <div 
-                  key={group._id || group.id} 
+                  key={studentKey} 
                   className={`border rounded-2xl transition-all duration-200 ${
                     isExpanded ? 'border-blue-300 shadow-md shadow-blue-100/50' : 'border-slate-200 hover:border-slate-300'
                   }`}
@@ -43304,7 +43778,7 @@ const InstituteERPStudentDetails = ({
                           const isComplete = sem.attendancePercentage >= 75 && sem.thesisApproved;
                           return (
                             <div 
-                              key={idx}
+                              key={sem._id || sem.semesterNumber || `sem-dot-${idx}`}
                               className={`w-2.5 h-2.5 rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-amber-500'}`}
                               title={`Sem ${sem.semesterNumber}: ${isComplete ? 'Complete' : 'Incomplete'}`}
                             />
@@ -43751,6 +44225,19 @@ const InstituteERPStudentDetails = ({
         </div>
         );
       })()}
+
+      {/* ─── CONFIRM MODAL ─────────────────────────────────────────────────── */}
+      {confirmConfig && (
+        <ConfirmModal
+          isOpen={!!confirmConfig}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          type={confirmConfig.type || 'danger'}
+          confirmText={confirmConfig.confirmText || 'Confirm'}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
 
       {/* ─── TOASTS ──────────────────────────────────────────────────────────── */}
       {toast && (
