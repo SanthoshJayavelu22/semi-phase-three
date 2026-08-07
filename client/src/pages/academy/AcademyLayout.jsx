@@ -228,8 +228,108 @@ export default function AcademyLayout() {
     }
   }, [boardUser, fetchBoardData]);
 
+  // ─── Mock Fallbacks for Empty Database ──────────────────────────────────────
+  const DEFAULT_MOCK_APPLICATIONS = useMemo(() => [
+    {
+      id: 'app-101',
+      _id: 'app-101',
+      orgName: 'Saveetha Medical College & Hospital',
+      email: 'principal@saveetha.ac.in',
+      status: 'pending_review',
+      submittedAt: '12/04/2026',
+      bedCount: 450,
+      experience: 12,
+      emFacultyCount: 6,
+      teachingSpace: '5,000 sq ft',
+      paymentComplete: true,
+      paymentDetails: {
+        transactionId: 'pay_N39k28fK28',
+        amount: '₹5,000.00',
+        date: '12 April 2026'
+      }
+    },
+    {
+      id: 'app-102',
+      _id: 'app-102',
+      orgName: 'Madras Medical College (MMC)',
+      email: 'dean@mmc.edu.in',
+      status: 'approved',
+      submittedAt: '08/03/2026',
+      bedCount: 800,
+      experience: 25,
+      emFacultyCount: 14,
+      teachingSpace: '12,000 sq ft',
+      paymentComplete: true,
+      paymentDetails: {
+        transactionId: 'pay_M88x11aB99',
+        amount: '₹5,000.00',
+        date: '08 March 2026'
+      }
+    },
+    {
+      id: 'app-103',
+      _id: 'app-103',
+      orgName: 'Sri Ramachandra Institute of Higher Education',
+      email: 'admissions@sriramachandra.edu.in',
+      status: 'rejected',
+      submittedAt: '20/02/2026',
+      bedCount: 300,
+      experience: 5,
+      emFacultyCount: 2,
+      teachingSpace: '2,500 sq ft',
+      paymentComplete: false,
+      rejectionReason: 'Faculty count does not meet the minimum SEMI requirement.'
+    }
+  ], []);
+
+  const DEFAULT_MOCK_STUDENTS = useMemo(() => [
+    {
+      id: 'stu-101',
+      _id: 'stu-101',
+      enrollmentNo: 'SEMI-2026-1001',
+      fullName: 'Dr. Aarav Sharma',
+      email: 'aarav.sharma@example.com',
+      mobile: '+91 98765 43210',
+      course: 'Emergency Medicine',
+      batch: 'Batch 2026',
+      institute: 'Saveetha Medical College',
+      status: 'Active',
+      attendancePercentage: 85,
+      thesisApproved: true
+    },
+    {
+      id: 'stu-102',
+      _id: 'stu-102',
+      enrollmentNo: 'SEMI-2026-1002',
+      fullName: 'Dr. Priya Nair',
+      email: 'priya.nair@example.com',
+      mobile: '+91 98765 43211',
+      course: 'Emergency Medicine',
+      batch: 'Batch 2026',
+      institute: 'Madras Medical College',
+      status: 'Active',
+      attendancePercentage: 92,
+      thesisApproved: true
+    },
+    {
+      id: 'stu-103',
+      _id: 'stu-103',
+      enrollmentNo: 'SEMI-2026-1003',
+      fullName: 'Dr. Rahul Verma',
+      email: 'rahul.verma@example.com',
+      mobile: '+91 98765 43212',
+      course: 'Emergency Medicine',
+      batch: 'Batch 2025',
+      institute: 'Dr.MGR Medical College',
+      status: 'Active',
+      attendancePercentage: 68,
+      thesisApproved: false
+    }
+  ], []);
+
   // ─── Computed / Memoised Values ───────────────────────────────────────────────
-  const allApplications = apiApplications;
+  const allApplications = apiApplications.length > 0 ? apiApplications : DEFAULT_MOCK_APPLICATIONS;
+  const activeStudents = students.length > 0 ? students : DEFAULT_MOCK_STUDENTS;
 
   const dynamicMetrics = useMemo(() => {
     let pending = 0, approved = 0, rejected = 0;
@@ -245,9 +345,9 @@ export default function AcademyLayout() {
   const filteredApplications = useMemo(() =>
     allApplications.filter(app => {
       const matchSearch =
-        app.orgName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.id.toLowerCase().includes(searchQuery.toLowerCase());
+        (app.orgName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (app.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (app.id || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchFilter = statusFilter === 'All' || app.status === statusFilter;
       return matchSearch && matchFilter;
     }),
@@ -255,15 +355,15 @@ export default function AcademyLayout() {
   );
 
   const filteredStudents = useMemo(() =>
-    students.filter(s =>
-      s.fullName.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
-      s.enrollmentNo.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
+    activeStudents.filter(s =>
+      (s.fullName || '').toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
+      (s.enrollmentNo || '').toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
       (s.institute && s.institute.toLowerCase().includes(studentSearchQuery.toLowerCase())) ||
       (s.batch && s.batch.toLowerCase().includes(studentSearchQuery.toLowerCase())) ||
       (s.course && s.course.toLowerCase().includes(studentSearchQuery.toLowerCase())) ||
       (s.email && s.email.toLowerCase().includes(studentSearchQuery.toLowerCase()))
     ),
-    [students, studentSearchQuery]
+    [activeStudents, studentSearchQuery]
   );
 
   const auditDocs = useMemo(() => {
@@ -423,7 +523,10 @@ export default function AcademyLayout() {
   const outletContext = useMemo(() => ({
     boardUser,
     applications: filteredApplications,
+    filteredApplications,
     students: filteredStudents,
+    filteredStudents,
+    rawStudents: activeStudents,
     allApplications,
     metrics: dynamicMetrics,
     searchQuery, setSearchQuery,
