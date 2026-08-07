@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Lock, ShieldCheck, PhoneCall, Calendar, User, ArrowRight, Loader2 } from 'lucide-react';
-import semiLogo from '../../../assets/semi logo.png';
+import semiLogo from '../../../../assets/semi logo.png';
 
 const ResultsLogin = ({ onSearch, isLoading, error }) => {
   const [enrollmentId, setEnrollmentId] = useState('');

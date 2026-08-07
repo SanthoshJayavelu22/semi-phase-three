@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Printer, ShieldCheck, Lock, PhoneCall, Award, CheckCircle2, XCircle, AlertCircle, FileText } from 'lucide-react';
-import semiLogo from '../../../assets/semi logo.png';
+import semiLogo from '../../../../assets/semi logo.png';
 
 const getOrdinal = (n) => {
   const num = parseInt(n, 10);
