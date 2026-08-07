@@ -192,6 +192,8 @@ export default function AcademyLayout() {
           thesisApproved: s.thesisApproved || false,
           remittedToAcademy: s.remittedToAcademy || false,
           documents: s.documents || {},
+          dateOfBirth: s.dateOfBirth ? (new Date(s.dateOfBirth).toISOString().split('T')[0]) : null,
+          dobFormatted: s.dateOfBirth ? (new Date(s.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : 'N/A',
           qualification: s.qualification,
           mbbsQualification: s.mbbsQualification,
           yearOfPassing: s.yearOfPassing,

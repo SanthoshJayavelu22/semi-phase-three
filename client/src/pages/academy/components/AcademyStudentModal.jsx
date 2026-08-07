@@ -58,13 +58,21 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                     <span className="font-mono text-slate-700">{student.enrollmentNo}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 font-medium block">Mobile Number</span>
-                    <span className="text-slate-700">{student.mobile || 'N/A'}</span>
+                    <span className="text-[10px] text-slate-400 font-medium block">Date of Birth (D.O.B)</span>
+                    <span className="text-slate-900 font-extrabold">
+                      {student.dobFormatted || (student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A')}
+                    </span>
                   </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 font-medium block">Email Address</span>
-                  <span className="text-slate-700 font-mono">{student.email}</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-medium block">Mobile Number</span>
+                    <span className="text-slate-700">{student.mobile || student.contactNumber || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-medium block">Email Address</span>
+                    <span className="text-slate-700 font-mono truncate block">{student.email}</span>
+                  </div>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-medium block">Assigned Institution</span>
@@ -156,7 +164,7 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
             <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5 border-b border-slate-200/60 pb-2">
               <UserCheck className="w-3.5 h-3.5 text-blue-600" /> Evaluation & Remittance Checkpoint
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <span className="text-[10px] text-slate-400 font-medium block">Remittance status</span>
                 <span className={`inline-flex items-center gap-1 mt-1 text-[9px] uppercase tracking-wider ${student.remittedToAcademy ? 'text-emerald-700' : 'text-rose-700'}`}>
@@ -166,10 +174,6 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                     <><XCircle className="w-3.5 h-3.5" /> Pending</>
                   )}
                 </span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 font-medium block">Remittance UTR No</span>
-                <span className="font-mono text-slate-700">{student.utrNumber || 'N/A'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-medium block">Attendance Tracker</span>
