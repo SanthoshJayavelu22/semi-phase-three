@@ -33,20 +33,6 @@ export class CacheService {
     if (id) {
       this.inMemoryTimestamps.set(`change:${entityType}:${id}`, timestamp);
     }
-
-    // Safely lazy-import emitEvent to break circular dependency
-    try {
-      const { emitEvent } = require('../config/socket');
-      if (typeof emitEvent === 'function') {
-        emitEvent('DATA_CHANGED', {
-          entityType,
-          id,
-          timestamp,
-        });
-      }
-    } catch (err) {
-      // Ignore if socket is initializing
-    }
   }
 
   /**

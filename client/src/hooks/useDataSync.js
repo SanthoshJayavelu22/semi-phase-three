@@ -1,117 +1,65 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import socket from '../socket';
+import { useEffect, useRef } from 'react';
+import apiClient from '../api/apiClient';
 
-export const useDataSync = (entityType, fetcher, options = {}) => {
-  const { immediate = true, debounceMs = 300 } = options;
+/**
+ * Custom hook to automatically trigger a data refresh ONLY when relevant database entities are updated.
+ * Performs ultra-lightweight timestamp pings without heavy database queries or WebSockets.
+ *
+ * @param {Array<string>} entityTypes - Array of entity names to track (e.g., ['institutes', 'students', 'marks'])
+ * @param {Function} onDataChange - Callback function to trigger data refetch
+ * @param {number} intervalMs - Polling interval in ms (default: 5000ms)
+ */
+export const useDataSync = (entityTypes = [], onDataChange, intervalMs = 5000) => {
+  const lastTimestampsRef = useRef({});
+  const onDataChangeRef = useRef(onDataChange);
 
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(immediate);
-  const [error, setError] = useState(null);
-  const [lastChange, setLastChange] = useState(0);
-
-  const fetchCounterRef = useRef(0);
-  const debounceTimerRef = useRef(null);
-  const fetcherRef = useRef(fetcher);
-
-  // Keep fetcherRef updated to avoid stale closures
   useEffect(() => {
-    fetcherRef.current = fetcher;
-  }, [fetcher]);
+    onDataChangeRef.current = onDataChange;
+  }, [onDataChange]);
 
-  const fetchData = useCallback((force = false) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_board_token') || localStorage.getItem('semi_institute_token');
-    if (!token && immediate === false) return Promise.resolve(null);
+  useEffect(() => {
+    let isMounted = true;
 
-    if (!force && debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+    const checkChangeTimestamps = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_board_token') || localStorage.getItem('semi_institute_token');
+      if (!token) return;
 
-    return new Promise((resolve, reject) => {
-      const doFetch = async () => {
-        const fetchId = ++fetchCounterRef.current;
-        setLoading(true);
-        try {
-          const result = await fetcherRef.current();
-          if (fetchId === fetchCounterRef.current) {
-            setData(result);
-            setError(null);
-            resolve(result);
+      try {
+        const response = await apiClient.get('/sync/timestamps');
+        if (!isMounted) return;
+
+        const serverTimestamps = response.data?.data || response.data || {};
+        let hasChanged = false;
+
+        entityTypes.forEach((entity) => {
+          const serverTime = serverTimestamps[entity] || 0;
+          const lastTime = lastTimestampsRef.current[entity];
+
+          if (lastTime !== undefined && serverTime > lastTime) {
+            hasChanged = true;
           }
-        } catch (err) {
-          if (fetchId === fetchCounterRef.current) {
-            setError(err);
-            reject(err);
-          }
-        } finally {
-          if (fetchId === fetchCounterRef.current) {
-            setLoading(false);
-          }
+          lastTimestampsRef.current[entity] = serverTime;
+        });
+
+        if (hasChanged && typeof onDataChangeRef.current === 'function') {
+          onDataChangeRef.current();
         }
-      };
-
-      if (force) {
-        doFetch();
-      } else {
-        debounceTimerRef.current = setTimeout(doFetch, debounceMs);
-      }
-    });
-  }, [debounceMs, immediate]);
-
-  // Initial immediate fetch
-  useEffect(() => {
-    if (immediate) {
-      fetchData(true).catch(() => {});
-    }
-  }, [immediate, fetchData]);
-
-  // Subscribe to socket events for entityType
-  useEffect(() => {
-    if (!socket || !entityType) return;
-
-    // Subscribe to this entity type channel
-    try {
-      socket.emit('subscribe', { entityTypes: [entityType] });
-    } catch (e) {}
-
-    const handleTimestamps = (timestamps) => {
-      if (timestamps && timestamps[entityType]) {
-        const ts = timestamps[entityType];
-        setLastChange(ts);
+      } catch (err) {
+        // Silent catch for network hiccups
       }
     };
 
-    const handleDataChanged = (payload) => {
-      if (payload && (payload.entityType === entityType || payload.entityType === 'all')) {
-        const newTs = payload.timestamp || Date.now();
-        setLastChange(newTs);
-        fetchData(false).catch(() => {});
-      }
-    };
+    // Initial timestamp check
+    checkChangeTimestamps();
 
-    const handleRefreshRequired = (payload) => {
-      if (payload && payload.entityType === entityType) {
-        fetchData(true).catch(() => {});
-      }
-    };
-
-    socket.on('timestamps', handleTimestamps);
-    socket.on('DATA_CHANGED', handleDataChanged);
-    socket.on('refresh_required', handleRefreshRequired);
+    // Periodic lightweight check
+    const intervalId = setInterval(checkChangeTimestamps, intervalMs);
 
     return () => {
-      try {
-        socket.emit('unsubscribe', { entityTypes: [entityType] });
-      } catch (e) {}
-      socket.off('timestamps', handleTimestamps);
-      socket.off('DATA_CHANGED', handleDataChanged);
-      socket.off('refresh_required', handleRefreshRequired);
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
+      isMounted = false;
+      clearInterval(intervalId);
     };
-  }, [entityType, fetchData]);
-
-  return { data, loading, error, refetch: () => fetchData(true), lastChange };
+  }, [entityTypes.join(','), intervalMs]);
 };
 
 export default useDataSync;

@@ -3,9 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import InstitutionalLayout from '../institute/InstitutionalLayout';
 
 import authService from '../../api/auth';
+import { clearAllTokens } from '../../api/apiClient';
+import useDataSync from '../../hooks/useDataSync';
 import instituteService from '../../api/institutes';
 import academicService from '../../api/academic';
-import socket from '../../socket';
 import Toast from '../../Components/Toast';
 import ConfirmModal from '../../Components/ConfirmModal';
 
@@ -228,42 +229,17 @@ const AcademyPortal = () => {
     }
   }, [fetchBoardData]);
 
-  // Background Auto-Polling every 5 seconds
-  useEffect(() => {
-    let intervalId;
-    if (boardUser && currentStep === 'dashboard') {
-      intervalId = setInterval(() => {
+  // Smart Auto-Refresh ONLY on Data Change
+  useDataSync(
+    ['institutes', 'students', 'exams', 'results', 'revaluation', 'marks'],
+    useCallback(() => {
+      if (boardUser) {
         fetchBoardData();
-      }, 5000);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [boardUser, currentStep, fetchBoardData]);
+      }
+    }, [boardUser, fetchBoardData])
+  );
 
-  // Real-Time Socket Listener for Instant Data Refresh
-  useEffect(() => {
-    if (!boardUser) return;
-    const handleLiveRefresh = () => {
-      fetchBoardData();
-    };
 
-    socket.on('INSTITUTE_APPLICATION_UPDATED', handleLiveRefresh);
-    socket.on('MARKS_UPDATED', handleLiveRefresh);
-    socket.on('RESULTS_PUBLISHED', handleLiveRefresh);
-    socket.on('REVALUATION_UPDATED', handleLiveRefresh);
-    socket.on('EXAM_APPLICATION_UPDATED', handleLiveRefresh);
-    socket.on('DATA_CHANGED', handleLiveRefresh);
-
-    return () => {
-      socket.off('INSTITUTE_APPLICATION_UPDATED', handleLiveRefresh);
-      socket.off('MARKS_UPDATED', handleLiveRefresh);
-      socket.off('RESULTS_PUBLISHED', handleLiveRefresh);
-      socket.off('REVALUATION_UPDATED', handleLiveRefresh);
-      socket.off('EXAM_APPLICATION_UPDATED', handleLiveRefresh);
-      socket.off('DATA_CHANGED', handleLiveRefresh);
-    };
-  }, [boardUser, fetchBoardData]);
 
   // URL and Auth Guard Synchronizer
   useEffect(() => {
@@ -464,7 +440,9 @@ const AcademyPortal = () => {
 
   const handleLogout = useCallback(() => {
     setBoardUser(null);
-    localStorage.clear();
+    clearAllTokens();
+    if (typeof localStorage !== 'undefined') localStorage.clear();
+    if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
     setCurrentStep('login');
   }, [setCurrentStep]);
 

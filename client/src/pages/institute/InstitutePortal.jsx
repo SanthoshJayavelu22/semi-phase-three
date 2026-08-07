@@ -9,7 +9,7 @@ import {
 import authService from '../../api/auth';
 import { setTokens, clearAllTokens } from '../../api/apiClient';
 import instituteService from '../../api/institutes';
-import socket from '../../socket';
+import useDataSync from '../../hooks/useDataSync';
 import { getPaymentState, clearPaymentState } from '../../utils/razorpay';
 import { PaymentStatusChecker } from '../../Components/PaymentStatusChecker';
 import academicService from '../../api/academic';
@@ -583,48 +583,19 @@ const InstitutePortal = () => {
     return () => clearTimeout(timer);
   }, [loadApplicationFromStorage]);
 
-  // Background Auto-Polling every 5 seconds
-  useEffect(() => {
-    let intervalId;
-    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
-    if (user && token) {
-      if (currentStep === 'active_erp') {
-        fetchERPData().catch(err => console.warn('Failed sync ERP data:', err));
-      } else if (currentStep === 'pending_review' || currentStep === 'status') {
-        fetchApplication().catch(err => console.warn('Failed sync application status:', err));
-      }
-    }
-  }, [user, currentStep, fetchERPData, fetchApplication]);
-
-  // Real-Time Socket Listener for Instant Live Updates
-  useEffect(() => {
-    if (!user) return;
-
-    const handleLiveUpdate = () => {
+  // Smart Auto-Refresh ONLY on Data Change
+  useDataSync(
+    ['institutes', 'students', 'exams', 'results', 'revaluation', 'marks', 'courses', 'batches'],
+    useCallback(() => {
       if (currentStep === 'active_erp') {
         fetchERPData().catch(() => {});
+      } else if (currentStep === 'pending_review' || currentStep === 'status') {
+        fetchApplication().catch(() => {});
       }
-      fetchApplication().catch(() => {});
-    };
+    }, [currentStep, fetchERPData, fetchApplication])
+  );
 
-    socket.on('INSTITUTE_APPLICATION_UPDATED', handleLiveUpdate);
-    socket.on('MARKS_UPDATED', handleLiveUpdate);
-    socket.on('RESULTS_PUBLISHED', handleLiveUpdate);
-    socket.on('REVALUATION_UPDATED', handleLiveUpdate);
-    socket.on('EXAM_APPLICATION_UPDATED', handleLiveUpdate);
-    socket.on('HALL_TICKET_UPDATED', handleLiveUpdate);
-    socket.on('DATA_CHANGED', handleLiveUpdate);
 
-    return () => {
-      socket.off('INSTITUTE_APPLICATION_UPDATED', handleLiveUpdate);
-      socket.off('MARKS_UPDATED', handleLiveUpdate);
-      socket.off('RESULTS_PUBLISHED', handleLiveUpdate);
-      socket.off('REVALUATION_UPDATED', handleLiveUpdate);
-      socket.off('EXAM_APPLICATION_UPDATED', handleLiveUpdate);
-      socket.off('HALL_TICKET_UPDATED', handleLiveUpdate);
-      socket.off('DATA_CHANGED', handleLiveUpdate);
-    };
-  }, [user, currentStep, fetchERPData, fetchApplication]);
 
   // Fetch from backend when authenticated
   useEffect(() => {

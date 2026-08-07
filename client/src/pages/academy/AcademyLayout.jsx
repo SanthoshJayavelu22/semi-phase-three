@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 import instituteService from '../../api/institutes';
+import { clearAllTokens } from '../../api/apiClient';
+import useDataSync from '../../hooks/useDataSync';
 import academicService from '../../api/academic';
 import examService from '../../api/exams';
 import Toast from '../../Components/Toast';
@@ -229,6 +231,16 @@ export default function AcademyLayout() {
       setTimeout(() => fetchBoardData(), 0);
     }
   }, [boardUser, fetchBoardData]);
+
+  // Smart Auto-Refresh ONLY on Data Change
+  useDataSync(
+    ['institutes', 'students', 'exams', 'results', 'revaluation', 'marks'],
+    useCallback(() => {
+      if (boardUser) {
+        fetchBoardData();
+      }
+    }, [boardUser, fetchBoardData])
+  );
 
   // ─── Mock Fallbacks for Empty Database ──────────────────────────────────────
   const DEFAULT_MOCK_APPLICATIONS = useMemo(() => [
@@ -472,12 +484,9 @@ export default function AcademyLayout() {
 
   const handleLogout = useCallback(() => {
     setBoardUser(null);
-    localStorage.removeItem('semi_board_user');
-    localStorage.removeItem('semi_board_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('semi_token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('semi_refreshToken');
+    clearAllTokens();
+    if (typeof localStorage !== 'undefined') localStorage.clear();
+    if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
     navigate('/academy/login', { replace: true });
   }, [navigate]);
 

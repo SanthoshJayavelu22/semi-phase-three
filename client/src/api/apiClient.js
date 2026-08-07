@@ -129,23 +129,12 @@ export const setTokens = (accessToken, refreshToken) => {
 
 export const clearAllTokens = () => {
   try {
-    if (typeof localStorage === 'undefined') return;
-    [
-      'token',
-      'semi_token',
-      'semi_institute_token',
-      'semi_board_token',
-      'refreshToken',
-      'semi_refreshToken',
-      TOKEN_KEYS.access,
-      TOKEN_KEYS.refresh,
-      'semi_user',
-      'semi_board_user',
-      'semi_registered_email',
-    ].forEach((key) => {
-      try { localStorage.removeItem(key); } catch { /* ignore */ }
-    });
-    try { sessionStorage.clear(); } catch { /* ignore */ }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.clear();
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
   } catch { /* ignore */ }
 };
 
