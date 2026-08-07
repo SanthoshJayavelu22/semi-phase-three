@@ -583,17 +583,119 @@ const InstitutePortal = () => {
     return () => clearTimeout(timer);
   }, [loadApplicationFromStorage]);
 
-  // Smart Auto-Refresh ONLY on Data Change
-  useDataSync(
-    ['institutes', 'students', 'exams', 'results', 'revaluation', 'marks', 'courses', 'batches'],
-    useCallback(() => {
-      if (currentStep === 'active_erp') {
-        fetchERPData().catch(() => {});
-      } else if (currentStep === 'pending_review' || currentStep === 'status') {
+  // ─── ACTIVE PAGE ONLY AUTO-FETCHING (EVERY 3 SECONDS) ─────────────────────
+  // Auto-fetches ONLY the API for the page/tab currently being viewed to prevent unwanted API calls
+  useEffect(() => {
+    if (!user) return;
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) return;
+
+    const fetchCurrentPageData = () => {
+      if (currentStep === 'pending_review' || currentStep === 'status') {
         fetchApplication().catch(() => {});
+      } else if (currentStep === 'active_erp') {
+        if (activeTab === 'dashboard') {
+          fetchApplication().catch(() => {});
+          fetchERPData().catch(() => {});
+        } else if (activeTab === 'courses') {
+          academicService.getCourses().then(res => {
+            const data = extractData(res) || [];
+            if (Array.isArray(data)) {
+              const formatted = data.map(c => ({
+                id: c._id,
+                _id: c._id,
+                courseName: c.name,
+                courseCode: c.courseCode || 'N/A',
+                courseType: c.courseType || 'Postgraduate',
+                programCategory: c.programCategory || 'Emergency Medicine',
+                courseDuration: c.courseDuration || '2',
+                durationType: c.durationType || 'Years',
+                subjects: c.subjects || [],
+                practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
+                practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
+                totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
+                courseFee: c.courseFee || '0',
+                registrationFee: c.registrationFee || '0',
+                examinationFee: c.examinationFee || '0',
+                certificationFee: c.certificationFee || '0',
+                studentsCount: c.studentsCount ?? 0,
+                batchesCount: c.batchesCount ?? 0,
+                status: c.status || 'Active'
+              }));
+              setCourses(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
+            }
+          }).catch(() => {});
+        } else if (activeTab === 'batches') {
+          academicService.getBatches().then(res => {
+            const data = extractData(res) || [];
+            if (Array.isArray(data)) {
+              const formatted = data.map(b => ({
+                id: b._id,
+                _id: b._id,
+                name: b.name || `Batch ${b.year || new Date().getFullYear()}-A`,
+                startDate: b.startDate ? b.startDate.split('T')[0] : `${b.year || new Date().getFullYear()}-01-10`,
+                seats: b.seats || '5',
+                activeFellows: b.activeFellows || 0,
+                year: b.year,
+                course: b.course,
+                courseName: b.course?.name || b.course?.courseName || b.courseName || ''
+              }));
+              setBatches(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
+            }
+          }).catch(() => {});
+        } else if (activeTab === 'students' || activeTab === 'enrollment' || activeTab === 'studentDetails') {
+          academicService.listStudents().then(res => {
+            const data = extractData(res) || [];
+            if (Array.isArray(data)) {
+              const formatted = data.map(s => ({
+                id: s._id,
+                _id: s._id,
+                fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+                email: s.email,
+                phone: s.contactNumber,
+                qualification: s.qualification,
+                graduationYear: s.yearOfPassing?.toString() || '',
+                enrollmentNo: s.enrollmentId,
+                admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+                status: s.remittedToAcademy ? 'Completed' : 'Active',
+                remittedToAcademy: s.remittedToAcademy || false,
+                attendancePercentage: s.attendancePercentage || 0,
+                thesisApproved: s.thesisApproved || false,
+                courseId: s.course?._id || s.course,
+                batchId: s.batch?._id || s.batch,
+                courseName: s.course?.name || 'General Medicine',
+                batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
+                homeAddress: s.homeAddress,
+                contactNumber: s.contactNumber,
+                courseDirector: s.courseDirector,
+                razorpayOrderId: s.razorpayOrderId,
+                razorpayPaymentId: s.razorpayPaymentId,
+                razorpaySignature: s.razorpaySignature,
+                medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
+                universityName: s.universityName,
+                mbbsQualification: s.mbbsQualification,
+                fmgeClearanceStatus: s.fmgeClearanceStatus,
+                isForeignGraduate: s.isForeignGraduate,
+                documents: s.documents || {},
+                semesters: s.semesters || [],
+              }));
+              setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
+            }
+          }).catch(() => {});
+        } else if (activeTab === 'exams' || activeTab === 'hallTicket' || activeTab === 'results') {
+          examService.listExamApplications().then(res => {
+            const data = extractData(res) || [];
+            if (Array.isArray(data)) {
+              setExamApplications(prev => JSON.stringify(prev) === JSON.stringify(data) ? prev : data);
+            }
+          }).catch(() => {});
+        }
       }
-    }, [currentStep, fetchERPData, fetchApplication])
-  );
+    };
+
+    const intervalId = setInterval(fetchCurrentPageData, 3000);
+    return () => clearInterval(intervalId);
+  }, [user, currentStep, activeTab, fetchApplication, fetchERPData]);
 
 
 
@@ -1265,10 +1367,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
   };
 
   // ─── APPLICATION SUBMIT (validates → pays → submits) ─────────────────────────
-  const submitApplicationInternal = async (overridePaymentData) => {
+  const submitApplicationInternal = async (overridePaymentData, forceAgreement = false) => {
     const formData = new FormData();
 
     const cleaned = { ...appForm };
+    if (forceAgreement || paymentComplete || overridePaymentData) {
+      cleaned.certificationAgreement = true;
+    }
     cleaned.phoneNumber = (appForm.phoneNumber || '').replace(/\D/g, '');
     cleaned.officePhone = (appForm.officePhone || '').replace(/\D/g, '');
 
@@ -1278,6 +1383,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         formData.append(key, val);
       }
     });
+    // Ensure certificationAgreement is always sent as boolean true string
+    formData.append('certificationAgreement', 'true');
 
     const appendDocFile = (backendKey, stateKey) => {
       const fileState = uploadedDocs[stateKey];
@@ -1326,6 +1433,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     setSuccessBanner('Application submitted successfully! Moving to Academic Board for Review.');
     setApplicationSubmitting(false);
     setCurrentStep('pending_review');
+    navigate('/institute/status', { replace: true });
   };
 
   const handleApplicationSubmit = async (e) => {
@@ -1387,17 +1495,18 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
 
+    // STRICT REQUIREMENT: Require Certification & Declarations agreement checkbox to be ticked
     if (!appForm.certificationAgreement) {
-      setErrorBanner('You must accept the Certification & Declarations agreement to proceed.');
+      setErrorBanner('⚠️ Compliance Requirement: You must tick the "Certification & Declarations agreement" checkbox before initiating payment or submitting the application.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    // If payment already complete, submit directly
+    // If payment already complete and checkbox is ticked: submit directly on single click
     if (paymentComplete) {
       setApplicationSubmitting(true);
       try {
-        await submitApplicationInternal();
+        await submitApplicationInternal(null, true);
       } catch (err) {
         console.error('Application submission failed:', err);
         setErrorBanner(extractErrorMessage(err, 'Failed to submit application.'));
@@ -1471,7 +1580,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
               // Auto-submit after successful payment
               // Pass newPaymentData directly to avoid closure stale-state bug
               try {
-                await submitApplicationInternal(newPaymentData);
+                await submitApplicationInternal(newPaymentData, true);
               } catch (submitErr) {
                 console.error('Application submission failed after payment', submitErr);
                 setErrorBanner('Payment succeeded but application submission failed: ' + extractErrorMessage(submitErr, 'Please try submitting again.'));

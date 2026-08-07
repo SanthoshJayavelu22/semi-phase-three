@@ -232,15 +232,14 @@ export default function AcademyLayout() {
     }
   }, [boardUser, fetchBoardData]);
 
-  // Smart Auto-Refresh ONLY on Data Change
-  useDataSync(
-    ['institutes', 'students', 'exams', 'results', 'revaluation', 'marks'],
-    useCallback(() => {
-      if (boardUser) {
-        fetchBoardData();
-      }
-    }, [boardUser, fetchBoardData])
-  );
+  // Auto-fetch data every 3 seconds for active board view
+  useEffect(() => {
+    if (!boardUser) return;
+    const intervalId = setInterval(() => {
+      fetchBoardData();
+    }, 3000);
+    return () => clearInterval(intervalId);
+  }, [boardUser, fetchBoardData]);
 
   // ─── Mock Fallbacks for Empty Database ──────────────────────────────────────
   const DEFAULT_MOCK_APPLICATIONS = useMemo(() => [
