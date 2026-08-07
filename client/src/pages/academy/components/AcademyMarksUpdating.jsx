@@ -659,14 +659,6 @@ const AcademyMarksUpdating = () => {
                       <Plus className="w-3.5 h-3.5" />
                       Add Subject
                     </button>
-                    <button
-                      onClick={handleSaveMarks}
-                      disabled={isSubmitting}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm"
-                    >
-                      {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                      Save Marks
-                    </button>
                   </div>
                 </div>
 
@@ -844,7 +836,7 @@ const AcademyMarksUpdating = () => {
                 </div>
               </div>
 
-              {/* ─── Quick Actions ────────────────────────────────────────────── */}
+              {/* ─── Bottom Actions & Submit ───────────────────────────────────── */}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-3 justify-between">
                 <div className="flex items-center gap-2.5 text-xs text-slate-600">
                   <AlertCircle className="w-4 h-4 text-amber-500" />
@@ -855,31 +847,12 @@ const AcademyMarksUpdating = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => {
-                      const updatedMarks = (selectedStudent.marks || []).map((m) => ({
-                        ...m,
-                        isAbsent: false,
-                      }));
-                      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
-                      setToast({ message: 'All subjects set to PRESENT', type: 'success' });
-                    }}
-                    className="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold rounded-xl text-xs transition-all border border-emerald-200"
+                    onClick={handleSaveMarks}
+                    disabled={isSubmitting}
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md cursor-pointer active:scale-95"
                   >
-                    Set All Present
-                  </button>
-                  <button
-                    onClick={() => {
-                      const updatedMarks = (selectedStudent.marks || []).map((m) => ({
-                        ...m,
-                        isAbsent: true,
-                        marksObtained: null,
-                      }));
-                      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
-                      setToast({ message: 'All subjects set to ABSENT', type: 'info' });
-                    }}
-                    className="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl text-xs transition-all border border-rose-200"
-                  >
-                    Set All Absent
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Submit Marks
                   </button>
                 </div>
               </div>

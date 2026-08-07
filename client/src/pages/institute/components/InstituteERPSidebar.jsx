@@ -1,4 +1,4 @@
-import { Activity, BookOpen, Layers, GraduationCap, Users, CreditCard, FileText, Database, Ticket } from 'lucide-react';
+import { Activity, BookOpen, Layers, GraduationCap, Users, CreditCard, FileText, Database, Ticket, Award } from 'lucide-react';
 
 const InstituteERPSidebar = ({ 
   activeTab, 
@@ -6,7 +6,6 @@ const InstituteERPSidebar = ({
   user, 
   setErrorBanner, 
   setSuccessBanner,
-
 }) => {
   const handleTabClick = (tab) => {
     setErrorBanner(null);
@@ -28,13 +27,13 @@ const InstituteERPSidebar = ({
         </div>
         <div className="flex flex-col text-left">
           <span className="text-sm font-black text-white tracking-wide drop-shadow-sm">SEMI Portal</span>
-          <span className="text-[9px] text-primary-400 font-bold uppercase tracking-widest mt-0.5">Institution Console</span>
+          <span className="text-[9px] text-primary-400 font-bold uppercase tracking-widest mt-0.5">Institute Dashboard</span>
         </div>
       </div>
       
       {/* Logged in User Widget */}
       <div className="px-5 py-4 border-b border-primary-800/60 bg-primary-950/20 relative z-10">
-        <span className="text-[8px] uppercase font-black text-primary-400 tracking-widest block text-left">Accredited Institute</span>
+        <span className="text-[8px] uppercase font-black text-primary-400 tracking-widest block text-left">College / Hospital</span>
         <div className="flex items-center gap-3 mt-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-400 to-primary-600 text-white flex items-center justify-center font-black text-xs shadow-md border border-primary-400/20">
             SI
@@ -49,9 +48,12 @@ const InstituteERPSidebar = ({
       </div>
 
       {/* Navigation tabs */}
-      <nav className="flex-grow px-4 py-6 space-y-1 overflow-y-auto">
-        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mb-3 text-left">Main Menu</span>
+      <nav className="flex-grow px-4 py-5 space-y-1 overflow-y-auto">
         
+        {/* ── 1. OVERVIEW ── */}
+        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mb-2 text-left">
+          Main
+        </span>
         <button
           type="button"
           onClick={() => handleTabClick('dashboard')}
@@ -66,8 +68,10 @@ const InstituteERPSidebar = ({
           <span>Dashboard</span>
         </button>
 
-        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mt-5 mb-3 text-left">Manage</span>
-        
+        {/* ── 2. COURSES & BATCHES ── */}
+        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mt-4 mb-2 text-left">
+          Courses & Batches
+        </span>
         <button
           type="button"
           onClick={() => handleTabClick('courses')}
@@ -79,9 +83,8 @@ const InstituteERPSidebar = ({
           }`}
         >
           <BookOpen className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'courses' ? 'scale-110' : ''}`} />
-          <span>Courses</span>
+          <span>Courses List</span>
         </button>
-
         <button
           type="button"
           onClick={() => handleTabClick('batches')}
@@ -93,9 +96,13 @@ const InstituteERPSidebar = ({
           }`}
         >
           <Layers className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'batches' ? 'scale-110' : ''}`} />
-          <span>Batches</span>
+          <span>Student Batches</span>
         </button>
 
+        {/* ── 3. STUDENTS ── */}
+        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mt-4 mb-2 text-left">
+          Students
+        </span>
         <button
           type="button"
           onClick={() => handleTabClick('enrollment')}
@@ -106,9 +113,8 @@ const InstituteERPSidebar = ({
           }`}
         >
           <GraduationCap className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'enrollment' ? 'scale-110' : ''}`} />
-          <span>Students Enrollment</span>
+          <span>Register New Student</span>
         </button>
-
         <button
           type="button"
           onClick={() => handleTabClick('students')}
@@ -119,9 +125,8 @@ const InstituteERPSidebar = ({
           }`}
         >
           <Users className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'students' ? 'scale-110' : ''}`} />
-          <span>Students List</span>
+          <span>All Students</span>
         </button>
-
         <button
           type="button"
           onClick={() => handleTabClick('studentDetails')}
@@ -132,9 +137,13 @@ const InstituteERPSidebar = ({
           }`}
         >
           <Database className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'studentDetails' ? 'scale-110' : ''}`} />
-          <span>Student details</span>
+          <span>Student Profiles</span>
         </button>
 
+        {/* ── 4. FEES ── */}
+        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mt-4 mb-2 text-left">
+          Fees & Payments
+        </span>
         <button
           type="button"
           onClick={() => handleTabClick('fees')}
@@ -145,9 +154,8 @@ const InstituteERPSidebar = ({
           }`}
         >
           <CreditCard className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'fees' ? 'scale-110' : ''}`} />
-          <span>Fees</span>
+          <span>Student Fees</span>
         </button>
-
         <button
           type="button"
           onClick={() => handleTabClick('remittance')}
@@ -158,9 +166,13 @@ const InstituteERPSidebar = ({
           }`}
         >
           <CreditCard className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'remittance' ? 'scale-110' : ''}`} />
-          <span>Academy Remittance</span>
+          <span>Board Fee Payments</span>
         </button>
 
+        {/* ── 5. EXAMS ── */}
+        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mt-4 mb-2 text-left">
+          Exams & Hall Tickets
+        </span>
         <button
           type="button"
           onClick={() => handleTabClick('exams')}
@@ -171,9 +183,8 @@ const InstituteERPSidebar = ({
           }`}
         >
           <FileText className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'exams' ? 'scale-110' : ''}`} />
-          <span>Exam Application</span>
+          <span>Exam Registration</span>
         </button>
-
         <button
           type="button"
           onClick={() => handleTabClick('hallTicket')}
@@ -184,11 +195,13 @@ const InstituteERPSidebar = ({
           }`}
         >
           <Ticket className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'hallTicket' ? 'scale-110' : ''}`} />
-          <span>Hall Ticket</span>
+          <span>Hall Tickets</span>
         </button>
 
-        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mt-5 mb-3 text-left">Post-Exam</span>
-
+        {/* ── 6. RESULTS ── */}
+        <span className="text-[9px] uppercase font-black text-primary-500 px-3 tracking-widest block mt-4 mb-2 text-left">
+          Results & Re-checking
+        </span>
         <button
           type="button"
           onClick={() => handleTabClick('results')}
@@ -198,10 +211,9 @@ const InstituteERPSidebar = ({
               : 'hover:bg-primary-800/60 hover:text-primary-100 text-primary-300'
           }`}
         >
-          <FileText className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'results' ? 'scale-110' : ''}`} />
-          <span>Results</span>
+          <Award className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'results' ? 'scale-110' : ''}`} />
+          <span>Exam Results</span>
         </button>
-
         <button
           type="button"
           onClick={() => handleTabClick('revaluation')}
@@ -212,8 +224,9 @@ const InstituteERPSidebar = ({
           }`}
         >
           <FileText className={`w-4 h-4 transition-transform duration-200 ${activeTab === 'revaluation' ? 'scale-110' : ''}`} />
-          <span>Revaluation</span>
+          <span>Re-checking Requests</span>
         </button>
+
       </nav>
     </aside>
   );

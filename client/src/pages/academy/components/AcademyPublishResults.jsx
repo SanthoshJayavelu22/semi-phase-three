@@ -832,37 +832,7 @@ const AcademyPublishResults = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-        <h4 className="text-sm font-black text-slate-700 mb-4">Quick Actions</h4>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => {
-              setStep(1);
-              setGeneratedResults(null);
-              setPublishResult(null);
-            }}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            New Publication
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            Print Report
-          </button>
-          <button
-            onClick={() => setToast({ message: '📊 Publication report exported successfully!', type: 'success' })}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export Report
-          </button>
-        </div>
-      </div>
+
 
       {/* Generated Results Preview */}
       {publishResult?.publishedResults?.length > 0 && (
