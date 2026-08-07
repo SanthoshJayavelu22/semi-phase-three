@@ -588,35 +588,13 @@ const InstitutePortal = () => {
     let intervalId;
     const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
     if (user && token) {
-      intervalId = setInterval(() => {
-        if (currentStep === 'active_erp') {
-          fetchERPData().catch(err => console.warn('Failed auto-polling ERP data:', err));
-        } else if (currentStep === 'pending_review' || currentStep === 'status') {
-          fetchApplication().catch(err => console.warn('Failed auto-polling application status:', err));
-        } else if (currentStep === 'verify_pending') {
-          authService.checkStatus()
-            .then(res => {
-              const data = res.data?.data || res.data || {};
-              if (data.isEmailVerified === true) {
-                setSuccessBanner('Email verified successfully! Please login with your credentials.');
-                setUser(null);
-                localStorage.removeItem('semi_user');
-                localStorage.removeItem('token');
-                localStorage.removeItem('semi_token');
-                localStorage.removeItem('refreshToken');
-                setCurrentStep('login');
-              }
-            })
-            .catch(err => {
-              console.warn('Failed to poll user verification status:', err);
-            });
-        }
-      }, 5000);
+      if (currentStep === 'active_erp') {
+        fetchERPData().catch(err => console.warn('Failed sync ERP data:', err));
+      } else if (currentStep === 'pending_review' || currentStep === 'status') {
+        fetchApplication().catch(err => console.warn('Failed sync application status:', err));
+      }
     }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [user, currentStep, fetchERPData, fetchApplication, setCurrentStep]);
+  }, [user, currentStep, fetchERPData, fetchApplication]);
 
   // Real-Time Socket Listener for Instant Live Updates
   useEffect(() => {
@@ -635,6 +613,7 @@ const InstitutePortal = () => {
     socket.on('REVALUATION_UPDATED', handleLiveUpdate);
     socket.on('EXAM_APPLICATION_UPDATED', handleLiveUpdate);
     socket.on('HALL_TICKET_UPDATED', handleLiveUpdate);
+    socket.on('DATA_CHANGED', handleLiveUpdate);
 
     return () => {
       socket.off('INSTITUTE_APPLICATION_UPDATED', handleLiveUpdate);
@@ -643,6 +622,7 @@ const InstitutePortal = () => {
       socket.off('REVALUATION_UPDATED', handleLiveUpdate);
       socket.off('EXAM_APPLICATION_UPDATED', handleLiveUpdate);
       socket.off('HALL_TICKET_UPDATED', handleLiveUpdate);
+      socket.off('DATA_CHANGED', handleLiveUpdate);
     };
   }, [user, currentStep, fetchERPData, fetchApplication]);
 

@@ -3,6 +3,7 @@ import { Institute } from '../models/instituteModel';
 import { User } from '../models/userModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { emitEvent } from '../config/socket';
+import { cacheService } from '../services/cacheService';
 import { z } from 'zod';
 import sendEmail from '../utils/sendEmail';
 import razorpayInstance, { keyId } from '../config/razorpay';
@@ -441,6 +442,7 @@ export const reviewApplication = async (req: Request, res: Response) => {
     await institute.save();
 
     emitEvent('INSTITUTE_APPLICATION_UPDATED', { instituteId: institute._id, status });
+    await cacheService.markChange('institutes', institute._id.toString());
 
     // Fetch the user related to the institute
     const user = await User.findById(institute.user);

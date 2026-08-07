@@ -253,6 +253,7 @@ const AcademyPortal = () => {
     socket.on('RESULTS_PUBLISHED', handleLiveRefresh);
     socket.on('REVALUATION_UPDATED', handleLiveRefresh);
     socket.on('EXAM_APPLICATION_UPDATED', handleLiveRefresh);
+    socket.on('DATA_CHANGED', handleLiveRefresh);
 
     return () => {
       socket.off('INSTITUTE_APPLICATION_UPDATED', handleLiveRefresh);
@@ -260,6 +261,7 @@ const AcademyPortal = () => {
       socket.off('RESULTS_PUBLISHED', handleLiveRefresh);
       socket.off('REVALUATION_UPDATED', handleLiveRefresh);
       socket.off('EXAM_APPLICATION_UPDATED', handleLiveRefresh);
+      socket.off('DATA_CHANGED', handleLiveRefresh);
     };
   }, [boardUser, fetchBoardData]);
 
