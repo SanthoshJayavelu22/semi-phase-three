@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pencil, Trash2, XCircle } from 'lucide-react';
+import { Pencil, Trash2, XCircle, Loader2 } from 'lucide-react';
 
 const InstituteERPBatches = ({
   batches = [],
@@ -11,6 +11,7 @@ const InstituteERPBatches = ({
   handleDeleteBatch
 }) => {
   const [editingBatch, setEditingBatch] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     startDate: '',
@@ -39,6 +40,7 @@ const InstituteERPBatches = ({
 
   const onEditSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     if (!editForm.name || !editForm.startDate) {
       alert('Please fill in the batch name and commencement date.');
       return;
@@ -50,15 +52,30 @@ const InstituteERPBatches = ({
       return;
     }
 
-    if (handleUpdateBatch) {
-      const batchId = editingBatch._id || editingBatch.id;
-      await handleUpdateBatch(batchId, {
-        name: editForm.name,
-        startDate: editForm.startDate,
-        seats: Number(editForm.seats)
-      });
+    setSubmitting(true);
+    try {
+      if (handleUpdateBatch) {
+        const batchId = editingBatch._id || editingBatch.id;
+        await handleUpdateBatch(batchId, {
+          name: editForm.name,
+          startDate: editForm.startDate,
+          seats: Number(editForm.seats)
+        });
+      }
+      cancelEdit();
+    } finally {
+      setSubmitting(false);
     }
-    cancelEdit();
+  };
+
+  const onSubmit = async (e) => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await handleCreateBatch(e);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
 
@@ -90,7 +107,7 @@ const InstituteERPBatches = ({
             )}
           </div>
           
-          <form onSubmit={editingBatch ? onEditSubmit : handleCreateBatch} className="space-y-4">
+          <form onSubmit={editingBatch ? onEditSubmit : onSubmit} className="space-y-4">
             <div>
               <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Select Course *</label>
               <select
@@ -179,13 +196,21 @@ const InstituteERPBatches = ({
 
             <button
               type="submit"
-              className={`w-full py-3.5 text-white font-extrabold rounded-xl transition-all shadow-md text-xs uppercase tracking-wider cursor-pointer ${
+              disabled={submitting}
+              className={`w-full py-3.5 text-white font-extrabold rounded-xl transition-all shadow-md text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 ${
                 editingBatch 
                   ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/10' 
                   : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/10'
-              }`}
+              } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600`}
             >
-              {editingBatch ? 'Save Changes' : 'Create Batch'}
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {editingBatch ? 'Saving Changes...' : 'Creating Batch...'}
+                </>
+              ) : (
+                editingBatch ? 'Save Changes' : 'Create Batch'
+              )}
             </button>
           </form>
         </div>
