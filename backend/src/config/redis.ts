@@ -63,5 +63,5 @@ export const getRedisClient = () => {
   return redisClient;
 };
 
-export default getRedisClient();
+export default getRedisClient;
 

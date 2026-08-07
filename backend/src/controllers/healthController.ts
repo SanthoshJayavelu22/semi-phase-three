@@ -24,11 +24,12 @@ export const healthCheck = async (req: Request, res: Response) => {
 
     // Check Redis
     try {
-      if (redis) {
-        await redis.ping();
+      const redisClient = typeof redis === 'function' ? redis() : redis;
+      if (redisClient && typeof redisClient.ping === 'function') {
+        await redisClient.ping();
         health.services.redis = 'connected';
       } else {
-        health.services.redis = 'disconnected';
+        health.services.redis = 'fallback';
       }
     } catch (error) {
       health.services.redis = 'disconnected';

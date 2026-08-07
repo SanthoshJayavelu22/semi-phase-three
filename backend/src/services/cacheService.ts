@@ -1,5 +1,4 @@
 import getRedisClient from '../config/redis';
-import { getIO, emitEvent } from '../config/socket';
 
 export class CacheService {
   private redis: any;
@@ -27,10 +26,6 @@ export class CacheService {
       }
     } catch (err: any) {
       // Fallback to in-memory map if Redis set fails
-      this.inMemoryTimestamps.set(key, timestamp);
-      if (id) {
-        this.inMemoryTimestamps.set(`change:${entityType}:${id}`, timestamp);
-      }
     }
 
     // Always update in-memory map as instant cache
@@ -39,12 +34,19 @@ export class CacheService {
       this.inMemoryTimestamps.set(`change:${entityType}:${id}`, timestamp);
     }
 
-    // Broadcast change notification via Socket.io
-    emitEvent('DATA_CHANGED', {
-      entityType,
-      id,
-      timestamp,
-    });
+    // Safely lazy-import emitEvent to break circular dependency
+    try {
+      const { emitEvent } = require('../config/socket');
+      if (typeof emitEvent === 'function') {
+        emitEvent('DATA_CHANGED', {
+          entityType,
+          id,
+          timestamp,
+        });
+      }
+    } catch (err) {
+      // Ignore if socket is initializing
+    }
   }
 
   /**

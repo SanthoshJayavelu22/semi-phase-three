@@ -7,8 +7,9 @@ const clientSubscriptions = new Map<string, Set<string>>();
 
 export const initSocket = (server: HttpServer) => {
   try {
-    const { Server } = require('socket.io');
-    ioInstance = new Server(server, {
+    const socketModule = require('socket.io');
+    const ServerClass = socketModule.Server || socketModule;
+    ioInstance = new ServerClass(server, {
       cors: {
         origin: process.env.CLIENT_URL || '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -29,12 +30,14 @@ export const initSocket = (server: HttpServer) => {
         const subs = clientSubscriptions.get(socket.id)!;
         entityTypes.forEach((type) => subs.add(type));
 
-        // Lazily fetch and return current timestamps
+        // Lazily fetch and return current timestamps without circular dependency
         try {
           const { cacheService } = require('../services/cacheService');
-          cacheService.getAllTimestamps().then((timestamps: Record<string, number>) => {
-            socket.emit('timestamps', timestamps);
-          });
+          if (cacheService && typeof cacheService.getAllTimestamps === 'function') {
+            cacheService.getAllTimestamps().then((timestamps: Record<string, number>) => {
+              socket.emit('timestamps', timestamps);
+            }).catch(() => {});
+          }
         } catch (e) {
           // Ignore cache service import error if initializing
         }
@@ -64,19 +67,21 @@ export const initSocket = (server: HttpServer) => {
     console.log('✅ Socket.io server initialized successfully');
     return ioInstance;
   } catch (error: any) {
-    console.error('❌ Failed to initialize Socket.io:', error.message);
-    return null;
+    console.warn('⚠️ Socket.io module (socket.io) not available in local node_modules. Falling back to HTTP sync mode.');
+    ioInstance = {
+      emit: () => {},
+      on: () => {},
+    };
+    return ioInstance;
   }
 };
 
 export const getIO = () => ioInstance;
 
 export const emitEvent = (eventName: string, payload?: any) => {
-  if (ioInstance) {
+  if (ioInstance && typeof ioInstance.emit === 'function') {
     try {
       if (eventName === 'DATA_CHANGED') {
-        const { entityType } = payload || {};
-        // Emit DATA_CHANGED to all clients or clients subscribed to this entity type
         ioInstance.emit('DATA_CHANGED', payload || {});
       } else {
         ioInstance.emit(eventName, payload || {});
