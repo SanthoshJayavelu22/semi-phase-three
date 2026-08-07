@@ -172,13 +172,13 @@ const AcademyDashboard = ({ dynamicMetrics = {}, setActiveTab, allApplications =
           </div>
 
           <div className="space-y-3">
-            {allApplications.length === 0 ? (
+            {(!allApplications || allApplications.length === 0) ? (
               <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl">
                 <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                 <p className="text-xs font-bold text-slate-500">No applications registered yet</p>
               </div>
             ) : (
-              allApplications.slice(0, 5).map((app) => {
+              (allApplications || []).slice(0, 5).map((app) => {
                 const status = app.status || 'pending_review';
                 const isApproved = status === 'approved' || status === 'active_erp';
                 const isRejected = status === 'rejected';

@@ -3,16 +3,19 @@ import { Search, RefreshCw, Eye, Compass } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 
 const AcademyApplications = ({ 
-  filteredApplications, 
-  allApplications, 
-  searchQuery, 
+  filteredApplications = [], 
+  allApplications = [], 
+  searchQuery = '', 
   setSearchQuery, 
-  statusFilter, 
+  statusFilter = '', 
   setStatusFilter, 
   fetchBoardData,
   setSelectedApp
 }) => {
   const [toast, setToast] = useState(null);
+  const safeFiltered = Array.isArray(filteredApplications) ? filteredApplications : [];
+  const safeAll = Array.isArray(allApplications) ? allApplications : [];
+
   return (
     <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm text-left space-y-6 animate-in fade-in duration-300">
       
@@ -21,7 +24,7 @@ const AcademyApplications = ({
         <div>
           <h2 className="text-xl font-black text-gray-900 tracking-tight">Institutional Onboarding Applications</h2>
           <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mt-1">
-            Auditing {filteredApplications.length} of {allApplications.length} institutions in registry
+            Auditing {safeFiltered.length} of {safeAll.length} institutions in registry
           </span>
         </div>
 
@@ -81,8 +84,8 @@ const AcademyApplications = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-150/60 text-xs font-bold text-slate-700 bg-white">
-              {filteredApplications.length > 0 ? (
-                filteredApplications.map((app, idx) => (
+              {safeFiltered.length > 0 ? (
+                safeFiltered.map((app, idx) => (
                   <tr key={app.id} className="hover:bg-slate-50/60 transition-colors group">
                     <td className="px-6 py-4 text-center text-[10px] text-gray-400 font-extrabold">
                       {String(idx + 1).padStart(2, '0')}

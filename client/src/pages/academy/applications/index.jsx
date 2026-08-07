@@ -7,13 +7,13 @@ import AcademyApplications from '../components/AcademyApplications';
  */
 export default function AcademyApplicationsPage() {
   const {
-    filteredApplications,
-    allApplications,
-    searchQuery, setSearchQuery,
-    statusFilter, setStatusFilter,
-    fetchBoardData,
-    setSelectedApp,
-  } = useOutletContext();
+    filteredApplications = [],
+    allApplications = [],
+    searchQuery = '', setSearchQuery = () => {},
+    statusFilter = '', setStatusFilter = () => {},
+    fetchBoardData = () => {},
+    setSelectedApp = () => {},
+  } = useOutletContext() || {};
 
   return (
     <AcademyApplications

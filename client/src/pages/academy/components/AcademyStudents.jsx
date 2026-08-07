@@ -2,22 +2,24 @@ import React from 'react';
 import { Search, Compass, Eye } from 'lucide-react';
 
 const AcademyStudents = ({ 
-  filteredStudents, 
-  studentSearchQuery, 
+  filteredStudents = [], 
+  studentSearchQuery = '', 
   setStudentSearchQuery,
   handleView
 }) => {
   const [instituteFilter, setInstituteFilter] = React.useState('');
 
+  const safeStudents = Array.isArray(filteredStudents) ? filteredStudents : [];
+
   const uniqueInstitutes = React.useMemo(() => {
-    const insts = filteredStudents.map(s => s.institute || s.assignedInstitute || s.instituteName).filter(Boolean);
+    const insts = safeStudents.map(s => s?.institute || s?.assignedInstitute || s?.instituteName).filter(Boolean);
     return [...new Set(insts)].sort();
-  }, [filteredStudents]);
+  }, [safeStudents]);
 
   const displayedStudents = React.useMemo(() => {
-    if (!instituteFilter) return filteredStudents;
-    return filteredStudents.filter(s => (s.institute || s.assignedInstitute || s.instituteName) === instituteFilter);
-  }, [filteredStudents, instituteFilter]);
+    if (!instituteFilter) return safeStudents;
+    return safeStudents.filter(s => (s?.institute || s?.assignedInstitute || s?.instituteName) === instituteFilter);
+  }, [safeStudents, instituteFilter]);
 
   return (
     <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm text-left space-y-6 animate-in fade-in duration-300">

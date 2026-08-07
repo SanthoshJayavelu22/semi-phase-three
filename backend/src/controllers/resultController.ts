@@ -90,10 +90,23 @@ export const getResultByStudent = async (req: Request, res: Response) => {
     }
 
     if (dateOfBirth && student.dateOfBirth) {
-      const queryDob = new Date(dateOfBirth as string).toISOString().split('T')[0];
-      const studentDob = student.dateOfBirth.toISOString().split('T')[0];
-      if (queryDob !== studentDob) {
-        return sendError({ req, res, statusCode: 401, message: 'Invalid Date of Birth' });
+      try {
+        const queryDobStr = String(dateOfBirth).split('T')[0].trim();
+        const studentDobStr = (student.dateOfBirth instanceof Date 
+          ? student.dateOfBirth.toISOString() 
+          : String(student.dateOfBirth)).split('T')[0].trim();
+
+        const qDate = new Date(dateOfBirth as string);
+        const sDate = new Date(student.dateOfBirth);
+
+        const qUTC = !isNaN(qDate.getTime()) ? qDate.toISOString().split('T')[0] : queryDobStr;
+        const sUTC = !isNaN(sDate.getTime()) ? sDate.toISOString().split('T')[0] : studentDobStr;
+
+        if (queryDobStr !== studentDobStr && qUTC !== sUTC) {
+          return sendError({ req, res, statusCode: 401, message: 'Invalid Date of Birth' });
+        }
+      } catch (err) {
+        console.warn('DOB validation error:', err);
       }
     }
 

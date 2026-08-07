@@ -7,10 +7,11 @@ import AcademyStudents from '../components/AcademyStudents';
  */
 export default function AcademyStudentsPage() {
   const {
-    filteredStudents,
-    studentSearchQuery, setStudentSearchQuery,
-    handleViewStudent,
-  } = useOutletContext();
+    filteredStudents = [],
+    studentSearchQuery = '', 
+    setStudentSearchQuery = () => {},
+    handleViewStudent = () => {},
+  } = useOutletContext() || {};
 
   return (
     <AcademyStudents
