@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle } from 'lucide-react';
+import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle, Loader2 } from 'lucide-react';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
@@ -27,6 +27,7 @@ const InstituteERPCourses = ({
     status: 'Active'
   });
   const [isEditLoading, setIsEditLoading] = useState(false);
+  const [isCreateLoading, setIsCreateLoading] = useState(false);
   const [editError, setEditError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -159,6 +160,16 @@ const InstituteERPCourses = ({
     }
   }, [editForm, editingCourse, courses, setCourses, closeEditModal]);
 
+  const handleCreateSubmit = useCallback(async (e) => {
+    if (isCreateLoading) return;
+    setIsCreateLoading(true);
+    try {
+      await handleCreateCourse(e);
+    } finally {
+      setIsCreateLoading(false);
+    }
+  }, [handleCreateCourse, isCreateLoading]);
+
   // ─── Delete Handler ──────────────────────────────────────────────────────────
   const handleDeleteCourse = useCallback((course) => {
     setConfirmConfig({
@@ -249,7 +260,7 @@ const InstituteERPCourses = ({
       <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 shadow-sm">
         <h3 className="text-base font-black text-gray-900 uppercase tracking-wider mb-6 border-b border-gray-100 pb-3">Course Creation Form</h3>
         
-        <form onSubmit={handleCreateCourse} className="space-y-6">
+        <form onSubmit={handleCreateSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Course Name *</label>
@@ -441,9 +452,17 @@ const InstituteERPCourses = ({
           <div className="flex justify-center pt-4">
             <button
               type="submit"
-              className="px-10 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all shadow-md shadow-blue-500/10 text-xs uppercase tracking-wider"
+              disabled={isCreateLoading}
+              className="px-10 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all shadow-md shadow-blue-500/10 text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
             >
-              Create Course
+              {isCreateLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating Course...
+                </>
+              ) : (
+                'Create Course'
+              )}
             </button>
           </div>
         </form>
