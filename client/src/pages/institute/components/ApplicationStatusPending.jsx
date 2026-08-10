@@ -35,33 +35,7 @@ const ApplicationStatusPending = ({
     <div className="max-w-4xl mx-auto w-full space-y-8 text-left animate-in fade-in duration-200">
       
       {/* 1. Audit status block */}
-      {applicationRecord.status === 'pending_review' ? (
-        <div className="bg-amber-50/50 border border-amber-200 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-center text-amber-600 flex-shrink-0">
-              <Clock className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <span className="text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                {applicationRecord.status === 'pending_review' ? 'Awaiting Board Audit' : applicationRecord.status.replace('_', ' ')}
-              </span>
-              <h3 className="text-xl font-black text-gray-900 mt-2">
-                Application Submitted! Status: <span className="capitalize">{applicationRecord.status.replace('_', ' ')}</span>
-              </h3>
-              <p className="text-xs text-gray-400 mt-1 font-semibold leading-relaxed">
-                Your institutional registration is complete, the fee has been captured, and your application was submitted on <span className="font-bold text-gray-700">{applicationRecord.submittedAt}</span>. The Academic Board is currently auditing your compliance parameters.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setConfirmOpen(true)}
-            className="px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-800 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors self-end sm:self-center"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Logout
-          </button>
-        </div>
-      ) : (
+      {applicationRecord.status === 'rejected' || applicationRecord.status === 'Rejected' ? (
         // Rejected Status block
         <div className="bg-rose-50/50 border border-rose-200 rounded-3xl p-6 sm:p-8 flex flex-col gap-6">
           <div className="flex items-start gap-4">
@@ -113,6 +87,53 @@ const ApplicationStatusPending = ({
               Edit & Re-submit Application
             </button>
           </div>
+        </div>
+      ) : applicationRecord.status === 'approved' || applicationRecord.status === 'Approved' ? (
+        // Approved Status block
+        <div className="bg-emerald-50/50 border border-emerald-200 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-center text-emerald-600 flex-shrink-0">
+              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-black tracking-wider text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                Application Approved
+              </span>
+              <h3 className="text-xl font-black text-gray-900 mt-2">
+                Application Approved! Transitioning to Portal Dashboard...
+              </h3>
+              <p className="text-xs text-gray-500 mt-1 font-semibold leading-relaxed">
+                Your institutional application has been verified and approved by the Academic Board. Redirecting to your ERP dashboard...
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Pending Status block
+        <div className="bg-amber-50/50 border border-amber-200 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-center text-amber-600 flex-shrink-0">
+              <Clock className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                Awaiting Board Audit
+              </span>
+              <h3 className="text-xl font-black text-gray-900 mt-2">
+                Application Submitted! Status: <span className="capitalize">Awaiting Audit</span>
+              </h3>
+              <p className="text-xs text-gray-400 mt-1 font-semibold leading-relaxed">
+                Your institutional registration is complete, the fee has been captured, and your application was submitted. The Academic Board is currently auditing your compliance parameters.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            className="px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-800 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors self-end sm:self-center"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Logout
+          </button>
         </div>
       )}
 

@@ -510,7 +510,11 @@ const InstitutePortal = () => {
           });
         }
 
-        if (statusMapped === 'approved' && currentStep === 'active_erp') {
+        if (statusMapped === 'approved') {
+          if (currentStep !== 'active_erp') {
+            setCurrentStep('active_erp');
+            navigate('/institute/dashboard', { replace: true });
+          }
           fetchERPData();
         }
 
