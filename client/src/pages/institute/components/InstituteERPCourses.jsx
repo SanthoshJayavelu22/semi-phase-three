@@ -627,10 +627,10 @@ const InstituteERPCourses = ({
 
       {/* ─── EDIT COURSE MODAL ────────────────────────────────────────────────── */}
       {editingCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col my-auto">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 px-6 py-4 text-white sticky top-0 z-10 flex justify-between items-center">
+            <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 px-6 py-4 text-white flex-shrink-0 flex justify-between items-center">
               <div>
                 <h3 className="font-extrabold text-base">Edit Course</h3>
                 <p className="text-[10px] text-blue-200 font-medium">Update course details for {editingCourse.courseName}</p>
@@ -645,7 +645,7 @@ const InstituteERPCourses = ({
             </div>
 
             {/* Edit Form */}
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 text-left">
               {editError && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-xs text-red-800 font-semibold">
                   <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -833,10 +833,10 @@ const InstituteERPCourses = ({
 
       {/* ─── VIEW COURSE MODAL ────────────────────────────────────────────────── */}
       {viewingCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col my-auto">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-indigo-900 px-6 py-4 text-white sticky top-0 z-10 flex justify-between items-center">
+            <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-indigo-900 px-6 py-4 text-white flex-shrink-0 flex justify-between items-center">
               <div>
                 <h3 className="font-extrabold text-base">Course Details</h3>
                 <p className="text-[10px] text-indigo-200 font-medium">Course information overview</p>
@@ -850,7 +850,7 @@ const InstituteERPCourses = ({
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="p-6 space-y-4 text-xs overflow-y-auto flex-1 text-left">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="block text-[10px] uppercase font-black text-gray-400">Course Name</span>

@@ -7,8 +7,8 @@ const AcademyEditModal = ({
   handleSaveEdit
 }) => {
   return (
-    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left">
+    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left my-auto">
         <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 px-6 py-4 text-white">
           <h3 className="font-extrabold text-base">Compliance Override</h3>
           <p className="text-[10px] text-blue-200 font-medium">Edit compliance parameters for {editingApp.orgName}</p>

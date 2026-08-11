@@ -302,7 +302,7 @@ const AcademyEligibility = ({
       {/* REVIEW DIALOG MODAL */}
       {reviewingApp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full flex flex-col scale-in-center">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full flex flex-col scale-in-center my-auto">
             
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-slate-50/50 rounded-t-3xl">
@@ -464,7 +464,7 @@ const AcademyEligibility = ({
       {/* PUBLISH SCHEDULE MODAL */}
       {publishingApp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full flex flex-col scale-in-center">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full flex flex-col scale-in-center my-auto">
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-slate-50/50 rounded-t-3xl">
               <div className="flex items-center gap-3">
