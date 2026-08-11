@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-08-11T11:57:05.297Z
+> Auto-generated on 2026-08-11T12:50:45.143Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -11992,33 +11992,51 @@ const autoUpdateStatusFromProgress = async (request: any, performedBy: any) => {
   if (totalSubjects === 0) return;
 
   const evaluatedSubjects = subjects.filter((s: any) => s.evaluated === true).length;
-  if (evaluatedSubjects === 0) return;
 
+  // Don't change terminal statuses
   if (['COMPLETED', 'REJECTED', 'CANCELLED'].includes(request.status)) return;
 
-  const newStatus = evaluatedSubjects >= totalSubjects ? 'COMPLETED' : 'IN_PROGRESS';
-  if (newStatus === request.status) return;
-
-  const previousStatus = request.status;
-  request.status = newStatus;
-  if (newStatus === 'COMPLETED') {
-    request.evaluatedDate = new Date();
-  }
-  request.auditTrail.push({
-    action: 'AUTO_STATUS_UPDATE',
-    previousStatus,
-    newStatus,
-    performedBy: performedBy || undefined,
-    timestamp: new Date(),
+  // Check how many approved revaluation results exist
+  const approvedResults = await RevaluationResult.countDocuments({
+    revaluationRequest: request._id,
+    reviewStatus: 'APPROVED',
   });
-  await request.save();
 
-  if (newStatus === 'COMPLETED') {
-    emitEvent('REVALUATION_UPDATED', {
-      requestId: request._id,
-      status: 'COMPLETED',
-      studentId: request.student,
+  const allEvaluated = evaluatedSubjects >= totalSubjects;
+  const allApproved = approvedResults >= totalSubjects;
+
+  let newStatus = request.status;
+
+  if (allEvaluated && allApproved) {
+    newStatus = 'COMPLETED';
+    request.evaluatedDate = new Date();
+
+    // Process all revaluation results and update the original result
+    await revaluationService.processRevaluationResults(request._id.toString());
+  } else if (allEvaluated || evaluatedSubjects > 0) {
+    // All evaluated but some approvals pending, or still evaluating
+    newStatus = 'IN_PROGRESS';
+  }
+
+  if (newStatus !== request.status) {
+    const previousStatus = request.status;
+    request.status = newStatus;
+    request.auditTrail.push({
+      action: 'AUTO_STATUS_UPDATE',
+      previousStatus,
+      newStatus,
+      performedBy: performedBy || undefined,
+      timestamp: new Date(),
     });
+    await request.save();
+
+    if (newStatus === 'COMPLETED') {
+      emitEvent('REVALUATION_UPDATED', {
+        requestId: request._id,
+        status: 'COMPLETED',
+        studentId: request.student,
+      });
+    }
   }
 };
 
@@ -12061,6 +12079,10 @@ export const addRevaluationResult = async (req: Request, res: Response) => {
     request.revaluationResults.push(revaluationResult._id);
     await request.save();
 
+    // Update the original result with the new revaluation data (applies approved subjects)
+    await revaluationService.updateResultWithRevaluation(request._id.toString());
+
+    // Auto-update status based on progress
     await autoUpdateStatusFromProgress(request, userId);
 
     emitEvent('REVALUATION_UPDATED', {
@@ -12068,6 +12090,14 @@ export const addRevaluationResult = async (req: Request, res: Response) => {
       status: request.status,
       subjectCode: validatedData.subjectCode,
       studentId: request.student,
+    });
+
+    // Also emit result updated event for Institute/Student portals
+    emitEvent('RESULT_UPDATED', {
+      resultId: request.result,
+      studentId: request.student,
+      revaluationRequestId: request._id,
+      subjectCode: validatedData.subjectCode,
     });
 
     return sendSuccess({ req, res, statusCode: 201, message: 'Revaluation result added successfully', data: revaluationResult });
@@ -12112,22 +12142,61 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
 
     await revalResult.save();
 
-    if (isFinal) {
-      await revaluationService.processRevaluationResults(revalResult.revaluationRequest.toString());
+    // Get the associated request
+    const request = await RevaluationRequest.findById(revalResult.revaluationRequest);
+    if (!request) {
+      return sendError({ req, res, statusCode: 404, message: 'Revaluation request not found' });
     }
 
-    const request = await RevaluationRequest.findById(revalResult.revaluationRequest);
-    if (request) {
-      await autoUpdateStatusFromProgress(request, req.user._id);
-      emitEvent('REVALUATION_UPDATED', {
-        requestId: request._id,
-        status: request.status,
-        studentId: request.student,
-      });
+    // Mark the subject as evaluated in the request
+    const subjectIndex = request.subjects.findIndex(
+      (s: any) => s.subjectCode === revalResult.subjectCode
+    );
+    if (subjectIndex !== -1) {
+      request.subjects[subjectIndex].evaluated = true;
+      request.subjects[subjectIndex].revisedMarks = revalResult.revisedTotalMarks;
+      request.subjects[subjectIndex].revisedGrade = revalResult.revisedGrade;
+      await request.save();
     }
+
+    // Check if all subjects are now approved
+    const approvedResults = await RevaluationResult.countDocuments({
+      revaluationRequest: request._id,
+      reviewStatus: 'APPROVED',
+    });
+
+    const totalSubjects = request.subjects.length;
+    const allApproved = approvedResults >= totalSubjects && totalSubjects > 0;
+
+    if (allApproved) {
+      // Process all revaluation results to update the original result
+      await revaluationService.processRevaluationResults(request._id.toString());
+    } else {
+      // Update the original result with the newly approved subject
+      await revaluationService.updateResultWithRevaluation(request._id.toString());
+    }
+
+    // Auto-update status based on progress
+    await autoUpdateStatusFromProgress(request, req.user._id);
+
+    // Emit event for real-time updates
+    emitEvent('REVALUATION_UPDATED', {
+      requestId: request._id,
+      status: request.status,
+      studentId: request.student,
+      subjectCode: revalResult.subjectCode,
+    });
+
+    // Also emit result updated event so Institute portal refreshes
+    emitEvent('RESULT_UPDATED', {
+      resultId: request.result,
+      studentId: request.student,
+      revaluationRequestId: request._id,
+    });
 
     return sendSuccess({ req, res, message: 'Revaluation result approved successfully', data: revalResult });
   } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
@@ -17217,6 +17286,7 @@ import { RevaluationRequest } from '../models/revaluationRequestModel';
 import { RevaluationResult } from '../models/revaluationResultModel';
 import { Result } from '../models/resultModel';
 import { emitEvent } from '../config/socket';
+import { calculateGrade } from '../utils/helpers';
 
 class RevaluationService {
   generateRequestId(): string {
@@ -17261,7 +17331,12 @@ class RevaluationService {
       reviewStatus: 'APPROVED',
     });
 
-    let allApproved = revalResults.length === request.subjects.length;
+    // Check whether ALL subjects have been evaluated (regardless of approval status)
+    const totalSubjects = request.subjects.length;
+    const evaluatedSubjects = request.subjects.filter((s: any) => s.evaluated === true).length;
+    const allEvaluated = evaluatedSubjects >= totalSubjects;
+
+    const allApproved = revalResults.length === totalSubjects && totalSubjects > 0;
     let hasChanges = false;
 
     for (const revalResult of revalResults) {
@@ -17275,11 +17350,14 @@ class RevaluationService {
     if (allApproved) {
       request.status = 'COMPLETED';
       request.evaluatedDate = request.evaluatedDate || new Date();
+    } else if (allEvaluated && revalResults.length > 0) {
+      // All subjects evaluated but some approvals still pending
+      request.status = 'IN_PROGRESS';
     }
 
     await request.save();
 
-    // Update the original result with all approved revaluation changes
+    // IMPORTANT: always update the original result when there are approved revaluation results
     if (revalResults.length > 0) {
       await this.updateResultWithRevaluation(requestId);
     }
@@ -17289,9 +17367,10 @@ class RevaluationService {
       requestId: request._id,
       finalResult: request.finalResult,
       studentId: request.student,
+      status: request.status,
     });
 
-    return { request, allApproved, hasChanges, revaluationResults: revalResults };
+    return { request, allApproved, hasChanges, revaluationResults: revalResults, allEvaluated };
   }
 
   async updateResultWithRevaluation(requestId: string) {
@@ -17310,31 +17389,52 @@ class RevaluationService {
       reviewStatus: 'APPROVED',
     });
 
+    if (revalResults.length === 0) {
+      console.log(`No approved revaluation results for request ${requestId}`);
+      return result;
+    }
+
     const previousSubjects = result.subjects.map((s: any) => s.toObject());
 
-    // Update each subject in the result
+    // Update each subject in the result with the revised marks
+    let hasChanges = false;
     for (const reval of revalResults) {
       const subjectIndex = result.subjects.findIndex(
         (s: any) => s.subjectCode === reval.subjectCode
       );
 
-      if (subjectIndex === -1) continue;
+      if (subjectIndex === -1) {
+        console.warn(`Subject ${reval.subjectCode} not found in original result`);
+        continue;
+      }
 
-      (result.subjects[subjectIndex] as any).totalMarks = reval.revisedTotalMarks;
-      (result.subjects[subjectIndex] as any).grade = reval.revisedGrade;
+      // Store the original marks for audit
+      const originalMarks = result.subjects[subjectIndex].totalMarks;
+      const revisedMarks = reval.revisedTotalMarks ?? originalMarks;
+
+      if (originalMarks !== revisedMarks) {
+        hasChanges = true;
+      }
+
+      (result.subjects[subjectIndex] as any).totalMarks = revisedMarks;
+      (result.subjects[subjectIndex] as any).grade = reval.revisedGrade || calculateGrade(revisedMarks);
       (result.subjects[subjectIndex] as any).isRevaluationApplied = true;
-      (result.subjects[subjectIndex] as any).revaluationMarks = reval.revisedTotalMarks;
-      (result.subjects[subjectIndex] as any).revaluationGrade = reval.revisedGrade;
+      (result.subjects[subjectIndex] as any).revaluationMarks = revisedMarks;
+      (result.subjects[subjectIndex] as any).revaluationGrade = reval.revisedGrade || calculateGrade(revisedMarks);
       (result.subjects[subjectIndex] as any).isRevaluationCompleted = true;
     }
 
+    // Recalculate overall totals
     const totalMarks = result.subjects.reduce((sum: number, s: any) => sum + (s.totalMarks || 0), 0);
+    const totalCredits = result.subjects.reduce((sum: number, s: any) => sum + (s.credits || 0), 0);
     const maxMarks = result.subjects.length * 100;
     const percentage = maxMarks > 0 ? (totalMarks / maxMarks) * 100 : 0;
 
     result.totalMarks = totalMarks;
+    result.totalCredits = totalCredits;
     result.percentage = parseFloat(percentage.toFixed(2));
 
+    // Recalculate grade points and CGPA
     const gradePoints = result.subjects.map((subject: any) => {
       const marks = subject.totalMarks || 0;
       if (marks >= 90) return 10;
@@ -17343,13 +17443,16 @@ class RevaluationService {
       if (marks >= 60) return 7;
       if (marks >= 50) return 6;
       if (marks >= 40) return 5;
+      if (marks >= 35) return 4;
       return 0;
     });
 
     const totalGradePoints = gradePoints.reduce((sum: number, gp: number) => sum + gp, 0);
-    result.sgpa = parseFloat((totalGradePoints / result.subjects.length).toFixed(2));
-    result.cgpa = result.sgpa;
+    const sgpa = result.subjects.length > 0 ? parseFloat((totalGradePoints / result.subjects.length).toFixed(2)) : 0;
+    result.sgpa = sgpa;
+    result.cgpa = sgpa;
 
+    // Update division and result status
     if (percentage >= 60) {
       result.division = 'First';
       result.resultStatus = 'PASS';
@@ -17385,8 +17488,11 @@ class RevaluationService {
     emitEvent('RESULT_UPDATED', {
       resultId: result._id,
       studentId: result.student,
+      hasChanges,
+      revaluationRequestId: requestId,
     });
 
+    console.log(`Result ${result._id} updated with revaluation changes (${revalResults.length} subjects)`);
     return result;
   }
 
@@ -28685,6 +28791,77 @@ const AcademyRevaluation = () => {
                         );
                       })}
                     </div>
+                  </div>
+                )}
+
+                {/* Updated Result (after revaluation) */}
+                {request.result && (
+                  <div>
+                    <h5 className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-3 flex items-center gap-2">
+                      <Award className="w-3.5 h-3.5" /> Updated Result
+                    </h5>
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Total Marks</span>
+                        <span className="text-base font-black text-slate-800">{request.result.totalMarks || 0}</span>
+                      </div>
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Percentage</span>
+                        <span className="text-base font-black text-slate-800">{request.result.percentage || 0}%</span>
+                      </div>
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Status</span>
+                        <span className={`text-base font-black ${request.result.resultStatus === 'PASS' ? 'text-emerald-700' : request.result.resultStatus === 'SUPPLEMENTARY' ? 'text-amber-700' : 'text-rose-700'}`}>
+                          {request.result.resultStatus || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                    {request.result.subjects && request.result.subjects.length > 0 && (
+                      <div className="overflow-x-auto border border-slate-100 rounded-xl">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-slate-50/70 border-b border-slate-100">
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject</th>
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Reval</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50 bg-white">
+                            {request.result.subjects.map((subject, idx) => {
+                              const hasReval = subject.isRevaluationCompleted || subject.isRevaluationApplied;
+                              return (
+                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-3 py-2 font-bold text-slate-700">
+                                    {subject.subjectName}
+                                    <span className="text-[9px] text-slate-400 font-mono ml-1">{subject.subjectCode}</span>
+                                  </td>
+                                  <td className="px-3 py-2 text-center font-bold text-slate-800">{subject.totalMarks || 0}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-bold border ${
+                                      (subject.totalMarks || 0) >= 70 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                                      (subject.totalMarks || 0) >= 50 ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                                      'bg-rose-50 border-rose-200 text-rose-700'
+                                    }`}>
+                                      {subject.grade || getGrade(subject.totalMarks)}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    {hasReval ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 border border-blue-200 text-blue-700">
+                                        <CheckCircle2 className="w-3 h-3" /> Applied
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] text-slate-300 font-medium">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -41761,7 +41938,7 @@ export default InstituteERPRemittance;
 ### `client/src/pages/institute/components/InstituteERPResults.jsx`
 
 ```jsx
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -41779,13 +41956,11 @@ import {
   Minus,
   CheckCircle2,
   XCircle,
-  Printer,
   FileSpreadsheet,
   Loader2,
   BarChart3,
   Clock,
   X,
-  Sliders,
 } from 'lucide-react';
 import resultService from '../../../api/results';
 import academicService from '../../../api/academic';
@@ -41817,49 +41992,62 @@ const InstituteERPResults = ({ user }) => {
   const itemsPerPage = 10;
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchData = async () => {
-      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
-      if (!token) {
-        setLoading(false);
-        return;
+  const fetchData = useCallback(async (showLoading = true) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    if (showLoading) setLoading(true);
+    try {
+      // Fetch courses, batches, students, and results in parallel.
+      // getAllResults is paginated by default (limit 20) — request a large
+      // limit so client-side course/batch filtering covers all results.
+      const [coursesRes, batchesRes, studentsRes, resultsRes] = await Promise.all([
+        academicService.getCourses().catch(() => ({ data: { data: [] } })),
+        academicService.getBatches().catch(() => ({ data: { data: [] } })),
+        academicService.listStudents().catch(() => ({ data: { data: [] } })),
+        resultService.getAllResults({ limit: 10000 }).catch(() => ({ data: { data: { results: [] } } })),
+      ]);
+
+      // Extract data — getAllResults returns { results, pagination }
+      const coursesData = coursesRes.data?.data || coursesRes.data || [];
+      const batchesData = batchesRes.data?.data || batchesRes.data || [];
+      const studentsData = studentsRes.data?.data || studentsRes.data || [];
+      const resultsData = resultsRes.data?.data?.results || resultsRes.data?.results || resultsRes.data?.data || resultsRes.data || [];
+
+      setCourses(coursesData);
+      setBatches(batchesData);
+      setStudents(studentsData);
+      setResults(resultsData);
+
+      // Auto-select first course if available
+      if (coursesData.length > 0) {
+        setSelectedCourse(coursesData[0]._id || coursesData[0].id);
       }
-      setLoading(true);
-      try {
-        // Fetch courses, batches, students, and results in parallel.
-        // getAllResults is paginated by default (limit 20) — request a large
-        // limit so client-side course/batch filtering covers all results.
-        const [coursesRes, batchesRes, studentsRes, resultsRes] = await Promise.all([
-          academicService.getCourses().catch(() => ({ data: { data: [] } })),
-          academicService.getBatches().catch(() => ({ data: { data: [] } })),
-          academicService.listStudents().catch(() => ({ data: { data: [] } })),
-          resultService.getAllResults({ limit: 10000 }).catch(() => ({ data: { data: { results: [] } } })),
-        ]);
-
-        // Extract data — getAllResults returns { results, pagination }
-        const coursesData = coursesRes.data?.data || coursesRes.data || [];
-        const batchesData = batchesRes.data?.data || batchesRes.data || [];
-        const studentsData = studentsRes.data?.data || studentsRes.data || [];
-        const resultsData = resultsRes.data?.data?.results || resultsRes.data?.results || resultsRes.data?.data || resultsRes.data || [];
-
-        setCourses(coursesData);
-        setBatches(batchesData);
-        setStudents(studentsData);
-        setResults(resultsData);
-
-        // Auto-select first course if available
-        if (coursesData.length > 0) {
-          setSelectedCourse(coursesData[0]._id || coursesData[0].id);
-        }
-      } catch (err) {
+    } catch (err) {
+      if (showLoading) {
         console.error('Error fetching data:', err);
         setToast({ message: 'Failed to load data', type: 'error' });
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchData();
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchData(true), 0);
+    return () => clearTimeout(timer);
+  }, [fetchData]);
+
+  // Poll in the background so revaluation-approved marks are reflected
+  // automatically (socket.io is not wired up on the client).
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   // ─── Computed Data ──────────────────────────────────────────────────────
   const filteredBatches = useMemo(() => {

@@ -444,12 +444,20 @@ export const generateHallTickets = async (req: Request, res: Response) => {
     const batchDoc     = application.batch     as any;
     const studentsArr  = application.students  as any[];
 
-    // Resolve exam schedule — for Approved applications the board may not have
-    // published the full schedule yet, so fall back to institute details.
-    const examDate      = application.scheduledDate || new Date();
-    const examVenue     = application.examVenue     || `${instituteDoc.orgName} Examination Centre`;
-    const examCenter    = application.examCenter    || instituteDoc.orgName;
-    const reportingTime = application.reportingTime || '09:00 AM';
+    // These are the fields set by the board/admin in the "publish schedule" step
+    const examVenue        = application.examVenue;
+    const examCenter       = application.examCenter;
+    const reportingTime    = application.reportingTime;
+    const examDate         = application.scheduledDate || new Date();
+    const subjectSchedules = application.subjectSchedules || [];
+
+    // Require the published schedule details before generating hall tickets
+    if (!examVenue || !examCenter || !reportingTime) {
+      return sendError({
+        req, res, statusCode: 400,
+        message: 'Exam schedule details (venue, center, reporting time) are missing. Please ensure the academic board has published the schedule.',
+      });
+    }
 
     // Idempotent: delete existing tickets for this application before regenerating
     await HallTicket.deleteMany({ examApplication: application._id });
@@ -500,6 +508,15 @@ export const generateHallTickets = async (req: Request, res: Response) => {
         count:                   tickets.length,
         hallTicketsGeneratedAt:  application.hallTicketsGeneratedAt,
         tickets,
+        examDetails: {
+          examVenue,
+          examCenter,
+          reportingTime,
+          examDate,
+          subjectSchedules,
+          subjects: application.subjects,
+          semesterNumber: application.semesterNumber,
+        },
       },
     });
   } catch (error: any) {

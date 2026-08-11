@@ -29,9 +29,7 @@ import {
   Check,
   Award
 } from 'lucide-react';
-import { hallTicketAPI } from '../../../api/hallTicket';
-import examService from '../../../api/exams';
-import { getUploadUrl } from '../../../api/apiClient';
+import examService from '../../../api/exams';import { getUploadUrl } from '../../../api/apiClient';
 import semiLogo from '../../../assets/semi logo.png';
 
 const InstituteERPHallTicket = ({
@@ -48,6 +46,7 @@ const InstituteERPHallTicket = ({
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('default-cct-em');
+  const [selectedExamAppId, setSelectedExamAppId] = useState('');
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -209,6 +208,58 @@ const InstituteERPHallTicket = ({
     }));
   }, [selectedCourseId, selectedStudents, selectedSemester, courses, students, examApplications]);
 
+  // ─── NEW: Fetch exam application details when selected ─────────────────────
+  useEffect(() => {
+    if (!selectedExamAppId) return;
+
+    const fetchExamDetails = async () => {
+      setLoading(true);
+      setErrorMsg(null);
+      try {
+        const res = await examService.getExamApplicationById(selectedExamAppId);
+        const app = res.data?.data || res.data;
+        if (!app) return;
+
+        const courseName = app.course?.name || 'CCT-EM Fellowship';
+        const scheduleDates = (app.subjectSchedules || []).reduce((map, sch) => {
+          if (sch?.subject && sch?.date) map[String(sch.subject).toLowerCase()] = sch.date;
+          return map;
+        }, {});
+
+        setExamDetails(prev => ({
+          ...prev,
+          examType: courseName,
+          semesterLabel: `Semester ${app.semesterNumber || 1}`,
+          headerTitle: `${courseName} Examination Hall ticket - July’26`,
+          theoryCentre: app.examVenue || prev.theoryCentre,
+          theoryAddress: app.examCenter || prev.theoryAddress,
+          theoryTime: app.reportingTime || prev.theoryTime,
+          subjects: (app.subjects || []).map((subject, index) => ({
+            paperNumber: index + 1,
+            paperName: subject,
+            date: scheduleDates[String(subject).toLowerCase()]
+              || new Date(Date.now() + 86400000 * (12 + index)).toISOString().split('T')[0]
+          })),
+          practicalCentre: app.examVenue ? `${courseName} Practical - ${app.examVenue}` : prev.practicalCentre,
+          showPracticalSection: !!app.examVenue
+        }));
+
+        if (app.students?.length) {
+          setSelectedStudents(app.students.map(s => s._id || s.id));
+        }
+        if (app.course?._id) setSelectedCourseId(app.course._id);
+        if (app.batch?._id) setSelectedBatchId(app.batch._id);
+      } catch (error) {
+        console.error('Failed to fetch exam application details:', error);
+        setErrorMsg('Failed to load exam details. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExamDetails();
+  }, [selectedExamAppId]);
+
   const lowerNameContains = (str, keyword) => (str || '').toLowerCase().includes(keyword);
 
   // Filter students based on active search, course & batch selection
@@ -242,6 +293,14 @@ const InstituteERPHallTicket = ({
     } else {
       setSelectedStudents(filteredStudents.map(s => s._id || s.id));
     }
+  };
+
+  // Handle exam application selection
+  const handleExamAppSelect = (appId) => {
+    setSelectedExamAppId(appId);
+    setSelectedStudents([]);
+    setErrorMsg(null);
+    setSuccessMsg(null);
   };
 
   // Exam Subject Management
@@ -326,6 +385,10 @@ const InstituteERPHallTicket = ({
 
   // Generate Hall Tickets Handler
   const handleGenerateHallTickets = async () => {
+    if (!selectedExamAppId) {
+      setErrorMsg('Please select an approved exam application before issuing hall tickets.');
+      return;
+    }
     if (selectedStudents.length === 0) {
       setErrorMsg('Please select at least one eligible fellow candidate.');
       return;
@@ -336,58 +399,51 @@ const InstituteERPHallTicket = ({
     setSuccessMsg(null);
 
     try {
-      // Build candidate hall tickets
-      const selectedStudentObjs = students.filter(s => selectedStudents.includes(s._id || s.id));
-      const generatedList = selectedStudentObjs.map((student, idx) => {
-        const serial = String(idx + 1).padStart(4, '0');
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        return {
-          ticketId: `HT-SEMI-${new Date().getFullYear()}-${rand}`,
-          studentId: student._id || student.id,
-          studentName: student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Candidate',
-          enrollmentId: student.enrollmentNo || student.enrollmentId || `SEMI-${rand}`,
-          courseName: student.courseName || student.course?.name || 'CCT-EM Fellowship',
-          batchName: student.batchName || (student.batch?.year ? `Batch ${student.batch.year}` : 'Batch 2026'),
-          instituteName: user?.hospitalName || user?.name || 'Accredited Academic Hospital',
-          instituteAddress: user?.address || `${user?.city || 'Central'}, India`,
-          photoUrl: student.documents?.passportPhotoUrl || student.photoUrl,
-          examVenue: examDetails.theoryCentre,
-          examAddress: examDetails.theoryAddress,
-          examDate: examDetails.subjects[0]?.date || new Date().toISOString().split('T')[0],
-          reportingTime: examDetails.theoryTime,
-          subjects: examDetails.subjects,
-          practicalDetails: {
-            centre: examDetails.practicalCentre,
-            address: examDetails.practicalAddress,
-            date: examDetails.practicalDate,
-            timeSlot: examDetails.practicalTime,
-            subjects: examDetails.practicalSubjects
-          }
-        };
-      });
+      // Use the selected exam application to generate tickets on the backend.
+      // The response now contains all hall ticket details + exam details.
+      const res = await examService.generateHallTickets(selectedExamAppId);
+      const result = res.data?.data || res.data;
 
-      // Persist issued hall tickets to the backend
-      let savedTickets = generatedList;
-      try {
-        const saveRes = await hallTicketAPI.generateBulk(generatedList);
-        const payload = saveRes?.data?.data || saveRes?.data;
-        if (Array.isArray(payload) && payload.length > 0) {
-          savedTickets = generatedList.map((t, i) => ({ ...t, _id: payload[i]?._id || payload.find(p => p.ticketId === t.ticketId)?._id }));
+      if (result && result.tickets && result.tickets.length > 0) {
+        const generatedTickets = result.tickets;
+
+        // Update the exam details form with the data returned from the backend
+        if (result.examDetails) {
+          const scheduleDates = (result.examDetails.subjectSchedules || []).reduce((map, sch) => {
+            if (sch?.subject && sch?.date) map[String(sch.subject).toLowerCase()] = sch.date;
+            return map;
+          }, {});
+          const courseName = generatedTickets[0]?.courseName || 'CCT-EM Fellowship';
+          setExamDetails(prev => ({
+            ...prev,
+            examType: courseName,
+            headerTitle: `${courseName} Examination Hall ticket - July’26`,
+            theoryCentre: result.examDetails.examVenue || prev.theoryCentre,
+            theoryAddress: result.examDetails.examCenter || prev.theoryAddress,
+            theoryTime: result.examDetails.reportingTime || prev.theoryTime,
+            subjects: (result.examDetails.subjects || []).map((subject, index) => ({
+              paperNumber: index + 1,
+              paperName: subject,
+              date: scheduleDates[String(subject).toLowerCase()]
+                || new Date(Date.now() + 86400000 * (12 + index)).toISOString().split('T')[0]
+            })),
+          }));
         }
-      } catch (saveErr) {
-        console.warn('Failed to persist hall tickets, showing local preview only:', saveErr);
-      }
 
-      if (fetchERPData) {
-        await fetchERPData();
-      }
+        // Persist/refresh ERP data
+        if (fetchERPData) {
+          await fetchERPData();
+        }
 
-      setSuccessMsg(`🎉 Successfully saved & generated ${savedTickets.length} accredited Hall Ticket(s)!`);
-      setViewingTickets(savedTickets);
-      setViewingBatchInfo({
-        batchName: selectedBatchId ? `Selected Candidates (${generatedList.length})` : 'All Batches',
-        courseName: examDetails.examType
-      });
+        setSuccessMsg(`🎉 Successfully generated ${generatedTickets.length} accredited Hall Ticket(s) from the exam application!`);
+        setViewingTickets(generatedTickets);
+        setViewingBatchInfo({
+          batchName: selectedExamAppId ? `Exam Application ${String(selectedExamAppId).substring(0, 6)}` : 'Selected Candidates',
+          courseName: generatedTickets[0]?.courseName || examDetails.examType
+        });
+      } else {
+        setErrorMsg('No hall tickets were generated. Please try again.');
+      }
     } catch (err) {
       console.error('Error generating hall tickets:', err);
       setErrorMsg(err.parsedMessage || err.message || 'Failed to generate hall tickets.');
@@ -706,6 +762,52 @@ const InstituteERPHallTicket = ({
         <div className="flex items-center gap-2.5 text-emerald-600 font-extrabold px-4 py-2 bg-emerald-50/80 rounded-xl">
           <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-xs">3</div>
           <span>3. Preview & Issue Tickets</span>
+        </div>
+      </div>
+
+      {/* ── Exam Application Selector ────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
+        <h3 className="text-sm font-black text-slate-800 tracking-tight flex items-center gap-2 mb-4">
+          <FileText className="w-5 h-5 text-blue-600" />
+          Select Exam Application
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+              Exam Application <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={selectedExamAppId}
+              onChange={(e) => handleExamAppSelect(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="">Select an approved exam application...</option>
+              {examApplications
+                .filter(app => app.status === 'Approved' || app.status === 'SchedulePublished')
+                .map(app => (
+                  <option key={app._id} value={app._id}>
+                    {app.course?.name || app.courseName || 'Course'} - Semester {app.semesterNumber} ({app.students?.length || 0} students)
+                  </option>
+                ))}
+              {examApplications.filter(app => app.status === 'Approved' || app.status === 'SchedulePublished').length === 0 && (
+                <option value="">No approved exam applications available</option>
+              )}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={handleGenerateHallTickets}
+              disabled={generating || loading || selectedStudents.length === 0 || !selectedExamAppId}
+              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {generating ? (
+                <><RefreshCw className="w-4 h-4 animate-spin" /> Generating Admit Cards...</>
+              ) : (
+                <><Ticket className="w-4 h-4" /> Issue {selectedStudents.length} Hall Ticket(s)</>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1168,7 +1270,7 @@ const InstituteERPHallTicket = ({
                   <button
                     type="button"
                     onClick={handleGenerateHallTickets}
-                    disabled={generating || selectedStudents.length === 0}
+                    disabled={generating || loading || selectedStudents.length === 0 || !selectedExamAppId}
                     className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generating ? (
