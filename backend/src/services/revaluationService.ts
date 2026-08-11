@@ -2,6 +2,7 @@ import { RevaluationRequest } from '../models/revaluationRequestModel';
 import { RevaluationResult } from '../models/revaluationResultModel';
 import { Result } from '../models/resultModel';
 import { emitEvent } from '../config/socket';
+import { calculateGrade } from '../utils/helpers';
 
 class RevaluationService {
   generateRequestId(): string {
@@ -46,7 +47,12 @@ class RevaluationService {
       reviewStatus: 'APPROVED',
     });
 
-    let allApproved = revalResults.length === request.subjects.length;
+    // Check whether ALL subjects have been evaluated (regardless of approval status)
+    const totalSubjects = request.subjects.length;
+    const evaluatedSubjects = request.subjects.filter((s: any) => s.evaluated === true).length;
+    const allEvaluated = evaluatedSubjects >= totalSubjects;
+
+    const allApproved = revalResults.length === totalSubjects && totalSubjects > 0;
     let hasChanges = false;
 
     for (const revalResult of revalResults) {
@@ -60,11 +66,14 @@ class RevaluationService {
     if (allApproved) {
       request.status = 'COMPLETED';
       request.evaluatedDate = request.evaluatedDate || new Date();
+    } else if (allEvaluated && revalResults.length > 0) {
+      // All subjects evaluated but some approvals still pending
+      request.status = 'IN_PROGRESS';
     }
 
     await request.save();
 
-    // Update the original result with all approved revaluation changes
+    // IMPORTANT: always update the original result when there are approved revaluation results
     if (revalResults.length > 0) {
       await this.updateResultWithRevaluation(requestId);
     }
@@ -74,9 +83,10 @@ class RevaluationService {
       requestId: request._id,
       finalResult: request.finalResult,
       studentId: request.student,
+      status: request.status,
     });
 
-    return { request, allApproved, hasChanges, revaluationResults: revalResults };
+    return { request, allApproved, hasChanges, revaluationResults: revalResults, allEvaluated };
   }
 
   async updateResultWithRevaluation(requestId: string) {
@@ -95,31 +105,52 @@ class RevaluationService {
       reviewStatus: 'APPROVED',
     });
 
+    if (revalResults.length === 0) {
+      console.log(`No approved revaluation results for request ${requestId}`);
+      return result;
+    }
+
     const previousSubjects = result.subjects.map((s: any) => s.toObject());
 
-    // Update each subject in the result
+    // Update each subject in the result with the revised marks
+    let hasChanges = false;
     for (const reval of revalResults) {
       const subjectIndex = result.subjects.findIndex(
         (s: any) => s.subjectCode === reval.subjectCode
       );
 
-      if (subjectIndex === -1) continue;
+      if (subjectIndex === -1) {
+        console.warn(`Subject ${reval.subjectCode} not found in original result`);
+        continue;
+      }
 
-      (result.subjects[subjectIndex] as any).totalMarks = reval.revisedTotalMarks;
-      (result.subjects[subjectIndex] as any).grade = reval.revisedGrade;
+      // Store the original marks for audit
+      const originalMarks = result.subjects[subjectIndex].totalMarks;
+      const revisedMarks = reval.revisedTotalMarks ?? originalMarks;
+
+      if (originalMarks !== revisedMarks) {
+        hasChanges = true;
+      }
+
+      (result.subjects[subjectIndex] as any).totalMarks = revisedMarks;
+      (result.subjects[subjectIndex] as any).grade = reval.revisedGrade || calculateGrade(revisedMarks);
       (result.subjects[subjectIndex] as any).isRevaluationApplied = true;
-      (result.subjects[subjectIndex] as any).revaluationMarks = reval.revisedTotalMarks;
-      (result.subjects[subjectIndex] as any).revaluationGrade = reval.revisedGrade;
+      (result.subjects[subjectIndex] as any).revaluationMarks = revisedMarks;
+      (result.subjects[subjectIndex] as any).revaluationGrade = reval.revisedGrade || calculateGrade(revisedMarks);
       (result.subjects[subjectIndex] as any).isRevaluationCompleted = true;
     }
 
+    // Recalculate overall totals
     const totalMarks = result.subjects.reduce((sum: number, s: any) => sum + (s.totalMarks || 0), 0);
+    const totalCredits = result.subjects.reduce((sum: number, s: any) => sum + (s.credits || 0), 0);
     const maxMarks = result.subjects.length * 100;
     const percentage = maxMarks > 0 ? (totalMarks / maxMarks) * 100 : 0;
 
     result.totalMarks = totalMarks;
+    result.totalCredits = totalCredits;
     result.percentage = parseFloat(percentage.toFixed(2));
 
+    // Recalculate grade points and CGPA
     const gradePoints = result.subjects.map((subject: any) => {
       const marks = subject.totalMarks || 0;
       if (marks >= 90) return 10;
@@ -128,13 +159,16 @@ class RevaluationService {
       if (marks >= 60) return 7;
       if (marks >= 50) return 6;
       if (marks >= 40) return 5;
+      if (marks >= 35) return 4;
       return 0;
     });
 
     const totalGradePoints = gradePoints.reduce((sum: number, gp: number) => sum + gp, 0);
-    result.sgpa = parseFloat((totalGradePoints / result.subjects.length).toFixed(2));
-    result.cgpa = result.sgpa;
+    const sgpa = result.subjects.length > 0 ? parseFloat((totalGradePoints / result.subjects.length).toFixed(2)) : 0;
+    result.sgpa = sgpa;
+    result.cgpa = sgpa;
 
+    // Update division and result status
     if (percentage >= 60) {
       result.division = 'First';
       result.resultStatus = 'PASS';
@@ -170,8 +204,11 @@ class RevaluationService {
     emitEvent('RESULT_UPDATED', {
       resultId: result._id,
       studentId: result.student,
+      hasChanges,
+      revaluationRequestId: requestId,
     });
 
+    console.log(`Result ${result._id} updated with revaluation changes (${revalResults.length} subjects)`);
     return result;
   }
 

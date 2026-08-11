@@ -1253,6 +1253,77 @@ const AcademyRevaluation = () => {
                   </div>
                 )}
 
+                {/* Updated Result (after revaluation) */}
+                {request.result && (
+                  <div>
+                    <h5 className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-3 flex items-center gap-2">
+                      <Award className="w-3.5 h-3.5" /> Updated Result
+                    </h5>
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Total Marks</span>
+                        <span className="text-base font-black text-slate-800">{request.result.totalMarks || 0}</span>
+                      </div>
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Percentage</span>
+                        <span className="text-base font-black text-slate-800">{request.result.percentage || 0}%</span>
+                      </div>
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Status</span>
+                        <span className={`text-base font-black ${request.result.resultStatus === 'PASS' ? 'text-emerald-700' : request.result.resultStatus === 'SUPPLEMENTARY' ? 'text-amber-700' : 'text-rose-700'}`}>
+                          {request.result.resultStatus || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                    {request.result.subjects && request.result.subjects.length > 0 && (
+                      <div className="overflow-x-auto border border-slate-100 rounded-xl">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-slate-50/70 border-b border-slate-100">
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject</th>
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Reval</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50 bg-white">
+                            {request.result.subjects.map((subject, idx) => {
+                              const hasReval = subject.isRevaluationCompleted || subject.isRevaluationApplied;
+                              return (
+                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-3 py-2 font-bold text-slate-700">
+                                    {subject.subjectName}
+                                    <span className="text-[9px] text-slate-400 font-mono ml-1">{subject.subjectCode}</span>
+                                  </td>
+                                  <td className="px-3 py-2 text-center font-bold text-slate-800">{subject.totalMarks || 0}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-bold border ${
+                                      (subject.totalMarks || 0) >= 70 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                                      (subject.totalMarks || 0) >= 50 ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                                      'bg-rose-50 border-rose-200 text-rose-700'
+                                    }`}>
+                                      {subject.grade || getGrade(subject.totalMarks)}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    {hasReval ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 border border-blue-200 text-blue-700">
+                                        <CheckCircle2 className="w-3 h-3" /> Applied
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] text-slate-300 font-medium">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Audit Trail */}
                 {request.auditTrail && request.auditTrail.length > 0 && (
                   <div>

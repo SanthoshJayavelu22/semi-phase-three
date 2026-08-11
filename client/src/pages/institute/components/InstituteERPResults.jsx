@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -16,13 +16,11 @@ import {
   Minus,
   CheckCircle2,
   XCircle,
-  Printer,
   FileSpreadsheet,
   Loader2,
   BarChart3,
   Clock,
   X,
-  Sliders,
 } from 'lucide-react';
 import resultService from '../../../api/results';
 import academicService from '../../../api/academic';
@@ -54,49 +52,62 @@ const InstituteERPResults = ({ user }) => {
   const itemsPerPage = 10;
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchData = async () => {
-      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
-      if (!token) {
-        setLoading(false);
-        return;
+  const fetchData = useCallback(async (showLoading = true) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    if (showLoading) setLoading(true);
+    try {
+      // Fetch courses, batches, students, and results in parallel.
+      // getAllResults is paginated by default (limit 20) — request a large
+      // limit so client-side course/batch filtering covers all results.
+      const [coursesRes, batchesRes, studentsRes, resultsRes] = await Promise.all([
+        academicService.getCourses().catch(() => ({ data: { data: [] } })),
+        academicService.getBatches().catch(() => ({ data: { data: [] } })),
+        academicService.listStudents().catch(() => ({ data: { data: [] } })),
+        resultService.getAllResults({ limit: 10000 }).catch(() => ({ data: { data: { results: [] } } })),
+      ]);
+
+      // Extract data — getAllResults returns { results, pagination }
+      const coursesData = coursesRes.data?.data || coursesRes.data || [];
+      const batchesData = batchesRes.data?.data || batchesRes.data || [];
+      const studentsData = studentsRes.data?.data || studentsRes.data || [];
+      const resultsData = resultsRes.data?.data?.results || resultsRes.data?.results || resultsRes.data?.data || resultsRes.data || [];
+
+      setCourses(coursesData);
+      setBatches(batchesData);
+      setStudents(studentsData);
+      setResults(resultsData);
+
+      // Auto-select first course if available
+      if (coursesData.length > 0) {
+        setSelectedCourse(coursesData[0]._id || coursesData[0].id);
       }
-      setLoading(true);
-      try {
-        // Fetch courses, batches, students, and results in parallel.
-        // getAllResults is paginated by default (limit 20) — request a large
-        // limit so client-side course/batch filtering covers all results.
-        const [coursesRes, batchesRes, studentsRes, resultsRes] = await Promise.all([
-          academicService.getCourses().catch(() => ({ data: { data: [] } })),
-          academicService.getBatches().catch(() => ({ data: { data: [] } })),
-          academicService.listStudents().catch(() => ({ data: { data: [] } })),
-          resultService.getAllResults({ limit: 10000 }).catch(() => ({ data: { data: { results: [] } } })),
-        ]);
-
-        // Extract data — getAllResults returns { results, pagination }
-        const coursesData = coursesRes.data?.data || coursesRes.data || [];
-        const batchesData = batchesRes.data?.data || batchesRes.data || [];
-        const studentsData = studentsRes.data?.data || studentsRes.data || [];
-        const resultsData = resultsRes.data?.data?.results || resultsRes.data?.results || resultsRes.data?.data || resultsRes.data || [];
-
-        setCourses(coursesData);
-        setBatches(batchesData);
-        setStudents(studentsData);
-        setResults(resultsData);
-
-        // Auto-select first course if available
-        if (coursesData.length > 0) {
-          setSelectedCourse(coursesData[0]._id || coursesData[0].id);
-        }
-      } catch (err) {
+    } catch (err) {
+      if (showLoading) {
         console.error('Error fetching data:', err);
         setToast({ message: 'Failed to load data', type: 'error' });
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchData();
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchData(true), 0);
+    return () => clearTimeout(timer);
+  }, [fetchData]);
+
+  // Poll in the background so revaluation-approved marks are reflected
+  // automatically (socket.io is not wired up on the client).
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   // ─── Computed Data ──────────────────────────────────────────────────────
   const filteredBatches = useMemo(() => {

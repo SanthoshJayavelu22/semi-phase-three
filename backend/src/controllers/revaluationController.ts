@@ -869,33 +869,51 @@ const autoUpdateStatusFromProgress = async (request: any, performedBy: any) => {
   if (totalSubjects === 0) return;
 
   const evaluatedSubjects = subjects.filter((s: any) => s.evaluated === true).length;
-  if (evaluatedSubjects === 0) return;
 
+  // Don't change terminal statuses
   if (['COMPLETED', 'REJECTED', 'CANCELLED'].includes(request.status)) return;
 
-  const newStatus = evaluatedSubjects >= totalSubjects ? 'COMPLETED' : 'IN_PROGRESS';
-  if (newStatus === request.status) return;
-
-  const previousStatus = request.status;
-  request.status = newStatus;
-  if (newStatus === 'COMPLETED') {
-    request.evaluatedDate = new Date();
-  }
-  request.auditTrail.push({
-    action: 'AUTO_STATUS_UPDATE',
-    previousStatus,
-    newStatus,
-    performedBy: performedBy || undefined,
-    timestamp: new Date(),
+  // Check how many approved revaluation results exist
+  const approvedResults = await RevaluationResult.countDocuments({
+    revaluationRequest: request._id,
+    reviewStatus: 'APPROVED',
   });
-  await request.save();
 
-  if (newStatus === 'COMPLETED') {
-    emitEvent('REVALUATION_UPDATED', {
-      requestId: request._id,
-      status: 'COMPLETED',
-      studentId: request.student,
+  const allEvaluated = evaluatedSubjects >= totalSubjects;
+  const allApproved = approvedResults >= totalSubjects;
+
+  let newStatus = request.status;
+
+  if (allEvaluated && allApproved) {
+    newStatus = 'COMPLETED';
+    request.evaluatedDate = new Date();
+
+    // Process all revaluation results and update the original result
+    await revaluationService.processRevaluationResults(request._id.toString());
+  } else if (allEvaluated || evaluatedSubjects > 0) {
+    // All evaluated but some approvals pending, or still evaluating
+    newStatus = 'IN_PROGRESS';
+  }
+
+  if (newStatus !== request.status) {
+    const previousStatus = request.status;
+    request.status = newStatus;
+    request.auditTrail.push({
+      action: 'AUTO_STATUS_UPDATE',
+      previousStatus,
+      newStatus,
+      performedBy: performedBy || undefined,
+      timestamp: new Date(),
     });
+    await request.save();
+
+    if (newStatus === 'COMPLETED') {
+      emitEvent('REVALUATION_UPDATED', {
+        requestId: request._id,
+        status: 'COMPLETED',
+        studentId: request.student,
+      });
+    }
   }
 };
 
@@ -938,6 +956,10 @@ export const addRevaluationResult = async (req: Request, res: Response) => {
     request.revaluationResults.push(revaluationResult._id);
     await request.save();
 
+    // Update the original result with the new revaluation data (applies approved subjects)
+    await revaluationService.updateResultWithRevaluation(request._id.toString());
+
+    // Auto-update status based on progress
     await autoUpdateStatusFromProgress(request, userId);
 
     emitEvent('REVALUATION_UPDATED', {
@@ -945,6 +967,14 @@ export const addRevaluationResult = async (req: Request, res: Response) => {
       status: request.status,
       subjectCode: validatedData.subjectCode,
       studentId: request.student,
+    });
+
+    // Also emit result updated event for Institute/Student portals
+    emitEvent('RESULT_UPDATED', {
+      resultId: request.result,
+      studentId: request.student,
+      revaluationRequestId: request._id,
+      subjectCode: validatedData.subjectCode,
     });
 
     return sendSuccess({ req, res, statusCode: 201, message: 'Revaluation result added successfully', data: revaluationResult });
@@ -989,22 +1019,61 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
 
     await revalResult.save();
 
-    if (isFinal) {
-      await revaluationService.processRevaluationResults(revalResult.revaluationRequest.toString());
+    // Get the associated request
+    const request = await RevaluationRequest.findById(revalResult.revaluationRequest);
+    if (!request) {
+      return sendError({ req, res, statusCode: 404, message: 'Revaluation request not found' });
     }
 
-    const request = await RevaluationRequest.findById(revalResult.revaluationRequest);
-    if (request) {
-      await autoUpdateStatusFromProgress(request, req.user._id);
-      emitEvent('REVALUATION_UPDATED', {
-        requestId: request._id,
-        status: request.status,
-        studentId: request.student,
-      });
+    // Mark the subject as evaluated in the request
+    const subjectIndex = request.subjects.findIndex(
+      (s: any) => s.subjectCode === revalResult.subjectCode
+    );
+    if (subjectIndex !== -1) {
+      request.subjects[subjectIndex].evaluated = true;
+      request.subjects[subjectIndex].revisedMarks = revalResult.revisedTotalMarks;
+      request.subjects[subjectIndex].revisedGrade = revalResult.revisedGrade;
+      await request.save();
     }
+
+    // Check if all subjects are now approved
+    const approvedResults = await RevaluationResult.countDocuments({
+      revaluationRequest: request._id,
+      reviewStatus: 'APPROVED',
+    });
+
+    const totalSubjects = request.subjects.length;
+    const allApproved = approvedResults >= totalSubjects && totalSubjects > 0;
+
+    if (allApproved) {
+      // Process all revaluation results to update the original result
+      await revaluationService.processRevaluationResults(request._id.toString());
+    } else {
+      // Update the original result with the newly approved subject
+      await revaluationService.updateResultWithRevaluation(request._id.toString());
+    }
+
+    // Auto-update status based on progress
+    await autoUpdateStatusFromProgress(request, req.user._id);
+
+    // Emit event for real-time updates
+    emitEvent('REVALUATION_UPDATED', {
+      requestId: request._id,
+      status: request.status,
+      studentId: request.student,
+      subjectCode: revalResult.subjectCode,
+    });
+
+    // Also emit result updated event so Institute portal refreshes
+    emitEvent('RESULT_UPDATED', {
+      resultId: request.result,
+      studentId: request.student,
+      revaluationRequestId: request._id,
+    });
 
     return sendSuccess({ req, res, message: 'Revaluation result approved successfully', data: revalResult });
   } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };

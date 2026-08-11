@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-08-10T12:22:25.706Z
+> Auto-generated on 2026-08-11T11:57:05.297Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -52,6 +52,7 @@ semi-phase-three/
 │   │   │   ├── resultController.ts
 │   │   │   ├── revaluationController.ts
 │   │   │   ├── syncController.ts
+│   │   │   ├── treasuryController.ts
 │   │   │   └── userController.ts
 │   │   ├── docs
 │   │   │   └── swaggerSpec.ts
@@ -93,6 +94,7 @@ semi-phase-three/
 │   │   │   ├── resultRoutes.ts
 │   │   │   ├── revaluationRoutes.ts
 │   │   │   ├── syncRoutes.ts
+│   │   │   ├── treasuryRoutes.ts
 │   │   │   └── userRoutes.ts
 │   │   ├── services
 │   │   │   ├── auditService.ts
@@ -108,6 +110,7 @@ semi-phase-three/
 │   │   │   └── index.ts
 │   │   ├── utils
 │   │   │   ├── errorHandler.ts
+│   │   │   ├── feeCategories.ts
 │   │   │   ├── fileHelpers.ts
 │   │   │   ├── helpers.ts
 │   │   │   ├── responseFormatter.ts
@@ -5048,6 +5051,7 @@ import { FeeRecord } from '../models/feeRecordModel';
 import { Remittance } from '../models/remittanceModel';
 import { Institute } from '../models/instituteModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
+import { getFeeCategory, getFeeCategoryLabel } from '../utils/feeCategories';
 import path from 'path';
 import razorpayInstance, { isRazorpayConfigured, keyId, keySecret } from '../config/razorpay';
 import crypto from 'crypto';
@@ -5881,14 +5885,30 @@ export const listFeeRecords = async (req: Request, res: Response) => {
     }
 
     const records = await FeeRecord.find(query)
-      .populate('student', 'firstName lastName enrollmentId email course batch')
+      .populate({ path: 'student', select: 'firstName lastName enrollmentId email course batch institute', populate: { path: 'institute', select: 'orgName' } })
       .sort({ createdAt: -1 });
+
+    // Enhance records with category and formatted data
+    const enhancedRecords = records.map(record => {
+      const recordObj = record.toObject();
+      const student = recordObj.student as any;
+      const category = getFeeCategory(recordObj.paymentPurpose);
+      return {
+        ...recordObj,
+        category,
+        categoryLabel: getFeeCategoryLabel(category),
+        paymentPurpose: recordObj.paymentPurpose || 'Fee Payment',
+        studentName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A',
+        studentEnrollmentId: student?.enrollmentId || 'N/A',
+        instituteName: student?.institute?.orgName || 'N/A',
+      };
+    });
 
     return sendSuccess({
       req,
       res,
       message: 'Fee records retrieved successfully',
-      data: records,
+      data: enhancedRecords,
     });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
@@ -8397,6 +8417,7 @@ export const downloadHallTicket = async (req: Request, res: Response) => {
 // backend/src/controllers/hallTicketController.ts
 import { Request, Response } from 'express';
 import hallTicketService from '../services/hallTicketService';
+import { Institute } from '../models/instituteModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 
 export class HallTicketController {
@@ -8407,6 +8428,41 @@ export class HallTicketController {
         issuedBy: req.user?._id
       });
       return sendSuccess({ req, res, data: hallTicket, message: 'Hall ticket created successfully' });
+    } catch (error: any) {
+      return sendError({ req, res, message: error.message, statusCode: 400 });
+    }
+  }
+
+  // Save one or more issued hall tickets to the backend
+  async bulkGenerate(req: Request, res: Response): Promise<Response> {
+    try {
+      const records = Array.isArray(req.body) ? req.body : (req.body?.tickets || []);
+      if (!Array.isArray(records) || records.length === 0) {
+        return sendError({ req, res, message: 'At least one hall ticket is required', statusCode: 400 });
+      }
+
+      const institute = req.user?.role === 'institute'
+        ? await Institute.findOne({ user: req.user._id })
+        : null;
+
+      const enriched = records.map((r: any) => ({
+        ...r,
+        instituteId: institute?._id,
+        issuedBy: req.user?._id,
+      }));
+
+      const saved = await hallTicketService.saveHallTicketsBulk(enriched, req.user?._id);
+      return sendSuccess({ req, res, data: saved, message: `${saved.length} hall ticket(s) saved successfully`, statusCode: 201 });
+    } catch (error: any) {
+      return sendError({ req, res, message: error.message, statusCode: 400 });
+    }
+  }
+
+  // List all issued hall tickets (institute scopes to its own)
+  async listHallTickets(req: Request, res: Response): Promise<Response> {
+    try {
+      const tickets = await hallTicketService.listHallTickets(req.user?.role, req.user?._id);
+      return sendSuccess({ req, res, data: tickets, message: 'Hall tickets retrieved successfully' });
     } catch (error: any) {
       return sendError({ req, res, message: error.message, statusCode: 400 });
     }
@@ -9072,12 +9128,24 @@ export const listApplications = async (req: Request, res: Response) => {
         Institute.countDocuments(query),
       ]);
 
+      // Enhance applications with fee category
+      const enhancedApps = applications.map(app => {
+        const appObj = app.toObject();
+        return {
+          ...appObj,
+          feeCategory: 'ONBOARDING',
+          feeCategoryLabel: 'Institute Onboarding & Inspection Fee',
+          paymentPurpose: 'Institute Onboarding & Inspection Fee',
+          isOnboardingPayment: true,
+        };
+      });
+
       return sendSuccess({
         req,
         res,
         message: 'All institute applications retrieved successfully',
         data: {
-          applications,
+          applications: enhancedApps,
           pagination: {
             page,
             limit,
@@ -9092,11 +9160,22 @@ export const listApplications = async (req: Request, res: Response) => {
       .populate('user', 'name email')
       .sort({ createdAt: -1 });
 
+    const enhancedApps = applications.map(app => {
+      const appObj = app.toObject();
+      return {
+        ...appObj,
+        feeCategory: 'ONBOARDING',
+        feeCategoryLabel: 'Institute Onboarding & Inspection Fee',
+        paymentPurpose: 'Institute Onboarding & Inspection Fee',
+        isOnboardingPayment: true,
+      };
+    });
+
     return sendSuccess({
       req,
       res,
       message: 'All institute applications retrieved successfully',
-      data: applications,
+      data: enhancedApps,
     });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
@@ -11283,6 +11362,9 @@ export const getRevaluationPaymentStatus = async (req: Request, res: Response) =
         paymentId: feeRecord?.razorpayPaymentId || feeRecord?.utrNumber,
         paymentDate: feeRecord?.paymentDate,
         amount: feeRecord?.amount,
+        category: 'REVALUATION',
+        categoryLabel: 'Revaluation Fee',
+        paymentPurpose: 'Revaluation fee',
       },
     });
   } catch (error: any) {
@@ -12226,6 +12308,200 @@ export const getEntityTimestamps = async (req: Request, res: Response) => {
         batches: Date.now(),
       },
     });
+  }
+};
+
+```
+
+### `backend/src/controllers/treasuryController.ts`
+
+```typescript
+import { Request, Response } from 'express';
+import { FeeRecord } from '../models/feeRecordModel';
+import { Institute } from '../models/instituteModel';
+import { Remittance } from '../models/remittanceModel';
+import { RevaluationRequest } from '../models/revaluationRequestModel';
+import { sendSuccess, sendError } from '../utils/responseFormatter';
+import { getFeeCategory, getFeeCategoryLabel } from '../utils/feeCategories';
+
+export const getTreasurySummary = async (req: Request, res: Response) => {
+  try {
+    // 1. Get all fee records with proper categorization
+    const feeRecords = await FeeRecord.find({})
+      .populate({ path: 'student', select: 'firstName lastName enrollmentId email institute', populate: { path: 'institute', select: 'orgName' } })
+      .sort({ createdAt: -1 });
+
+    // 2. Get all institute onboarding payments
+    const institutes = await Institute.find({ paymentStatus: 'Completed', isDeleted: { $ne: true } })
+      .populate('user', 'name email');
+
+    // 3. Get all remittance records
+    const remittances = await Remittance.find({})
+      .populate('institute', 'orgName')
+      .populate('students', 'firstName lastName enrollmentId');
+
+    // 4. Get revaluation requests with payments
+    const revaluations = await RevaluationRequest.find({ paymentStatus: 'PAID' })
+      .populate('student', 'firstName lastName enrollmentId')
+      .populate('institute', 'orgName');
+
+    const transactions: any[] = [];
+
+    // Add fee records
+    feeRecords.forEach(record => {
+      const student = record.student as any;
+      const purpose = record.paymentPurpose || 'Fee Payment';
+      const category = getFeeCategory(purpose);
+      transactions.push({
+        id: `FEE-${record._id}`,
+        rawId: record._id,
+        refNo: record._id.toString().substring(0, 8).toUpperCase(),
+        category,
+        categoryLabel: getFeeCategoryLabel(category),
+        paymentPurpose: purpose,
+        remarks: purpose,
+        amount: record.amount || 0,
+        paymentId: record.razorpayPaymentId || record.utrNumber || 'N/A',
+        orderId: record.razorpayOrderId || 'N/A',
+        paymentMode: record.paymentMode || 'Online',
+        paymentDate: record.paymentDate ? new Date(record.paymentDate).toISOString().split('T')[0] : 'N/A',
+        timestamp: record.paymentDate ? new Date(record.paymentDate).getTime() : (record as any).createdAt ? new Date((record as any).createdAt).getTime() : Date.now(),
+        status: 'Verified',
+        instituteName: student?.institute?.orgName || 'Accredited Center',
+        instituteId: student?.institute?._id || student?.institute || undefined,
+        payerName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A',
+        studentName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A',
+        studentEnrollmentId: student?.enrollmentId || 'N/A',
+        semesterNumber: record.semesterNumber,
+        isFeeRecord: true,
+        isRemittance: false,
+        isOnboarding: false,
+        isRevaluation: false,
+      });
+    });
+
+    // Add institute onboarding payments
+    institutes.forEach(inst => {
+      const user = inst.user as any;
+      const paymentDate = inst.paymentCompletedAt || (inst as any).createdAt;
+      transactions.push({
+        id: `ONB-${inst._id}`,
+        rawId: inst._id,
+        refNo: inst._id.toString().substring(0, 8).toUpperCase(),
+        category: 'ONBOARDING',
+        categoryLabel: 'Institute Onboarding',
+        paymentPurpose: 'Institute Onboarding & Inspection Fee',
+        remarks: `Onboarding inspection fee for ${inst.orgName}`,
+        amount: inst.paymentAmount || 5000,
+        paymentId: inst.razorpayPaymentId || 'N/A',
+        orderId: inst.razorpayOrderId || 'N/A',
+        paymentMode: 'Razorpay Gateway',
+        paymentDate: paymentDate ? new Date(paymentDate).toISOString().split('T')[0] : 'N/A',
+        timestamp: paymentDate ? new Date(paymentDate).getTime() : Date.now(),
+        status: 'Verified',
+        instituteName: inst.orgName || 'N/A',
+        instituteId: inst._id,
+        payerName: user?.name || inst.orgName || 'N/A',
+        studentName: 'N/A',
+        studentEnrollmentId: 'N/A',
+        isFeeRecord: false,
+        isRemittance: false,
+        isOnboarding: true,
+        isRevaluation: false,
+      });
+    });
+
+    // Add remittance records
+    remittances.forEach(rem => {
+      const institute = rem.institute as any;
+      transactions.push({
+        id: `REM-${rem._id}`,
+        rawId: rem._id,
+        refNo: rem._id.toString().substring(0, 8).toUpperCase(),
+        category: 'REMITTANCE',
+        categoryLabel: 'Academy Remittance',
+        paymentPurpose: rem.paymentPurpose || 'Annual Fellowship Accreditation Remittance',
+        remarks: rem.remarks || 'Annual Institute Remittance',
+        amount: rem.totalAmount || 0,
+        paymentId: rem.razorpayPaymentId || rem.utrNumber || 'N/A',
+        orderId: rem.razorpayOrderId || 'N/A',
+        paymentMode: rem.paymentMode || 'Razorpay Online',
+        paymentDate: rem.paymentDate ? new Date(rem.paymentDate).toISOString().split('T')[0] : 'N/A',
+        timestamp: rem.paymentDate ? new Date(rem.paymentDate).getTime() : Date.now(),
+        status: 'Verified',
+        instituteName: institute?.orgName || 'N/A',
+        instituteId: institute?._id || rem.institute,
+        payerName: institute?.orgName || 'N/A',
+        studentName: 'N/A',
+        studentEnrollmentId: 'N/A',
+        studentCount: rem.students?.length || 0,
+        isFeeRecord: false,
+        isRemittance: true,
+        isOnboarding: false,
+        isRevaluation: false,
+      });
+    });
+
+    // Add revaluation payments
+    revaluations.forEach(rev => {
+      const student = rev.student as any;
+      const institute = rev.institute as any;
+      transactions.push({
+        id: `REV-${rev._id}`,
+        rawId: rev._id,
+        refNo: rev.requestId || rev._id.toString().substring(0, 8).toUpperCase(),
+        category: 'REVALUATION',
+        categoryLabel: 'Revaluation Fee',
+        paymentPurpose: 'Answer Script Revaluation Fee',
+        remarks: `Revaluation for ${rev.subjects?.length || 1} subject(s)`,
+        amount: rev.totalFee || 0,
+        paymentId: rev.paymentId || 'N/A',
+        orderId: rev.paymentOrderId || 'N/A',
+        paymentMode: 'Razorpay Gateway',
+        paymentDate: rev.paymentDate ? new Date(rev.paymentDate).toISOString().split('T')[0] : 'N/A',
+        timestamp: rev.paymentDate ? new Date(rev.paymentDate).getTime() : Date.now(),
+        status: 'Verified',
+        instituteName: institute?.orgName || 'Academic Center',
+        instituteId: institute?._id || rev.institute,
+        payerName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'Fellow Candidate',
+        studentName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A',
+        studentEnrollmentId: student?.enrollmentId || 'N/A',
+        semesterNumber: rev.semester,
+        subjectsCount: rev.subjects?.length || 0,
+        isFeeRecord: false,
+        isRemittance: false,
+        isOnboarding: false,
+        isRevaluation: true,
+      });
+    });
+
+    // Sort by timestamp descending
+    transactions.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Calculate totals by category
+    const categoryTotals: Record<string, number> = {};
+    const categoryCounts: Record<string, number> = {};
+    transactions.forEach(t => {
+      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+      categoryCounts[t.category] = (categoryCounts[t.category] || 0) + 1;
+    });
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Treasury summary retrieved successfully',
+      data: {
+        transactions,
+        summary: {
+          totalTransactions: transactions.length,
+          totalAmount: transactions.reduce((sum, t) => sum + t.amount, 0),
+          categoryTotals,
+          categoryCounts,
+        },
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
 
@@ -13526,10 +13802,12 @@ export interface IHallTicket extends Document {
   instituteName?: string;
   instituteAddress?: string;
   courseName?: string;
+  batchName?: string;
   batchYear?: number;
   subjects?: string[];
   examDate?: Date;
   examVenue?: string;
+  examAddress?: string;
   examCenter?: string;
   reportingTime?: string;
   isDownloaded?: boolean;
@@ -13565,6 +13843,11 @@ export interface IHallTicket extends Document {
       appearing?: boolean;
       timeSlot?: string;
       coordinatorSignature?: string;
+      subjects?: Array<{
+        paperNumber?: number;
+        paperName?: string;
+        appearing?: boolean;
+      }>;
     };
   };
   template?: {
@@ -13596,13 +13879,16 @@ const HallTicketSchema = new Schema({
   studentName: { type: String },
   contactNumber: { type: String },
   photoUrl: { type: String },
+  institute: { type: Schema.Types.ObjectId, ref: 'Institute' },
   instituteName: { type: String },
   instituteAddress: { type: String },
   courseName: { type: String },
+  batchName: { type: String },
   batchYear: { type: Number },
   subjects: { type: [Schema.Types.Mixed] },
   examDate: { type: Date },
   examVenue: { type: String },
+  examAddress: { type: String },
   examCenter: { type: String },
   reportingTime: { type: String },
   isDownloaded: { type: Boolean, default: false },
@@ -13616,7 +13902,6 @@ const HallTicketSchema = new Schema({
     photo: { type: String },
     enrollmentId: { type: String }
   },
-  institute: { type: Schema.Types.Mixed },
   examDetails: { type: Schema.Types.Mixed },
   template: { type: Schema.Types.Mixed },
   customFields: { type: Map, of: Schema.Types.Mixed },
@@ -15187,6 +15472,8 @@ const router = express.Router();
 router.use(protect);
 
 // Hall ticket management
+router.post('/bulk-generate', hallTicketController.bulkGenerate);
+router.get('/', hallTicketController.listHallTickets);
 router.post('/create', hallTicketController.createHallTicket);
 router.get('/:id', hallTicketController.getHallTicket);
 router.get('/:id/pdf', hallTicketController.generatePDF);
@@ -15632,6 +15919,21 @@ export default router;
 
 ```
 
+### `backend/src/routes/treasuryRoutes.ts`
+
+```typescript
+import express from 'express';
+import { getTreasurySummary } from '../controllers/treasuryController';
+import { protect, authorize } from '../middlewares/authMiddleware';
+
+const router = express.Router();
+
+router.get('/summary', protect, authorize('admin', 'super_admin', 'board'), getTreasurySummary);
+
+export default router;
+
+```
+
 ### `backend/src/routes/userRoutes.ts`
 
 ```typescript
@@ -15666,6 +15968,7 @@ import paymentRoutes from '../paymentRoutes';
 import marksRoutes from '../marksRoutes';
 import hallTicketRoutes from '../hallTicketRoutes';
 import syncRoutes from '../syncRoutes';
+import treasuryRoutes from '../treasuryRoutes';
 
 const router = Router();
 
@@ -15682,6 +15985,7 @@ router.use('/certificates', certificateRoutes);
 router.use('/marks', marksRoutes);
 router.use('/hall-tickets', hallTicketRoutes);
 router.use('/sync', syncRoutes);
+router.use('/treasury', treasuryRoutes);
 router.use('/', paymentRoutes);
 
 export default router;
@@ -16357,6 +16661,7 @@ export default new FileParserService();
 import { HallTicket } from '../models/hallTicketModel';
 import { HallTicketTemplate } from '../models/hallTicketTemplateModel';
 import { IHallTicket } from '../models/hallTicketModel';
+import { Institute } from '../models/instituteModel';
 import pdfGeneratorService from './pdfGeneratorService';
 import { randomUUID as uuidv4 } from 'crypto';
 
@@ -16369,6 +16674,95 @@ class HallTicketService {
       status: 'draft'
     });
     return await hallTicket.save();
+  }
+
+  async saveHallTicketsBulk(records: any[], issuedBy?: string): Promise<IHallTicket[]> {
+    const now = Date.now();
+
+    const tickets = (Array.isArray(records) ? records : []).map((record: any) => {
+      const examType = record.examType || 'CCT-EM';
+      const ticketNumber = this.generateHallTicketNumber(examType);
+
+      return new HallTicket({
+        ticketId: record.ticketId || `HT-${now}-${Math.floor(1000 + Math.random() * 9000)}`,
+        hallTicketNumber: ticketNumber,
+        examType,
+        student: record.studentId || record.student || undefined,
+        enrollmentId: record.enrollmentId,
+        studentName: record.studentName,
+        contactNumber: record.contactNumber,
+        photoUrl: record.photoUrl,
+        institute: record.instituteId || record.institute,
+        instituteName: record.instituteName,
+        instituteAddress: record.instituteAddress,
+        courseName: record.courseName,
+        batchName: record.batchName,
+        batchYear: record.batchYear,
+        subjects: record.subjects || [],
+        examDate: record.examDate,
+        examVenue: record.examVenue,
+        examAddress: record.examAddress,
+        examCenter: record.examCenter,
+        reportingTime: record.reportingTime,
+        candidate: {
+          name: record.studentName,
+          photo: record.photoUrl,
+          enrollmentId: record.enrollmentId,
+          signature: record.studentSignatureUrl || record.signature,
+        },
+        examDetails: {
+          theory: {
+            centre: record.examVenue,
+            address: record.examAddress,
+            timeSlot: record.reportingTime,
+            subjects: (record.subjects || []).map((s: any) => ({
+              date: s?.date,
+              paperName: s?.paperName,
+              paperNumber: s?.paperNumber,
+              appearing: true,
+            })),
+          },
+          practical: record.practicalDetails
+            ? {
+                centre: record.practicalDetails.centre,
+                address: record.practicalDetails.address,
+                date: record.practicalDetails.date,
+                timeSlot: record.practicalDetails.timeSlot,
+                appearing: true,
+                subjects: (record.practicalDetails.subjects || []).map((s: any) => ({
+                  paperNumber: s?.paperNumber,
+                  paperName: s?.paperName,
+                  appearing: true,
+                })),
+              }
+            : undefined,
+        },
+        status: 'published',
+        issuedBy,
+        metadata: {
+          generatedAt: new Date(),
+          generatedBy: issuedBy,
+          version: '1.0',
+        },
+      });
+    });
+
+    return await HallTicket.create(tickets);
+  }
+
+  async listHallTickets(userRole: string, userId: string): Promise<IHallTicket[]> {
+    const query: any = {};
+
+    if (userRole === 'institute') {
+      const institute = await Institute.findOne({ user: userId, status: 'Approved' });
+      if (!institute) return [];
+      query.institute = institute._id;
+    }
+
+    return await HallTicket.find(query)
+      .populate('student', 'firstName lastName enrollmentId')
+      .populate('issuedBy', 'name email')
+      .sort({ createdAt: -1 });
   }
 
   async generateHallTicketPDF(hallTicketId: string, templateId?: string): Promise<Buffer> {
@@ -17240,6 +17634,33 @@ export const handleError = (err: any, req: Request, res: Response) => {
     success: false,
     message: err.message || 'Internal server error',
   });
+};
+
+```
+
+### `backend/src/utils/feeCategories.ts`
+
+```typescript
+export const getFeeCategory = (paymentPurpose: string): string => {
+  const purpose = (paymentPurpose || '').toLowerCase();
+  if (purpose.includes('enrollment')) return 'ENROLLMENT';
+  if (purpose.includes('examination') || purpose.includes('exam')) return 'EXAM_FEE';
+  if (purpose.includes('revaluation')) return 'REVALUATION';
+  if (purpose.includes('remittance')) return 'REMITTANCE';
+  if (purpose.includes('inspection') || purpose.includes('onboarding')) return 'ONBOARDING';
+  return 'OTHER';
+};
+
+export const getFeeCategoryLabel = (category: string): string => {
+  const map: Record<string, string> = {
+    'ONBOARDING': 'Institute Onboarding',
+    'ENROLLMENT': 'Student Enrollment',
+    'EXAM_FEE': 'Exam Application Fee',
+    'REVALUATION': 'Revaluation Fee',
+    'REMITTANCE': 'Academy Remittance',
+    'OTHER': 'Other Payment',
+  };
+  return map[category] || category;
 };
 
 ```
@@ -19589,6 +20010,9 @@ export const hallTicketAPI = {
 
   // Bulk operations
   generateBulk: (data) => apiClient.post('/hall-tickets/bulk-generate', data),
+
+  // List issued hall tickets (institute scopes to its own)
+  list: () => apiClient.get('/hall-tickets'),
 
   // Get hall tickets by exam
   getByExam: (examId) => apiClient.get(`/hall-tickets/exam/${examId}`),
@@ -26368,6 +26792,7 @@ import {
   FileSpreadsheet,
   X
 } from 'lucide-react';
+import apiClient from '../../../api/apiClient';
 import academicService from '../../../api/academic';
 import instituteService from '../../../api/institutes';
 import revaluationService from '../../../api/revaluation';
@@ -26399,6 +26824,23 @@ const AcademyRemittance = () => {
       return;
     }
     setLoading(true);
+    try {
+      // Preferred path: dedicated treasury endpoint returns fully categorized
+      // transactions (ONBOARDING / ENROLLMENT / EXAM_FEE / REVALUATION / REMITTANCE).
+      const treasuryRes = await apiClient.get('/treasury/summary');
+      const treasuryData = treasuryRes.data?.data || treasuryRes.data;
+      const treasuryTransactions = treasuryData?.transactions;
+
+      if (Array.isArray(treasuryTransactions)) {
+        setAllTransactions(treasuryTransactions);
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Treasury endpoint unavailable, falling back to multi-source aggregation:', err);
+    }
+
+    // ─── Fallback: legacy multi-source aggregation ─────────────────────────────
     try {
       const [
         remittanceRes,
@@ -38138,6 +38580,7 @@ const InstituteERPHallTicket = ({
     practicalAddress: 'Emergency Dept, Academic Wing',
     practicalTime: '8am to 5pm',
     practicalDate: new Date(Date.now() + 86400000 * 20).toISOString().split('T')[0],
+    practicalSubjects: [],
     showPracticalSection: true,
     controllerName: 'Dr Sowjanya Patibandla',
     controllerTitle: 'Controller - Examinations,SEMI',
@@ -38149,12 +38592,7 @@ const InstituteERPHallTicket = ({
       'Hall ticket becomes valid only after attaching latest passport size photo on the top right corner and attested by program director with seal',
       'Failing to carry hall ticket to exam centre, disqualifies the candidate to give exam'
     ],
-    subjects: [
-      { paperNumber: 1, paperName: 'Basic Sciences & Resuscitation', date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
-      { paperNumber: 2, paperName: 'Surgical Emergencies', date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] },
-      { paperNumber: 3, paperName: 'Medical Emergencies', date: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0] },
-      { paperNumber: 4, paperName: 'Pediatric Emergencies', date: new Date(Date.now() + 86400000 * 16).toISOString().split('T')[0] }
-    ]
+    subjects: []
   });
 
   // System & custom templates list
@@ -38173,16 +38611,67 @@ const InstituteERPHallTicket = ({
 
     let autoSubjects = [];
 
-    // 1. Try student semester-specific subjects if semester filter is active
-    if (firstStudent?.semesters && firstStudent.semesters.length > 0) {
+    const resolveCourseId = (c) => c?._id || c?.id || c;
+    const courseId = selectedCourseId
+      || resolveCourseId(firstStudent?.courseId)
+      || resolveCourseId(firstStudent?.course?._id)
+      || resolveCourseId(firstStudent?.course);
+    const semesterNum = selectedSemester !== 'All Semesters'
+      ? parseInt(String(selectedSemester).replace(/\D/g, ''), 10) || null
+      : null;
+    const selectedStudentIds = selectedStudentObjs.map(s => s._id || s.id);
+
+    const isDegenerateSubjects = (subjects) => Array.isArray(subjects)
+      && subjects.length === 1 && String(subjects[0]).trim().toLowerCase() === 'all';
+
+    // 0. Prefer subjects from the exam application API (authoritative backend source).
+    //    Matches by course + semester + batch and, when students are selected, by membership.
+    const appCandidates = (examApplications || []).filter(app => {
+      const appCourseId = resolveCourseId(app.course);
+      const appBatchId = resolveCourseId(app.batch);
+      const courseMatches = !courseId || !appCourseId || String(appCourseId) === String(courseId);
+      const semMatches = !semesterNum || !app.semesterNumber || app.semesterNumber === semesterNum;
+      const batchMatches = !selectedBatchId || !appBatchId || String(appBatchId) === String(selectedBatchId);
+      const appStudentIds = (app.students || []).map(s => s._id || s.id);
+      const includesSelected = selectedStudentIds.length === 0
+        || selectedStudentIds.every(sid => appStudentIds.includes(sid));
+      return courseMatches && semMatches && batchMatches && includesSelected;
+    });
+    const statusRank = { SchedulePublished: 0, Approved: 1, Pending: 2, Rejected: 3 };
+    appCandidates.sort((a, b) => (statusRank[a.status] ?? 2) - (statusRank[b.status] ?? 2));
+    const matchedApp = appCandidates.find(app => !isDegenerateSubjects(app.subjects)) || appCandidates[0];
+
+    if (matchedApp && !isDegenerateSubjects(matchedApp.subjects)
+      && Array.isArray(matchedApp.subjects) && matchedApp.subjects.length > 0) {
+      const scheduleDates = (matchedApp.subjectSchedules || []).reduce((map, sch) => {
+        if (sch?.subject && sch?.date) map[String(sch.subject).toLowerCase()] = sch.date;
+        return map;
+      }, {});
+      matchedApp.subjects.forEach((subName, index) => {
+        autoSubjects.push({
+          paperNumber: index + 1,
+          paperName: subName,
+          date: scheduleDates[String(subName).toLowerCase()]
+            || new Date(Date.now() + 86400000 * (12 + index)).toISOString().split('T')[0]
+        });
+      });
+    }
+
+    // 1. Fall back to student semester-specific subjects from the student API
+    if (autoSubjects.length === 0 && firstStudent?.semesters && firstStudent.semesters.length > 0) {
       let paperIndex = 1;
       firstStudent.semesters.forEach((sem, idx) => {
         const semName = sem.semesterName || `Semester ${sem.semesterNumber || idx + 1}`;
         if (selectedSemester === 'All Semesters' || selectedSemester === semName) {
-          (sem.subjects || []).forEach(sub => {
+          const semesterSubjects = (sem.marks && sem.marks.length > 0)
+            ? sem.marks
+            : (sem.subjects || []);
+          semesterSubjects.forEach(sub => {
             autoSubjects.push({
               paperNumber: paperIndex++,
-              paperName: sub.subjectName || sub.name || sub.title || `Paper ${paperIndex}`,
+              paperName: typeof sub === 'string'
+                ? sub
+                : (sub.subjectName || sub.name || sub.title || `Paper ${paperIndex}`),
               date: new Date(Date.now() + 86400000 * (12 + paperIndex)).toISOString().split('T')[0]
             });
           });
@@ -38190,7 +38679,7 @@ const InstituteERPHallTicket = ({
       });
     }
 
-    // 2. Try course level subjects
+    // 2. Fall back to course level subjects from the course API
     if (autoSubjects.length === 0 && targetCourse?.subjects && targetCourse.subjects.length > 0) {
       let paperIndex = 1;
       targetCourse.subjects.forEach(sub => {
@@ -38202,46 +38691,31 @@ const InstituteERPHallTicket = ({
       });
     }
 
-    // 3. Fallback based on Course Name / Semester Choice
-    if (autoSubjects.length === 0) {
-      const lowerName = courseName.toLowerCase();
-      if (selectedSemester !== 'All Semesters') {
-        autoSubjects = [
-          { paperNumber: 1, paperName: `${selectedSemester} Theory Paper I`, date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
-          { paperNumber: 2, paperName: `${selectedSemester} Clinical Emergencies Paper II`, date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] }
-        ];
-      } else if (lowerName.includes('basic') || examDetails.examType === 'Basic Sciences') {
-        autoSubjects = [
-          { paperNumber: 1, paperName: 'Applied Basic Sciences & Physiology', date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
-          { paperNumber: 2, paperName: 'Pharmacology & Pathology in Emergencies', date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] }
-        ];
-      } else {
-        autoSubjects = [
-          { paperNumber: 1, paperName: 'Basic Sciences & Resuscitation', date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
-          { paperNumber: 2, paperName: 'Surgical Emergencies', date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] },
-          { paperNumber: 3, paperName: 'Medical Emergencies', date: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0] },
-          { paperNumber: 4, paperName: 'Pediatric Emergencies', date: new Date(Date.now() + 86400000 * 16).toISOString().split('T')[0] }
-        ];
-      }
-    }
-
     const titlePrefix = selectedSemester !== 'All Semesters' 
       ? `${selectedSemester} CCT-EM Examinations Hall ticket - July’26`
       : lowerNameContains(courseName, 'basic') 
         ? "Basic Sciences CCT-EM Exam Hall ticket - July’26" 
         : "Final Year CCT-EM Examinations Hall ticket - July’26";
 
-    const practicalTitle = (targetCourse?.practicalExams && targetCourse.practicalExams.length > 0)
-      ? targetCourse.practicalExams.join(' & ')
-      : (targetCourse?.practicalExamName || '');
+    // Practical subjects auto-populate from the course data (no extra API call)
+    const practicalNames = (targetCourse?.practicalExams && targetCourse.practicalExams.length > 0)
+      ? targetCourse.practicalExams
+      : (targetCourse?.practicalExamName ? [targetCourse.practicalExamName] : []);
+    const practicalSubjects = practicalNames.map((name, idx) => ({
+      paperNumber: idx + 1,
+      paperName: name
+    }));
+
+    const practicalTitle = practicalNames.join(' & ');
 
     setExamDetails(prev => ({
       ...prev,
       headerTitle: titlePrefix,
       subjects: autoSubjects,
+      practicalSubjects,
       ...(practicalTitle ? { practicalCentre: `${practicalTitle} - ${prev.practicalCentre.split(' - ').pop() || 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI'}` } : {})
     }));
-  }, [selectedCourseId, selectedStudents, selectedSemester, courses, students]);
+  }, [selectedCourseId, selectedStudents, selectedSemester, courses, students, examApplications]);
 
   const lowerNameContains = (str, keyword) => (str || '').toLowerCase().includes(keyword);
 
@@ -38309,6 +38783,33 @@ const InstituteERPHallTicket = ({
     }));
   };
 
+  // Practical Subject Management
+  const handleAddPracticalSubject = () => {
+    setExamDetails(prev => ({
+      ...prev,
+      practicalSubjects: [
+        ...prev.practicalSubjects,
+        { paperNumber: prev.practicalSubjects.length + 1, paperName: '' }
+      ]
+    }));
+  };
+
+  const handleRemovePracticalSubject = (index) => {
+    setExamDetails(prev => ({
+      ...prev,
+      practicalSubjects: prev.practicalSubjects.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handlePracticalSubjectChange = (index, field, value) => {
+    setExamDetails(prev => ({
+      ...prev,
+      practicalSubjects: prev.practicalSubjects.map((subject, i) =>
+        i === index ? { ...subject, [field]: value } : subject
+      )
+    }));
+  };
+
   // Controller Signature image upload handler
   const handleSignatureImageUpload = (e) => {
     const file = e.target.files?.[0];
@@ -38350,6 +38851,7 @@ const InstituteERPHallTicket = ({
         const rand = Math.floor(1000 + Math.random() * 9000);
         return {
           ticketId: `HT-SEMI-${new Date().getFullYear()}-${rand}`,
+          studentId: student._id || student.id,
           studentName: student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Candidate',
           enrollmentId: student.enrollmentNo || student.enrollmentId || `SEMI-${rand}`,
           courseName: student.courseName || student.course?.name || 'CCT-EM Fellowship',
@@ -38366,17 +38868,30 @@ const InstituteERPHallTicket = ({
             centre: examDetails.practicalCentre,
             address: examDetails.practicalAddress,
             date: examDetails.practicalDate,
-            timeSlot: examDetails.practicalTime
+            timeSlot: examDetails.practicalTime,
+            subjects: examDetails.practicalSubjects
           }
         };
       });
+
+      // Persist issued hall tickets to the backend
+      let savedTickets = generatedList;
+      try {
+        const saveRes = await hallTicketAPI.generateBulk(generatedList);
+        const payload = saveRes?.data?.data || saveRes?.data;
+        if (Array.isArray(payload) && payload.length > 0) {
+          savedTickets = generatedList.map((t, i) => ({ ...t, _id: payload[i]?._id || payload.find(p => p.ticketId === t.ticketId)?._id }));
+        }
+      } catch (saveErr) {
+        console.warn('Failed to persist hall tickets, showing local preview only:', saveErr);
+      }
 
       if (fetchERPData) {
         await fetchERPData();
       }
 
-      setSuccessMsg(`🎉 Successfully generated ${generatedList.length} accredited Hall Ticket(s)!`);
-      setViewingTickets(generatedList);
+      setSuccessMsg(`🎉 Successfully saved & generated ${savedTickets.length} accredited Hall Ticket(s)!`);
+      setViewingTickets(savedTickets);
       setViewingBatchInfo({
         batchName: selectedBatchId ? `Selected Candidates (${generatedList.length})` : 'All Batches',
         courseName: examDetails.examType
@@ -38566,6 +39081,12 @@ const InstituteERPHallTicket = ({
                 <td>Practical Centre</td>
                 <td><span class="yellow-highlight">${(examDetails.practicalCentre || 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI').toUpperCase()}</span></td>
               </tr>
+              ${(examDetails.practicalSubjects || []).length > 0 ? `
+                <tr>
+                  <td>Subjects</td>
+                  <td>${(examDetails.practicalSubjects || []).map(s => `<strong>${s.paperName || ''}</strong>`).join('<br/>')}</td>
+                </tr>
+              ` : ''}
             </table>
           ` : ''}
 
@@ -39024,6 +39545,44 @@ const InstituteERPHallTicket = ({
                           className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs"
                         />
                       </div>
+
+                      {/* Practical Subjects & Exams */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Subjects</label>
+                          <button
+                            type="button"
+                            onClick={handleAddPracticalSubject}
+                            className="text-[10px] bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-lg font-bold hover:bg-indigo-100 uppercase tracking-wider transition-colors flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> Add
+                          </button>
+                        </div>
+                        <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
+                          {examDetails.practicalSubjects.map((sub, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <span className="text-[9px] font-black uppercase text-indigo-500 w-8 flex-shrink-0">P{sub.paperNumber}</span>
+                              <input
+                                type="text"
+                                placeholder="Practical Subject / Exam Name"
+                                value={sub.paperName}
+                                onChange={(e) => handlePracticalSubjectChange(idx, 'paperName', e.target.value)}
+                                className="flex-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
+                              />
+                              {examDetails.practicalSubjects.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePracticalSubject(idx)}
+                                  className="text-rose-500 hover:text-rose-700 p-0.5 flex-shrink-0"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Date</label>
@@ -39301,6 +39860,16 @@ const InstituteERPHallTicket = ({
                               <span className="bg-yellow-300 px-1 py-0.5 font-bold">{examDetails.practicalCentre.toUpperCase()}</span>
                             </td>
                           </tr>
+                          {examDetails.practicalSubjects?.length > 0 && (
+                            <tr>
+                              <td className="p-2 border-r border-black">Subjects</td>
+                              <td className="p-2 font-semibold">
+                                {examDetails.practicalSubjects.map((s, i) => (
+                                  <div key={i}>{s.paperName}</div>
+                                ))}
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
