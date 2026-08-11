@@ -7,6 +7,7 @@ import { FeeRecord } from '../models/feeRecordModel';
 import { Remittance } from '../models/remittanceModel';
 import { Institute } from '../models/instituteModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
+import { getFeeCategory, getFeeCategoryLabel } from '../utils/feeCategories';
 import path from 'path';
 import razorpayInstance, { isRazorpayConfigured, keyId, keySecret } from '../config/razorpay';
 import crypto from 'crypto';
@@ -840,14 +841,30 @@ export const listFeeRecords = async (req: Request, res: Response) => {
     }
 
     const records = await FeeRecord.find(query)
-      .populate('student', 'firstName lastName enrollmentId email course batch')
+      .populate({ path: 'student', select: 'firstName lastName enrollmentId email course batch institute', populate: { path: 'institute', select: 'orgName' } })
       .sort({ createdAt: -1 });
+
+    // Enhance records with category and formatted data
+    const enhancedRecords = records.map(record => {
+      const recordObj = record.toObject();
+      const student = recordObj.student as any;
+      const category = getFeeCategory(recordObj.paymentPurpose);
+      return {
+        ...recordObj,
+        category,
+        categoryLabel: getFeeCategoryLabel(category),
+        paymentPurpose: recordObj.paymentPurpose || 'Fee Payment',
+        studentName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A',
+        studentEnrollmentId: student?.enrollmentId || 'N/A',
+        instituteName: student?.institute?.orgName || 'N/A',
+      };
+    });
 
     return sendSuccess({
       req,
       res,
       message: 'Fee records retrieved successfully',
-      data: records,
+      data: enhancedRecords,
     });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });

@@ -239,6 +239,9 @@ export const getRevaluationPaymentStatus = async (req: Request, res: Response) =
         paymentId: feeRecord?.razorpayPaymentId || feeRecord?.utrNumber,
         paymentDate: feeRecord?.paymentDate,
         amount: feeRecord?.amount,
+        category: 'REVALUATION',
+        categoryLabel: 'Revaluation Fee',
+        paymentPurpose: 'Revaluation fee',
       },
     });
   } catch (error: any) {
@@ -745,7 +748,7 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
         { path: 'institute', select: 'orgName' },
         { path: 'result', select: 'academicYear semester totalMarks percentage resultStatus' },
         { path: 'assignedEvaluator', select: 'name email' },
-        { path: 'revaluationResults', select: 'subjectCode reviewStatus isFinal' },
+        { path: 'revaluationResults', select: 'subjectCode subjectName originalMarks revisedTotalMarks marksChange reviewStatus isFinal revisedGrade' },
       ],
       sort: { submittedDate: -1 } as any,
     };
@@ -843,6 +846,12 @@ export const updateRequestStatus = async (req: Request, res: Response) => {
       await revaluationService.processRevaluationResults(request._id.toString());
     }
 
+    emitEvent('REVALUATION_UPDATED', {
+      requestId: request._id,
+      status: request.status,
+      studentId: request.student,
+    });
+
     return sendSuccess({ req, res, message: 'Revaluation request status updated successfully', data: request });
   } catch (error: any) {
     if (error instanceof z.ZodError) throw error;
@@ -855,11 +864,11 @@ export const updateRequestStatus = async (req: Request, res: Response) => {
 // all subjects evaluated -> COMPLETED, some -> IN_PROGRESS. Terminal statuses
 // (COMPLETED/REJECTED/CANCELLED) and manual statuses are left untouched.
 const autoUpdateStatusFromProgress = async (request: any, performedBy: any) => {
-  const totalSubjects = request.subjects?.length || 0;
+  const subjects = request.subjects || [];
+  const totalSubjects = subjects.length;
   if (totalSubjects === 0) return;
 
-  const results = await RevaluationResult.find({ revaluationRequest: request._id });
-  const evaluatedSubjects = new Set(results.map((r: any) => r.subjectCode)).size;
+  const evaluatedSubjects = subjects.filter((s: any) => s.evaluated === true).length;
   if (evaluatedSubjects === 0) return;
 
   if (['COMPLETED', 'REJECTED', 'CANCELLED'].includes(request.status)) return;
@@ -869,13 +878,25 @@ const autoUpdateStatusFromProgress = async (request: any, performedBy: any) => {
 
   const previousStatus = request.status;
   request.status = newStatus;
+  if (newStatus === 'COMPLETED') {
+    request.evaluatedDate = new Date();
+  }
   request.auditTrail.push({
     action: 'AUTO_STATUS_UPDATE',
     previousStatus,
     newStatus,
     performedBy: performedBy || undefined,
+    timestamp: new Date(),
   });
   await request.save();
+
+  if (newStatus === 'COMPLETED') {
+    emitEvent('REVALUATION_UPDATED', {
+      requestId: request._id,
+      status: 'COMPLETED',
+      studentId: request.student,
+    });
+  }
 };
 
 export const addRevaluationResult = async (req: Request, res: Response) => {
@@ -889,13 +910,18 @@ export const addRevaluationResult = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Revaluation request not found' });
     }
 
-    const subjectExists = request.subjects.some((s: any) => s.subjectCode === validatedData.subjectCode);
-    if (!subjectExists) {
+    const subjectIndex = request.subjects.findIndex((s: any) => s.subjectCode === validatedData.subjectCode);
+    if (subjectIndex === -1) {
       return sendError({ req, res, statusCode: 400, message: 'Subject not found in revaluation request' });
     }
 
-    const originalSubject = request.subjects.find((s: any) => s.subjectCode === validatedData.subjectCode);
+    const originalSubject = request.subjects[subjectIndex];
     const marksChange = validatedData.revisedTotalMarks - (originalSubject?.originalMarks || 0);
+
+    // Mark subject as evaluated and record the revised marks
+    request.subjects[subjectIndex].evaluated = true;
+    request.subjects[subjectIndex].revisedMarks = validatedData.revisedTotalMarks;
+    request.subjects[subjectIndex].revisedGrade = validatedData.revisedGrade;
 
     const revaluationResult = await RevaluationResult.create({
       ...validatedData,
@@ -913,6 +939,13 @@ export const addRevaluationResult = async (req: Request, res: Response) => {
     await request.save();
 
     await autoUpdateStatusFromProgress(request, userId);
+
+    emitEvent('REVALUATION_UPDATED', {
+      requestId: request._id,
+      status: request.status,
+      subjectCode: validatedData.subjectCode,
+      studentId: request.student,
+    });
 
     return sendSuccess({ req, res, statusCode: 201, message: 'Revaluation result added successfully', data: revaluationResult });
   } catch (error: any) {
@@ -957,12 +990,17 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
     await revalResult.save();
 
     if (isFinal) {
-      await revaluationService.updateResultWithRevaluation(revalResult);
+      await revaluationService.processRevaluationResults(revalResult.revaluationRequest.toString());
     }
 
     const request = await RevaluationRequest.findById(revalResult.revaluationRequest);
     if (request) {
       await autoUpdateStatusFromProgress(request, req.user._id);
+      emitEvent('REVALUATION_UPDATED', {
+        requestId: request._id,
+        status: request.status,
+        studentId: request.student,
+      });
     }
 
     return sendSuccess({ req, res, message: 'Revaluation result approved successfully', data: revalResult });

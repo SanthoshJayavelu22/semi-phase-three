@@ -8,6 +8,9 @@ export interface IRevaluationSubject {
   internalMarks: number;
   externalMarks: number;
   revaluationReason: string;
+  evaluated: boolean;
+  revisedMarks?: number;
+  revisedGrade?: string;
 }
 
 export interface IAdminComment {
@@ -92,6 +95,9 @@ const revaluationRequestSchema: Schema = new Schema(
         internalMarks: { type: Number, required: true },
         externalMarks: { type: Number, required: true },
         revaluationReason: { type: String, required: true },
+        evaluated: { type: Boolean, default: false },
+        revisedMarks: { type: Number },
+        revisedGrade: { type: String },
       },
     ],
     feePerSubject: { type: Number, required: true },

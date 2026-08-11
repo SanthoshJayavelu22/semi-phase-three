@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-08-07T06:42:18.066Z
+> Auto-generated on 2026-08-10T12:22:25.706Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -51,6 +51,7 @@ semi-phase-three/
 │   │   │   ├── paymentController.ts
 │   │   │   ├── resultController.ts
 │   │   │   ├── revaluationController.ts
+│   │   │   ├── syncController.ts
 │   │   │   └── userController.ts
 │   │   ├── docs
 │   │   │   └── swaggerSpec.ts
@@ -91,9 +92,11 @@ semi-phase-three/
 │   │   │   ├── paymentRoutes.ts
 │   │   │   ├── resultRoutes.ts
 │   │   │   ├── revaluationRoutes.ts
+│   │   │   ├── syncRoutes.ts
 │   │   │   └── userRoutes.ts
 │   │   ├── services
 │   │   │   ├── auditService.ts
+│   │   │   ├── cacheService.ts
 │   │   │   ├── certificateService.ts
 │   │   │   ├── fileParserService.ts
 │   │   │   ├── hallTicketService.ts
@@ -160,6 +163,7 @@ semi-phase-three/
 │   │   ├── contexts
 │   │   │   └── ToastContext.jsx
 │   │   ├── hooks
+│   │   │   ├── useDataSync.js
 │   │   │   ├── useLoading.js
 │   │   │   └── useTokenRefresh.js
 │   │   ├── pages
@@ -775,67 +779,53 @@ Warning: A student with this Email Address or Medical Council Registration Numbe
 ### `backend/logs/combined.log`
 
 ```
-[INFO] [2026-08-03T12:33:56.674Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:37:20.691Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:37:28.223Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:37:46.297Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:37:53.358Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:38:32.385Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:38:45.282Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:38:50.701Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:43:15.168Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:43:24.639Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:44:24.489Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:45:48.310Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:45:54.871Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:48:54.734Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:49:03.397Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:50:04.062Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:50:08.977Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:54:36.225Z] Server is running on port 5003 
-[INFO] [2026-08-03T12:54:36.240Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T12:57:51.385Z] Server is running on port 5003 
-[INFO] [2026-08-03T12:57:51.403Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T13:00:44.351Z] Server is running on port 5003 
-[INFO] [2026-08-03T13:00:44.363Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T13:00:59.764Z] Server is running on port 5003 
-[INFO] [2026-08-03T13:00:59.777Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T13:10:34.693Z] Server is running on port 5003 
-[INFO] [2026-08-03T13:10:34.707Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T13:24:32.312Z] Received SIGINT. Shutting down gracefully... 
-[WARN] [2026-08-03T13:24:32.350Z] APM Alert: MongoDB connection pool disconnected. 
-[INFO] [2026-08-03T13:24:32.351Z] MongoDB connection closed 
-[ERROR] [2026-08-03T13:24:32.351Z] Error during graceful shutdown: [{}]
-[INFO] [2026-08-03T13:25:16.125Z] Server is running on port 5003 
-[INFO] [2026-08-03T13:25:16.141Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T13:25:31.894Z] Received SIGINT. Shutting down gracefully... 
-[WARN] [2026-08-03T13:25:31.913Z] APM Alert: MongoDB connection pool disconnected. 
-[INFO] [2026-08-03T13:25:31.914Z] MongoDB connection closed 
-[ERROR] [2026-08-03T13:25:31.915Z] Error during graceful shutdown: [{}]
-[INFO] [2026-08-03T13:28:10.209Z] Server is running on port 5003 
-[INFO] [2026-08-03T13:28:10.225Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-03T13:31:54.291Z] Server is running on port 5003 
-[INFO] [2026-08-03T13:31:54.313Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T05:38:56.490Z] Server is running on port 5003 
-[INFO] [2026-08-04T05:38:56.512Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T09:25:32.547Z] Server is running on port 5003 
-[INFO] [2026-08-04T09:25:32.573Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-05T07:21:42.333Z] Server is running on port 5003 
-[INFO] [2026-08-05T07:21:42.387Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-05T07:22:00.597Z] Server is running on port 5003 
-[INFO] [2026-08-05T07:22:00.617Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-05T07:26:11.450Z] Server is running on port 5003 
-[INFO] [2026-08-05T07:26:11.472Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-05T07:37:49.042Z] Server is running on port 5003 
-[INFO] [2026-08-05T07:37:49.060Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T07:15:51.614Z] Server is running on port 5003 
+[INFO] [2026-08-04T07:15:51.633Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T07:29:40.169Z] Server is running on port 5003 
+[INFO] [2026-08-04T07:29:40.183Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T07:30:04.685Z] Server is running on port 5003 
+[INFO] [2026-08-04T07:30:04.699Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T08:07:30.013Z] Server is running on port 5003 
+[INFO] [2026-08-04T08:07:30.039Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T08:07:42.052Z] Server is running on port 5003 
+[INFO] [2026-08-04T08:07:42.078Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T10:39:03.671Z] Server is running on port 5003 
+[INFO] [2026-08-04T10:39:03.693Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T10:39:13.542Z] Server is running on port 5003 
+[INFO] [2026-08-04T10:39:13.557Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T10:43:43.543Z] Server is running on port 5003 
+[INFO] [2026-08-04T10:43:43.561Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T10:44:10.408Z] Server is running on port 5003 
+[INFO] [2026-08-04T10:44:10.423Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T10:44:38.672Z] Server is running on port 5003 
+[INFO] [2026-08-04T10:44:38.687Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T10:44:47.069Z] Server is running on port 5003 
+[INFO] [2026-08-04T10:44:47.088Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T10:45:09.367Z] Server is running on port 5003 
+[INFO] [2026-08-04T10:45:09.381Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T10:45:17.621Z] Server is running on port 5003 
+[INFO] [2026-08-04T10:45:17.638Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T10:45:41.469Z] Server is running on port 5003 
+[INFO] [2026-08-04T10:45:41.485Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T10:30:41.467Z] Server is running on port 5003 
+[INFO] [2026-08-05T10:30:41.488Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T10:36:30.840Z] Server is running on port 5003 
+[INFO] [2026-08-05T10:36:30.859Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T10:37:32.120Z] Received SIGINT. Shutting down gracefully... 
+[WARN] [2026-08-05T10:37:32.148Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-08-05T10:37:32.148Z] MongoDB connection closed 
+[ERROR] [2026-08-05T10:37:32.149Z] Error during graceful shutdown: [{}]
+[INFO] [2026-08-05T10:37:44.849Z] Server is running on port 5003 
+[INFO] [2026-08-05T10:37:44.866Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T10:51:42.708Z] Server is running on port 5003 
+[INFO] [2026-08-05T10:51:42.722Z] APM: Mongoose connected to MongoDB cluster. 
 
 ```
 
 ### `backend/logs/error.log`
 
 ```
-[ERROR] [2026-08-03T13:24:32.351Z] Error during graceful shutdown: [{}]
-[ERROR] [2026-08-03T13:25:31.915Z] Error during graceful shutdown: [{}]
+[ERROR] [2026-08-05T10:37:32.149Z] Error during graceful shutdown: [{}]
 
 ```
 
@@ -4961,7 +4951,7 @@ export const getRedisClient = () => {
   return redisClient;
 };
 
-export default getRedisClient();
+export default getRedisClient;
 
 
 ```
@@ -5032,46 +5022,16 @@ if (require.main === module) {
 ### `backend/src/config/socket.ts`
 
 ```typescript
-import { Server as HttpServer } from 'http';
+// Socket.io disabled — clean no-op stubs
 
-let ioInstance: any = null;
-
-export const initSocket = (server: HttpServer) => {
-  try {
-    const { Server } = require('socket.io');
-    ioInstance = new Server(server, {
-      cors: {
-        origin: '*',
-        methods: ['GET', 'POST', 'PUT', 'DELETE'],
-        credentials: true,
-      },
-      transports: ['websocket', 'polling'],
-    });
-
-    ioInstance.on('connection', (socket: any) => {
-      socket.on('disconnect', () => {
-        // Socket disconnected
-      });
-    });
-
-    console.log('Socket.io server initialized successfully');
-    return ioInstance;
-  } catch (error: any) {
-    console.error('Failed to initialize Socket.io:', error.message);
-    return null;
-  }
+export const initSocket = (_server?: any) => {
+  return null;
 };
 
-export const getIO = () => ioInstance;
+export const getIO = () => null;
 
-export const emitEvent = (eventName: string, payload?: any) => {
-  if (ioInstance) {
-    try {
-      ioInstance.emit(eventName, payload || {});
-    } catch (err: any) {
-      console.error(`Error emitting socket event ${eventName}:`, err.message);
-    }
-  }
+export const emitEvent = (_eventName: string, _payload?: any) => {
+  // No-op
 };
 
 ```
@@ -8545,11 +8505,12 @@ export const healthCheck = async (req: Request, res: Response) => {
 
     // Check Redis
     try {
-      if (redis) {
-        await redis.ping();
+      const redisClient = typeof redis === 'function' ? redis() : redis;
+      if (redisClient && typeof redisClient.ping === 'function') {
+        await redisClient.ping();
         health.services.redis = 'connected';
       } else {
-        health.services.redis = 'disconnected';
+        health.services.redis = 'fallback';
       }
     } catch (error) {
       health.services.redis = 'disconnected';
@@ -8587,6 +8548,7 @@ import { Institute } from '../models/instituteModel';
 import { User } from '../models/userModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { emitEvent } from '../config/socket';
+import { cacheService } from '../services/cacheService';
 import { z } from 'zod';
 import sendEmail from '../utils/sendEmail';
 import razorpayInstance, { keyId } from '../config/razorpay';
@@ -9025,6 +8987,7 @@ export const reviewApplication = async (req: Request, res: Response) => {
     await institute.save();
 
     emitEvent('INSTITUTE_APPLICATION_UPDATED', { instituteId: institute._id, status });
+    await cacheService.markChange('institutes', institute._id.toString());
 
     // Fetch the user related to the institute
     const user = await User.findById(institute.user);
@@ -11826,7 +11789,7 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
         { path: 'institute', select: 'orgName' },
         { path: 'result', select: 'academicYear semester totalMarks percentage resultStatus' },
         { path: 'assignedEvaluator', select: 'name email' },
-        { path: 'revaluationResults', select: 'subjectCode reviewStatus isFinal' },
+        { path: 'revaluationResults', select: 'subjectCode subjectName originalMarks revisedTotalMarks marksChange reviewStatus isFinal revisedGrade' },
       ],
       sort: { submittedDate: -1 } as any,
     };
@@ -11924,6 +11887,12 @@ export const updateRequestStatus = async (req: Request, res: Response) => {
       await revaluationService.processRevaluationResults(request._id.toString());
     }
 
+    emitEvent('REVALUATION_UPDATED', {
+      requestId: request._id,
+      status: request.status,
+      studentId: request.student,
+    });
+
     return sendSuccess({ req, res, message: 'Revaluation request status updated successfully', data: request });
   } catch (error: any) {
     if (error instanceof z.ZodError) throw error;
@@ -11936,11 +11905,11 @@ export const updateRequestStatus = async (req: Request, res: Response) => {
 // all subjects evaluated -> COMPLETED, some -> IN_PROGRESS. Terminal statuses
 // (COMPLETED/REJECTED/CANCELLED) and manual statuses are left untouched.
 const autoUpdateStatusFromProgress = async (request: any, performedBy: any) => {
-  const totalSubjects = request.subjects?.length || 0;
+  const subjects = request.subjects || [];
+  const totalSubjects = subjects.length;
   if (totalSubjects === 0) return;
 
-  const results = await RevaluationResult.find({ revaluationRequest: request._id });
-  const evaluatedSubjects = new Set(results.map((r: any) => r.subjectCode)).size;
+  const evaluatedSubjects = subjects.filter((s: any) => s.evaluated === true).length;
   if (evaluatedSubjects === 0) return;
 
   if (['COMPLETED', 'REJECTED', 'CANCELLED'].includes(request.status)) return;
@@ -11950,13 +11919,25 @@ const autoUpdateStatusFromProgress = async (request: any, performedBy: any) => {
 
   const previousStatus = request.status;
   request.status = newStatus;
+  if (newStatus === 'COMPLETED') {
+    request.evaluatedDate = new Date();
+  }
   request.auditTrail.push({
     action: 'AUTO_STATUS_UPDATE',
     previousStatus,
     newStatus,
     performedBy: performedBy || undefined,
+    timestamp: new Date(),
   });
   await request.save();
+
+  if (newStatus === 'COMPLETED') {
+    emitEvent('REVALUATION_UPDATED', {
+      requestId: request._id,
+      status: 'COMPLETED',
+      studentId: request.student,
+    });
+  }
 };
 
 export const addRevaluationResult = async (req: Request, res: Response) => {
@@ -11970,13 +11951,18 @@ export const addRevaluationResult = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Revaluation request not found' });
     }
 
-    const subjectExists = request.subjects.some((s: any) => s.subjectCode === validatedData.subjectCode);
-    if (!subjectExists) {
+    const subjectIndex = request.subjects.findIndex((s: any) => s.subjectCode === validatedData.subjectCode);
+    if (subjectIndex === -1) {
       return sendError({ req, res, statusCode: 400, message: 'Subject not found in revaluation request' });
     }
 
-    const originalSubject = request.subjects.find((s: any) => s.subjectCode === validatedData.subjectCode);
+    const originalSubject = request.subjects[subjectIndex];
     const marksChange = validatedData.revisedTotalMarks - (originalSubject?.originalMarks || 0);
+
+    // Mark subject as evaluated and record the revised marks
+    request.subjects[subjectIndex].evaluated = true;
+    request.subjects[subjectIndex].revisedMarks = validatedData.revisedTotalMarks;
+    request.subjects[subjectIndex].revisedGrade = validatedData.revisedGrade;
 
     const revaluationResult = await RevaluationResult.create({
       ...validatedData,
@@ -11994,6 +11980,13 @@ export const addRevaluationResult = async (req: Request, res: Response) => {
     await request.save();
 
     await autoUpdateStatusFromProgress(request, userId);
+
+    emitEvent('REVALUATION_UPDATED', {
+      requestId: request._id,
+      status: request.status,
+      subjectCode: validatedData.subjectCode,
+      studentId: request.student,
+    });
 
     return sendSuccess({ req, res, statusCode: 201, message: 'Revaluation result added successfully', data: revaluationResult });
   } catch (error: any) {
@@ -12038,12 +12031,17 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
     await revalResult.save();
 
     if (isFinal) {
-      await revaluationService.updateResultWithRevaluation(revalResult);
+      await revaluationService.processRevaluationResults(revalResult.revaluationRequest.toString());
     }
 
     const request = await RevaluationRequest.findById(revalResult.revaluationRequest);
     if (request) {
       await autoUpdateStatusFromProgress(request, req.user._id);
+      emitEvent('REVALUATION_UPDATED', {
+        requestId: request._id,
+        status: request.status,
+        studentId: request.student,
+      });
     }
 
     return sendSuccess({ req, res, message: 'Revaluation result approved successfully', data: revalResult });
@@ -12193,6 +12191,41 @@ export const deleteRevaluationRequest = async (req: Request, res: Response) => {
     return sendSuccess({ req, res, message: 'Revaluation request cancelled successfully', data: null });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+```
+
+### `backend/src/controllers/syncController.ts`
+
+```typescript
+import { Request, Response } from 'express';
+import { cacheService } from '../services/cacheService';
+import { sendSuccess } from '../utils/responseFormatter';
+
+export const getEntityTimestamps = async (req: Request, res: Response) => {
+  try {
+    const timestamps = await cacheService.getAllTimestamps();
+    return sendSuccess({
+      req,
+      res,
+      message: 'Entity change timestamps retrieved',
+      data: timestamps,
+    });
+  } catch (error: any) {
+    return res.status(200).json({
+      success: true,
+      data: {
+        institutes: Date.now(),
+        students: Date.now(),
+        exams: Date.now(),
+        results: Date.now(),
+        revaluation: Date.now(),
+        marks: Date.now(),
+        courses: Date.now(),
+        batches: Date.now(),
+      },
+    });
   }
 };
 
@@ -14249,6 +14282,9 @@ export interface IRevaluationSubject {
   internalMarks: number;
   externalMarks: number;
   revaluationReason: string;
+  evaluated: boolean;
+  revisedMarks?: number;
+  revisedGrade?: string;
 }
 
 export interface IAdminComment {
@@ -14333,6 +14369,9 @@ const revaluationRequestSchema: Schema = new Schema(
         internalMarks: { type: Number, required: true },
         externalMarks: { type: Number, required: true },
         revaluationReason: { type: String, required: true },
+        evaluated: { type: Boolean, default: false },
+        revisedMarks: { type: Number },
+        revisedGrade: { type: String },
       },
     ],
     feePerSubject: { type: Number, required: true },
@@ -15579,6 +15618,20 @@ export default router;
 
 ```
 
+### `backend/src/routes/syncRoutes.ts`
+
+```typescript
+import { Router } from 'express';
+import { getEntityTimestamps } from '../controllers/syncController';
+
+const router = Router();
+
+router.get('/timestamps', getEntityTimestamps);
+
+export default router;
+
+```
+
 ### `backend/src/routes/userRoutes.ts`
 
 ```typescript
@@ -15612,6 +15665,7 @@ import certificateRoutes from '../certificateRoutes';
 import paymentRoutes from '../paymentRoutes';
 import marksRoutes from '../marksRoutes';
 import hallTicketRoutes from '../hallTicketRoutes';
+import syncRoutes from '../syncRoutes';
 
 const router = Router();
 
@@ -15627,6 +15681,7 @@ router.use('/marksheets', marksheetRoutes);
 router.use('/certificates', certificateRoutes);
 router.use('/marks', marksRoutes);
 router.use('/hall-tickets', hallTicketRoutes);
+router.use('/sync', syncRoutes);
 router.use('/', paymentRoutes);
 
 export default router;
@@ -15884,6 +15939,106 @@ export const cleanupOldAuditLogs = async (daysToKeep: number = 30) => {
   console.log(`Cleaned up ${result.deletedCount || 0} audit logs older than ${daysToKeep} days.`);
   return result;
 };
+
+```
+
+### `backend/src/services/cacheService.ts`
+
+```typescript
+import getRedisClient from '../config/redis';
+
+export class CacheService {
+  private redis: any;
+  private inMemoryTimestamps: Map<string, number> = new Map();
+  private debounceTimers: Record<string, NodeJS.Timeout> = {};
+
+  constructor() {
+    this.redis = getRedisClient();
+  }
+
+  /**
+   * Mark that a specific entity type has changed
+   * Used by controllers after any mutation (create, update, delete)
+   */
+  async markChange(entityType: string, id?: string): Promise<void> {
+    const key = `change:${entityType}`;
+    const timestamp = Date.now();
+
+    try {
+      if (this.redis && typeof this.redis.set === 'function') {
+        await this.redis.set(key, timestamp.toString());
+        if (id) {
+          await this.redis.set(`change:${entityType}:${id}`, timestamp.toString());
+        }
+      }
+    } catch (err: any) {
+      // Fallback to in-memory map if Redis set fails
+    }
+
+    // Always update in-memory map as instant cache
+    this.inMemoryTimestamps.set(key, timestamp);
+    if (id) {
+      this.inMemoryTimestamps.set(`change:${entityType}:${id}`, timestamp);
+    }
+  }
+
+  /**
+   * Get the last change timestamp for a given entity type
+   */
+  async getLastChange(entityType: string): Promise<number> {
+    const key = `change:${entityType}`;
+    try {
+      if (this.redis && typeof this.redis.get === 'function') {
+        const val = await this.redis.get(key);
+        if (val) return parseInt(val, 10);
+      }
+    } catch (err: any) {
+      // Fallback to memory
+    }
+    return this.inMemoryTimestamps.get(key) || 0;
+  }
+
+  /**
+   * Check if data has changed since a given timestamp
+   */
+  async hasChangedSince(entityType: string, since: number): Promise<boolean> {
+    const lastChange = await this.getLastChange(entityType);
+    return lastChange > since;
+  }
+
+  /**
+   * Get all entity timestamps for a client to check which panels need refresh
+   */
+  async getAllTimestamps(): Promise<Record<string, number>> {
+    const types = ['institutes', 'students', 'exams', 'results', 'revaluation', 'remittances', 'marks', 'courses', 'batches'];
+    const result: Record<string, number> = {};
+
+    for (const type of types) {
+      result[type] = await this.getLastChange(type);
+    }
+
+    return result;
+  }
+
+  /**
+   * Debounced change marking - coalesce multiple changes in a short time
+   */
+  async markChangeDebounced(entityType: string, id?: string, delay: number = 500): Promise<void> {
+    const timerKey = `${entityType}:${id || 'all'}`;
+
+    if (this.debounceTimers[timerKey]) {
+      clearTimeout(this.debounceTimers[timerKey]);
+    }
+
+    this.debounceTimers[timerKey] = setTimeout(() => {
+      this.markChange(entityType, id);
+      delete this.debounceTimers[timerKey];
+    }, delay);
+  }
+}
+
+export const cacheService = new CacheService();
+export default cacheService;
 
 ```
 
@@ -16667,6 +16822,7 @@ export default new ResultService();
 import { RevaluationRequest } from '../models/revaluationRequestModel';
 import { RevaluationResult } from '../models/revaluationResultModel';
 import { Result } from '../models/resultModel';
+import { emitEvent } from '../config/socket';
 
 class RevaluationService {
   generateRequestId(): string {
@@ -16706,15 +16862,15 @@ class RevaluationService {
       throw new Error('Revaluation request not found');
     }
 
-    const revalResults = await RevaluationResult.find({ revaluationRequest: requestId });
+    const revalResults = await RevaluationResult.find({
+      revaluationRequest: requestId,
+      reviewStatus: 'APPROVED',
+    });
 
-    let allApproved = true;
+    let allApproved = revalResults.length === request.subjects.length;
     let hasChanges = false;
 
     for (const revalResult of revalResults) {
-      if (revalResult.reviewStatus !== 'APPROVED') {
-        allApproved = false;
-      }
       if (revalResult.marksChange !== 0) {
         hasChanges = true;
       }
@@ -16722,41 +16878,61 @@ class RevaluationService {
 
     request.finalResult = hasChanges ? 'CHANGED' : 'UNCHANGED';
 
-    if (allApproved && revalResults.length === request.subjects.length) {
+    if (allApproved) {
       request.status = 'COMPLETED';
+      request.evaluatedDate = request.evaluatedDate || new Date();
     }
 
     await request.save();
 
-    if (hasChanges && revalResults.length > 0) {
-      await this.updateResultWithRevaluation(revalResults[0]);
+    // Update the original result with all approved revaluation changes
+    if (revalResults.length > 0) {
+      await this.updateResultWithRevaluation(requestId);
     }
+
+    // Emit event for real-time updates
+    emitEvent('REVALUATION_PROCESSED', {
+      requestId: request._id,
+      finalResult: request.finalResult,
+      studentId: request.student,
+    });
 
     return { request, allApproved, hasChanges, revaluationResults: revalResults };
   }
 
-  async updateResultWithRevaluation(revalResult: any) {
-    const result = await Result.findById(revalResult.result);
+  async updateResultWithRevaluation(requestId: string) {
+    const request = await RevaluationRequest.findById(requestId);
+    if (!request) {
+      throw new Error('Revaluation request not found');
+    }
+
+    const result = await Result.findById(request.result);
     if (!result) {
       throw new Error('Result not found');
     }
 
-    const subjectIndex = result.subjects.findIndex(
-      (s: any) => s.subjectCode === revalResult.subjectCode
-    );
+    const revalResults = await RevaluationResult.find({
+      revaluationRequest: requestId,
+      reviewStatus: 'APPROVED',
+    });
 
-    if (subjectIndex === -1) {
-      throw new Error('Subject not found in result');
+    const previousSubjects = result.subjects.map((s: any) => s.toObject());
+
+    // Update each subject in the result
+    for (const reval of revalResults) {
+      const subjectIndex = result.subjects.findIndex(
+        (s: any) => s.subjectCode === reval.subjectCode
+      );
+
+      if (subjectIndex === -1) continue;
+
+      (result.subjects[subjectIndex] as any).totalMarks = reval.revisedTotalMarks;
+      (result.subjects[subjectIndex] as any).grade = reval.revisedGrade;
+      (result.subjects[subjectIndex] as any).isRevaluationApplied = true;
+      (result.subjects[subjectIndex] as any).revaluationMarks = reval.revisedTotalMarks;
+      (result.subjects[subjectIndex] as any).revaluationGrade = reval.revisedGrade;
+      (result.subjects[subjectIndex] as any).isRevaluationCompleted = true;
     }
-
-    const previousSubject = { ...(result.subjects[subjectIndex] as any).toObject() };
-
-    (result.subjects[subjectIndex] as any).totalMarks = revalResult.revisedTotalMarks;
-    (result.subjects[subjectIndex] as any).grade = revalResult.revisedGrade;
-    (result.subjects[subjectIndex] as any).isRevaluationApplied = true;
-    (result.subjects[subjectIndex] as any).revaluationMarks = revalResult.revisedTotalMarks;
-    (result.subjects[subjectIndex] as any).revaluationGrade = revalResult.revisedGrade;
-    (result.subjects[subjectIndex] as any).isRevaluationCompleted = true;
 
     const totalMarks = result.subjects.reduce((sum: number, s: any) => sum + (s.totalMarks || 0), 0);
     const maxMarks = result.subjects.length * 100;
@@ -16803,13 +16979,20 @@ class RevaluationService {
 
     result.auditHistory.push({
       action: 'REVALUATION_UPDATED' as any,
-      previousData: { subjects: [previousSubject] },
-      newData: { subjects: [(result.subjects[subjectIndex] as any).toObject()] },
-      performedBy: revalResult.reviewedBy,
+      previousData: { subjects: previousSubjects },
+      newData: { subjects: result.subjects.map((s: any) => s.toObject()) },
+      performedBy: (revalResults[0]?.reviewedBy || request.assignedEvaluator) as any,
       timestamp: new Date(),
     });
 
     await result.save();
+
+    // Emit event for real-time updates
+    emitEvent('RESULT_UPDATED', {
+      resultId: result._id,
+      studentId: result.student,
+    });
+
     return result;
   }
 
@@ -16908,6 +17091,7 @@ class RevaluationService {
 
     const revalResults = await RevaluationResult.find({
       revaluationRequest: { $in: requests.map((r) => r._id) },
+      reviewStatus: 'APPROVED',
     });
 
     revalResults.forEach((result) => {
@@ -18350,6 +18534,20 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('Error caught by React ErrorBoundary:', error, errorInfo);
+    
+    // Auto-reload once on stale chunk import failure after new build deployments
+    const errorMsg = (error?.message || error?.toString() || '');
+    if (
+      errorMsg.includes('Failed to fetch dynamically imported module') ||
+      errorMsg.includes('Importing a module script failed') ||
+      errorMsg.includes('error loading dynamically imported module')
+    ) {
+      const isReloaded = sessionStorage.getItem('chunk_reload_retry');
+      if (!isReloaded) {
+        sessionStorage.setItem('chunk_reload_retry', 'true');
+        window.location.reload();
+      }
+    }
   }
 
   render() {
@@ -19047,23 +19245,12 @@ export const setTokens = (accessToken, refreshToken) => {
 
 export const clearAllTokens = () => {
   try {
-    if (typeof localStorage === 'undefined') return;
-    [
-      'token',
-      'semi_token',
-      'semi_institute_token',
-      'semi_board_token',
-      'refreshToken',
-      'semi_refreshToken',
-      TOKEN_KEYS.access,
-      TOKEN_KEYS.refresh,
-      'semi_user',
-      'semi_board_user',
-      'semi_registered_email',
-    ].forEach((key) => {
-      try { localStorage.removeItem(key); } catch { /* ignore */ }
-    });
-    try { sessionStorage.clear(); } catch { /* ignore */ }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.clear();
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
   } catch { /* ignore */ }
 };
 
@@ -19768,6 +19955,77 @@ export default ToastContext;
 
 ```
 
+### `client/src/hooks/useDataSync.js`
+
+```javascript
+import { useEffect, useRef } from 'react';
+import apiClient from '../api/apiClient';
+
+/**
+ * Custom hook to automatically trigger a data refresh ONLY when relevant database entities are updated.
+ * Performs ultra-lightweight timestamp pings without heavy database queries or WebSockets.
+ *
+ * @param {Array<string>} entityTypes - Array of entity names to track (e.g., ['institutes', 'students', 'marks'])
+ * @param {Function} onDataChange - Callback function to trigger data refetch
+ * @param {number} intervalMs - Polling interval in ms (default: 5000ms)
+ */
+export const useDataSync = (entityTypes = [], onDataChange, intervalMs = 5000) => {
+  const lastTimestampsRef = useRef({});
+  const onDataChangeRef = useRef(onDataChange);
+
+  useEffect(() => {
+    onDataChangeRef.current = onDataChange;
+  }, [onDataChange]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkChangeTimestamps = async () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_board_token') || localStorage.getItem('semi_institute_token');
+      if (!token) return;
+
+      try {
+        const response = await apiClient.get('/sync/timestamps');
+        if (!isMounted) return;
+
+        const serverTimestamps = response.data?.data || response.data || {};
+        let hasChanged = false;
+
+        entityTypes.forEach((entity) => {
+          const serverTime = serverTimestamps[entity] || 0;
+          const lastTime = lastTimestampsRef.current[entity];
+
+          if (lastTime !== undefined && serverTime > lastTime) {
+            hasChanged = true;
+          }
+          lastTimestampsRef.current[entity] = serverTime;
+        });
+
+        if (hasChanged && typeof onDataChangeRef.current === 'function') {
+          onDataChangeRef.current();
+        }
+      } catch (err) {
+        // Silent catch for network hiccups
+      }
+    };
+
+    // Initial timestamp check
+    checkChangeTimestamps();
+
+    // Periodic lightweight check
+    const intervalId = setInterval(checkChangeTimestamps, intervalMs);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [entityTypes.join(','), intervalMs]);
+};
+
+export default useDataSync;
+
+```
+
 ### `client/src/hooks/useLoading.js`
 
 ```javascript
@@ -20167,6 +20425,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 import instituteService from '../../api/institutes';
+import { clearAllTokens } from '../../api/apiClient';
+import useDataSync from '../../hooks/useDataSync';
 import academicService from '../../api/academic';
 import examService from '../../api/exams';
 import Toast from '../../Components/Toast';
@@ -20393,6 +20653,15 @@ export default function AcademyLayout() {
     if (boardUser) {
       setTimeout(() => fetchBoardData(), 0);
     }
+  }, [boardUser, fetchBoardData]);
+
+  // Auto-fetch data every 3 seconds for active board view
+  useEffect(() => {
+    if (!boardUser) return;
+    const intervalId = setInterval(() => {
+      fetchBoardData();
+    }, 3000);
+    return () => clearInterval(intervalId);
   }, [boardUser, fetchBoardData]);
 
   // ─── Mock Fallbacks for Empty Database ──────────────────────────────────────
@@ -20637,12 +20906,9 @@ export default function AcademyLayout() {
 
   const handleLogout = useCallback(() => {
     setBoardUser(null);
-    localStorage.removeItem('semi_board_user');
-    localStorage.removeItem('semi_board_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('semi_token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('semi_refreshToken');
+    clearAllTokens();
+    if (typeof localStorage !== 'undefined') localStorage.clear();
+    if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
     navigate('/academy/login', { replace: true });
   }, [navigate]);
 
@@ -20821,9 +21087,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import InstitutionalLayout from '../institute/InstitutionalLayout';
 
 import authService from '../../api/auth';
+import { clearAllTokens } from '../../api/apiClient';
+import useDataSync from '../../hooks/useDataSync';
 import instituteService from '../../api/institutes';
 import academicService from '../../api/academic';
-import socket from '../../socket';
 import Toast from '../../Components/Toast';
 import ConfirmModal from '../../Components/ConfirmModal';
 
@@ -21046,40 +21313,16 @@ const AcademyPortal = () => {
     }
   }, [fetchBoardData]);
 
-  // Background Auto-Polling every 5 seconds
-  useEffect(() => {
-    let intervalId;
-    if (boardUser && currentStep === 'dashboard') {
-      intervalId = setInterval(() => {
-        fetchBoardData();
-      }, 5000);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [boardUser, currentStep, fetchBoardData]);
-
-  // Real-Time Socket Listener for Instant Data Refresh
+  // Auto-fetch data every 3 seconds for active board view
   useEffect(() => {
     if (!boardUser) return;
-    const handleLiveRefresh = () => {
+    const intervalId = setInterval(() => {
       fetchBoardData();
-    };
-
-    socket.on('INSTITUTE_APPLICATION_UPDATED', handleLiveRefresh);
-    socket.on('MARKS_UPDATED', handleLiveRefresh);
-    socket.on('RESULTS_PUBLISHED', handleLiveRefresh);
-    socket.on('REVALUATION_UPDATED', handleLiveRefresh);
-    socket.on('EXAM_APPLICATION_UPDATED', handleLiveRefresh);
-
-    return () => {
-      socket.off('INSTITUTE_APPLICATION_UPDATED', handleLiveRefresh);
-      socket.off('MARKS_UPDATED', handleLiveRefresh);
-      socket.off('RESULTS_PUBLISHED', handleLiveRefresh);
-      socket.off('REVALUATION_UPDATED', handleLiveRefresh);
-      socket.off('EXAM_APPLICATION_UPDATED', handleLiveRefresh);
-    };
+    }, 3000);
+    return () => clearInterval(intervalId);
   }, [boardUser, fetchBoardData]);
+
+
 
   // URL and Auth Guard Synchronizer
   useEffect(() => {
@@ -21280,7 +21523,9 @@ const AcademyPortal = () => {
 
   const handleLogout = useCallback(() => {
     setBoardUser(null);
-    localStorage.clear();
+    clearAllTokens();
+    if (typeof localStorage !== 'undefined') localStorage.clear();
+    if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
     setCurrentStep('login');
   }, [setCurrentStep]);
 
@@ -30767,7 +31012,7 @@ import {
 import authService from '../../api/auth';
 import { setTokens, clearAllTokens } from '../../api/apiClient';
 import instituteService from '../../api/institutes';
-import socket from '../../socket';
+import useDataSync from '../../hooks/useDataSync';
 import { getPaymentState, clearPaymentState } from '../../utils/razorpay';
 import { PaymentStatusChecker } from '../../Components/PaymentStatusChecker';
 import academicService from '../../api/academic';
@@ -31268,7 +31513,11 @@ const InstitutePortal = () => {
           });
         }
 
-        if (statusMapped === 'approved' && currentStep === 'active_erp') {
+        if (statusMapped === 'approved') {
+          if (currentStep !== 'active_erp') {
+            setCurrentStep('active_erp');
+            navigate('/institute/dashboard', { replace: true });
+          }
           fetchERPData();
         }
 
@@ -31341,68 +31590,121 @@ const InstitutePortal = () => {
     return () => clearTimeout(timer);
   }, [loadApplicationFromStorage]);
 
-  // Background Auto-Polling every 5 seconds
-  useEffect(() => {
-    let intervalId;
-    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
-    if (user && token) {
-      intervalId = setInterval(() => {
-        if (currentStep === 'active_erp') {
-          fetchERPData().catch(err => console.warn('Failed auto-polling ERP data:', err));
-        } else if (currentStep === 'pending_review' || currentStep === 'status') {
-          fetchApplication().catch(err => console.warn('Failed auto-polling application status:', err));
-        } else if (currentStep === 'verify_pending') {
-          authService.checkStatus()
-            .then(res => {
-              const data = res.data?.data || res.data || {};
-              if (data.isEmailVerified === true) {
-                setSuccessBanner('Email verified successfully! Please login with your credentials.');
-                setUser(null);
-                localStorage.removeItem('semi_user');
-                localStorage.removeItem('token');
-                localStorage.removeItem('semi_token');
-                localStorage.removeItem('refreshToken');
-                setCurrentStep('login');
-              }
-            })
-            .catch(err => {
-              console.warn('Failed to poll user verification status:', err);
-            });
-        }
-      }, 5000);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [user, currentStep, fetchERPData, fetchApplication, setCurrentStep]);
-
-  // Real-Time Socket Listener for Instant Live Updates
+  // ─── ACTIVE PAGE ONLY AUTO-FETCHING (EVERY 3 SECONDS) ─────────────────────
+  // Auto-fetches ONLY the API for the page/tab currently being viewed to prevent unwanted API calls
   useEffect(() => {
     if (!user) return;
+    const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
+    if (!token) return;
 
-    const handleLiveUpdate = () => {
-      if (currentStep === 'active_erp') {
-        fetchERPData().catch(() => {});
+    const fetchCurrentPageData = () => {
+      if (currentStep === 'pending_review' || currentStep === 'status') {
+        fetchApplication().catch(() => {});
+      } else if (currentStep === 'active_erp') {
+        if (activeTab === 'dashboard') {
+          fetchApplication().catch(() => {});
+          fetchERPData().catch(() => {});
+        } else if (activeTab === 'courses') {
+          academicService.getCourses().then(res => {
+            const data = extractData(res) || [];
+            if (Array.isArray(data)) {
+              const formatted = data.map(c => ({
+                id: c._id,
+                _id: c._id,
+                courseName: c.name,
+                courseCode: c.courseCode || 'N/A',
+                courseType: c.courseType || 'Postgraduate',
+                programCategory: c.programCategory || 'Emergency Medicine',
+                courseDuration: c.courseDuration || '2',
+                durationType: c.durationType || 'Years',
+                subjects: c.subjects || [],
+                practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
+                practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
+                totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
+                courseFee: c.courseFee || '0',
+                registrationFee: c.registrationFee || '0',
+                examinationFee: c.examinationFee || '0',
+                certificationFee: c.certificationFee || '0',
+                studentsCount: c.studentsCount ?? 0,
+                batchesCount: c.batchesCount ?? 0,
+                status: c.status || 'Active'
+              }));
+              setCourses(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
+            }
+          }).catch(() => {});
+        } else if (activeTab === 'batches') {
+          academicService.getBatches().then(res => {
+            const data = extractData(res) || [];
+            if (Array.isArray(data)) {
+              const formatted = data.map(b => ({
+                id: b._id,
+                _id: b._id,
+                name: b.name || `Batch ${b.year || new Date().getFullYear()}-A`,
+                startDate: b.startDate ? b.startDate.split('T')[0] : `${b.year || new Date().getFullYear()}-01-10`,
+                seats: b.seats || '5',
+                activeFellows: b.activeFellows || 0,
+                year: b.year,
+                course: b.course,
+                courseName: b.course?.name || b.course?.courseName || b.courseName || ''
+              }));
+              setBatches(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
+            }
+          }).catch(() => {});
+        } else if (activeTab === 'students' || activeTab === 'enrollment' || activeTab === 'studentDetails') {
+          academicService.listStudents().then(res => {
+            const data = extractData(res) || [];
+            if (Array.isArray(data)) {
+              const formatted = data.map(s => ({
+                id: s._id,
+                _id: s._id,
+                fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+                email: s.email,
+                phone: s.contactNumber,
+                qualification: s.qualification,
+                graduationYear: s.yearOfPassing?.toString() || '',
+                enrollmentNo: s.enrollmentId,
+                admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+                status: s.remittedToAcademy ? 'Completed' : 'Active',
+                remittedToAcademy: s.remittedToAcademy || false,
+                attendancePercentage: s.attendancePercentage || 0,
+                thesisApproved: s.thesisApproved || false,
+                courseId: s.course?._id || s.course,
+                batchId: s.batch?._id || s.batch,
+                courseName: s.course?.name || 'General Medicine',
+                batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
+                homeAddress: s.homeAddress,
+                contactNumber: s.contactNumber,
+                courseDirector: s.courseDirector,
+                razorpayOrderId: s.razorpayOrderId,
+                razorpayPaymentId: s.razorpayPaymentId,
+                razorpaySignature: s.razorpaySignature,
+                medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
+                universityName: s.universityName,
+                mbbsQualification: s.mbbsQualification,
+                fmgeClearanceStatus: s.fmgeClearanceStatus,
+                isForeignGraduate: s.isForeignGraduate,
+                documents: s.documents || {},
+                semesters: s.semesters || [],
+              }));
+              setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
+            }
+          }).catch(() => {});
+        } else if (activeTab === 'exams' || activeTab === 'hallTicket' || activeTab === 'results') {
+          examService.listExamApplications().then(res => {
+            const data = extractData(res) || [];
+            if (Array.isArray(data)) {
+              setExamApplications(prev => JSON.stringify(prev) === JSON.stringify(data) ? prev : data);
+            }
+          }).catch(() => {});
+        }
       }
-      fetchApplication().catch(() => {});
     };
 
-    socket.on('INSTITUTE_APPLICATION_UPDATED', handleLiveUpdate);
-    socket.on('MARKS_UPDATED', handleLiveUpdate);
-    socket.on('RESULTS_PUBLISHED', handleLiveUpdate);
-    socket.on('REVALUATION_UPDATED', handleLiveUpdate);
-    socket.on('EXAM_APPLICATION_UPDATED', handleLiveUpdate);
-    socket.on('HALL_TICKET_UPDATED', handleLiveUpdate);
+    const intervalId = setInterval(fetchCurrentPageData, 3000);
+    return () => clearInterval(intervalId);
+  }, [user, currentStep, activeTab, fetchApplication, fetchERPData]);
 
-    return () => {
-      socket.off('INSTITUTE_APPLICATION_UPDATED', handleLiveUpdate);
-      socket.off('MARKS_UPDATED', handleLiveUpdate);
-      socket.off('RESULTS_PUBLISHED', handleLiveUpdate);
-      socket.off('REVALUATION_UPDATED', handleLiveUpdate);
-      socket.off('EXAM_APPLICATION_UPDATED', handleLiveUpdate);
-      socket.off('HALL_TICKET_UPDATED', handleLiveUpdate);
-    };
-  }, [user, currentStep, fetchERPData, fetchApplication]);
+
 
   // Fetch from backend when authenticated
   useEffect(() => {
@@ -32072,10 +32374,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
   };
 
   // ─── APPLICATION SUBMIT (validates → pays → submits) ─────────────────────────
-  const submitApplicationInternal = async (overridePaymentData) => {
+  const submitApplicationInternal = async (overridePaymentData, forceAgreement = false) => {
     const formData = new FormData();
 
     const cleaned = { ...appForm };
+    if (forceAgreement || paymentComplete || overridePaymentData) {
+      cleaned.certificationAgreement = true;
+    }
     cleaned.phoneNumber = (appForm.phoneNumber || '').replace(/\D/g, '');
     cleaned.officePhone = (appForm.officePhone || '').replace(/\D/g, '');
 
@@ -32085,6 +32390,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         formData.append(key, val);
       }
     });
+    // Ensure certificationAgreement is always sent as boolean true string
+    formData.append('certificationAgreement', 'true');
 
     const appendDocFile = (backendKey, stateKey) => {
       const fileState = uploadedDocs[stateKey];
@@ -32133,6 +32440,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     setSuccessBanner('Application submitted successfully! Moving to Academic Board for Review.');
     setApplicationSubmitting(false);
     setCurrentStep('pending_review');
+    navigate('/institute/status', { replace: true });
   };
 
   const handleApplicationSubmit = async (e) => {
@@ -32194,17 +32502,18 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
 
+    // STRICT REQUIREMENT: Require Certification & Declarations agreement checkbox to be ticked
     if (!appForm.certificationAgreement) {
-      setErrorBanner('You must accept the Certification & Declarations agreement to proceed.');
+      setErrorBanner('⚠️ Compliance Requirement: You must tick the "Certification & Declarations agreement" checkbox before initiating payment or submitting the application.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    // If payment already complete, submit directly
+    // If payment already complete and checkbox is ticked: submit directly on single click
     if (paymentComplete) {
       setApplicationSubmitting(true);
       try {
-        await submitApplicationInternal();
+        await submitApplicationInternal(null, true);
       } catch (err) {
         console.error('Application submission failed:', err);
         setErrorBanner(extractErrorMessage(err, 'Failed to submit application.'));
@@ -32278,7 +32587,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
               // Auto-submit after successful payment
               // Pass newPaymentData directly to avoid closure stale-state bug
               try {
-                await submitApplicationInternal(newPaymentData);
+                await submitApplicationInternal(newPaymentData, true);
               } catch (submitErr) {
                 console.error('Application submission failed after payment', submitErr);
                 setErrorBanner('Payment succeeded but application submission failed: ' + extractErrorMessage(submitErr, 'Please try submitting again.'));
@@ -33293,33 +33602,7 @@ const ApplicationStatusPending = ({
     <div className="max-w-4xl mx-auto w-full space-y-8 text-left animate-in fade-in duration-200">
       
       {/* 1. Audit status block */}
-      {applicationRecord.status === 'pending_review' ? (
-        <div className="bg-amber-50/50 border border-amber-200 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-center text-amber-600 flex-shrink-0">
-              <Clock className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <span className="text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                {applicationRecord.status === 'pending_review' ? 'Awaiting Board Audit' : applicationRecord.status.replace('_', ' ')}
-              </span>
-              <h3 className="text-xl font-black text-gray-900 mt-2">
-                Application Submitted! Status: <span className="capitalize">{applicationRecord.status.replace('_', ' ')}</span>
-              </h3>
-              <p className="text-xs text-gray-400 mt-1 font-semibold leading-relaxed">
-                Your institutional registration is complete, the fee has been captured, and your application was submitted on <span className="font-bold text-gray-700">{applicationRecord.submittedAt}</span>. The Academic Board is currently auditing your compliance parameters.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setConfirmOpen(true)}
-            className="px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-800 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors self-end sm:self-center"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Logout
-          </button>
-        </div>
-      ) : (
+      {applicationRecord.status === 'rejected' || applicationRecord.status === 'Rejected' ? (
         // Rejected Status block
         <div className="bg-rose-50/50 border border-rose-200 rounded-3xl p-6 sm:p-8 flex flex-col gap-6">
           <div className="flex items-start gap-4">
@@ -33371,6 +33654,53 @@ const ApplicationStatusPending = ({
               Edit & Re-submit Application
             </button>
           </div>
+        </div>
+      ) : applicationRecord.status === 'approved' || applicationRecord.status === 'Approved' ? (
+        // Approved Status block
+        <div className="bg-emerald-50/50 border border-emerald-200 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-center text-emerald-600 flex-shrink-0">
+              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-black tracking-wider text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                Application Approved
+              </span>
+              <h3 className="text-xl font-black text-gray-900 mt-2">
+                Application Approved! Transitioning to Portal Dashboard...
+              </h3>
+              <p className="text-xs text-gray-500 mt-1 font-semibold leading-relaxed">
+                Your institutional application has been verified and approved by the Academic Board. Redirecting to your ERP dashboard...
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Pending Status block
+        <div className="bg-amber-50/50 border border-amber-200 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-center text-amber-600 flex-shrink-0">
+              <Clock className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                Awaiting Board Audit
+              </span>
+              <h3 className="text-xl font-black text-gray-900 mt-2">
+                Application Submitted! Status: <span className="capitalize">Awaiting Audit</span>
+              </h3>
+              <p className="text-xs text-gray-400 mt-1 font-semibold leading-relaxed">
+                Your institutional registration is complete, the fee has been captured, and your application was submitted. The Academic Board is currently auditing your compliance parameters.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            className="px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-800 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors self-end sm:self-center"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Logout
+          </button>
         </div>
       )}
 
@@ -33575,7 +33905,7 @@ export default ForgotPassword;
 
 ```jsx
 import { useState } from 'react';
-import { Pencil, Trash2, XCircle } from 'lucide-react';
+import { Pencil, Trash2, XCircle, Loader2 } from 'lucide-react';
 
 const InstituteERPBatches = ({
   batches = [],
@@ -33587,6 +33917,7 @@ const InstituteERPBatches = ({
   handleDeleteBatch
 }) => {
   const [editingBatch, setEditingBatch] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     startDate: '',
@@ -33615,6 +33946,7 @@ const InstituteERPBatches = ({
 
   const onEditSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     if (!editForm.name || !editForm.startDate) {
       alert('Please fill in the batch name and commencement date.');
       return;
@@ -33626,15 +33958,30 @@ const InstituteERPBatches = ({
       return;
     }
 
-    if (handleUpdateBatch) {
-      const batchId = editingBatch._id || editingBatch.id;
-      await handleUpdateBatch(batchId, {
-        name: editForm.name,
-        startDate: editForm.startDate,
-        seats: Number(editForm.seats)
-      });
+    setSubmitting(true);
+    try {
+      if (handleUpdateBatch) {
+        const batchId = editingBatch._id || editingBatch.id;
+        await handleUpdateBatch(batchId, {
+          name: editForm.name,
+          startDate: editForm.startDate,
+          seats: Number(editForm.seats)
+        });
+      }
+      cancelEdit();
+    } finally {
+      setSubmitting(false);
     }
-    cancelEdit();
+  };
+
+  const onSubmit = async (e) => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await handleCreateBatch(e);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
 
@@ -33666,7 +34013,7 @@ const InstituteERPBatches = ({
             )}
           </div>
           
-          <form onSubmit={editingBatch ? onEditSubmit : handleCreateBatch} className="space-y-4">
+          <form onSubmit={editingBatch ? onEditSubmit : onSubmit} className="space-y-4">
             <div>
               <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Select Course *</label>
               <select
@@ -33755,13 +34102,21 @@ const InstituteERPBatches = ({
 
             <button
               type="submit"
-              className={`w-full py-3.5 text-white font-extrabold rounded-xl transition-all shadow-md text-xs uppercase tracking-wider cursor-pointer ${
+              disabled={submitting}
+              className={`w-full py-3.5 text-white font-extrabold rounded-xl transition-all shadow-md text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 ${
                 editingBatch 
                   ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/10' 
                   : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/10'
-              }`}
+              } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600`}
             >
-              {editingBatch ? 'Save Changes' : 'Create Batch'}
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {editingBatch ? 'Saving Changes...' : 'Creating Batch...'}
+                </>
+              ) : (
+                editingBatch ? 'Save Changes' : 'Create Batch'
+              )}
             </button>
           </form>
         </div>
@@ -33879,7 +34234,7 @@ export default InstituteERPBatches;
 
 ```jsx
 import { useState, useMemo, useCallback } from 'react';
-import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle } from 'lucide-react';
+import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle, Loader2 } from 'lucide-react';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
@@ -33907,6 +34262,7 @@ const InstituteERPCourses = ({
     status: 'Active'
   });
   const [isEditLoading, setIsEditLoading] = useState(false);
+  const [isCreateLoading, setIsCreateLoading] = useState(false);
   const [editError, setEditError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -34039,6 +34395,16 @@ const InstituteERPCourses = ({
     }
   }, [editForm, editingCourse, courses, setCourses, closeEditModal]);
 
+  const handleCreateSubmit = useCallback(async (e) => {
+    if (isCreateLoading) return;
+    setIsCreateLoading(true);
+    try {
+      await handleCreateCourse(e);
+    } finally {
+      setIsCreateLoading(false);
+    }
+  }, [handleCreateCourse, isCreateLoading]);
+
   // ─── Delete Handler ──────────────────────────────────────────────────────────
   const handleDeleteCourse = useCallback((course) => {
     setConfirmConfig({
@@ -34129,7 +34495,7 @@ const InstituteERPCourses = ({
       <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 shadow-sm">
         <h3 className="text-base font-black text-gray-900 uppercase tracking-wider mb-6 border-b border-gray-100 pb-3">Course Creation Form</h3>
         
-        <form onSubmit={handleCreateCourse} className="space-y-6">
+        <form onSubmit={handleCreateSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Course Name *</label>
@@ -34321,9 +34687,17 @@ const InstituteERPCourses = ({
           <div className="flex justify-center pt-4">
             <button
               type="submit"
-              className="px-10 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all shadow-md shadow-blue-500/10 text-xs uppercase tracking-wider"
+              disabled={isCreateLoading}
+              className="px-10 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all shadow-md shadow-blue-500/10 text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
             >
-              Create Course
+              {isCreateLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating Course...
+                </>
+              ) : (
+                'Create Course'
+              )}
             </button>
           </div>
         </form>
@@ -43266,14 +43640,43 @@ const InstituteERPRevaluation = () => {
                   <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">Subjects for Revaluation</h4>
                   <div className="space-y-2">
                     {viewingRequest.subjects.map((subject, idx) => (
-                      <div key={idx} className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 flex items-center justify-between">
+                      <div key={idx} className={`border rounded-xl p-3 flex items-center justify-between ${
+                        subject.evaluated ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/50 border-slate-100'
+                      }`}>
                         <div>
                           <span className="font-bold text-slate-800 block">{subject.subjectName}</span>
                           <span className="text-[10px] text-slate-400 font-mono">{subject.subjectCode}</span>
                         </div>
-                        <div className="text-right">
-                          <span className="text-[10px] text-slate-400 block">Original Marks</span>
-                          <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-400 block">Original Marks</span>
+                            <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                          </div>
+                          {subject.evaluated && (
+                            <div className="text-right">
+                              <span className="text-[10px] text-slate-400 block">Revised Marks</span>
+                              <span className={`text-sm font-black ${
+                                (subject.revisedMarks || 0) > subject.originalMarks
+                                  ? 'text-emerald-600'
+                                  : (subject.revisedMarks || 0) < subject.originalMarks
+                                    ? 'text-rose-600'
+                                    : 'text-amber-600'
+                              }`}>
+                                {subject.revisedMarks}%
+                              </span>
+                            </div>
+                          )}
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                            subject.evaluated
+                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                              : 'bg-amber-100 text-amber-700 border-amber-200'
+                          }`}>
+                            {subject.evaluated ? (
+                              <><CheckCircle2 className="w-3 h-3" /> Evaluated</>
+                            ) : (
+                              <><Clock className="w-3 h-3" /> Pending</>
+                            )}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -43287,10 +43690,21 @@ const InstituteERPRevaluation = () => {
                   <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">Revaluation Results</h4>
                   <div className="space-y-2">
                     {viewingRequest.revaluationResults.map((result, idx) => (
-                      <div key={idx} className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex items-center justify-between">
+                      <div key={idx} className={`border rounded-xl p-3 flex items-center justify-between ${
+                        result.reviewStatus === 'APPROVED' ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'
+                      }`}>
                         <div>
                           <span className="font-bold text-slate-800 block">{result.subjectName}</span>
                           <span className="text-[10px] text-slate-400">{result.subjectCode}</span>
+                          <span className={`inline-flex items-center gap-1 ml-2 text-[8px] font-bold ${
+                            result.reviewStatus === 'APPROVED' ? 'text-emerald-600' : 'text-amber-600'
+                          }`}>
+                            {result.reviewStatus === 'APPROVED' ? (
+                              <><CheckCircle2 className="w-3 h-3" /> Approved</>
+                            ) : (
+                              <><Clock className="w-3 h-3" /> Pending Approval</>
+                            )}
+                          </span>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
@@ -43648,6 +44062,21 @@ import academicService from '../../../api/academic';
 
 import ConfirmModal from '../../../Components/ConfirmModal';
 
+const isSemComplete = (sem) => {
+  return (sem.attendancePercentage || 0) >= 75 && !!sem.thesisApproved;
+};
+
+const getVisibleSemesters = (semesters) => {
+  if (!semesters || semesters.length === 0) return [];
+  const sorted = [...semesters].sort((a, b) => a.semesterNumber - b.semesterNumber);
+  const visible = [];
+  for (const sem of sorted) {
+    visible.push(sem);
+    if (!isSemComplete(sem)) break;
+  }
+  return visible;
+};
+
 const InstituteERPStudentDetails = ({
   students = [],
   fetchERPData,
@@ -43737,13 +44166,15 @@ const InstituteERPStudentDetails = ({
     }
     
     if (filterStatus === 'Complete') {
-      result = result.filter(g => 
-        g.semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved)
-      );
+      result = result.filter(g => {
+        const visible = getVisibleSemesters(g.semesters);
+        return visible.length > 0 && visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+      });
     } else if (filterStatus === 'Incomplete') {
-      result = result.filter(g => 
-        g.semesters.some(s => s.attendancePercentage < 75 || !s.thesisApproved)
-      );
+      result = result.filter(g => {
+        const visible = getVisibleSemesters(g.semesters);
+        return visible.some(s => s.attendancePercentage < 75 || !s.thesisApproved);
+      });
     }
     
     return result;
@@ -43967,11 +44398,12 @@ const InstituteERPStudentDetails = ({
 
   const getOverallStatus = (semesters) => {
     if (!semesters || semesters.length === 0) return { label: 'No Data', color: 'bg-slate-100 text-slate-500' };
-    const allComplete = semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+    const visible = getVisibleSemesters(semesters);
+    const allComplete = visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
     if (allComplete) {
       return { label: 'All Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
     }
-    const someComplete = semesters.some(s => s.attendancePercentage >= 75 && s.thesisApproved);
+    const someComplete = visible.some(s => s.attendancePercentage >= 75 && s.thesisApproved);
     if (someComplete) {
       return { label: 'Partial', color: 'bg-amber-100 text-amber-700 border-amber-200' };
     }
@@ -44018,22 +44450,29 @@ const InstituteERPStudentDetails = ({
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-center">
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">All Complete</span>
             <span className="text-lg font-black text-emerald-600">
-              {studentGroups.filter(g => g.semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved)).length}
+              {studentGroups.filter(g => {
+                const visible = getVisibleSemesters(g.semesters);
+                return visible.length > 0 && visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+              }).length}
             </span>
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-center">
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Partial</span>
             <span className="text-lg font-black text-amber-600">
-              {studentGroups.filter(g => 
-                g.semesters.some(s => s.attendancePercentage >= 75 && s.thesisApproved) &&
-                g.semesters.some(s => s.attendancePercentage < 75 || !s.thesisApproved)
-              ).length}
+              {studentGroups.filter(g => {
+                const visible = getVisibleSemesters(g.semesters);
+                return visible.some(s => s.attendancePercentage >= 75 && s.thesisApproved) &&
+                  visible.some(s => s.attendancePercentage < 75 || !s.thesisApproved);
+              }).length}
             </span>
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-center">
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Incomplete</span>
             <span className="text-lg font-black text-rose-600">
-              {studentGroups.filter(g => g.semesters.every(s => s.attendancePercentage < 75 || !s.thesisApproved)).length}
+              {studentGroups.filter(g => {
+                const visible = getVisibleSemesters(g.semesters);
+                return visible.length > 0 && visible.every(s => s.attendancePercentage < 75 || !s.thesisApproved);
+              }).length}
             </span>
           </div>
         </div>
@@ -44116,6 +44555,10 @@ const InstituteERPStudentDetails = ({
                     isExpanded ? 'border-blue-300 shadow-md shadow-blue-100/50' : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
+                  {(() => {
+                    const visibleSemesters = getVisibleSemesters(group.semesters);
+                    return (
+                  <>
                   {/* ─── Card Header (always visible) ──────────────────────── */}
                   <div 
                     className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors rounded-2xl"
@@ -44140,7 +44583,7 @@ const InstituteERPStudentDetails = ({
                             {overallStatus.label}
                           </span>
                           <span className="text-[10px] text-slate-400 font-medium">
-                            {group.semesters.length} semester{group.semesters.length > 1 ? 's' : ''}
+                            {visibleSemesters.length} semester{visibleSemesters.length > 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>
@@ -44149,8 +44592,8 @@ const InstituteERPStudentDetails = ({
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {/* Quick status dots */}
                       <div className="flex items-center gap-1">
-                        {group.semesters.map((sem, idx) => {
-                          const isComplete = sem.attendancePercentage >= 75 && sem.thesisApproved;
+                        {visibleSemesters.map((sem, idx) => {
+                          const isComplete = isSemComplete(sem);
                           return (
                             <div 
                               key={sem._id || sem.semesterNumber || `sem-dot-${idx}`}
@@ -44185,10 +44628,10 @@ const InstituteERPStudentDetails = ({
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
-                            {group.semesters.map((sem) => {
+                            {visibleSemesters.map((sem) => {
                               const status = getStatusBadge(sem);
                               const thesis = getThesisStatus(sem);
-                              const isComplete = sem.attendancePercentage >= 75 && sem.thesisApproved;
+                              const isComplete = isSemComplete(sem);
 
                               return (
                                 <tr key={sem.semesterNumber} className="hover:bg-slate-50/50 transition-colors">
@@ -44254,6 +44697,9 @@ const InstituteERPStudentDetails = ({
                       </div>
                     </div>
                   )}
+                  </>
+                  );
+                  })()}
                 </div>
               );
             })}
@@ -44346,27 +44792,32 @@ const InstituteERPStudentDetails = ({
                   Select Semester <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3, 4, 5, 6].map(sem => {
+                  {(() => {
                     const student = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
-                    const hasSem = student?.semesters?.some(s => s.semesterNumber === sem);
-                    return (
-                      <button
-                        key={sem}
-                        type="button"
-                        onClick={() => handleSemesterChange(sem)}
-                        disabled={!hasSem}
-                        className={`flex-1 min-w-[30%] py-2.5 rounded-xl text-xs font-bold transition-all border ${
-                          String(selectedSemester) === String(sem)
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                            : hasSem
-                              ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:border-slate-300'
-                              : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed opacity-50'
-                        }`}
-                      >
-                        Sem {sem}
-                      </button>
-                    );
-                  })}
+                    const selectableSems = getVisibleSemesters(student?.semesters || []);
+                    if (selectableSems.length === 0) return null;
+                    return selectableSems.map(sem => {
+                      const hasSem = true;
+                      const semNum = sem.semesterNumber;
+                      return (
+                        <button
+                          key={semNum}
+                          type="button"
+                          onClick={() => handleSemesterChange(semNum)}
+                          disabled={!hasSem}
+                          className={`flex-1 min-w-[30%] py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                            String(selectedSemester) === String(semNum)
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                              : hasSem
+                                ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:border-slate-300'
+                                : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed opacity-50'
+                          }`}
+                        >
+                          Sem {semNum}
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}
@@ -46919,7 +47370,7 @@ export default Step3DocumentsUpload;
 ```jsx
 import { RefreshCw, CheckCircle2, UploadCloud, FileCheck, Trash2, Check, ShieldCheck } from 'lucide-react';
 import Toast from '../../../Components/Toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const Step4PaymentSubmit = ({
   appForm,
@@ -47888,9 +48339,9 @@ export default ResultsPortal;
 ### `client/src/socket.js`
 
 ```javascript
-// Safe Socket.io client wrapper with dynamic fallback for Vite dev server
+// Socket completely removed — dummy fallback export
 
-const dummySocket = {
+export const socket = {
   on: () => {},
   off: () => {},
   emit: () => {},
@@ -47898,33 +48349,6 @@ const dummySocket = {
   disconnect: () => {},
 };
 
-let activeSocket = dummySocket;
-
-try {
-  const pkgName = 'socket.io-client';
-  const ioModule = await import(/* @vite-ignore */ pkgName).catch(() => null);
-  if (ioModule && (ioModule.io || ioModule.default)) {
-    const io = ioModule.io || ioModule.default;
-    const envUrl = import.meta.env.VITE_API_URL;
-    let socketUrl = 'http://localhost:5003';
-    if (envUrl && envUrl.startsWith('http')) {
-      socketUrl = envUrl.replace(/\/api\/v1\/?$/, '').replace(/\/api\/?$/, '');
-    } else if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-      socketUrl = window.location.origin;
-    }
-    activeSocket = io(socketUrl, {
-      autoConnect: true,
-      reconnection: true,
-      reconnectionDelay: 2000,
-      reconnectionAttempts: 5,
-      transports: ['polling', 'websocket'],
-    });
-  }
-} catch (err) {
-  // Silent fallback to mock socket
-}
-
-export const socket = activeSocket;
 export default socket;
 
 ```

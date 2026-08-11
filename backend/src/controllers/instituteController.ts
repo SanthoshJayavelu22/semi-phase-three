@@ -527,12 +527,24 @@ export const listApplications = async (req: Request, res: Response) => {
         Institute.countDocuments(query),
       ]);
 
+      // Enhance applications with fee category
+      const enhancedApps = applications.map(app => {
+        const appObj = app.toObject();
+        return {
+          ...appObj,
+          feeCategory: 'ONBOARDING',
+          feeCategoryLabel: 'Institute Onboarding & Inspection Fee',
+          paymentPurpose: 'Institute Onboarding & Inspection Fee',
+          isOnboardingPayment: true,
+        };
+      });
+
       return sendSuccess({
         req,
         res,
         message: 'All institute applications retrieved successfully',
         data: {
-          applications,
+          applications: enhancedApps,
           pagination: {
             page,
             limit,
@@ -547,11 +559,22 @@ export const listApplications = async (req: Request, res: Response) => {
       .populate('user', 'name email')
       .sort({ createdAt: -1 });
 
+    const enhancedApps = applications.map(app => {
+      const appObj = app.toObject();
+      return {
+        ...appObj,
+        feeCategory: 'ONBOARDING',
+        feeCategoryLabel: 'Institute Onboarding & Inspection Fee',
+        paymentPurpose: 'Institute Onboarding & Inspection Fee',
+        isOnboardingPayment: true,
+      };
+    });
+
     return sendSuccess({
       req,
       res,
       message: 'All institute applications retrieved successfully',
-      data: applications,
+      data: enhancedApps,
     });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });

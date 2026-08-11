@@ -32,6 +32,21 @@ import academicService from '../../../api/academic';
 
 import ConfirmModal from '../../../Components/ConfirmModal';
 
+const isSemComplete = (sem) => {
+  return (sem.attendancePercentage || 0) >= 75 && !!sem.thesisApproved;
+};
+
+const getVisibleSemesters = (semesters) => {
+  if (!semesters || semesters.length === 0) return [];
+  const sorted = [...semesters].sort((a, b) => a.semesterNumber - b.semesterNumber);
+  const visible = [];
+  for (const sem of sorted) {
+    visible.push(sem);
+    if (!isSemComplete(sem)) break;
+  }
+  return visible;
+};
+
 const InstituteERPStudentDetails = ({
   students = [],
   fetchERPData,
@@ -121,13 +136,15 @@ const InstituteERPStudentDetails = ({
     }
     
     if (filterStatus === 'Complete') {
-      result = result.filter(g => 
-        g.semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved)
-      );
+      result = result.filter(g => {
+        const visible = getVisibleSemesters(g.semesters);
+        return visible.length > 0 && visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+      });
     } else if (filterStatus === 'Incomplete') {
-      result = result.filter(g => 
-        g.semesters.some(s => s.attendancePercentage < 75 || !s.thesisApproved)
-      );
+      result = result.filter(g => {
+        const visible = getVisibleSemesters(g.semesters);
+        return visible.some(s => s.attendancePercentage < 75 || !s.thesisApproved);
+      });
     }
     
     return result;
@@ -351,11 +368,12 @@ const InstituteERPStudentDetails = ({
 
   const getOverallStatus = (semesters) => {
     if (!semesters || semesters.length === 0) return { label: 'No Data', color: 'bg-slate-100 text-slate-500' };
-    const allComplete = semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+    const visible = getVisibleSemesters(semesters);
+    const allComplete = visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
     if (allComplete) {
       return { label: 'All Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
     }
-    const someComplete = semesters.some(s => s.attendancePercentage >= 75 && s.thesisApproved);
+    const someComplete = visible.some(s => s.attendancePercentage >= 75 && s.thesisApproved);
     if (someComplete) {
       return { label: 'Partial', color: 'bg-amber-100 text-amber-700 border-amber-200' };
     }
@@ -402,22 +420,29 @@ const InstituteERPStudentDetails = ({
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-center">
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">All Complete</span>
             <span className="text-lg font-black text-emerald-600">
-              {studentGroups.filter(g => g.semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved)).length}
+              {studentGroups.filter(g => {
+                const visible = getVisibleSemesters(g.semesters);
+                return visible.length > 0 && visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+              }).length}
             </span>
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-center">
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Partial</span>
             <span className="text-lg font-black text-amber-600">
-              {studentGroups.filter(g => 
-                g.semesters.some(s => s.attendancePercentage >= 75 && s.thesisApproved) &&
-                g.semesters.some(s => s.attendancePercentage < 75 || !s.thesisApproved)
-              ).length}
+              {studentGroups.filter(g => {
+                const visible = getVisibleSemesters(g.semesters);
+                return visible.some(s => s.attendancePercentage >= 75 && s.thesisApproved) &&
+                  visible.some(s => s.attendancePercentage < 75 || !s.thesisApproved);
+              }).length}
             </span>
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-center">
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Incomplete</span>
             <span className="text-lg font-black text-rose-600">
-              {studentGroups.filter(g => g.semesters.every(s => s.attendancePercentage < 75 || !s.thesisApproved)).length}
+              {studentGroups.filter(g => {
+                const visible = getVisibleSemesters(g.semesters);
+                return visible.length > 0 && visible.every(s => s.attendancePercentage < 75 || !s.thesisApproved);
+              }).length}
             </span>
           </div>
         </div>
@@ -500,6 +525,10 @@ const InstituteERPStudentDetails = ({
                     isExpanded ? 'border-blue-300 shadow-md shadow-blue-100/50' : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
+                  {(() => {
+                    const visibleSemesters = getVisibleSemesters(group.semesters);
+                    return (
+                  <>
                   {/* ─── Card Header (always visible) ──────────────────────── */}
                   <div 
                     className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors rounded-2xl"
@@ -524,7 +553,7 @@ const InstituteERPStudentDetails = ({
                             {overallStatus.label}
                           </span>
                           <span className="text-[10px] text-slate-400 font-medium">
-                            {group.semesters.length} semester{group.semesters.length > 1 ? 's' : ''}
+                            {visibleSemesters.length} semester{visibleSemesters.length > 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>
@@ -533,8 +562,8 @@ const InstituteERPStudentDetails = ({
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {/* Quick status dots */}
                       <div className="flex items-center gap-1">
-                        {group.semesters.map((sem, idx) => {
-                          const isComplete = sem.attendancePercentage >= 75 && sem.thesisApproved;
+                        {visibleSemesters.map((sem, idx) => {
+                          const isComplete = isSemComplete(sem);
                           return (
                             <div 
                               key={sem._id || sem.semesterNumber || `sem-dot-${idx}`}
@@ -569,10 +598,10 @@ const InstituteERPStudentDetails = ({
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
-                            {group.semesters.map((sem) => {
+                            {visibleSemesters.map((sem) => {
                               const status = getStatusBadge(sem);
                               const thesis = getThesisStatus(sem);
-                              const isComplete = sem.attendancePercentage >= 75 && sem.thesisApproved;
+                              const isComplete = isSemComplete(sem);
 
                               return (
                                 <tr key={sem.semesterNumber} className="hover:bg-slate-50/50 transition-colors">
@@ -638,6 +667,9 @@ const InstituteERPStudentDetails = ({
                       </div>
                     </div>
                   )}
+                  </>
+                  );
+                  })()}
                 </div>
               );
             })}
@@ -730,27 +762,32 @@ const InstituteERPStudentDetails = ({
                   Select Semester <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3, 4, 5, 6].map(sem => {
+                  {(() => {
                     const student = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
-                    const hasSem = student?.semesters?.some(s => s.semesterNumber === sem);
-                    return (
-                      <button
-                        key={sem}
-                        type="button"
-                        onClick={() => handleSemesterChange(sem)}
-                        disabled={!hasSem}
-                        className={`flex-1 min-w-[30%] py-2.5 rounded-xl text-xs font-bold transition-all border ${
-                          String(selectedSemester) === String(sem)
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                            : hasSem
-                              ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:border-slate-300'
-                              : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed opacity-50'
-                        }`}
-                      >
-                        Sem {sem}
-                      </button>
-                    );
-                  })}
+                    const selectableSems = getVisibleSemesters(student?.semesters || []);
+                    if (selectableSems.length === 0) return null;
+                    return selectableSems.map(sem => {
+                      const hasSem = true;
+                      const semNum = sem.semesterNumber;
+                      return (
+                        <button
+                          key={semNum}
+                          type="button"
+                          onClick={() => handleSemesterChange(semNum)}
+                          disabled={!hasSem}
+                          className={`flex-1 min-w-[30%] py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                            String(selectedSemester) === String(semNum)
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                              : hasSem
+                                ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:border-slate-300'
+                                : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed opacity-50'
+                          }`}
+                        >
+                          Sem {semNum}
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}

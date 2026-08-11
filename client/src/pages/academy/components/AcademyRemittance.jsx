@@ -26,6 +26,7 @@ import {
   FileSpreadsheet,
   X
 } from 'lucide-react';
+import apiClient from '../../../api/apiClient';
 import academicService from '../../../api/academic';
 import instituteService from '../../../api/institutes';
 import revaluationService from '../../../api/revaluation';
@@ -57,6 +58,23 @@ const AcademyRemittance = () => {
       return;
     }
     setLoading(true);
+    try {
+      // Preferred path: dedicated treasury endpoint returns fully categorized
+      // transactions (ONBOARDING / ENROLLMENT / EXAM_FEE / REVALUATION / REMITTANCE).
+      const treasuryRes = await apiClient.get('/treasury/summary');
+      const treasuryData = treasuryRes.data?.data || treasuryRes.data;
+      const treasuryTransactions = treasuryData?.transactions;
+
+      if (Array.isArray(treasuryTransactions)) {
+        setAllTransactions(treasuryTransactions);
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Treasury endpoint unavailable, falling back to multi-source aggregation:', err);
+    }
+
+    // ─── Fallback: legacy multi-source aggregation ─────────────────────────────
     try {
       const [
         remittanceRes,

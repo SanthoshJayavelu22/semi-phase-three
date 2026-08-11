@@ -1,6 +1,7 @@
 import { RevaluationRequest } from '../models/revaluationRequestModel';
 import { RevaluationResult } from '../models/revaluationResultModel';
 import { Result } from '../models/resultModel';
+import { emitEvent } from '../config/socket';
 
 class RevaluationService {
   generateRequestId(): string {
@@ -40,15 +41,15 @@ class RevaluationService {
       throw new Error('Revaluation request not found');
     }
 
-    const revalResults = await RevaluationResult.find({ revaluationRequest: requestId });
+    const revalResults = await RevaluationResult.find({
+      revaluationRequest: requestId,
+      reviewStatus: 'APPROVED',
+    });
 
-    let allApproved = true;
+    let allApproved = revalResults.length === request.subjects.length;
     let hasChanges = false;
 
     for (const revalResult of revalResults) {
-      if (revalResult.reviewStatus !== 'APPROVED') {
-        allApproved = false;
-      }
       if (revalResult.marksChange !== 0) {
         hasChanges = true;
       }
@@ -56,41 +57,61 @@ class RevaluationService {
 
     request.finalResult = hasChanges ? 'CHANGED' : 'UNCHANGED';
 
-    if (allApproved && revalResults.length === request.subjects.length) {
+    if (allApproved) {
       request.status = 'COMPLETED';
+      request.evaluatedDate = request.evaluatedDate || new Date();
     }
 
     await request.save();
 
-    if (hasChanges && revalResults.length > 0) {
-      await this.updateResultWithRevaluation(revalResults[0]);
+    // Update the original result with all approved revaluation changes
+    if (revalResults.length > 0) {
+      await this.updateResultWithRevaluation(requestId);
     }
+
+    // Emit event for real-time updates
+    emitEvent('REVALUATION_PROCESSED', {
+      requestId: request._id,
+      finalResult: request.finalResult,
+      studentId: request.student,
+    });
 
     return { request, allApproved, hasChanges, revaluationResults: revalResults };
   }
 
-  async updateResultWithRevaluation(revalResult: any) {
-    const result = await Result.findById(revalResult.result);
+  async updateResultWithRevaluation(requestId: string) {
+    const request = await RevaluationRequest.findById(requestId);
+    if (!request) {
+      throw new Error('Revaluation request not found');
+    }
+
+    const result = await Result.findById(request.result);
     if (!result) {
       throw new Error('Result not found');
     }
 
-    const subjectIndex = result.subjects.findIndex(
-      (s: any) => s.subjectCode === revalResult.subjectCode
-    );
+    const revalResults = await RevaluationResult.find({
+      revaluationRequest: requestId,
+      reviewStatus: 'APPROVED',
+    });
 
-    if (subjectIndex === -1) {
-      throw new Error('Subject not found in result');
+    const previousSubjects = result.subjects.map((s: any) => s.toObject());
+
+    // Update each subject in the result
+    for (const reval of revalResults) {
+      const subjectIndex = result.subjects.findIndex(
+        (s: any) => s.subjectCode === reval.subjectCode
+      );
+
+      if (subjectIndex === -1) continue;
+
+      (result.subjects[subjectIndex] as any).totalMarks = reval.revisedTotalMarks;
+      (result.subjects[subjectIndex] as any).grade = reval.revisedGrade;
+      (result.subjects[subjectIndex] as any).isRevaluationApplied = true;
+      (result.subjects[subjectIndex] as any).revaluationMarks = reval.revisedTotalMarks;
+      (result.subjects[subjectIndex] as any).revaluationGrade = reval.revisedGrade;
+      (result.subjects[subjectIndex] as any).isRevaluationCompleted = true;
     }
-
-    const previousSubject = { ...(result.subjects[subjectIndex] as any).toObject() };
-
-    (result.subjects[subjectIndex] as any).totalMarks = revalResult.revisedTotalMarks;
-    (result.subjects[subjectIndex] as any).grade = revalResult.revisedGrade;
-    (result.subjects[subjectIndex] as any).isRevaluationApplied = true;
-    (result.subjects[subjectIndex] as any).revaluationMarks = revalResult.revisedTotalMarks;
-    (result.subjects[subjectIndex] as any).revaluationGrade = revalResult.revisedGrade;
-    (result.subjects[subjectIndex] as any).isRevaluationCompleted = true;
 
     const totalMarks = result.subjects.reduce((sum: number, s: any) => sum + (s.totalMarks || 0), 0);
     const maxMarks = result.subjects.length * 100;
@@ -137,13 +158,20 @@ class RevaluationService {
 
     result.auditHistory.push({
       action: 'REVALUATION_UPDATED' as any,
-      previousData: { subjects: [previousSubject] },
-      newData: { subjects: [(result.subjects[subjectIndex] as any).toObject()] },
-      performedBy: revalResult.reviewedBy,
+      previousData: { subjects: previousSubjects },
+      newData: { subjects: result.subjects.map((s: any) => s.toObject()) },
+      performedBy: (revalResults[0]?.reviewedBy || request.assignedEvaluator) as any,
       timestamp: new Date(),
     });
 
     await result.save();
+
+    // Emit event for real-time updates
+    emitEvent('RESULT_UPDATED', {
+      resultId: result._id,
+      studentId: result.student,
+    });
+
     return result;
   }
 
@@ -242,6 +270,7 @@ class RevaluationService {
 
     const revalResults = await RevaluationResult.find({
       revaluationRequest: { $in: requests.map((r) => r._id) },
+      reviewStatus: 'APPROVED',
     });
 
     revalResults.forEach((result) => {

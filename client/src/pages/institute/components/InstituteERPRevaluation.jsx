@@ -1494,14 +1494,43 @@ const InstituteERPRevaluation = () => {
                   <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">Subjects for Revaluation</h4>
                   <div className="space-y-2">
                     {viewingRequest.subjects.map((subject, idx) => (
-                      <div key={idx} className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 flex items-center justify-between">
+                      <div key={idx} className={`border rounded-xl p-3 flex items-center justify-between ${
+                        subject.evaluated ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50/50 border-slate-100'
+                      }`}>
                         <div>
                           <span className="font-bold text-slate-800 block">{subject.subjectName}</span>
                           <span className="text-[10px] text-slate-400 font-mono">{subject.subjectCode}</span>
                         </div>
-                        <div className="text-right">
-                          <span className="text-[10px] text-slate-400 block">Original Marks</span>
-                          <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-400 block">Original Marks</span>
+                            <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                          </div>
+                          {subject.evaluated && (
+                            <div className="text-right">
+                              <span className="text-[10px] text-slate-400 block">Revised Marks</span>
+                              <span className={`text-sm font-black ${
+                                (subject.revisedMarks || 0) > subject.originalMarks
+                                  ? 'text-emerald-600'
+                                  : (subject.revisedMarks || 0) < subject.originalMarks
+                                    ? 'text-rose-600'
+                                    : 'text-amber-600'
+                              }`}>
+                                {subject.revisedMarks}%
+                              </span>
+                            </div>
+                          )}
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                            subject.evaluated
+                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                              : 'bg-amber-100 text-amber-700 border-amber-200'
+                          }`}>
+                            {subject.evaluated ? (
+                              <><CheckCircle2 className="w-3 h-3" /> Evaluated</>
+                            ) : (
+                              <><Clock className="w-3 h-3" /> Pending</>
+                            )}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -1515,10 +1544,21 @@ const InstituteERPRevaluation = () => {
                   <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">Revaluation Results</h4>
                   <div className="space-y-2">
                     {viewingRequest.revaluationResults.map((result, idx) => (
-                      <div key={idx} className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 flex items-center justify-between">
+                      <div key={idx} className={`border rounded-xl p-3 flex items-center justify-between ${
+                        result.reviewStatus === 'APPROVED' ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'
+                      }`}>
                         <div>
                           <span className="font-bold text-slate-800 block">{result.subjectName}</span>
                           <span className="text-[10px] text-slate-400">{result.subjectCode}</span>
+                          <span className={`inline-flex items-center gap-1 ml-2 text-[8px] font-bold ${
+                            result.reviewStatus === 'APPROVED' ? 'text-emerald-600' : 'text-amber-600'
+                          }`}>
+                            {result.reviewStatus === 'APPROVED' ? (
+                              <><CheckCircle2 className="w-3 h-3" /> Approved</>
+                            ) : (
+                              <><Clock className="w-3 h-3" /> Pending Approval</>
+                            )}
+                          </span>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">

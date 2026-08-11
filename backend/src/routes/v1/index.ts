@@ -13,6 +13,7 @@ import paymentRoutes from '../paymentRoutes';
 import marksRoutes from '../marksRoutes';
 import hallTicketRoutes from '../hallTicketRoutes';
 import syncRoutes from '../syncRoutes';
+import treasuryRoutes from '../treasuryRoutes';
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.use('/certificates', certificateRoutes);
 router.use('/marks', marksRoutes);
 router.use('/hall-tickets', hallTicketRoutes);
 router.use('/sync', syncRoutes);
+router.use('/treasury', treasuryRoutes);
 router.use('/', paymentRoutes);
 
 export default router;
