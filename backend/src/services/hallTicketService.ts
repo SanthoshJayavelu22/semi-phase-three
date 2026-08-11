@@ -2,6 +2,7 @@
 import { HallTicket } from '../models/hallTicketModel';
 import { HallTicketTemplate } from '../models/hallTicketTemplateModel';
 import { IHallTicket } from '../models/hallTicketModel';
+import { Institute } from '../models/instituteModel';
 import pdfGeneratorService from './pdfGeneratorService';
 import { randomUUID as uuidv4 } from 'crypto';
 
@@ -14,6 +15,95 @@ class HallTicketService {
       status: 'draft'
     });
     return await hallTicket.save();
+  }
+
+  async saveHallTicketsBulk(records: any[], issuedBy?: string): Promise<IHallTicket[]> {
+    const now = Date.now();
+
+    const tickets = (Array.isArray(records) ? records : []).map((record: any) => {
+      const examType = record.examType || 'CCT-EM';
+      const ticketNumber = this.generateHallTicketNumber(examType);
+
+      return new HallTicket({
+        ticketId: record.ticketId || `HT-${now}-${Math.floor(1000 + Math.random() * 9000)}`,
+        hallTicketNumber: ticketNumber,
+        examType,
+        student: record.studentId || record.student || undefined,
+        enrollmentId: record.enrollmentId,
+        studentName: record.studentName,
+        contactNumber: record.contactNumber,
+        photoUrl: record.photoUrl,
+        institute: record.instituteId || record.institute,
+        instituteName: record.instituteName,
+        instituteAddress: record.instituteAddress,
+        courseName: record.courseName,
+        batchName: record.batchName,
+        batchYear: record.batchYear,
+        subjects: record.subjects || [],
+        examDate: record.examDate,
+        examVenue: record.examVenue,
+        examAddress: record.examAddress,
+        examCenter: record.examCenter,
+        reportingTime: record.reportingTime,
+        candidate: {
+          name: record.studentName,
+          photo: record.photoUrl,
+          enrollmentId: record.enrollmentId,
+          signature: record.studentSignatureUrl || record.signature,
+        },
+        examDetails: {
+          theory: {
+            centre: record.examVenue,
+            address: record.examAddress,
+            timeSlot: record.reportingTime,
+            subjects: (record.subjects || []).map((s: any) => ({
+              date: s?.date,
+              paperName: s?.paperName,
+              paperNumber: s?.paperNumber,
+              appearing: true,
+            })),
+          },
+          practical: record.practicalDetails
+            ? {
+                centre: record.practicalDetails.centre,
+                address: record.practicalDetails.address,
+                date: record.practicalDetails.date,
+                timeSlot: record.practicalDetails.timeSlot,
+                appearing: true,
+                subjects: (record.practicalDetails.subjects || []).map((s: any) => ({
+                  paperNumber: s?.paperNumber,
+                  paperName: s?.paperName,
+                  appearing: true,
+                })),
+              }
+            : undefined,
+        },
+        status: 'published',
+        issuedBy,
+        metadata: {
+          generatedAt: new Date(),
+          generatedBy: issuedBy,
+          version: '1.0',
+        },
+      });
+    });
+
+    return await HallTicket.create(tickets);
+  }
+
+  async listHallTickets(userRole: string, userId: string): Promise<IHallTicket[]> {
+    const query: any = {};
+
+    if (userRole === 'institute') {
+      const institute = await Institute.findOne({ user: userId, status: 'Approved' });
+      if (!institute) return [];
+      query.institute = institute._id;
+    }
+
+    return await HallTicket.find(query)
+      .populate('student', 'firstName lastName enrollmentId')
+      .populate('issuedBy', 'name email')
+      .sort({ createdAt: -1 });
   }
 
   async generateHallTicketPDF(hallTicketId: string, templateId?: string): Promise<Buffer> {

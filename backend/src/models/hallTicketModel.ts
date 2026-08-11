@@ -13,10 +13,12 @@ export interface IHallTicket extends Document {
   instituteName?: string;
   instituteAddress?: string;
   courseName?: string;
+  batchName?: string;
   batchYear?: number;
   subjects?: string[];
   examDate?: Date;
   examVenue?: string;
+  examAddress?: string;
   examCenter?: string;
   reportingTime?: string;
   isDownloaded?: boolean;
@@ -52,6 +54,11 @@ export interface IHallTicket extends Document {
       appearing?: boolean;
       timeSlot?: string;
       coordinatorSignature?: string;
+      subjects?: Array<{
+        paperNumber?: number;
+        paperName?: string;
+        appearing?: boolean;
+      }>;
     };
   };
   template?: {
@@ -83,13 +90,16 @@ const HallTicketSchema = new Schema({
   studentName: { type: String },
   contactNumber: { type: String },
   photoUrl: { type: String },
+  institute: { type: Schema.Types.ObjectId, ref: 'Institute' },
   instituteName: { type: String },
   instituteAddress: { type: String },
   courseName: { type: String },
+  batchName: { type: String },
   batchYear: { type: Number },
   subjects: { type: [Schema.Types.Mixed] },
   examDate: { type: Date },
   examVenue: { type: String },
+  examAddress: { type: String },
   examCenter: { type: String },
   reportingTime: { type: String },
   isDownloaded: { type: Boolean, default: false },
@@ -103,7 +113,6 @@ const HallTicketSchema = new Schema({
     photo: { type: String },
     enrollmentId: { type: String }
   },
-  institute: { type: Schema.Types.Mixed },
   examDetails: { type: Schema.Types.Mixed },
   template: { type: Schema.Types.Mixed },
   customFields: { type: Map, of: Schema.Types.Mixed },

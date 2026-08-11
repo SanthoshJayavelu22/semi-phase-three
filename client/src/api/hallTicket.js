@@ -23,6 +23,9 @@ export const hallTicketAPI = {
   // Bulk operations
   generateBulk: (data) => apiClient.post('/hall-tickets/bulk-generate', data),
 
+  // List issued hall tickets (institute scopes to its own)
+  list: () => apiClient.get('/hall-tickets'),
+
   // Get hall tickets by exam
   getByExam: (examId) => apiClient.get(`/hall-tickets/exam/${examId}`),
 

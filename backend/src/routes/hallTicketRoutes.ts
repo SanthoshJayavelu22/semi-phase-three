@@ -10,6 +10,8 @@ const router = express.Router();
 router.use(protect);
 
 // Hall ticket management
+router.post('/bulk-generate', hallTicketController.bulkGenerate);
+router.get('/', hallTicketController.listHallTickets);
 router.post('/create', hallTicketController.createHallTicket);
 router.get('/:id', hallTicketController.getHallTicket);
 router.get('/:id/pdf', hallTicketController.generatePDF);

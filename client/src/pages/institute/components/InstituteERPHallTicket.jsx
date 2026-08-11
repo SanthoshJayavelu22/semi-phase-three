@@ -72,6 +72,7 @@ const InstituteERPHallTicket = ({
     practicalAddress: 'Emergency Dept, Academic Wing',
     practicalTime: '8am to 5pm',
     practicalDate: new Date(Date.now() + 86400000 * 20).toISOString().split('T')[0],
+    practicalSubjects: [],
     showPracticalSection: true,
     controllerName: 'Dr Sowjanya Patibandla',
     controllerTitle: 'Controller - Examinations,SEMI',
@@ -83,12 +84,7 @@ const InstituteERPHallTicket = ({
       'Hall ticket becomes valid only after attaching latest passport size photo on the top right corner and attested by program director with seal',
       'Failing to carry hall ticket to exam centre, disqualifies the candidate to give exam'
     ],
-    subjects: [
-      { paperNumber: 1, paperName: 'Basic Sciences & Resuscitation', date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
-      { paperNumber: 2, paperName: 'Surgical Emergencies', date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] },
-      { paperNumber: 3, paperName: 'Medical Emergencies', date: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0] },
-      { paperNumber: 4, paperName: 'Pediatric Emergencies', date: new Date(Date.now() + 86400000 * 16).toISOString().split('T')[0] }
-    ]
+    subjects: []
   });
 
   // System & custom templates list
@@ -107,16 +103,67 @@ const InstituteERPHallTicket = ({
 
     let autoSubjects = [];
 
-    // 1. Try student semester-specific subjects if semester filter is active
-    if (firstStudent?.semesters && firstStudent.semesters.length > 0) {
+    const resolveCourseId = (c) => c?._id || c?.id || c;
+    const courseId = selectedCourseId
+      || resolveCourseId(firstStudent?.courseId)
+      || resolveCourseId(firstStudent?.course?._id)
+      || resolveCourseId(firstStudent?.course);
+    const semesterNum = selectedSemester !== 'All Semesters'
+      ? parseInt(String(selectedSemester).replace(/\D/g, ''), 10) || null
+      : null;
+    const selectedStudentIds = selectedStudentObjs.map(s => s._id || s.id);
+
+    const isDegenerateSubjects = (subjects) => Array.isArray(subjects)
+      && subjects.length === 1 && String(subjects[0]).trim().toLowerCase() === 'all';
+
+    // 0. Prefer subjects from the exam application API (authoritative backend source).
+    //    Matches by course + semester + batch and, when students are selected, by membership.
+    const appCandidates = (examApplications || []).filter(app => {
+      const appCourseId = resolveCourseId(app.course);
+      const appBatchId = resolveCourseId(app.batch);
+      const courseMatches = !courseId || !appCourseId || String(appCourseId) === String(courseId);
+      const semMatches = !semesterNum || !app.semesterNumber || app.semesterNumber === semesterNum;
+      const batchMatches = !selectedBatchId || !appBatchId || String(appBatchId) === String(selectedBatchId);
+      const appStudentIds = (app.students || []).map(s => s._id || s.id);
+      const includesSelected = selectedStudentIds.length === 0
+        || selectedStudentIds.every(sid => appStudentIds.includes(sid));
+      return courseMatches && semMatches && batchMatches && includesSelected;
+    });
+    const statusRank = { SchedulePublished: 0, Approved: 1, Pending: 2, Rejected: 3 };
+    appCandidates.sort((a, b) => (statusRank[a.status] ?? 2) - (statusRank[b.status] ?? 2));
+    const matchedApp = appCandidates.find(app => !isDegenerateSubjects(app.subjects)) || appCandidates[0];
+
+    if (matchedApp && !isDegenerateSubjects(matchedApp.subjects)
+      && Array.isArray(matchedApp.subjects) && matchedApp.subjects.length > 0) {
+      const scheduleDates = (matchedApp.subjectSchedules || []).reduce((map, sch) => {
+        if (sch?.subject && sch?.date) map[String(sch.subject).toLowerCase()] = sch.date;
+        return map;
+      }, {});
+      matchedApp.subjects.forEach((subName, index) => {
+        autoSubjects.push({
+          paperNumber: index + 1,
+          paperName: subName,
+          date: scheduleDates[String(subName).toLowerCase()]
+            || new Date(Date.now() + 86400000 * (12 + index)).toISOString().split('T')[0]
+        });
+      });
+    }
+
+    // 1. Fall back to student semester-specific subjects from the student API
+    if (autoSubjects.length === 0 && firstStudent?.semesters && firstStudent.semesters.length > 0) {
       let paperIndex = 1;
       firstStudent.semesters.forEach((sem, idx) => {
         const semName = sem.semesterName || `Semester ${sem.semesterNumber || idx + 1}`;
         if (selectedSemester === 'All Semesters' || selectedSemester === semName) {
-          (sem.subjects || []).forEach(sub => {
+          const semesterSubjects = (sem.marks && sem.marks.length > 0)
+            ? sem.marks
+            : (sem.subjects || []);
+          semesterSubjects.forEach(sub => {
             autoSubjects.push({
               paperNumber: paperIndex++,
-              paperName: sub.subjectName || sub.name || sub.title || `Paper ${paperIndex}`,
+              paperName: typeof sub === 'string'
+                ? sub
+                : (sub.subjectName || sub.name || sub.title || `Paper ${paperIndex}`),
               date: new Date(Date.now() + 86400000 * (12 + paperIndex)).toISOString().split('T')[0]
             });
           });
@@ -124,7 +171,7 @@ const InstituteERPHallTicket = ({
       });
     }
 
-    // 2. Try course level subjects
+    // 2. Fall back to course level subjects from the course API
     if (autoSubjects.length === 0 && targetCourse?.subjects && targetCourse.subjects.length > 0) {
       let paperIndex = 1;
       targetCourse.subjects.forEach(sub => {
@@ -136,46 +183,31 @@ const InstituteERPHallTicket = ({
       });
     }
 
-    // 3. Fallback based on Course Name / Semester Choice
-    if (autoSubjects.length === 0) {
-      const lowerName = courseName.toLowerCase();
-      if (selectedSemester !== 'All Semesters') {
-        autoSubjects = [
-          { paperNumber: 1, paperName: `${selectedSemester} Theory Paper I`, date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
-          { paperNumber: 2, paperName: `${selectedSemester} Clinical Emergencies Paper II`, date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] }
-        ];
-      } else if (lowerName.includes('basic') || examDetails.examType === 'Basic Sciences') {
-        autoSubjects = [
-          { paperNumber: 1, paperName: 'Applied Basic Sciences & Physiology', date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
-          { paperNumber: 2, paperName: 'Pharmacology & Pathology in Emergencies', date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] }
-        ];
-      } else {
-        autoSubjects = [
-          { paperNumber: 1, paperName: 'Basic Sciences & Resuscitation', date: new Date(Date.now() + 86400000 * 13).toISOString().split('T')[0] },
-          { paperNumber: 2, paperName: 'Surgical Emergencies', date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0] },
-          { paperNumber: 3, paperName: 'Medical Emergencies', date: new Date(Date.now() + 86400000 * 15).toISOString().split('T')[0] },
-          { paperNumber: 4, paperName: 'Pediatric Emergencies', date: new Date(Date.now() + 86400000 * 16).toISOString().split('T')[0] }
-        ];
-      }
-    }
-
     const titlePrefix = selectedSemester !== 'All Semesters' 
       ? `${selectedSemester} CCT-EM Examinations Hall ticket - July’26`
       : lowerNameContains(courseName, 'basic') 
         ? "Basic Sciences CCT-EM Exam Hall ticket - July’26" 
         : "Final Year CCT-EM Examinations Hall ticket - July’26";
 
-    const practicalTitle = (targetCourse?.practicalExams && targetCourse.practicalExams.length > 0)
-      ? targetCourse.practicalExams.join(' & ')
-      : (targetCourse?.practicalExamName || '');
+    // Practical subjects auto-populate from the course data (no extra API call)
+    const practicalNames = (targetCourse?.practicalExams && targetCourse.practicalExams.length > 0)
+      ? targetCourse.practicalExams
+      : (targetCourse?.practicalExamName ? [targetCourse.practicalExamName] : []);
+    const practicalSubjects = practicalNames.map((name, idx) => ({
+      paperNumber: idx + 1,
+      paperName: name
+    }));
+
+    const practicalTitle = practicalNames.join(' & ');
 
     setExamDetails(prev => ({
       ...prev,
       headerTitle: titlePrefix,
       subjects: autoSubjects,
+      practicalSubjects,
       ...(practicalTitle ? { practicalCentre: `${practicalTitle} - ${prev.practicalCentre.split(' - ').pop() || 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI'}` } : {})
     }));
-  }, [selectedCourseId, selectedStudents, selectedSemester, courses, students]);
+  }, [selectedCourseId, selectedStudents, selectedSemester, courses, students, examApplications]);
 
   const lowerNameContains = (str, keyword) => (str || '').toLowerCase().includes(keyword);
 
@@ -243,6 +275,33 @@ const InstituteERPHallTicket = ({
     }));
   };
 
+  // Practical Subject Management
+  const handleAddPracticalSubject = () => {
+    setExamDetails(prev => ({
+      ...prev,
+      practicalSubjects: [
+        ...prev.practicalSubjects,
+        { paperNumber: prev.practicalSubjects.length + 1, paperName: '' }
+      ]
+    }));
+  };
+
+  const handleRemovePracticalSubject = (index) => {
+    setExamDetails(prev => ({
+      ...prev,
+      practicalSubjects: prev.practicalSubjects.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handlePracticalSubjectChange = (index, field, value) => {
+    setExamDetails(prev => ({
+      ...prev,
+      practicalSubjects: prev.practicalSubjects.map((subject, i) =>
+        i === index ? { ...subject, [field]: value } : subject
+      )
+    }));
+  };
+
   // Controller Signature image upload handler
   const handleSignatureImageUpload = (e) => {
     const file = e.target.files?.[0];
@@ -284,6 +343,7 @@ const InstituteERPHallTicket = ({
         const rand = Math.floor(1000 + Math.random() * 9000);
         return {
           ticketId: `HT-SEMI-${new Date().getFullYear()}-${rand}`,
+          studentId: student._id || student.id,
           studentName: student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Candidate',
           enrollmentId: student.enrollmentNo || student.enrollmentId || `SEMI-${rand}`,
           courseName: student.courseName || student.course?.name || 'CCT-EM Fellowship',
@@ -300,17 +360,30 @@ const InstituteERPHallTicket = ({
             centre: examDetails.practicalCentre,
             address: examDetails.practicalAddress,
             date: examDetails.practicalDate,
-            timeSlot: examDetails.practicalTime
+            timeSlot: examDetails.practicalTime,
+            subjects: examDetails.practicalSubjects
           }
         };
       });
+
+      // Persist issued hall tickets to the backend
+      let savedTickets = generatedList;
+      try {
+        const saveRes = await hallTicketAPI.generateBulk(generatedList);
+        const payload = saveRes?.data?.data || saveRes?.data;
+        if (Array.isArray(payload) && payload.length > 0) {
+          savedTickets = generatedList.map((t, i) => ({ ...t, _id: payload[i]?._id || payload.find(p => p.ticketId === t.ticketId)?._id }));
+        }
+      } catch (saveErr) {
+        console.warn('Failed to persist hall tickets, showing local preview only:', saveErr);
+      }
 
       if (fetchERPData) {
         await fetchERPData();
       }
 
-      setSuccessMsg(`🎉 Successfully generated ${generatedList.length} accredited Hall Ticket(s)!`);
-      setViewingTickets(generatedList);
+      setSuccessMsg(`🎉 Successfully saved & generated ${savedTickets.length} accredited Hall Ticket(s)!`);
+      setViewingTickets(savedTickets);
       setViewingBatchInfo({
         batchName: selectedBatchId ? `Selected Candidates (${generatedList.length})` : 'All Batches',
         courseName: examDetails.examType
@@ -500,6 +573,12 @@ const InstituteERPHallTicket = ({
                 <td>Practical Centre</td>
                 <td><span class="yellow-highlight">${(examDetails.practicalCentre || 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI').toUpperCase()}</span></td>
               </tr>
+              ${(examDetails.practicalSubjects || []).length > 0 ? `
+                <tr>
+                  <td>Subjects</td>
+                  <td>${(examDetails.practicalSubjects || []).map(s => `<strong>${s.paperName || ''}</strong>`).join('<br/>')}</td>
+                </tr>
+              ` : ''}
             </table>
           ` : ''}
 
@@ -958,6 +1037,44 @@ const InstituteERPHallTicket = ({
                           className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs"
                         />
                       </div>
+
+                      {/* Practical Subjects & Exams */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Subjects</label>
+                          <button
+                            type="button"
+                            onClick={handleAddPracticalSubject}
+                            className="text-[10px] bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-lg font-bold hover:bg-indigo-100 uppercase tracking-wider transition-colors flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> Add
+                          </button>
+                        </div>
+                        <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
+                          {examDetails.practicalSubjects.map((sub, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <span className="text-[9px] font-black uppercase text-indigo-500 w-8 flex-shrink-0">P{sub.paperNumber}</span>
+                              <input
+                                type="text"
+                                placeholder="Practical Subject / Exam Name"
+                                value={sub.paperName}
+                                onChange={(e) => handlePracticalSubjectChange(idx, 'paperName', e.target.value)}
+                                className="flex-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
+                              />
+                              {examDetails.practicalSubjects.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePracticalSubject(idx)}
+                                  className="text-rose-500 hover:text-rose-700 p-0.5 flex-shrink-0"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Date</label>
@@ -1235,6 +1352,16 @@ const InstituteERPHallTicket = ({
                               <span className="bg-yellow-300 px-1 py-0.5 font-bold">{examDetails.practicalCentre.toUpperCase()}</span>
                             </td>
                           </tr>
+                          {examDetails.practicalSubjects?.length > 0 && (
+                            <tr>
+                              <td className="p-2 border-r border-black">Subjects</td>
+                              <td className="p-2 font-semibold">
+                                {examDetails.practicalSubjects.map((s, i) => (
+                                  <div key={i}>{s.paperName}</div>
+                                ))}
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
