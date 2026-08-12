@@ -1702,6 +1702,12 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
 
+    const cleanedSemesters = (courseForm.semesters || []).map(s => ({
+      ...s,
+      subjects: (s.subjects || []).filter(sub => sub && sub.name && sub.name.trim() !== ''),
+      practicalExams: (s.practicalExams || []).filter(prac => prac && prac.name && prac.name.trim() !== ''),
+    }));
+
     try {
       await academicService.createCourse({
         name: courseForm.courseName,
@@ -1709,7 +1715,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         programCategory: courseForm.programCategory || 'Emergency Medicine',
         courseDuration: courseForm.courseDuration || '2',
         durationType: courseForm.durationType || 'Years',
-        semesters: courseForm.semesters || [],
+        semesters: cleanedSemesters,
         examinationFee: courseForm.examinationFee,
         description: `${courseForm.courseType || 'Postgraduate'} - ${courseForm.programCategory || 'Emergency Medicine'}`
       });

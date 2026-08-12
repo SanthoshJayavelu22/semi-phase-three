@@ -38,8 +38,14 @@ const semesterPracticalSchema = z.object({
 const courseSemesterSchema = z.object({
   semesterNumber: z.coerce.number(),
   semesterName: z.string().optional().default(''),
-  subjects: z.array(semesterSubjectSchema).optional().default([]),
-  practicalExams: z.array(semesterPracticalSchema).optional().default([]),
+  subjects: z.preprocess(
+    (val) => (Array.isArray(val) ? val.filter((s: any) => s && typeof s.name === 'string' && s.name.trim().length > 0) : []),
+    z.array(semesterSubjectSchema).optional().default([])
+  ),
+  practicalExams: z.preprocess(
+    (val) => (Array.isArray(val) ? val.filter((p: any) => p && typeof p.name === 'string' && p.name.trim().length > 0) : []),
+    z.array(semesterPracticalSchema).optional().default([])
+  ),
 });
 
 const courseCreateSchema = z.object({

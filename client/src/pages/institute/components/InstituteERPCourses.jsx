@@ -168,6 +168,12 @@ const InstituteERPCourses = ({
         return;
       }
 
+      const cleanedSemesters = (editForm.semesters || []).map(s => ({
+        ...s,
+        subjects: (s.subjects || []).filter(sub => sub && sub.name && sub.name.trim() !== ''),
+        practicalExams: (s.practicalExams || []).filter(prac => prac && prac.name && prac.name.trim() !== ''),
+      }));
+
       // Prepare update data
       const updateData = {
         name: editForm.courseName,
@@ -175,7 +181,7 @@ const InstituteERPCourses = ({
         programCategory: editForm.programCategory,
         courseDuration: editForm.courseDuration,
         durationType: editForm.durationType,
-        semesters: editForm.semesters,
+        semesters: cleanedSemesters,
         examinationFee: editForm.examinationFee,
         status: editForm.status
       };
