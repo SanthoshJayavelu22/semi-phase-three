@@ -214,7 +214,7 @@ const InstituteERPCourses = ({
       console.error('Update course error:', err);
       const errorMsg = err.parsedMessage || err.message || 'Failed to update course. Please try again.';
       setEditError(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
-    } fontally {
+    } finally {
       setIsEditLoading(false);
     }
   }, [editForm, editingCourse, courses, setCourses, closeEditModal]);
