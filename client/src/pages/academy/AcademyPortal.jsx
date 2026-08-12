@@ -148,7 +148,7 @@ const AcademyPortal = () => {
             id: app._id,
             _id: app._id,
             orgName: app.orgName,
-            email: app.emailAddress || (app.user?.email || 'admin@saraswathi.edu.in'),
+            email: app.emailAddress || app.user?.email || 'N/A',
             submittedAt: app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A',
             status: statusMapped,
             bedCount: app.bedCount,

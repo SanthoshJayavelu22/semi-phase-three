@@ -729,10 +729,10 @@ const InstituteERPEnrollment = ({
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Accredited Institute of Enrollment *</label>
                   <select
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none cursor-not-allowed"
-                    value={user?.instituteName || appForm.orgName || 'Saraswathi Inst.'}
+                    value={user?.instituteName || appForm?.orgName || 'Institute Portal'}
                     disabled
                   >
-                    <option>{user?.instituteName || appForm.orgName || 'Saraswathi Inst.'}</option>
+                    <option>{user?.instituteName || appForm?.orgName || 'Institute Portal'}</option>
                   </select>
                 </div>
 

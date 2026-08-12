@@ -25,6 +25,23 @@ const getFileUrl = (filePath: string) => {
 // VALIDATION SCHEMAS
 // ==========================================
 
+const semesterSubjectSchema = z.object({
+  code: z.string().optional().default(''),
+  name: z.string().min(1, 'Subject Name is required'),
+});
+
+const semesterPracticalSchema = z.object({
+  code: z.string().optional().default(''),
+  name: z.string().min(1, 'Practical Exam Name is required'),
+});
+
+const courseSemesterSchema = z.object({
+  semesterNumber: z.coerce.number(),
+  semesterName: z.string().optional().default(''),
+  subjects: z.array(semesterSubjectSchema).optional().default([]),
+  practicalExams: z.array(semesterPracticalSchema).optional().default([]),
+});
+
 const courseCreateSchema = z.object({
   name: z.string().min(1, 'Course Name is required'),
   description: z.string().optional(),
@@ -34,6 +51,9 @@ const courseCreateSchema = z.object({
   courseDuration: z.string().optional(),
   durationType: z.string().optional(),
   subjects: z.array(z.string()).optional(),
+  practicalExamName: z.string().optional(),
+  practicalExams: z.array(z.string()).optional(),
+  semesters: z.array(courseSemesterSchema).optional(),
   examinationFee: z.string().optional(),
 });
 
@@ -46,6 +66,9 @@ const courseUpdateSchema = z.object({
   courseDuration: z.string().optional(),
   durationType: z.string().optional(),
   subjects: z.array(z.string()).optional(),
+  practicalExamName: z.string().optional(),
+  practicalExams: z.array(z.string()).optional(),
+  semesters: z.array(courseSemesterSchema).optional(),
   examinationFee: z.string().optional(),
   status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
 });
@@ -168,6 +191,31 @@ export const createCourse = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists for your institute.' });
     }
 
+    if (validatedData.semesters && Array.isArray(validatedData.semesters)) {
+      if (!validatedData.subjects || validatedData.subjects.length === 0) {
+        const flatSubs: string[] = [];
+        validatedData.semesters.forEach(s => {
+          (s.subjects || []).forEach(sub => {
+            if (sub.name) {
+              flatSubs.push(sub.code ? `${sub.code}: ${sub.name}` : sub.name);
+            }
+          });
+        });
+        validatedData.subjects = flatSubs;
+      }
+      if (!validatedData.practicalExams || validatedData.practicalExams.length === 0) {
+        const flatPracs: string[] = [];
+        validatedData.semesters.forEach(s => {
+          (s.practicalExams || []).forEach(prac => {
+            if (prac.name) {
+              flatPracs.push(prac.code ? `${prac.code}: ${prac.name}` : prac.name);
+            }
+          });
+        });
+        validatedData.practicalExams = flatPracs;
+      }
+    }
+
     const newCourse = await Course.create({
       institute: institute._id,
       ...validatedData,
@@ -279,6 +327,31 @@ export const updateCourse = async (req: Request, res: Response) => {
       });
       if (existingCourse) {
         return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists for your institute.' });
+      }
+    }
+
+    if (validatedData.semesters && Array.isArray(validatedData.semesters)) {
+      if (!validatedData.subjects || validatedData.subjects.length === 0) {
+        const flatSubs: string[] = [];
+        validatedData.semesters.forEach(s => {
+          (s.subjects || []).forEach(sub => {
+            if (sub.name) {
+              flatSubs.push(sub.code ? `${sub.code}: ${sub.name}` : sub.name);
+            }
+          });
+        });
+        validatedData.subjects = flatSubs;
+      }
+      if (!validatedData.practicalExams || validatedData.practicalExams.length === 0) {
+        const flatPracs: string[] = [];
+        validatedData.semesters.forEach(s => {
+          (s.practicalExams || []).forEach(prac => {
+            if (prac.name) {
+              flatPracs.push(prac.code ? `${prac.code}: ${prac.name}` : prac.name);
+            }
+          });
+        });
+        validatedData.practicalExams = flatPracs;
       }
     }
 

@@ -4,6 +4,7 @@ const InstituteERPSidebar = ({
   activeTab, 
   setActiveTab, 
   user, 
+  appForm,
   setErrorBanner, 
   setSuccessBanner,
 }) => {
@@ -12,6 +13,14 @@ const InstituteERPSidebar = ({
     setSuccessBanner(null);
     setActiveTab(tab);
   };
+
+  const storedUserStr = typeof window !== 'undefined' ? localStorage.getItem('semi_user') : null;
+  const storedUser = storedUserStr ? (() => { try { return JSON.parse(storedUserStr); } catch { return null; } })() : null;
+  const registeredEmail = typeof window !== 'undefined' ? localStorage.getItem('semi_registered_email') : null;
+
+  const displayEmail = user?.email || storedUser?.email || appForm?.emailAddress || registeredEmail || '';
+  const displayInstituteName = user?.instituteName || storedUser?.instituteName || appForm?.orgName || user?.name || 'Institute Portal';
+  const displayInitials = displayInstituteName ? displayInstituteName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'IP';
 
   return (
     <aside className="w-68 bg-primary-900 border-r border-primary-800 flex flex-col flex-shrink-0 text-primary-200 font-sans select-none relative overflow-hidden">
@@ -22,7 +31,7 @@ const InstituteERPSidebar = ({
       <div className="h-16 flex items-center px-6 border-b border-primary-800/80 bg-primary-950/40 gap-3 relative z-10">
         <div className="bg-gradient-to-tr from-primary-500 to-primary-400 p-1.5 rounded-xl shadow-md shadow-primary-500/20 flex items-center justify-center">
           <div className="w-7 h-7 rounded-lg bg-primary-900 flex items-center justify-center text-white font-extrabold text-sm">
-            SI
+            {displayInitials}
           </div>
         </div>
         <div className="flex flex-col text-left">
@@ -36,12 +45,12 @@ const InstituteERPSidebar = ({
         <span className="text-[8px] uppercase font-black text-primary-400 tracking-widest block text-left">College / Hospital</span>
         <div className="flex items-center gap-3 mt-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-400 to-primary-600 text-white flex items-center justify-center font-black text-xs shadow-md border border-primary-400/20">
-            SI
+            {displayInitials}
           </div>
           <div className="flex flex-col text-left truncate">
-            <span className="text-xs font-bold text-primary-100 truncate">{user?.email || 'admin@saraswathi.edu.in'}</span>
-            <span className="inline-flex w-fit mt-1 text-[8px] font-black uppercase text-primary-200 bg-primary-500/20 px-2 py-0.5 rounded-md border border-primary-500/30 tracking-wider">
-              {user?.instituteName || 'Saraswathi Inst.'}
+            <span className="text-xs font-bold text-primary-100 truncate" title={displayEmail}>{displayEmail}</span>
+            <span className="inline-flex w-fit mt-1 text-[8px] font-black uppercase text-primary-200 bg-primary-500/20 px-2 py-0.5 rounded-md border border-primary-500/30 tracking-wider truncate" title={displayInstituteName}>
+              {displayInstituteName}
             </span>
           </div>
         </div>

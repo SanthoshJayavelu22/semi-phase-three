@@ -54,7 +54,7 @@ const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrent
             <input
               type="email"
               required
-              placeholder="e.g. admin@saraswathi.edu.in"
+              placeholder="e.g. contact@institute.edu"
               value={regForm.email}
               onChange={(e) => setRegForm({...regForm, email: e.target.value})}
               className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm"

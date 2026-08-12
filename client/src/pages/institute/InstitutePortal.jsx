@@ -134,8 +134,11 @@ const InstitutePortal = () => {
       setCurrentStepState('active_erp');
       return;
     }
-    navigate(route);
-  }, [navigate]);
+    setCurrentStepState(step);
+    if (location.pathname !== route) {
+      navigate(route, { replace: true });
+    }
+  }, [navigate, location.pathname]);
 
   const [user, setUser] = useState(null);
   
@@ -270,14 +273,17 @@ const InstitutePortal = () => {
   const [courses, setCourses] = useState([]);
   const [courseForm, setCourseForm] = useState({
     courseName: '',
-    courseCode: '',
-    courseType: '',
-    programCategory: '',
-    courseDuration: '',
-    durationType: '',
-    subjects: [],
-    practicalExamName: '',
-    examinationFee: '',
+    courseType: 'Postgraduate',
+    programCategory: 'Emergency Medicine',
+    courseDuration: '2',
+    durationType: 'Years',
+    semesters: [
+      { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+      { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+      { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+      { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] }
+    ],
+    examinationFee: '15000',
   });
 
   const [batches, setBatches] = useState([]);
@@ -354,6 +360,7 @@ const InstitutePortal = () => {
           subjects: c.subjects || [],
           practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
           practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
+          semesters: c.semesters || [],
           totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
           courseFee: c.courseFee || '0',
           registrationFee: c.registrationFee || '0',
@@ -617,6 +624,7 @@ const InstitutePortal = () => {
                 subjects: c.subjects || [],
                 practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
                 practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
+                semesters: c.semesters || [],
                 totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
                 courseFee: c.courseFee || '0',
                 registrationFee: c.registrationFee || '0',
@@ -845,7 +853,7 @@ const InstitutePortal = () => {
     }
 
     setCurrentStepState(targetStep);
-  }, [location.pathname]);
+  }, [location.pathname, applicationRecord, user, navigate]);
 
   const activeStudentCount = useMemo(() => {
     return students.filter(s => s.status === 'Active').length;
@@ -1123,7 +1131,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       }
 
       const parsedUser = {
-        instituteName: data.user?.instituteName || data.user?.name || 'Saraswathi Medical College',
+        instituteName: data.user?.instituteName || data.user?.name || appForm?.orgName || 'Institute Portal',
         email: data.user?.email || loginForm.email,
         emailVerified: data.user?.emailVerified ?? true,
         role: data.user?.role || 'institute',
@@ -1666,15 +1674,12 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     setErrorBanner(null);
     setSuccessBanner(null);
 
-    if (!courseForm.courseName?.trim() || !courseForm.courseCode?.trim()) {
-      setErrorBanner('Please fill out all mandatory course fields.');
+    if (!courseForm.courseName?.trim()) {
+      setErrorBanner('Please enter a valid Course Name.');
       return;
     }
-    if (!courseForm.subjects || courseForm.subjects.length === 0 || courseForm.subjects.some(s => !s.trim())) {
-      setErrorBanner('Please add at least one valid subject.');
-      return;
-    }
-    const feeVal = parseFloat(courseForm.examinationFee.replace(/,/g, ''));
+
+    const feeVal = parseFloat(String(courseForm.examinationFee).replace(/,/g, ''));
     if (!courseForm.examinationFee || isNaN(feeVal) || feeVal < 0) {
       setErrorBanner('Please enter a valid non-negative numeric examination fee.');
       return;
@@ -1690,24 +1695,23 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
 
-    if (courses.some(c => c.courseCode?.toLowerCase() === courseForm.courseCode.toLowerCase())) {
-      setErrorBanner('A course with this code already exists.');
+    // Ensure at least one subject exists across semesters
+    const hasSubjects = (courseForm.semesters || []).some(s => s.subjects && s.subjects.some(sub => sub.name?.trim()));
+    if (!hasSubjects) {
+      setErrorBanner('Please add at least one subject with a valid name in your semesters.');
       return;
     }
 
     try {
       await academicService.createCourse({
         name: courseForm.courseName,
-        courseCode: courseForm.courseCode,
-        courseType: courseForm.courseType,
-        programCategory: courseForm.programCategory,
-        courseDuration: courseForm.courseDuration,
-        durationType: courseForm.durationType,
-        subjects: courseForm.subjects,
-        practicalExamName: courseForm.practicalExamName || 'Clinical OSCE & Practical Station Exam',
-        practicalExams: courseForm.practicalExams || [],
+        courseType: courseForm.courseType || 'Postgraduate',
+        programCategory: courseForm.programCategory || 'Emergency Medicine',
+        courseDuration: courseForm.courseDuration || '2',
+        durationType: courseForm.durationType || 'Years',
+        semesters: courseForm.semesters || [],
         examinationFee: courseForm.examinationFee,
-        description: `${courseForm.courseType} - ${courseForm.programCategory}`
+        description: `${courseForm.courseType || 'Postgraduate'} - ${courseForm.programCategory || 'Emergency Medicine'}`
       });
 
       await fetchERPData();
@@ -1715,15 +1719,17 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
       setCourseForm({
         courseName: '',
-        courseCode: '',
-        courseType: '',
-        programCategory: '',
-        courseDuration: '',
-        durationType: '',
-        subjects: [],
-        practicalExamName: '',
-        practicalExams: [],
-        examinationFee: ''
+        courseType: 'Postgraduate',
+        programCategory: 'Emergency Medicine',
+        courseDuration: '2',
+        durationType: 'Years',
+        semesters: [
+          { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+          { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+          { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+          { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] }
+        ],
+        examinationFee: '15000'
       });
     } catch (err) {
       console.error('Backend course creation failed:', err);
@@ -2407,6 +2413,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
               setActiveTab={setActiveTab} 
               handleLogout={handleLogout} 
               user={user}
+              appForm={appForm}
               setErrorBanner={setErrorBanner}
               setSuccessBanner={setSuccessBanner}
             />

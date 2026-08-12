@@ -1,5 +1,22 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export interface ISemesterSubject {
+  code?: string;
+  name: string;
+}
+
+export interface ISemesterPractical {
+  code?: string;
+  name: string;
+}
+
+export interface ISemesterCourse {
+  semesterNumber: number;
+  semesterName?: string;
+  subjects?: ISemesterSubject[];
+  practicalExams?: ISemesterPractical[];
+}
+
 export interface ICourse extends Document {
   institute: mongoose.Types.ObjectId;
   name: string;
@@ -12,6 +29,7 @@ export interface ICourse extends Document {
   subjects?: string[];
   practicalExamName?: string;
   practicalExams?: string[];
+  semesters?: ISemesterCourse[];
   examinationFee?: string;
   status?: 'Active' | 'Inactive' | 'Pending';
 }
@@ -65,6 +83,27 @@ const courseSchema: Schema = new Schema(
     },
     practicalExams: {
       type: [String],
+      default: [],
+    },
+    semesters: {
+      type: [
+        {
+          semesterNumber: { type: Number, required: true },
+          semesterName: { type: String, default: '' },
+          subjects: [
+            {
+              code: { type: String, default: '' },
+              name: { type: String, required: true },
+            },
+          ],
+          practicalExams: [
+            {
+              code: { type: String, default: '' },
+              name: { type: String, required: true },
+            },
+          ],
+        },
+      ],
       default: [],
     },
     examinationFee: {
