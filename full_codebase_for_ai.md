@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-08-11T12:50:45.143Z
+> Auto-generated on 2026-08-12T08:15:30.838Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -7886,6 +7886,14 @@ const publishScheduleSchema = z.object({
     date: z.string().transform(val => new Date(val)),
     time: z.string()
   })).optional(),
+  // NEW: Practical exam fields
+  practicalExam: z.object({
+    name:     z.string().optional(),
+    venue:    z.string().optional(),
+    date:     z.string().optional().transform(val => val ? new Date(val) : undefined),
+    time:     z.string().optional(),
+    subjects: z.array(z.string()).optional()
+  }).optional(),
 });
 
 // ─── UC 4.1: Apply for Exam (Institute) ──────────────────────────────────────
@@ -8188,6 +8196,17 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
       application.subjectSchedules = validatedData.subjectSchedules;
     }
 
+    // NEW: Save practical exam details
+    if (validatedData.practicalExam) {
+      application.practicalExam = {
+        name:     validatedData.practicalExam.name     || 'Practical Examination',
+        venue:    validatedData.practicalExam.venue    || '',
+        date:     validatedData.practicalExam.date,
+        time:     validatedData.practicalExam.time     || '',
+        subjects: validatedData.practicalExam.subjects || [],
+      };
+    }
+
     // Allow updating the scheduled date if provided
     if (validatedData.scheduledDate) {
       application.scheduledDate = validatedData.scheduledDate;
@@ -8217,6 +8236,8 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
         course:               application.course,
         batch:                application.batch,
         subjects:             application.subjects,
+        subjectSchedules:     application.subjectSchedules,
+        practicalExam:        application.practicalExam, // NEW: Return practical exam details
       },
     });
   } catch (error: any) {
@@ -8231,7 +8252,7 @@ export const generateHallTickets = async (req: Request, res: Response) => {
   try {
     const application = await ExamApplication.findById(req.params.id)
       .populate('institute', 'orgName instituteAddress')
-      .populate('course', 'name')
+      .populate('course', 'name subjects')
       .populate('batch', 'year')
       .populate('students', 'firstName lastName enrollmentId contactNumber documents');
 
@@ -8256,12 +8277,30 @@ export const generateHallTickets = async (req: Request, res: Response) => {
     const batchDoc     = application.batch     as any;
     const studentsArr  = application.students  as any[];
 
-    // Resolve exam schedule — for Approved applications the board may not have
-    // published the full schedule yet, so fall back to institute details.
-    const examDate      = application.scheduledDate || new Date();
-    const examVenue     = application.examVenue     || `${instituteDoc.orgName} Examination Centre`;
-    const examCenter    = application.examCenter    || instituteDoc.orgName;
-    const reportingTime = application.reportingTime || '09:00 AM';
+    // These are the fields set by the board/admin in the "publish schedule" step
+    const examVenue        = application.examVenue;
+    const examCenter       = application.examCenter;
+    const reportingTime    = application.reportingTime;
+    const examDate         = application.scheduledDate || new Date();
+    const subjectSchedules = application.subjectSchedules || [];
+    const subjects         = application.subjects || [];
+
+    // NEW: Get practical exam details
+    const practicalExam = application.practicalExam || {
+      name:     '',
+      venue:    '',
+      date:     undefined,
+      time:     '',
+      subjects: []
+    };
+
+    // Require the published schedule details before generating hall tickets
+    if (!examVenue || !examCenter || !reportingTime) {
+      return sendError({
+        req, res, statusCode: 400,
+        message: 'Exam schedule details (venue, center, reporting time) are missing. Please ensure the academic board has published the schedule.',
+      });
+    }
 
     // Idempotent: delete existing tickets for this application before regenerating
     await HallTicket.deleteMany({ examApplication: application._id });
@@ -8290,12 +8329,22 @@ export const generateHallTickets = async (req: Request, res: Response) => {
           courseName: courseDoc.name,
           batchYear:  batchDoc.year,
 
-          // Exam details
-          subjects:      application.subjects,
-          examDate:      examDate,
-          examVenue:     examVenue,
-          examCenter:    examCenter,
-          reportingTime: reportingTime,
+          // Exam details from application
+          examVenue:         examVenue,
+          examCenter:        examCenter,
+          reportingTime:     reportingTime,
+          examDate:          examDate,
+          subjects:          subjects,
+          subjectSchedules:  subjectSchedules,
+
+          // NEW: Practical exam details
+          practicalExam: {
+            name:     practicalExam.name,
+            venue:    practicalExam.venue,
+            date:     practicalExam.date,
+            time:     practicalExam.time,
+            subjects: practicalExam.subjects,
+          },
         });
       })
     );
@@ -8312,6 +8361,24 @@ export const generateHallTickets = async (req: Request, res: Response) => {
         count:                   tickets.length,
         hallTicketsGeneratedAt:  application.hallTicketsGeneratedAt,
         tickets,
+        examDetails: {
+          examVenue,
+          examCenter,
+          reportingTime,
+          examDate,
+          subjectSchedules,
+          subjects,
+          courseName: courseDoc.name,
+          semesterNumber: application.semesterNumber,
+          // NEW: Practical details
+          practicalExam: {
+            name:     practicalExam.name,
+            venue:    practicalExam.venue,
+            date:     practicalExam.date,
+            time:     practicalExam.time,
+            subjects: practicalExam.subjects,
+          },
+        },
       },
     });
   } catch (error: any) {
@@ -13696,6 +13763,15 @@ export interface IExamApplication extends Document {
   schedulePublishedAt?: Date;
   subjectSchedules?: { subject: string; date: Date; time: string }[];
 
+  // NEW: Practical exam details
+  practicalExam?: {
+    name: string;
+    venue: string;
+    date?: Date;
+    time: string;
+    subjects: string[];
+  };
+
   // Hall ticket tracking
   hallTicketsGenerated: boolean;
   hallTicketsGeneratedAt?: Date;
@@ -13759,6 +13835,15 @@ const examApplicationSchema: Schema = new Schema(
         time: { type: String, required: true }
       }
     ],
+
+    // NEW: Practical exam details
+    practicalExam: {
+      name:     { type: String },
+      venue:    { type: String },
+      date:     { type: Date },
+      time:     { type: String },
+      subjects: { type: [String] }
+    },
 
     // Hall ticket tracking
     hallTicketsGenerated:   { type: Boolean, default: false },
@@ -13874,6 +13959,14 @@ export interface IHallTicket extends Document {
   batchName?: string;
   batchYear?: number;
   subjects?: string[];
+  subjectSchedules?: { subject: string; date: Date; time: string }[];
+  practicalExam?: {
+    name: string;
+    venue: string;
+    date: Date;
+    time: string;
+    subjects: string[];
+  };
   examDate?: Date;
   examVenue?: string;
   examAddress?: string;
@@ -13955,6 +14048,20 @@ const HallTicketSchema = new Schema({
   batchName: { type: String },
   batchYear: { type: Number },
   subjects: { type: [Schema.Types.Mixed] },
+  subjectSchedules: [
+    {
+      subject: { type: String },
+      date: { type: Date },
+      time: { type: String }
+    }
+  ],
+  practicalExam: {
+    name: { type: String },
+    venue: { type: String },
+    date: { type: Date },
+    time: { type: String },
+    subjects: { type: [String] }
+  },
   examDate: { type: Date },
   examVenue: { type: String },
   examAddress: { type: String },
@@ -22804,8 +22911,8 @@ const AcademyEditModal = ({
   handleSaveEdit
 }) => {
   return (
-    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left">
+    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left my-auto">
         <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 px-6 py-4 text-white">
           <h3 className="font-extrabold text-base">Compliance Override</h3>
           <p className="text-[10px] text-blue-200 font-medium">Edit compliance parameters for {editingApp.orgName}</p>
@@ -22916,6 +23023,7 @@ const AcademyEligibility = ({
   const [pubReportingTime, setPubReportingTime] = useState('');
   const [pubDate, setPubDate] = useState('');
   const [pubSubjectSchedules, setPubSubjectSchedules] = useState([]);
+  const [pubPracticalExam, setPubPracticalExam] = useState({ name: '', venue: '', date: '', time: '', subjects: [] });
   const [pubLoading, setPubLoading] = useState(false);
 
   // Filter lists
@@ -22989,6 +23097,16 @@ const AcademyEligibility = ({
        const courseSubjects = app.course?.subjects || app.subjects || [];
        setPubSubjectSchedules(courseSubjects.map(subject => ({ subject, date: '', time: '' })));
     }
+
+    // Pre-fill practical exam details if already published
+    const existingPractical = app.practicalExam || {};
+    setPubPracticalExam({
+      name: existingPractical.name || '',
+      venue: existingPractical.venue || '',
+      date: existingPractical.date ? new Date(existingPractical.date).toISOString().split('T')[0] : '',
+      time: existingPractical.time || '',
+      subjects: existingPractical.subjects || []
+    });
   };
 
   // Submit Publish Schedule
@@ -23006,7 +23124,16 @@ const AcademyEligibility = ({
         examCenter: pubCenter,
         reportingTime: pubReportingTime,
         scheduledDate: pubDate || undefined,
-        subjectSchedules: pubSubjectSchedules
+        subjectSchedules: pubSubjectSchedules,
+        practicalExam: pubPracticalExam.date || pubPracticalExam.time || pubPracticalExam.venue
+          ? {
+              name: pubPracticalExam.name || undefined,
+              venue: pubPracticalExam.venue || undefined,
+              date: pubPracticalExam.date || undefined,
+              time: pubPracticalExam.time || undefined,
+              subjects: pubPracticalExam.subjects?.length ? pubPracticalExam.subjects : undefined
+            }
+          : undefined
       });
       setSuccessMsg('Exam schedule published! Institute can now generate hall tickets.');
       setTimeout(() => setSuccessMsg(null), 4000);
@@ -23192,7 +23319,7 @@ const AcademyEligibility = ({
       {/* REVIEW DIALOG MODAL */}
       {reviewingApp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full flex flex-col scale-in-center">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full flex flex-col scale-in-center my-auto">
             
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-slate-50/50 rounded-t-3xl">
@@ -23354,7 +23481,7 @@ const AcademyEligibility = ({
       {/* PUBLISH SCHEDULE MODAL */}
       {publishingApp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full flex flex-col scale-in-center">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full flex flex-col scale-in-center my-auto">
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-slate-50/50 rounded-t-3xl">
               <div className="flex items-center gap-3">
@@ -23487,6 +23614,70 @@ const AcademyEligibility = ({
                   />
                 </div>
                 <p className="text-[9px] text-slate-400 font-semibold mt-1">Leave blank to keep current scheduled date</p>
+              </div>
+
+              {/* Practical Exam Details (Optional) */}
+              <div className="pt-2 border-t border-slate-200/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Practical Exam (Optional)</label>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${pubPracticalExam.venue || pubPracticalExam.name ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {pubPracticalExam.venue || pubPracticalExam.name ? 'Included' : 'Not set'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Exam Name</label>
+                    <input
+                      type="text"
+                      value={pubPracticalExam.name}
+                      onChange={(e) => setPubPracticalExam({ ...pubPracticalExam, name: e.target.value })}
+                      placeholder="e.g. Clinical OSCE"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Venue</label>
+                    <input
+                      type="text"
+                      value={pubPracticalExam.venue}
+                      onChange={(e) => setPubPracticalExam({ ...pubPracticalExam, venue: e.target.value })}
+                      placeholder="e.g. SEMI Clinical Skills Lab"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={pubPracticalExam.date}
+                      onChange={(e) => setPubPracticalExam({ ...pubPracticalExam, date: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Time</label>
+                    <input
+                      type="text"
+                      value={pubPracticalExam.time}
+                      onChange={(e) => setPubPracticalExam({ ...pubPracticalExam, time: e.target.value })}
+                      placeholder="e.g. 8:00 AM - 5:00 PM"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Subjects (comma separated)</label>
+                  <input
+                    type="text"
+                    value={(pubPracticalExam.subjects || []).join(', ')}
+                    onChange={(e) => setPubPracticalExam({ ...pubPracticalExam, subjects: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                    placeholder="e.g. OSCE Station A, OSCE Station B, Viva"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                  />
+                </div>
               </div>
 
               {/* Actions */}
@@ -23659,8 +23850,8 @@ const AcademyInspectorModal = ({
   const isApproved = selectedApp?.status === 'approved' || selectedApp?.status === 'active_erp';
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto">
 
         {/* ─── HEADER ────────────────────────────────────────────────────────── */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
@@ -26605,9 +26796,9 @@ const AcademyPublishingDetails = () => {
       {/* ─── Publication Detail Modal ───────────────────────────────────────── */}
       {isModalOpen && selectedPublication && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150 my-auto">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
                   <FileSpreadsheet className="w-5 h-5" />
@@ -26822,8 +27013,8 @@ const AcademyRejectionModal = ({
   setShowRejectModal
 }) => {
   return (
-    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left">
+    <div className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-left my-auto">
         <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 text-white">
           <h3 className="font-extrabold text-base">Application Compliance Rejection</h3>
           <p className="text-[10px] text-red-200 font-medium">Log the regulatory reason for rejection</p>
@@ -27463,8 +27654,8 @@ const AcademyRemittance = () => {
 
       {/* ── Transaction Receipt Detail Modal ────────────────────────────────── */}
       {selectedTransaction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden text-left">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden text-left my-auto">
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
@@ -28256,7 +28447,7 @@ const AcademyRevaluation = () => {
 
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden scale-in-center animate-in zoom-in-95 duration-150">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden scale-in-center animate-in zoom-in-95 duration-150 my-auto">
           {/* Header */}
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-white">
             <div className="flex items-center gap-3">
@@ -28408,7 +28599,7 @@ const AcademyRevaluation = () => {
 
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden scale-in-center animate-in zoom-in-95 duration-150">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden scale-in-center animate-in zoom-in-95 duration-150 my-auto">
           {/* Header */}
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
             <div className="flex items-center gap-3">
@@ -28586,9 +28777,9 @@ const AcademyRevaluation = () => {
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150 my-auto">
           {/* Header */}
-          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white sticky top-0 z-10">
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
                 <FileText className="w-5 h-5" />
@@ -29831,9 +30022,9 @@ const AcademyStudentMarks = () => {
       {/* ─── Student Marks Detail Modal ──────────────────────────────────────── */}
       {isModalOpen && selectedStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150 my-auto">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-lg font-black shadow-md flex-shrink-0">
                   {selectedStudent.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
@@ -30008,7 +30199,7 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-250 text-left my-8">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-250 text-left my-auto">
         
         {/* Header Banner */}
         <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 py-5 text-white flex justify-between items-center">
@@ -31165,8 +31356,8 @@ const AcademyVerification = ({
 
       {viewingStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center my-auto">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
                   <User className="w-5 h-5" />
@@ -35481,10 +35672,10 @@ const InstituteERPCourses = ({
 
       {/* ─── EDIT COURSE MODAL ────────────────────────────────────────────────── */}
       {editingCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col my-auto">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 px-6 py-4 text-white sticky top-0 z-10 flex justify-between items-center">
+            <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 px-6 py-4 text-white flex-shrink-0 flex justify-between items-center">
               <div>
                 <h3 className="font-extrabold text-base">Edit Course</h3>
                 <p className="text-[10px] text-blue-200 font-medium">Update course details for {editingCourse.courseName}</p>
@@ -35499,7 +35690,7 @@ const InstituteERPCourses = ({
             </div>
 
             {/* Edit Form */}
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 text-left">
               {editError && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-xs text-red-800 font-semibold">
                   <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -35687,10 +35878,10 @@ const InstituteERPCourses = ({
 
       {/* ─── VIEW COURSE MODAL ────────────────────────────────────────────────── */}
       {viewingCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col my-auto">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-indigo-900 px-6 py-4 text-white sticky top-0 z-10 flex justify-between items-center">
+            <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-indigo-900 px-6 py-4 text-white flex-shrink-0 flex justify-between items-center">
               <div>
                 <h3 className="font-extrabold text-base">Course Details</h3>
                 <p className="text-[10px] text-indigo-200 font-medium">Course information overview</p>
@@ -35704,7 +35895,7 @@ const InstituteERPCourses = ({
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="p-6 space-y-4 text-xs overflow-y-auto flex-1 text-left">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="block text-[10px] uppercase font-black text-gray-400">Course Name</span>
@@ -37775,8 +37966,8 @@ const InstituteERPExams = ({
       </div>
 
       {viewingApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden flex flex-col scale-in-center text-left">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden flex flex-col scale-in-center text-left my-auto">
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
@@ -38577,8 +38768,8 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       </div>
 
       {viewingTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden flex flex-col my-auto">
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
@@ -38684,37 +38875,23 @@ export default InstituteERPFees;
 
 ```jsx
 // client/src/pages/institute/components/InstituteERPHallTicket.jsx
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Ticket, 
-  Search, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  Printer, 
-  HelpCircle, 
-  RefreshCw, 
-  Building2, 
-  UserCheck, 
-  BookOpen, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Plus, 
-  Trash2, 
-  Eye, 
-  Sparkles, 
-  ShieldCheck, 
-  Layers, 
-  ChevronRight, 
+import { useState, useMemo, useEffect } from 'react';
+import {
+  Ticket,
+  Search,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Printer,
+  RefreshCw,
+  UserCheck,
+  Sparkles,
   X,
   FileText,
-  FileCheck2,
   Sliders,
   Check,
-  Award
+  Loader2
 } from 'lucide-react';
-import { hallTicketAPI } from '../../../api/hallTicket';
 import examService from '../../../api/exams';
 import { getUploadUrl } from '../../../api/apiClient';
 import semiLogo from '../../../assets/semi logo.png';
@@ -38723,16 +38900,13 @@ const InstituteERPHallTicket = ({
   courses = [],
   batches = [],
   students = [],
-  examApplications = [],
-  fetchERPData,
-  user
+  examApplications = []
 }) => {
-  const [activeTab, setActiveTab] = useState('generator'); // 'generator' | 'templates' | 'issued'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedStudents, setSelectedStudents] = useState([]);
-  const [selectedTemplate, setSelectedTemplate] = useState('default-cct-em');
+  const [selectedExamAppId, setSelectedExamAppId] = useState('');
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -38742,25 +38916,25 @@ const InstituteERPHallTicket = ({
   const [viewingTickets, setViewingTickets] = useState(null);
   const [viewingBatchInfo, setViewingBatchInfo] = useState(null);
 
-  const [selectedSemester, setSelectedSemester] = useState('All Semesters');
-
-  // Default Exam Details configuration with fully customizable editing fields
+  // Exam Details state - populated from selected exam application
   const [examDetails, setExamDetails] = useState({
-    examType: 'Semester Exam',
-    semesterLabel: 'Semester 1',
-    headerTitle: "CCT-EM Semester Examination Hall ticket - July’26",
+    examType: '',
+    semesterLabel: '',
+    headerTitle: '',
     organizationTitle: "Society for Emergency Medicine India (SEMI)",
-    theoryCentre: 'DR. MEHTA HOSPITAL, GLOBAL CAMPUS, CHENNAI',
-    theoryAddress: 'Main Academic Block, SEMI Campus',
-    theoryTime: '10am to 1pm',
-    practicalCentre: 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI',
-    practicalAddress: 'Emergency Dept, Academic Wing',
-    practicalTime: '8am to 5pm',
-    practicalDate: new Date(Date.now() + 86400000 * 20).toISOString().split('T')[0],
-    practicalSubjects: [],
-    showPracticalSection: true,
+    theoryCentre: '',
+    theoryAddress: '',
+    theoryTime: '',
+    practicalExam: {
+      name: '',
+      venue: '',
+      date: '',
+      time: '',
+      subjects: []
+    },
+    showPracticalSection: false,
     controllerName: 'Dr Sowjanya Patibandla',
-    controllerTitle: 'Controller - Examinations,SEMI',
+    controllerTitle: 'Controller - Examinations, SEMI',
     controllerSignatureUrl: null,
     instructions: [
       'Theory exam reporting time 9am',
@@ -38772,147 +38946,130 @@ const InstituteERPHallTicket = ({
     subjects: []
   });
 
-  // System & custom templates list
-  const templates = [
-    { id: 'default-cct-em', name: 'SEMI Standard CCT-EM Hall Ticket', type: 'system', badge: 'Official', layout: 'Portrait A4' },
-    { id: 'basic-sciences-template', name: 'Basic Sciences Modular Exam Ticket', type: 'system', badge: 'Standard', layout: 'Portrait A4' },
-    { id: 'final-year-template', name: 'Final Exit Fellowship Clinical Ticket', type: 'system', badge: 'Board Grade', layout: 'Portrait A4' }
-  ];
+  // ─── Exam application students ──────────────────────────────────────────
+  const [examAppStudents, setExamAppStudents] = useState([]);
 
-  // Auto-fetch subjects based on selected Course, Semester, or selected Students
+  // ─── Fetch exam application details when selected ──────────────────────
   useEffect(() => {
-    const targetCourse = courses.find(c => (c.id || c._id) === selectedCourseId);
-    const selectedStudentObjs = students.filter(s => selectedStudents.includes(s._id || s.id));
-    const firstStudent = selectedStudentObjs[0];
-    const courseName = targetCourse?.courseName || targetCourse?.name || firstStudent?.courseName || firstStudent?.course?.name || '';
-
-    let autoSubjects = [];
-
-    const resolveCourseId = (c) => c?._id || c?.id || c;
-    const courseId = selectedCourseId
-      || resolveCourseId(firstStudent?.courseId)
-      || resolveCourseId(firstStudent?.course?._id)
-      || resolveCourseId(firstStudent?.course);
-    const semesterNum = selectedSemester !== 'All Semesters'
-      ? parseInt(String(selectedSemester).replace(/\D/g, ''), 10) || null
-      : null;
-    const selectedStudentIds = selectedStudentObjs.map(s => s._id || s.id);
-
-    const isDegenerateSubjects = (subjects) => Array.isArray(subjects)
-      && subjects.length === 1 && String(subjects[0]).trim().toLowerCase() === 'all';
-
-    // 0. Prefer subjects from the exam application API (authoritative backend source).
-    //    Matches by course + semester + batch and, when students are selected, by membership.
-    const appCandidates = (examApplications || []).filter(app => {
-      const appCourseId = resolveCourseId(app.course);
-      const appBatchId = resolveCourseId(app.batch);
-      const courseMatches = !courseId || !appCourseId || String(appCourseId) === String(courseId);
-      const semMatches = !semesterNum || !app.semesterNumber || app.semesterNumber === semesterNum;
-      const batchMatches = !selectedBatchId || !appBatchId || String(appBatchId) === String(selectedBatchId);
-      const appStudentIds = (app.students || []).map(s => s._id || s.id);
-      const includesSelected = selectedStudentIds.length === 0
-        || selectedStudentIds.every(sid => appStudentIds.includes(sid));
-      return courseMatches && semMatches && batchMatches && includesSelected;
-    });
-    const statusRank = { SchedulePublished: 0, Approved: 1, Pending: 2, Rejected: 3 };
-    appCandidates.sort((a, b) => (statusRank[a.status] ?? 2) - (statusRank[b.status] ?? 2));
-    const matchedApp = appCandidates.find(app => !isDegenerateSubjects(app.subjects)) || appCandidates[0];
-
-    if (matchedApp && !isDegenerateSubjects(matchedApp.subjects)
-      && Array.isArray(matchedApp.subjects) && matchedApp.subjects.length > 0) {
-      const scheduleDates = (matchedApp.subjectSchedules || []).reduce((map, sch) => {
-        if (sch?.subject && sch?.date) map[String(sch.subject).toLowerCase()] = sch.date;
-        return map;
-      }, {});
-      matchedApp.subjects.forEach((subName, index) => {
-        autoSubjects.push({
-          paperNumber: index + 1,
-          paperName: subName,
-          date: scheduleDates[String(subName).toLowerCase()]
-            || new Date(Date.now() + 86400000 * (12 + index)).toISOString().split('T')[0]
+    const fetchExamDetails = async () => {
+      if (!selectedExamAppId) {
+        setExamAppStudents([]);
+        setSelectedStudents([]);
+        setExamDetails({
+          ...examDetails,
+          theoryCentre: '',
+          theoryAddress: '',
+          theoryTime: '',
+          subjects: [],
+          practicalExam: { name: '', venue: '', date: '', time: '', subjects: [] },
+          showPracticalSection: false,
+          headerTitle: 'CCT-EM Examination Hall Ticket'
         });
-      });
-    }
+        return;
+      }
 
-    // 1. Fall back to student semester-specific subjects from the student API
-    if (autoSubjects.length === 0 && firstStudent?.semesters && firstStudent.semesters.length > 0) {
-      let paperIndex = 1;
-      firstStudent.semesters.forEach((sem, idx) => {
-        const semName = sem.semesterName || `Semester ${sem.semesterNumber || idx + 1}`;
-        if (selectedSemester === 'All Semesters' || selectedSemester === semName) {
-          const semesterSubjects = (sem.marks && sem.marks.length > 0)
-            ? sem.marks
-            : (sem.subjects || []);
-          semesterSubjects.forEach(sub => {
-            autoSubjects.push({
-              paperNumber: paperIndex++,
-              paperName: typeof sub === 'string'
-                ? sub
-                : (sub.subjectName || sub.name || sub.title || `Paper ${paperIndex}`),
-              date: new Date(Date.now() + 86400000 * (12 + paperIndex)).toISOString().split('T')[0]
-            });
-          });
+      setLoading(true);
+      try {
+        const res = await examService.getExamApplicationById(selectedExamAppId);
+        const app = res.data?.data || res.data;
+        if (!app) {
+          setErrorMsg('Failed to load exam application details.');
+          return;
         }
-      });
-    }
 
-    // 2. Fall back to course level subjects from the course API
-    if (autoSubjects.length === 0 && targetCourse?.subjects && targetCourse.subjects.length > 0) {
-      let paperIndex = 1;
-      targetCourse.subjects.forEach(sub => {
-        autoSubjects.push({
-          paperNumber: paperIndex++,
-          paperName: typeof sub === 'string' ? sub : (sub.name || sub.subjectName || sub.title || `Paper ${paperIndex}`),
-          date: new Date(Date.now() + 86400000 * (12 + paperIndex)).toISOString().split('T')[0]
+        const courseName = app.course?.name || 'CCT-EM Fellowship';
+        const semesterNum = app.semesterNumber || 1;
+        const semesterLabel = `Semester ${semesterNum}`;
+
+        // Build subjects with dates from subjectSchedules
+        const subjectSchedulesMap = {};
+        (app.subjectSchedules || []).forEach(s => {
+          if (s.subject) {
+            subjectSchedulesMap[s.subject] = s;
+          }
         });
-      });
-    }
 
-    const titlePrefix = selectedSemester !== 'All Semesters' 
-      ? `${selectedSemester} CCT-EM Examinations Hall ticket - July’26`
-      : lowerNameContains(courseName, 'basic') 
-        ? "Basic Sciences CCT-EM Exam Hall ticket - July’26" 
-        : "Final Year CCT-EM Examinations Hall ticket - July’26";
+        const subjects = (app.subjects || []).map((subject, index) => ({
+          paperNumber: index + 1,
+          paperName: subject,
+          date: subjectSchedulesMap[subject]?.date
+            || new Date(Date.now() + 86400000 * (12 + index)).toISOString().split('T')[0],
+          time: subjectSchedulesMap[subject]?.time || '10:00 AM'
+        }));
 
-    // Practical subjects auto-populate from the course data (no extra API call)
-    const practicalNames = (targetCourse?.practicalExams && targetCourse.practicalExams.length > 0)
-      ? targetCourse.practicalExams
-      : (targetCourse?.practicalExamName ? [targetCourse.practicalExamName] : []);
-    const practicalSubjects = practicalNames.map((name, idx) => ({
-      paperNumber: idx + 1,
-      paperName: name
-    }));
+        // Get practical exam details
+        const practicalExam = app.practicalExam || {
+          name: '',
+          venue: '',
+          date: null,
+          time: '',
+          subjects: []
+        };
 
-    const practicalTitle = practicalNames.join(' & ');
+        // Pre-populate the form with admin-published details
+        setExamDetails(prev => ({
+          ...prev,
+          examType: courseName,
+          semesterLabel: semesterLabel,
+          headerTitle: `${courseName} Examination Hall Ticket - ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`,
+          theoryCentre: app.examVenue || '',
+          theoryAddress: app.examCenter || '',
+          theoryTime: app.reportingTime || '',
+          subjects: subjects,
+          practicalExam: {
+            name: practicalExam.name || '',
+            venue: practicalExam.venue || '',
+            date: practicalExam.date ? new Date(practicalExam.date).toISOString().split('T')[0] : '',
+            time: practicalExam.time || '',
+            subjects: practicalExam.subjects || []
+          },
+          showPracticalSection: !!(practicalExam.venue || practicalExam.name),
+        }));
 
-    setExamDetails(prev => ({
-      ...prev,
-      headerTitle: titlePrefix,
-      subjects: autoSubjects,
-      practicalSubjects,
-      ...(practicalTitle ? { practicalCentre: `${practicalTitle} - ${prev.practicalCentre.split(' - ').pop() || 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI'}` } : {})
-    }));
-  }, [selectedCourseId, selectedStudents, selectedSemester, courses, students, examApplications]);
+        // Set the students from the exam application
+        const appStudents = app.students || [];
+        setExamAppStudents(appStudents);
+        
+        // Auto-select all students from the application
+        const studentIds = appStudents.map(s => s._id || s.id);
+        setSelectedStudents(studentIds);
 
-  const lowerNameContains = (str, keyword) => (str || '').toLowerCase().includes(keyword);
+        // Set course and batch filters
+        if (app.course?._id) {
+          setSelectedCourseId(app.course._id);
+        }
+        if (app.batch?._id) {
+          setSelectedBatchId(app.batch._id);
+        }
 
-  // Filter students based on active search, course & batch selection
+        setSuccessMsg(`✅ Loaded exam application: ${courseName} - ${semesterLabel} (${appStudents.length} students)`);
+      } catch (err) {
+        console.error('Failed to fetch exam application details:', err);
+        setErrorMsg(err.parsedMessage || err.message || 'Failed to load exam details. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExamDetails();
+  }, [selectedExamAppId]);
+
+  // ─── Filter students based on search criteria ──────────────────────────
   const filteredStudents = useMemo(() => {
-    return students.filter(s => {
+    // If no exam application is selected, return empty array
+    if (!selectedExamAppId) return [];
+
+    return examAppStudents.filter(s => {
+      // Search filter
       const name = `${s.firstName || ''} ${s.lastName || ''} ${s.fullName || ''}`.toLowerCase();
-      const enroll = (s.enrollmentNo || s.enrollmentId || s.applicationId || '').toLowerCase();
-      const matchesSearch = name.includes(searchQuery.toLowerCase()) || enroll.includes(searchQuery.toLowerCase());
-      
-      const bId = String(s.batchId || s.batch?._id || s.batch || '');
-      const cId = String(s.courseId || s.course?._id || s.course || '');
-      const matchesBatch = !selectedBatchId || bId === String(selectedBatchId) || (s.batchName && s.batchName.includes(selectedBatchId));
-      const matchesCourse = !selectedCourseId || cId === String(selectedCourseId) || (s.courseName && s.courseName.includes(selectedCourseId));
+      const enroll = (s.enrollmentNo || s.enrollmentId || '').toLowerCase();
+      const matchesSearch = !searchQuery || name.includes(searchQuery.toLowerCase()) || enroll.includes(searchQuery.toLowerCase());
 
-      return matchesSearch && (matchesBatch || !selectedBatchId) && (matchesCourse || !selectedCourseId);
+      return matchesSearch;
     });
-  }, [students, searchQuery, selectedBatchId, selectedCourseId]);
+  }, [examAppStudents, searchQuery, selectedExamAppId]);
 
-  // Select / Deselect handlers
+  // ─── Select / Deselect handlers ─────────────────────────────────────────
   const handleStudentSelect = (studentId) => {
     setSelectedStudents(prev =>
       prev.includes(studentId)
@@ -38922,97 +39079,29 @@ const InstituteERPHallTicket = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedStudents.length === filteredStudents.length && filteredStudents.length > 0) {
+    const allIds = filteredStudents.map(s => s._id || s.id);
+    if (selectedStudents.length === allIds.length && allIds.length > 0) {
       setSelectedStudents([]);
     } else {
-      setSelectedStudents(filteredStudents.map(s => s._id || s.id));
+      setSelectedStudents(allIds);
     }
   };
 
-  // Exam Subject Management
-  const handleAddSubject = () => {
-    setExamDetails(prev => ({
-      ...prev,
-      subjects: [
-        ...prev.subjects,
-        { 
-          paperNumber: prev.subjects.length + 1, 
-          paperName: '', 
-          date: new Date(Date.now() + 86400000 * (14 + prev.subjects.length)).toISOString().split('T')[0] 
-        }
-      ]
-    }));
-  };
-
-  const handleRemoveSubject = (index) => {
-    setExamDetails(prev => ({
-      ...prev,
-      subjects: prev.subjects.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleSubjectChange = (index, field, value) => {
-    setExamDetails(prev => ({
-      ...prev,
-      subjects: prev.subjects.map((subject, i) =>
-        i === index ? { ...subject, [field]: value } : subject
-      )
-    }));
-  };
-
-  // Practical Subject Management
-  const handleAddPracticalSubject = () => {
-    setExamDetails(prev => ({
-      ...prev,
-      practicalSubjects: [
-        ...prev.practicalSubjects,
-        { paperNumber: prev.practicalSubjects.length + 1, paperName: '' }
-      ]
-    }));
-  };
-
-  const handleRemovePracticalSubject = (index) => {
-    setExamDetails(prev => ({
-      ...prev,
-      practicalSubjects: prev.practicalSubjects.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handlePracticalSubjectChange = (index, field, value) => {
-    setExamDetails(prev => ({
-      ...prev,
-      practicalSubjects: prev.practicalSubjects.map((subject, i) =>
-        i === index ? { ...subject, [field]: value } : subject
-      )
-    }));
-  };
-
-  // Controller Signature image upload handler
-  const handleSignatureImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        setExamDetails(prev => ({
-          ...prev,
-          controllerSignatureUrl: uploadEvent.target?.result
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveSignature = () => {
-    setExamDetails(prev => ({
-      ...prev,
-      controllerSignatureUrl: null
-    }));
-  };
-
-  // Generate Hall Tickets Handler
+  // ─── Generate Hall Tickets Handler ──────────────────────────────────────
   const handleGenerateHallTickets = async () => {
     if (selectedStudents.length === 0) {
-      setErrorMsg('Please select at least one eligible fellow candidate.');
+      setErrorMsg('Please select at least one eligible candidate.');
+      return;
+    }
+
+    if (!selectedExamAppId) {
+      setErrorMsg('Please select an exam application first.');
+      return;
+    }
+
+    // Check if exam details are populated
+    if (!examDetails.theoryCentre || !examDetails.theoryTime) {
+      setErrorMsg('Exam schedule details are missing. Please ensure the academic board has published the schedule.');
       return;
     }
 
@@ -39021,65 +39110,89 @@ const InstituteERPHallTicket = ({
     setSuccessMsg(null);
 
     try {
-      // Build candidate hall tickets
-      const selectedStudentObjs = students.filter(s => selectedStudents.includes(s._id || s.id));
-      const generatedList = selectedStudentObjs.map((student, idx) => {
-        const serial = String(idx + 1).padStart(4, '0');
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        return {
-          ticketId: `HT-SEMI-${new Date().getFullYear()}-${rand}`,
-          studentId: student._id || student.id,
-          studentName: student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Candidate',
-          enrollmentId: student.enrollmentNo || student.enrollmentId || `SEMI-${rand}`,
-          courseName: student.courseName || student.course?.name || 'CCT-EM Fellowship',
-          batchName: student.batchName || (student.batch?.year ? `Batch ${student.batch.year}` : 'Batch 2026'),
-          instituteName: user?.hospitalName || user?.name || 'Accredited Academic Hospital',
-          instituteAddress: user?.address || `${user?.city || 'Central'}, India`,
-          photoUrl: student.documents?.passportPhotoUrl || student.photoUrl,
-          examVenue: examDetails.theoryCentre,
-          examAddress: examDetails.theoryAddress,
-          examDate: examDetails.subjects[0]?.date || new Date().toISOString().split('T')[0],
-          reportingTime: examDetails.theoryTime,
-          subjects: examDetails.subjects,
-          practicalDetails: {
-            centre: examDetails.practicalCentre,
-            address: examDetails.practicalAddress,
-            date: examDetails.practicalDate,
-            timeSlot: examDetails.practicalTime,
-            subjects: examDetails.practicalSubjects
-          }
-        };
-      });
+      // Call the backend to generate hall tickets
+      const res = await examService.generateHallTickets(selectedExamAppId);
+      const result = res.data?.data || res.data;
 
-      // Persist issued hall tickets to the backend
-      let savedTickets = generatedList;
-      try {
-        const saveRes = await hallTicketAPI.generateBulk(generatedList);
-        const payload = saveRes?.data?.data || saveRes?.data;
-        if (Array.isArray(payload) && payload.length > 0) {
-          savedTickets = generatedList.map((t, i) => ({ ...t, _id: payload[i]?._id || payload.find(p => p.ticketId === t.ticketId)?._id }));
+      if (result && result.tickets && result.tickets.length > 0) {
+        setSuccessMsg(`🎉 Successfully generated ${result.tickets.length} hall ticket(s)!`);
+
+        // Store tickets for preview
+        setViewingTickets(result.tickets);
+        setViewingBatchInfo({
+          batchName: `Exam: ${result.tickets[0]?.courseName || 'CCT-EM'}`,
+          courseName: result.tickets[0]?.courseName || 'CCT-EM Fellowship'
+        });
+
+        // Update exam details from the response
+        if (result.examDetails) {
+          const details = result.examDetails;
+          const scheduleMap = {};
+          (details.subjectSchedules || []).forEach(s => {
+            if (s.subject) scheduleMap[s.subject] = s;
+          });
+          const subjects = (details.subjects || []).map((subject, index) => ({
+            paperNumber: index + 1,
+            paperName: subject,
+            date: scheduleMap[subject]?.date
+              || new Date(Date.now() + 86400000 * (12 + index)).toISOString().split('T')[0],
+            time: scheduleMap[subject]?.time || '10:00 AM'
+          })) || [];
+
+          const practicalExam = details.practicalExam || {
+            name: '',
+            venue: '',
+            date: null,
+            time: '',
+            subjects: []
+          };
+
+          setExamDetails(prev => ({
+            ...prev,
+            theoryCentre: details.examVenue || prev.theoryCentre,
+            theoryAddress: details.examCenter || prev.theoryAddress,
+            theoryTime: details.reportingTime || prev.theoryTime,
+            subjects: subjects,
+            practicalExam: {
+              name: practicalExam.name || '',
+              venue: practicalExam.venue || '',
+              date: practicalExam.date ? new Date(practicalExam.date).toISOString().split('T')[0] : '',
+              time: practicalExam.time || '',
+              subjects: practicalExam.subjects || []
+            },
+            showPracticalSection: !!(practicalExam.venue || practicalExam.name),
+            headerTitle: `${details.courseName || 'CCT-EM'} Examination Hall Ticket - ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`,
+          }));
         }
-      } catch (saveErr) {
-        console.warn('Failed to persist hall tickets, showing local preview only:', saveErr);
+      } else {
+        setErrorMsg('No hall tickets were generated. Please try again.');
       }
-
-      if (fetchERPData) {
-        await fetchERPData();
-      }
-
-      setSuccessMsg(`🎉 Successfully saved & generated ${savedTickets.length} accredited Hall Ticket(s)!`);
-      setViewingTickets(savedTickets);
-      setViewingBatchInfo({
-        batchName: selectedBatchId ? `Selected Candidates (${generatedList.length})` : 'All Batches',
-        courseName: examDetails.examType
-      });
     } catch (err) {
       console.error('Error generating hall tickets:', err);
       setErrorMsg(err.parsedMessage || err.message || 'Failed to generate hall tickets.');
     } finally {
       setGenerating(false);
     }
-  }  // Generate HTML for Print preview & window matching official SEMI PDF format exactly
+  };
+
+  // ─── Print Window Trigger ──────────────────────────────────────────────
+  const handlePrint = () => {
+    if (!viewingTickets || viewingTickets.length === 0) return;
+    const html = generatePrintHTML(viewingTickets, viewingBatchInfo);
+    const printWin = window.open('', '_blank', 'width=1000,height=800');
+    if (!printWin) {
+      alert('Please allow popups to open the print preview.');
+      return;
+    }
+    printWin.document.write(html);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => {
+      printWin.print();
+    }, 400);
+  };
+
+  // ─── Generate Print HTML ────────────────────────────────────────────────
   const generatePrintHTML = (tickets, batchInfo) => {
     const resolvePhoto = (photoUrl) => photoUrl ? getUploadUrl(photoUrl) : '';
 
@@ -39092,12 +39205,12 @@ const InstituteERPHallTicket = ({
             @import url('https://fonts.googleapis.com/css2?family=Arial:wght@400;700&display=swap');
             body { font-family: Arial, sans-serif; padding: 20px; background: #ffffff; color: #000000; line-height: 1.3; }
             .page-container { page-break-after: always; max-width: 800px; margin: 0 auto 40px auto; padding: 10px; }
-            
+
             /* Top Header */
             .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             .header-title { font-size: 18px; font-weight: bold; text-decoration: underline; margin: 0 0 4px 0; }
             .header-subtitle { font-size: 17px; font-weight: bold; text-decoration: underline; margin: 0; }
-            
+
             .photo-box {
               width: 130px;
               height: 150px;
@@ -39115,24 +39228,20 @@ const InstituteERPHallTicket = ({
             .section-header { font-size: 14px; font-weight: bold; font-style: italic; margin-top: 18px; margin-bottom: 6px; text-decoration: underline; }
             .section-header .time-span { font-style: normal; font-weight: bold; float: right; text-decoration: none; }
 
-            /* Section I Candidate Table */
             .candidate-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 15px; }
             .candidate-table td { border: 1px solid #000; padding: 8px 12px; font-size: 13px; vertical-align: middle; }
             .candidate-table .label-col { width: 30%; font-weight: normal; }
             .candidate-table .val-col { font-weight: bold; font-size: 14px; }
             .signature-hint { color: #cbd5e1; font-weight: normal; font-size: 13px; float: right; font-style: normal; }
 
-            /* Section II & III Exam Tables */
             .exam-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-bottom: 15px; }
             .exam-table th, .exam-table td { border: 1px solid #000; padding: 8px 12px; font-size: 13px; text-align: left; vertical-align: middle; }
             .exam-table th { font-weight: normal; }
             .yellow-highlight { background-color: #ffff00; font-weight: bold; }
 
-            /* Section IV Instructions */
             .instructions-list { margin: 6px 0 25px 0; padding-left: 20px; font-size: 13px; }
             .instructions-list li { margin-bottom: 4px; }
 
-            /* Signatory Block */
             .signatory-block { margin-top: 20px; float: left; }
             .sig-img { height: 45px; width: auto; margin-bottom: 2px; }
             .sig-name { font-weight: bold; font-size: 13.5px; }
@@ -39149,6 +39258,13 @@ const InstituteERPHallTicket = ({
     `;
 
     tickets.forEach((ticket) => {
+      // Get theory subjects with schedules (from ticket if available, else form state)
+      const ticketSubjects = ticket.subjectSchedules || ticket.subjects || examDetails.subjects || [];
+
+      // Get practical exam details from ticket or examDetails
+      const practical = ticket.practicalExam || examDetails.practicalExam || {};
+      const hasPractical = !!(practical.venue || practical.name);
+
       html += `
         <div class="page-container">
           <!-- Logo & Header Title -->
@@ -39156,9 +39272,8 @@ const InstituteERPHallTicket = ({
             <tr>
               <td style="vertical-align: top;">
                 <div style="text-align: center; width: 80%;">
-                  <!-- SEMI Logo Graphic -->
                   <img src="${semiLogo}" alt="SEMI Logo" style="height: 60px; width: auto; margin: 0 auto 6px auto; display: block;" />
-                  <h3 class="header-title">${examDetails.headerTitle}</h3>
+                  <h3 class="header-title">${examDetails.headerTitle || 'CCT-EM Examination Hall Ticket'}</h3>
                   <h3 class="header-subtitle">${examDetails.organizationTitle}</h3>
                 </div>
               </td>
@@ -39176,17 +39291,17 @@ const InstituteERPHallTicket = ({
             <tr>
               <td class="label-col">Name of the Candidate</td>
               <td class="val-col">
-                ${ticket.studentName.toUpperCase()}
+                ${(ticket.studentName || '').toUpperCase()}
                 <span class="signature-hint">Candidate's Signature</span>
               </td>
             </tr>
             <tr>
               <td class="label-col">Hall ticket Number</td>
-              <td class="val-col">${ticket.enrollmentId}</td>
+              <td class="val-col">${ticket.enrollmentId || ticket.ticketId || ''}</td>
             </tr>
             <tr>
               <td class="label-col">Name of the Enrolled<br/>Institute for CCT-EM</td>
-              <td class="val-col">${ticket.instituteName.toUpperCase()}</td>
+              <td class="val-col">${(ticket.instituteName || '').toUpperCase()}</td>
             </tr>
             <tr>
               <td class="label-col">Program Director</td>
@@ -39198,55 +39313,67 @@ const InstituteERPHallTicket = ({
 
           <!-- Section II. Theory Examinations -->
           <div class="section-header">
-            Section II. ${examDetails.showPracticalSection ? 'Theory Examinations:' : 'Examination Details:'}
-            <span class="time-span">Time:${examDetails.theoryTime}</span>
+            Section II. Theory Examinations:
+            <span class="time-span">Time: ${examDetails.theoryTime || '10am to 1pm'}</span>
           </div>
           <div style="font-size: 13.5px; font-weight: bold; margin-bottom: 6px;">
-            ${examDetails.showPracticalSection ? 'Theory Centre' : 'Exam Centre'} - <span class="yellow-highlight">${(examDetails.theoryCentre || 'DR. MEHTA HOSPITAL, GLOBAL CAMPUS, CHENNAI').toUpperCase()}</span>
+            Theory Centre - <span class="yellow-highlight">${(examDetails.theoryCentre || '').toUpperCase()}</span>
           </div>
 
           <table class="exam-table">
             <thead>
               <tr>
-                <th style="width: 25%;">Date</th>
-                <th style="width: 35%;">Subject</th>
-                ${examDetails.showPracticalSection ? '<th>Appearing</th>' : ''}
+                <th style="width: 20%;">Date</th>
+                <th style="width: 30%;">Subject</th>
+                <th style="width: 25%;">Time</th>
+                <th>Appearing</th>
               </tr>
             </thead>
             <tbody>
-              ${(examDetails.subjects || []).map(s => `
+              ${(ticketSubjects || []).map((s, i) => `
                 <tr>
-                  <td>${s.date ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                  <td>${s.date ? new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'TBD'}</td>
                   <td>
-                    <strong>Paper ${s.paperNumber}</strong><br/>
-                    ${s.paperName}
+                    <strong>Paper ${s.paperNumber || i + 1}</strong><br/>
+                    ${s.paperName || s.subject || 'Subject'}
                   </td>
-                  ${examDetails.showPracticalSection ? `
-                    <td>
-                      Yes
-                      <span class="signature-hint">Invigilator's Signature</span>
-                    </td>
-                  ` : `
-                    <td style="width: 40%;">
-                      <span class="signature-hint" style="float: right;">Invigilator's Signature</span>
-                    </td>
-                  `}
+                  <td>${s.time || examDetails.theoryTime || '10:00 AM'}</td>
+                  <td>
+                    Yes
+                    <span class="signature-hint">Invigilator's Signature</span>
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
-          <!-- Section III. Practical Examination (Optional) -->
-          ${examDetails.showPracticalSection ? `
+          <!-- Section III. Practical Examination -->
+          ${hasPractical ? `
             <div class="section-header">
               Section III. Practical Examination:
-              <span class="time-span">Time: ${examDetails.practicalTime}</span>
+              <span class="time-span">Time: ${practical.time || '8am to 5pm'}</span>
             </div>
             <table class="exam-table">
               <tr>
                 <td style="width: 25%;">Date</td>
-                <td style="width: 75%;">${examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                <td style="width: 75%;">${practical.date ? new Date(practical.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'TBD'}</td>
               </tr>
+              <tr>
+                <td>Practical Centre</td>
+                <td><span class="yellow-highlight">${(practical.venue || '').toUpperCase()}</span></td>
+              </tr>
+              ${practical.name ? `
+                <tr>
+                  <td>Exam Name</td>
+                  <td>${practical.name}</td>
+                </tr>
+              ` : ''}
+              ${(practical.subjects || []).length > 0 ? `
+                <tr>
+                  <td>Subjects</td>
+                  <td>${(practical.subjects || []).map(sub => `<strong>${sub}</strong>`).join('<br/>')}</td>
+                </tr>
+              ` : ''}
               <tr>
                 <td>Appearing</td>
                 <td>
@@ -39254,21 +39381,11 @@ const InstituteERPHallTicket = ({
                   <span class="signature-hint">Centre Coordinator's Signature</span>
                 </td>
               </tr>
-              <tr>
-                <td>Practical Centre</td>
-                <td><span class="yellow-highlight">${(examDetails.practicalCentre || 'KAUVERY HOSPITAL, VADAPALANI, CHENNAI').toUpperCase()}</span></td>
-              </tr>
-              ${(examDetails.practicalSubjects || []).length > 0 ? `
-                <tr>
-                  <td>Subjects</td>
-                  <td>${(examDetails.practicalSubjects || []).map(s => `<strong>${s.paperName || ''}</strong>`).join('<br/>')}</td>
-                </tr>
-              ` : ''}
             </table>
           ` : ''}
 
-          <!-- Section ${examDetails.showPracticalSection ? 'IV' : 'III'}. Instructions -->
-          <div class="section-header">Section ${examDetails.showPracticalSection ? 'IV' : 'III'}. Instructions:</div>
+          <!-- Section IV. Instructions -->
+          <div class="section-header">Section ${hasPractical ? 'IV' : 'III'}. Instructions:</div>
           <ol class="instructions-list">
             ${(examDetails.instructions || []).map(inst => `<li>${inst}</li>`).join('')}
           </ol>
@@ -39284,8 +39401,8 @@ const InstituteERPHallTicket = ({
                 <circle cx="155" cy="45" r="2" fill="#000"/>
               </svg>
             `}
-            <div class="sig-name">${examDetails.controllerName}</div>
-            <div class="sig-title">${examDetails.controllerTitle}</div>
+            <div class="sig-name">${examDetails.controllerName || 'Dr Sowjanya Patibandla'}</div>
+            <div class="sig-title">${examDetails.controllerTitle || 'Controller - Examinations, SEMI'}</div>
           </div>
         </div>
       `;
@@ -39299,22 +39416,15 @@ const InstituteERPHallTicket = ({
     return html;
   };
 
-  // Print Window trigger
-  const handlePrint = () => {
-    if (!viewingTickets || viewingTickets.length === 0) return;
-    const html = generatePrintHTML(viewingTickets, viewingBatchInfo);
-    const printWin = window.open('', '_blank', 'width=1000,height=800');
-    if (!printWin) {
-      alert('Please allow popups to open the print preview.');
-      return;
-    }
-    printWin.document.write(html);
-    printWin.document.close();
-    printWin.focus();
-    setTimeout(() => {
-      printWin.print();
-    }, 400);
-  };
+  // ─── Get available exam applications ────────────────────────────────────
+  const availableExamApps = useMemo(() => {
+    return examApplications
+      .filter(app => app.status === 'Approved' || app.status === 'SchedulePublished')
+      .map(app => ({
+        id: app._id,
+        label: `${app.course?.name || app.courseName || 'Course'} - Semester ${app.semesterNumber} (${app.students?.length || 0} students) ${app.examVenue ? '✅ Scheduled' : ''}`
+      }));
+  }, [examApplications]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 text-left font-sans pb-12">
@@ -39330,28 +39440,12 @@ const InstituteERPHallTicket = ({
             Hall Ticket Management & Issuance Portal
           </h1>
           <p className="text-xs text-slate-300 max-w-2xl font-medium leading-relaxed">
-            Configure examination schedules, auto-fetch semester subjects, select accredited candidates, and generate official hall tickets with seal validation & custom controller signatures.
+            Select an approved exam application, configure examination schedules, and generate official hall tickets.
           </p>
-        </div>
-
-        {/* Header Summary KPI Quick Pills */}
-        <div className="relative z-10 grid grid-cols-3 gap-3 w-full lg:w-auto">
-          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-3 rounded-2xl text-center">
-            <div className="text-xl font-black text-white">{students.length}</div>
-            <div className="text-[9px] uppercase font-bold text-slate-400">Total Fellows</div>
-          </div>
-          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-3 rounded-2xl text-center">
-            <div className="text-xl font-black text-blue-400">{courses.length}</div>
-            <div className="text-[9px] uppercase font-bold text-slate-400">Courses</div>
-          </div>
-          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-3 rounded-2xl text-center">
-            <div className="text-xl font-black text-emerald-400">{batches.length}</div>
-            <div className="text-[9px] uppercase font-bold text-slate-400">Batches</div>
-          </div>
         </div>
       </div>
 
-      {/* Notifications */}
+      {/* ─── Notifications ────────────────────────────────────────────────────── */}
       {successMsg && (
         <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-2xl text-xs font-bold text-emerald-800 flex items-center justify-between shadow-sm animate-in slide-in-from-top duration-200">
           <div className="flex items-center gap-3">
@@ -39376,118 +39470,104 @@ const InstituteERPHallTicket = ({
         </div>
       )}
 
-      {/* ── Workflow Stepper Navigation Header ────────────────────────────── */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm flex items-center justify-around gap-2 text-xs font-bold">
-        <div className="flex items-center gap-2.5 text-blue-600 font-extrabold px-4 py-2 bg-blue-50/80 rounded-xl">
-          <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs">1</div>
-          <span>1. Select Candidates ({selectedStudents.length})</span>
+      {/* ─── Step 1: Select Exam Application ─────────────────────────────────── */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="flex-1">
+            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+              Select Exam Application <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={selectedExamAppId}
+              onChange={(e) => setSelectedExamAppId(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="">Select an approved exam application...</option>
+              {availableExamApps.map(app => (
+                <option key={app.id} value={app.id}>{app.label}</option>
+              ))}
+              {availableExamApps.length === 0 && (
+                <option value="">No approved exam applications available</option>
+              )}
+            </select>
+          </div>
+          <div className="md:w-48">
+            <button
+              type="button"
+              onClick={handleGenerateHallTickets}
+              disabled={generating || selectedStudents.length === 0 || !selectedExamAppId || loading}
+              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {generating ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+              ) : (
+                <><Ticket className="w-4 h-4" /> Issue {selectedStudents.length} Ticket(s)</>
+              )}
+            </button>
+          </div>
         </div>
-        <ChevronRight className="w-4 h-4 text-slate-300" />
-        <div className="flex items-center gap-2.5 text-indigo-600 font-extrabold px-4 py-2 bg-indigo-50/80 rounded-xl">
-          <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xs">2</div>
-          <span>2. Schedule & Subjects ({examDetails.subjects.length} Papers)</span>
-        </div>
-        <ChevronRight className="w-4 h-4 text-slate-300" />
-        <div className="flex items-center gap-2.5 text-emerald-600 font-extrabold px-4 py-2 bg-emerald-50/80 rounded-xl">
-          <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-xs">3</div>
-          <span>3. Preview & Issue Tickets</span>
-        </div>
+        {selectedExamAppId && examDetails.theoryCentre && (
+          <div className="mt-3 p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl flex items-center gap-3 text-xs text-emerald-800 font-bold">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>Schedule loaded: {examDetails.theoryCentre} • {examDetails.theoryTime}</span>
+          </div>
+        )}
+        {selectedExamAppId && !examDetails.theoryCentre && !loading && (
+          <div className="mt-3 p-3 bg-amber-50/60 border border-amber-200 rounded-xl flex items-center gap-3 text-xs text-amber-800 font-bold">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>Schedule not yet published by the Academic Board. Please wait for schedule publication.</span>
+          </div>
+        )}
       </div>
 
-      {/* Main Layout: Balanced 2-Column Responsive Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Left Panel: Candidate Selector (5 Cols) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
-            
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-sm font-black text-slate-800 tracking-tight flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-blue-600" />
-                  Candidate Fellows
-                </h3>
-                <p className="text-[11px] text-slate-400 font-semibold">Choose students to issue hall tickets</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleSelectAll}
-                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-[10px] uppercase tracking-wider transition-all"
-              >
-                {selectedStudents.length === filteredStudents.length && filteredStudents.length > 0 ? 'Deselect' : 'Select All'}
-              </button>
-            </div>
+      {/* ─── Step 2: Student Selection (only shown after exam app is selected) ── */}
+      {selectedExamAppId && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-              {/* Filter inputs bar */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search candidate..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400"
-                  />
-                </div>
-
+          {/* Left Panel: Candidate Selector */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <select
-                    value={selectedBatchId}
-                    onChange={(e) => setSelectedBatchId(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                  >
-                    <option value="">All Batches</option>
-                    {batches.map(b => (
-                      <option key={b.id || b._id} value={b.id || b._id}>
-                        {b.name || `Batch ${b.year}`}
-                      </option>
-                    ))}
-                  </select>
+                  <h3 className="text-sm font-black text-slate-800 tracking-tight flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-blue-600" />
+                    Candidate Fellows ({filteredStudents.length})
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-semibold">Select students for hall tickets</p>
                 </div>
-
-                <div>
-                  <select
-                    value={selectedCourseId}
-                    onChange={(e) => setSelectedCourseId(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-                  >
-                    <option value="">All Courses</option>
-                    {courses.map(c => (
-                      <option key={c.id || c._id} value={c.id || c._id}>
-                        {c.courseName || c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <select
-                    value={selectedSemester}
-                    onChange={(e) => setSelectedSemester(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs font-black text-indigo-700 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all cursor-pointer"
-                  >
-                    <option value="All Semesters">All Semesters</option>
-                    <option value="Semester 1">Semester 1</option>
-                    <option value="Semester 2">Semester 2</option>
-                    <option value="Semester 3">Semester 3</option>
-                    <option value="Semester 4">Semester 4</option>
-                    <option value="Semester 5">Semester 5</option>
-                    <option value="Semester 6">Semester 6</option>
-                  </select>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-[10px] uppercase tracking-wider transition-all"
+                >
+                  {selectedStudents.length === filteredStudents.length && filteredStudents.length > 0 ? 'Deselect All' : 'Select All'}
+                </button>
               </div>
 
-              {/* Student Cards List */}
-              <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                {filteredStudents.length > 0 ? (
+              {/* Search input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name or enrollment ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                />
+              </div>
+
+              {/* Student Cards */}
+              <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  </div>
+                ) : filteredStudents.length > 0 ? (
                   filteredStudents.map((student) => {
                     const studentId = student._id || student.id;
                     const isSelected = selectedStudents.includes(studentId);
-                    const name = student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Fellow Candidate';
-                    const enrollNo = student.enrollmentNo || student.enrollmentId || `SEMI-${studentId.substring(0, 6)}`;
-                    const course = student.courseName || student.course?.name || 'General Medicine';
-                    const batch = student.batchName || (student.batch?.year ? `Batch ${student.batch.year}` : 'Batch 2026');
+                    const name = student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Candidate';
+                    const enrollNo = student.enrollmentNo || student.enrollmentId || `SEMI-${studentId?.substring(0, 6) || '0000'}`;
 
                     return (
                       <div
@@ -39505,25 +39585,15 @@ const InstituteERPHallTicket = ({
                           }`}>
                             {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                           </div>
-
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-100 to-slate-200 text-slate-700 flex items-center justify-center font-black text-sm flex-shrink-0 shadow-inner">
                             {name.charAt(0).toUpperCase()}
                           </div>
-
                           <div className="min-w-0">
                             <h4 className="text-xs font-black text-slate-800 truncate">{name}</h4>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-[10px] font-mono font-bold text-blue-600">{enrollNo}</span>
-                              <span className="text-slate-300">·</span>
-                              <span className="text-[10px] text-slate-400 font-medium truncate">{course}</span>
                             </div>
                           </div>
-                        </div>
-
-                        <div className="text-right flex-shrink-0">
-                          <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                            {batch}
-                          </span>
                         </div>
                       </div>
                     );
@@ -39531,349 +39601,177 @@ const InstituteERPHallTicket = ({
                 ) : (
                   <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-3xl space-y-2">
                     <UserCheck className="w-10 h-10 text-slate-300 mx-auto" />
-                    <p className="text-xs font-bold text-slate-500">No matching fellow candidates found</p>
-                    <p className="text-[10px] text-slate-400">Try adjusting your search filters or course choices</p>
+                    <p className="text-xs font-bold text-slate-500">No students in this exam application</p>
+                    <p className="text-[10px] text-slate-400">The selected exam application has no students enrolled</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Right Column: Examination Config & Actions (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
+          {/* Right Panel: Exam Details */}
+          <div className="lg:col-span-7 space-y-4">
             <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-6">
-              
               <div className="border-b border-slate-100 pb-4">
                 <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
                   <Sliders className="w-5 h-5 text-indigo-600" />
                   Examination Details
                 </h3>
-                <p className="text-xs text-slate-400 font-semibold mt-0.5">Configure theory & practical venue schedules</p>
+                <p className="text-xs text-slate-400 font-semibold mt-0.5">
+                  Schedule loaded from exam application
+                </p>
               </div>
 
-              <div className="space-y-4 text-xs">
-                
-                {/* Exam Category / Semester Select */}
-                <div className="grid grid-cols-2 gap-2.5 pb-2">
-                  <div>
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Exam Type</label>
-                    <select
-                      value={examDetails.examType}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setExamDetails(prev => ({
-                          ...prev,
-                          examType: val,
-                          headerTitle: val === 'Semester Exam' 
-                            ? `${selectedSemester} CCT-EM Examinations Hall ticket - July’26`
-                            : val === 'Basic Sciences' 
-                              ? "Basic Sciences CCT-EM Exam Hall ticket - July’26"
-                              : "Final Year CCT-EM Examinations Hall ticket - July’26"
-                        }));
-                      }}
-                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                      <option value="Semester Exam">Semester Examination</option>
-                      <option value="Final Year">Final Exit Clinical</option>
-                      <option value="Basic Sciences">Basic Sciences</option>
-                      <option value="Custom">Custom Assessment</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Active Semester</label>
-                    <select
-                      value={selectedSemester}
-                      onChange={(e) => setSelectedSemester(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                      <option value="All Semesters">All Semesters</option>
-                      <option value="Semester 1">Semester 1</option>
-                      <option value="Semester 2">Semester 2</option>
-                      <option value="Semester 3">Semester 3</option>
-                      <option value="Semester 4">Semester 4</option>
-                      <option value="Semester 5">Semester 5</option>
-                      <option value="Semester 6">Semester 6</option>
-                    </select>
-                  </div>
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
                 </div>
-
-                {/* Document Header Text Customization */}
-                <div>
-                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Header Title Text</label>
-                  <input
-                    type="text"
-                    value={examDetails.headerTitle}
-                    onChange={(e) => setExamDetails({ ...examDetails, headerTitle: e.target.value })}
-                    placeholder="Final Year CCT-EM Examinations Hall ticket - July’26"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Organization Subtitle</label>
-                  <input
-                    type="text"
-                    value={examDetails.organizationTitle}
-                    onChange={(e) => setExamDetails({ ...examDetails, organizationTitle: e.target.value })}
-                    placeholder="Society for Emergency Medicine India (SEMI)"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                {/* Section II Theory Centre & Time */}
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <span className="block text-[10px] font-black uppercase text-indigo-600 tracking-wider">Theory Exam Venue & Timing</span>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Theory Centre Name</label>
-                      <input
-                        type="text"
-                        value={examDetails.theoryCentre}
-                        onChange={(e) => setExamDetails({ ...examDetails, theoryCentre: e.target.value })}
-                        placeholder="DR. MEHTA HOSPITAL, GLOBAL CAMPUS, CHENNAI"
-                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs"
-                      />
+              ) : (
+                <div className="space-y-4 text-xs">
+                  {/* Theory Venue */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Theory Centre Name</label>
+                      <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs">
+                        {examDetails.theoryCentre || 'Not published yet'}
+                      </div>
                     </div>
                     <div>
-                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Time Slot</label>
-                      <input
-                        type="text"
-                        value={examDetails.theoryTime}
-                        onChange={(e) => setExamDetails({ ...examDetails, theoryTime: e.target.value })}
-                        placeholder="10am to 1pm"
-                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs"
-                      />
+                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Time Slot</label>
+                      <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs">
+                        {examDetails.theoryTime || 'Not published yet'}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Theory Papers Timetable */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Theory Papers & Dates</label>
-                    <button
-                      type="button"
-                      onClick={handleAddSubject}
-                      className="text-[10px] bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg font-bold hover:bg-blue-100 uppercase tracking-wider transition-colors flex items-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" /> Add Paper
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {examDetails.subjects.map((sub, idx) => (
-                      <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-black uppercase text-blue-600">Paper {sub.paperNumber}</span>
-                          {examDetails.subjects.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSubject(idx)}
-                              className="text-rose-500 hover:text-rose-700 p-0.5"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <input
-                            type="text"
-                            placeholder="Subject Title"
-                            value={sub.paperName}
-                            onChange={(e) => handleSubjectChange(idx, 'paperName', e.target.value)}
-                            className="col-span-2 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
-                          />
-                          <input
-                            type="date"
-                            value={sub.date}
-                            onChange={(e) => handleSubjectChange(idx, 'date', e.target.value)}
-                            className="px-1.5 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Section III Practical Section Options */}
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider">Practical Exam Section</span>
-                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={examDetails.showPracticalSection}
-                        onChange={(e) => setExamDetails({ ...examDetails, showPracticalSection: e.target.checked })}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-                      />
-                      <span className="text-[10px] font-bold text-slate-600">Include Section III</span>
-                    </label>
-                  </div>
-
-                  {examDetails.showPracticalSection && (
-                    <div className="space-y-2">
-                      <div>
-                        <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Centre Name</label>
-                        <input
-                          type="text"
-                          value={examDetails.practicalCentre}
-                          onChange={(e) => setExamDetails({ ...examDetails, practicalCentre: e.target.value })}
-                          placeholder="KAUVERY HOSPITAL, VADAPALANI, CHENNAI"
-                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs"
-                        />
-                      </div>
-
-                      {/* Practical Subjects & Exams */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Subjects</label>
-                          <button
-                            type="button"
-                            onClick={handleAddPracticalSubject}
-                            className="text-[10px] bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-lg font-bold hover:bg-indigo-100 uppercase tracking-wider transition-colors flex items-center gap-1"
-                          >
-                            <Plus className="w-3 h-3" /> Add
-                          </button>
-                        </div>
-                        <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
-                          {examDetails.practicalSubjects.map((sub, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
-                              <span className="text-[9px] font-black uppercase text-indigo-500 w-8 flex-shrink-0">P{sub.paperNumber}</span>
-                              <input
-                                type="text"
-                                placeholder="Practical Subject / Exam Name"
-                                value={sub.paperName}
-                                onChange={(e) => handlePracticalSubjectChange(idx, 'paperName', e.target.value)}
-                                className="flex-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
-                              />
-                              {examDetails.practicalSubjects.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemovePracticalSubject(idx)}
-                                  className="text-rose-500 hover:text-rose-700 p-0.5 flex-shrink-0"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              )}
+                  {/* Theory Papers */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Theory Papers & Schedule</label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {(examDetails.subjects || []).length > 0 ? (
+                        examDetails.subjects.map((sub, idx) => (
+                          <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-black uppercase text-blue-600">Paper {sub.paperNumber}</span>
                             </div>
-                          ))}
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="col-span-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold">
+                                {sub.paperName}
+                              </div>
+                              <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold">
+                                {sub.date ? new Date(sub.date).toLocaleDateString() : 'TBD'}
+                              </div>
+                              <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold">
+                                {sub.time || examDetails.theoryTime || '10:00 AM'}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4 text-slate-400 font-medium">
+                          No subjects published yet
                         </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Date</label>
-                          <input
-                            type="date"
-                            value={examDetails.practicalDate}
-                            onChange={(e) => setExamDetails({ ...examDetails, practicalDate: e.target.value })}
-                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-[10px]"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Time Slot</label>
-                          <input
-                            type="text"
-                            value={examDetails.practicalTime}
-                            onChange={(e) => setExamDetails({ ...examDetails, practicalTime: e.target.value })}
-                            placeholder="8am to 5pm"
-                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Section IV Custom Instructions & Signatory */}
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <span className="block text-[10px] font-black uppercase text-indigo-600 tracking-wider">Controller Signatory & Signature Upload</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Name</label>
-                      <input
-                        type="text"
-                        value={examDetails.controllerName}
-                        onChange={(e) => setExamDetails({ ...examDetails, controllerName: e.target.value })}
-                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Title</label>
-                      <input
-                        type="text"
-                        value={examDetails.controllerTitle}
-                        onChange={(e) => setExamDetails({ ...examDetails, controllerTitle: e.target.value })}
-                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs"
-                      />
+                      )}
                     </div>
                   </div>
 
-                  {/* Signature Image File Upload */}
-                  <div>
-                    <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Upload Signature Image (PNG/JPG)</label>
-                    {examDetails.controllerSignatureUrl ? (
-                      <div className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200 rounded-xl">
-                        <div className="flex items-center gap-2">
-                          <img 
-                            src={examDetails.controllerSignatureUrl} 
-                            alt="Signature Preview" 
-                            className="h-8 max-w-[120px] object-contain border border-slate-300 rounded p-0.5 bg-white" 
-                          />
-                          <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Custom Signature Active
-                          </span>
+                  {/* Practical Exam Section */}
+                  <div className="pt-2 border-t border-slate-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider">Practical Exam Section</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${examDetails.showPracticalSection ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                        {examDetails.showPracticalSection ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+
+                    {examDetails.showPracticalSection && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Exam Name</label>
+                            <div className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs">
+                              {examDetails.practicalExam?.name || 'Practical Examination'}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Venue</label>
+                            <div className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs">
+                              {examDetails.practicalExam?.venue || 'Not published yet'}
+                            </div>
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={handleRemoveSignature}
-                          className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
-                          title="Remove custom signature"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Date</label>
+                            <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-[10px]">
+                              {examDetails.practicalExam?.date ? new Date(examDetails.practicalExam.date).toLocaleDateString() : 'TBD'}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Time</label>
+                            <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs">
+                              {examDetails.practicalExam?.time || 'Not published yet'}
+                            </div>
+                          </div>
+                        </div>
+                        {(examDetails.practicalExam?.subjects || []).length > 0 && (
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Subjects</label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {examDetails.practicalExam.subjects.map((sub, idx) => (
+                                <span key={idx} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-semibold">
+                                  {sub}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <label className="flex items-center justify-center gap-2 p-2.5 border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl bg-slate-50/50 hover:bg-blue-50/30 transition-all cursor-pointer text-slate-600 font-bold text-xs">
-                        <FileText className="w-4 h-4 text-blue-500" />
-                        <span>Choose Signature File...</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleSignatureImageUpload}
-                          className="hidden"
-                        />
-                      </label>
                     )}
                   </div>
-                </div>
 
-                {/* Action Submit Button */}
-                <div className="pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={handleGenerateHallTickets}
-                    disabled={generating || selectedStudents.length === 0}
-                    className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {generating ? (
-                      <><RefreshCw className="w-4 h-4 animate-spin" /> Generating Admit Cards...</>
-                    ) : (
-                      <><Ticket className="w-4 h-4" /> Issue {selectedStudents.length} Hall Ticket(s)</>
-                    )}
-                  </button>
+                  {/* Controller Signatory */}
+                  <div className="pt-2 border-t border-slate-100 space-y-3">
+                    <span className="block text-[10px] font-black uppercase text-indigo-600 tracking-wider">Controller Signatory</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Name</label>
+                        <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs">
+                          {examDetails.controllerName || 'Dr Sowjanya Patibandla'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Title</label>
+                        <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs">
+                          {examDetails.controllerTitle || 'Controller - Examinations, SEMI'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-              </div>
+              )}
             </div>
           </div>
         </div>
+      )}
 
-      {/* ── PRINT & ADMIT TICKET PREVIEW MODAL ───────────────────────────── */}
+      {/* ─── No Exam Selected State ──────────────────────────────────────────── */}
+      {!selectedExamAppId && (
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-12 shadow-sm text-center">
+          <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4 stroke-1" />
+          <h3 className="text-lg font-black text-slate-600">No Exam Application Selected</h3>
+          <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
+            Please select an approved exam application from the dropdown above to view enrolled students and generate hall tickets.
+          </p>
+          <p className="text-xs text-slate-400 mt-1">Only applications with status "Approved" or "Schedule Published" are shown.</p>
+        </div>
+      )}
+
+      {/* ─── PRINT PREVIEW MODAL ────────────────────────────────────────────── */}
       {viewingTickets && viewingTickets.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[92vh] flex flex-col scale-in-center overflow-hidden">
-            
+
             {/* Modal Header */}
             <div className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
               <div className="flex items-center gap-4">
@@ -39901,7 +39799,7 @@ const InstituteERPHallTicket = ({
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shadow-blue-600/20 cursor-pointer"
                 >
                   <Printer className="w-4 h-4" />
-                  Print Hall Tickets
+                  Print Tickets
                 </button>
                 <button
                   type="button"
@@ -39913,23 +39811,19 @@ const InstituteERPHallTicket = ({
               </div>
             </div>
 
-            {/* Modal Body Container with exact document layout */}
+            {/* Preview Body */}
             <div className="p-8 overflow-y-auto space-y-8 flex-1 bg-slate-100 text-black">
               {viewingTickets.map((ticket, idx) => (
                 <div key={idx} className="bg-white border border-slate-300 p-8 shadow-md max-w-3xl mx-auto text-left font-serif space-y-4">
-                  
-                  {/* Top Header Block with Logo & Title */}
+                  {/* Header */}
                   <div className="flex justify-between items-start gap-4 pb-2 border-b-0">
                     <div className="flex-1 text-center pr-4">
-                      {/* Logo Graphic */}
                       <img src={semiLogo} alt="SEMI Logo" className="h-16 w-auto mx-auto mb-2 object-contain" />
                       <h2 className="text-lg font-bold underline leading-snug">
-                        {examDetails.headerTitle}
+                        {examDetails.headerTitle || 'CCT-EM Examination Hall Ticket'}
                       </h2>
                       <h3 className="text-base font-bold underline mt-1">{examDetails.organizationTitle}</h3>
                     </div>
-
-                    {/* Photo Box */}
                     <div className="w-32 h-40 border border-black bg-blue-100 flex flex-col items-center justify-center flex-shrink-0 text-slate-500 font-sans text-xs font-normal">
                       {ticket.photoUrl ? (
                         <img src={getUploadUrl(ticket.photoUrl)} alt="Photo" className="w-full h-full object-cover" />
@@ -39939,7 +39833,7 @@ const InstituteERPHallTicket = ({
                     </div>
                   </div>
 
-                  {/* Section I Candidate Details */}
+                  {/* Candidate Details */}
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold italic underline font-sans">Section I. Candidate Details:</h4>
                     <table className="w-full border border-black text-xs font-sans border-collapse">
@@ -39947,17 +39841,17 @@ const InstituteERPHallTicket = ({
                         <tr className="border-b border-black">
                           <td className="p-2 border-r border-black w-1/3 font-normal">Name of the Candidate</td>
                           <td className="p-2 font-bold uppercase flex justify-between items-center">
-                            <span>{ticket.studentName}</span>
+                            <span>{ticket.studentName || 'Candidate'}</span>
                             <span className="text-slate-300 font-normal italic text-[11px]">Candidate's Signature</span>
                           </td>
                         </tr>
                         <tr className="border-b border-black">
                           <td className="p-2 border-r border-black font-normal">Hall ticket Number</td>
-                          <td className="p-2 font-bold font-mono text-sm">{ticket.enrollmentId}</td>
+                          <td className="p-2 font-bold font-mono text-sm">{ticket.enrollmentId || ticket.ticketId || 'N/A'}</td>
                         </tr>
                         <tr className="border-b border-black">
                           <td className="p-2 border-r border-black font-normal">Name of the Enrolled<br/>Institute for CCT-EM</td>
-                          <td className="p-2 font-bold uppercase">{ticket.instituteName}</td>
+                          <td className="p-2 font-bold uppercase">{ticket.instituteName || 'N/A'}</td>
                         </tr>
                         <tr>
                           <td className="p-2 border-r border-black font-normal">Program Director</td>
@@ -39969,92 +39863,100 @@ const InstituteERPHallTicket = ({
                     </table>
                   </div>
 
-                  {/* Section II Theory Examinations */}
+                  {/* Theory Papers */}
                   <div className="space-y-1 pt-1">
                     <div className="flex justify-between items-center text-sm font-bold font-sans">
-                      <span className="italic underline">Section II. {examDetails.showPracticalSection ? 'Theory Examinations:' : 'Examination Details:'}</span>
-                      <span>Time: {examDetails.theoryTime}</span>
+                      <span className="italic underline">Section II. Theory Examinations:</span>
+                      <span>Time: {examDetails.theoryTime || '10am to 1pm'}</span>
                     </div>
                     <div className="text-xs font-bold font-sans">
-                      {examDetails.showPracticalSection ? 'Theory Centre' : 'Exam Centre'} - <span className="bg-yellow-300 px-1 py-0.5">{examDetails.theoryCentre.toUpperCase()}</span>
+                      Theory Centre - <span className="bg-yellow-300 px-1 py-0.5">{(examDetails.theoryCentre || '').toUpperCase()}</span>
                     </div>
 
                     <table className="w-full border border-black text-xs font-sans border-collapse mt-2">
                       <thead>
                         <tr className="border-b border-black text-left font-normal">
-                          <th className="p-2 border-r border-black w-1/4 font-normal">Date</th>
+                          <th className="p-2 border-r border-black w-1/5 font-normal">Date</th>
                           <th className="p-2 border-r border-black w-2/5 font-normal">Subject</th>
-                          {examDetails.showPracticalSection && <th className="p-2 font-normal">Appearing</th>}
+                          <th className="p-2 border-r border-black w-1/5 font-normal">Time</th>
+                          <th className="p-2 font-normal">Appearing</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {(examDetails.subjects || []).map((sub, i) => (
+                        {(ticket.subjectSchedules || ticket.subjects || examDetails.subjects || []).map((sub, i) => (
                           <tr key={i} className="border-b border-black last:border-b-0">
-                            <td className="p-2 border-r border-black font-medium">{sub.date ? new Date(sub.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
-                            <td className="p-2 border-r border-black">
-                              <strong>Paper {sub.paperNumber}</strong><br/>
-                              {sub.paperName}
+                            <td className="p-2 border-r border-black font-medium">
+                              {sub.date ? new Date(sub.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'TBD'}
                             </td>
-                            {examDetails.showPracticalSection ? (
-                              <td className="p-2 flex justify-between items-center">
-                                <span>Yes</span>
-                                <span className="text-slate-300 font-normal italic text-[11px]">Invigilator's Signature</span>
-                              </td>
-                            ) : (
-                              <td className="p-2 text-right">
-                                <span className="text-slate-300 font-normal italic text-[11px]">Invigilator's Signature</span>
-                              </td>
-                            )}
+                            <td className="p-2 border-r border-black">
+                              <strong>Paper {sub.paperNumber || i + 1}</strong><br/>
+                              {sub.paperName || sub.subject || 'Subject'}
+                            </td>
+                            <td className="p-2 border-r border-black">
+                              {sub.time || examDetails.theoryTime || '10:00 AM'}
+                            </td>
+                            <td className="p-2 flex justify-between items-center">
+                              <span>Yes</span>
+                              <span className="text-slate-300 font-normal italic text-[11px]">Invigilator's Signature</span>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
 
-                  {/* Section III Practical Examination */}
-                  {examDetails.showPracticalSection && (
+                  {/* Practical Section */}
+                  {examDetails.showPracticalSection && (examDetails.practicalExam?.venue || examDetails.practicalExam?.name) && (
                     <div className="space-y-1 pt-1">
                       <div className="flex justify-between items-center text-sm font-bold font-sans">
                         <span className="italic underline">Section III. Practical Examination:</span>
-                        <span>Time: {examDetails.practicalTime}</span>
+                        <span>Time: {examDetails.practicalExam?.time || '8am to 5pm'}</span>
                       </div>
                       <table className="w-full border border-black text-xs font-sans border-collapse">
                         <tbody>
                           <tr className="border-b border-black">
                             <td className="p-2 border-r border-black w-1/4">Date</td>
-                            <td className="p-2">{examDetails.practicalDate ? new Date(examDetails.practicalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                            <td className="p-2">
+                              {examDetails.practicalExam?.date ? new Date(examDetails.practicalExam.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'TBD'}
+                            </td>
                           </tr>
                           <tr className="border-b border-black">
+                            <td className="p-2 border-r border-black">Practical Centre</td>
+                            <td className="p-2">
+                              <span className="bg-yellow-300 px-1 py-0.5 font-bold">{(examDetails.practicalExam?.venue || '').toUpperCase()}</span>
+                            </td>
+                          </tr>
+                          {examDetails.practicalExam?.name && (
+                            <tr className="border-b border-black">
+                              <td className="p-2 border-r border-black">Exam Name</td>
+                              <td className="p-2">{examDetails.practicalExam.name}</td>
+                            </tr>
+                          )}
+                          {(examDetails.practicalExam?.subjects || []).length > 0 && (
+                            <tr className="border-b border-black">
+                              <td className="p-2 border-r border-black">Subjects</td>
+                              <td className="p-2 font-semibold">
+                                {examDetails.practicalExam.subjects.map((s, i) => (
+                                  <div key={i}>{s}</div>
+                                ))}
+                              </td>
+                            </tr>
+                          )}
+                          <tr>
                             <td className="p-2 border-r border-black">Appearing</td>
                             <td className="p-2 flex justify-between items-center">
                               <span>Yes</span>
                               <span className="text-slate-300 font-normal italic text-[11px]">Centre Coordinator's Signature</span>
                             </td>
                           </tr>
-                          <tr>
-                            <td className="p-2 border-r border-black">Practical Centre</td>
-                            <td className="p-2">
-                              <span className="bg-yellow-300 px-1 py-0.5 font-bold">{examDetails.practicalCentre.toUpperCase()}</span>
-                            </td>
-                          </tr>
-                          {examDetails.practicalSubjects?.length > 0 && (
-                            <tr>
-                              <td className="p-2 border-r border-black">Subjects</td>
-                              <td className="p-2 font-semibold">
-                                {examDetails.practicalSubjects.map((s, i) => (
-                                  <div key={i}>{s.paperName}</div>
-                                ))}
-                              </td>
-                            </tr>
-                          )}
                         </tbody>
                       </table>
                     </div>
                   )}
 
-                  {/* Section IV Instructions */}
+                  {/* Instructions */}
                   <div className="space-y-1 pt-1 font-sans text-xs">
-                    <h4 className="text-sm font-bold italic underline">Section {examDetails.showPracticalSection ? 'IV' : 'III'}. Instructions:</h4>
+                    <h4 className="text-sm font-bold italic underline">Section {examDetails.showPracticalSection && (examDetails.practicalExam?.venue || examDetails.practicalExam?.name) ? 'IV' : 'III'}. Instructions:</h4>
                     <ol className="list-decimal pl-5 space-y-1 font-normal text-slate-800">
                       {(examDetails.instructions || []).map((inst, i) => (
                         <li key={i}>{inst}</li>
@@ -40065,11 +39967,7 @@ const InstituteERPHallTicket = ({
                   {/* Controller Signature */}
                   <div className="pt-4 font-sans text-xs">
                     {examDetails.controllerSignatureUrl ? (
-                      <img 
-                        src={examDetails.controllerSignatureUrl} 
-                        alt="Controller Signature" 
-                        className="h-10 max-w-[160px] object-contain mb-1" 
-                      />
+                      <img src={examDetails.controllerSignatureUrl} alt="Controller Signature" className="h-10 max-w-[160px] object-contain mb-1" />
                     ) : (
                       <svg className="h-10 w-36 mb-1" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M10 40 C30 10, 50 50, 70 20 C90 10, 110 45, 140 25 C160 15, 180 35, 195 20" stroke="#000" strokeWidth="2.5" fill="none"/>
@@ -40077,10 +39975,9 @@ const InstituteERPHallTicket = ({
                         <circle cx="155" cy="45" r="2" fill="#000"/>
                       </svg>
                     )}
-                    <div className="font-bold text-sm">{examDetails.controllerName}</div>
-                    <div className="font-bold text-xs">{examDetails.controllerTitle}</div>
+                    <div className="font-bold text-sm">{examDetails.controllerName || 'Dr Sowjanya Patibandla'}</div>
+                    <div className="font-bold text-xs">{examDetails.controllerTitle || 'Controller - Examinations, SEMI'}</div>
                   </div>
-
                 </div>
               ))}
             </div>
@@ -40117,7 +40014,6 @@ const InstituteERPHallTicket = ({
           </div>
         </div>
       )}
-
     </div>
   );
 };
@@ -41324,8 +41220,8 @@ const InstituteERPMarksheet = ({
 
       {/* ── PRINT & MARKSHEET PREVIEW MODAL ────────────────────────────────────── */}
       {viewingMarksheets && viewingMarksheets.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[92vh] flex flex-col scale-in-center overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[92vh] flex flex-col scale-in-center overflow-hidden my-auto">
             
             {/* Modal Header */}
             <div className="px-8 py-5 border-b border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
@@ -41938,7 +41834,7 @@ export default InstituteERPRemittance;
 ### `client/src/pages/institute/components/InstituteERPResults.jsx`
 
 ```jsx
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Search,
   Filter,
@@ -41992,6 +41888,10 @@ const InstituteERPResults = ({ user }) => {
   const itemsPerPage = 10;
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
+  // Only auto-select the first course once (initial load) so background polls
+  // never clobber a filter the user has already chosen.
+  const autoSelectCourseRef = useRef(false);
+
   const fetchData = useCallback(async (showLoading = true) => {
     const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
     if (!token) {
@@ -42021,9 +41921,10 @@ const InstituteERPResults = ({ user }) => {
       setStudents(studentsData);
       setResults(resultsData);
 
-      // Auto-select first course if available
-      if (coursesData.length > 0) {
+      // Auto-select first course if available (only on the first load)
+      if (!autoSelectCourseRef.current && coursesData.length > 0) {
         setSelectedCourse(coursesData[0]._id || coursesData[0].id);
+        autoSelectCourseRef.current = true;
       }
     } catch (err) {
       if (showLoading) {
@@ -42050,6 +41951,7 @@ const InstituteERPResults = ({ user }) => {
   }, [fetchData]);
 
   // ─── Computed Data ──────────────────────────────────────────────────────
+  // Filter batches based on selected course
   const filteredBatches = useMemo(() => {
     if (!selectedCourse) return batches;
     return batches.filter(b => {
@@ -42058,8 +41960,55 @@ const InstituteERPResults = ({ user }) => {
     });
   }, [batches, selectedCourse]);
 
-  // Effective batch — auto-defaults to the first batch of the selected course
-  const effectiveSelectedBatch = selectedBatch || (filteredBatches[0]?._id || filteredBatches[0]?.id || '');
+  // Auto-select first batch when course changes and no valid batch is selected
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (selectedCourse && filteredBatches.length > 0) {
+      const currentBatchExists = filteredBatches.some(b =>
+        String(b._id || b.id) === String(selectedBatch)
+      );
+      if (!selectedBatch || !currentBatchExists) {
+        setSelectedBatch(filteredBatches[0]._id || filteredBatches[0].id);
+      }
+    } else if (!selectedCourse) {
+      setSelectedBatch('');
+    }
+  }, [selectedCourse, filteredBatches, selectedBatch]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Get students for the selected batch (drives semester options)
+  const studentsForBatch = useMemo(() => {
+    if (!selectedBatch) return students;
+    return students.filter(s => {
+      const batchId = s.batch?._id || s.batch || s.batchId;
+      return String(batchId) === String(selectedBatch);
+    });
+  }, [students, selectedBatch]);
+
+  // Get available semesters for the selected batch
+  const availableSemesters = useMemo(() => {
+    const semSet = new Set();
+    studentsForBatch.forEach(s => {
+      if (s.semesters) {
+        s.semesters.forEach(sem => semSet.add(sem.semesterNumber));
+      }
+    });
+    return Array.from(semSet).sort((a, b) => a - b);
+  }, [studentsForBatch]);
+
+  // Auto-select first semester when batch changes and no valid semester is selected
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (selectedBatch && availableSemesters.length > 0) {
+      const currentSemExists = availableSemesters.includes(Number(selectedSemester));
+      if (!selectedSemester || !currentSemExists) {
+        setSelectedSemester(String(availableSemesters[0]));
+      }
+    } else if (!selectedBatch) {
+      setSelectedSemester('');
+    }
+  }, [selectedBatch, availableSemesters, selectedSemester]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Get student lookup map
   const studentMap = useMemo(() => {
@@ -42104,9 +42053,9 @@ const InstituteERPResults = ({ user }) => {
     }
 
     // Filter by batch
-    if (effectiveSelectedBatch) {
+    if (selectedBatch) {
       const studentIdsInBatch = students
-        .filter(s => String(s.batch?._id || s.batch || s.batchId) === String(effectiveSelectedBatch))
+        .filter(s => String(s.batch?._id || s.batch || s.batchId) === String(selectedBatch))
         .map(s => s._id || s.id);
       filtered = filtered.filter(r => studentIdsInBatch.includes(String(r.student?._id || r.student)));
     }
@@ -42133,7 +42082,7 @@ const InstituteERPResults = ({ user }) => {
     }
 
     return filtered;
-  }, [results, selectedCourse, effectiveSelectedBatch, selectedSemester, resultStatusFilter, searchQuery, students, studentMap]);
+  }, [results, selectedCourse, selectedBatch, selectedSemester, resultStatusFilter, searchQuery, students, studentMap]);
 
   // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
@@ -42404,7 +42353,9 @@ const InstituteERPResults = ({ user }) => {
                 value={selectedCourse}
                 onChange={(e) => {
                   setSelectedCourse(e.target.value);
+                  // Reset dependent filters
                   setSelectedBatch('');
+                  setSelectedSemester('');
                   setCurrentPage(1);
                 }}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
@@ -42429,30 +42380,32 @@ const InstituteERPResults = ({ user }) => {
             <div className="relative">
               <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <select
-                value={effectiveSelectedBatch}
+                value={selectedBatch}
                 onChange={(e) => {
                   setSelectedBatch(e.target.value);
+                  setSelectedSemester('');
                   setCurrentPage(1);
                 }}
                 disabled={!selectedCourse || filteredBatches.length === 0}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {filteredBatches.map(b => (
-                  <option key={b._id || b.id} value={b._id || b.id}>
-                    {b.name || `Batch ${b.year}`}
-                  </option>
-                ))}
-                {filteredBatches.length === 0 && (
-                  <option value="">No batches available</option>
+                {filteredBatches.length > 0 ? (
+                  filteredBatches.map(b => (
+                    <option key={b._id || b.id} value={b._id || b.id}>
+                      {b.name || `Batch ${b.year}`}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">{selectedCourse ? 'No batches available' : 'Select course first'}</option>
                 )}
               </select>
             </div>
           </div>
 
-          {/* Semester Filter */}
+          {/* Semester Filter - Dependent on Batch */}
           <div>
             <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
-              Semester
+              Semester <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -42462,12 +42415,16 @@ const InstituteERPResults = ({ user }) => {
                   setSelectedSemester(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                disabled={!selectedBatch || availableSemesters.length === 0}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="">All Semesters</option>
-                {[1, 2, 3, 4, 5, 6].map(sem => (
-                  <option key={sem} value={sem}>Semester {sem}</option>
-                ))}
+                {availableSemesters.length > 0 ? (
+                  availableSemesters.map(sem => (
+                    <option key={sem} value={sem}>Semester {sem}</option>
+                  ))
+                ) : (
+                  <option value="">{selectedBatch ? 'No semesters available' : 'Select batch first'}</option>
+                )}
               </select>
             </div>
           </div>
@@ -42528,6 +42485,30 @@ const InstituteERPResults = ({ user }) => {
               <X className="w-3.5 h-3.5" />
               Clear Filters
             </button>
+          )}
+        </div>
+
+        {/* Active filters display */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {selectedCourse && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-full text-[10px] font-bold text-blue-700">
+              Course: {courses.find(c => String(c._id || c.id) === String(selectedCourse))?.name || 'Selected'}
+            </span>
+          )}
+          {selectedBatch && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 border border-indigo-200 rounded-full text-[10px] font-bold text-indigo-700">
+              Batch: {batches.find(b => String(b._id || b.id) === String(selectedBatch))?.name || 'Selected'}
+            </span>
+          )}
+          {selectedSemester && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 border border-purple-200 rounded-full text-[10px] font-bold text-purple-700">
+              Semester {selectedSemester}
+            </span>
+          )}
+          {resultStatusFilter !== 'All' && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-[10px] font-bold text-amber-700">
+              Status: {resultStatusFilter}
+            </span>
           )}
         </div>
       </div>
@@ -42673,9 +42654,9 @@ const InstituteERPResults = ({ user }) => {
       {/* ─── Result Detail Modal ────────────────────────────────────────────── */}
       {isModalOpen && viewingResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center animate-in zoom-in-95 duration-150 my-auto">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
                   <Award className="w-5 h-5" />
@@ -44303,9 +44284,9 @@ const InstituteERPRevaluation = () => {
       {/* ─── Request Detail Modal ───────────────────────────────────────────── */}
       {isModalOpen && viewingRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col scale-in-center my-auto">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner">
                   <FileText className="w-5 h-5" />
@@ -45692,8 +45673,8 @@ const InstituteERPStudentDetails = ({
         const isComplete = semAttendance >= 75 && semThesisApproved;
 
         return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden flex flex-col scale-in-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden flex flex-col scale-in-center my-auto">
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
@@ -46100,8 +46081,8 @@ const InstituteERPStudents = ({
 
       {/* VIEW DETAILS MODAL */}
       {selectedStudentForView && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-4xl w-full overflow-hidden flex flex-col scale-in-center max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-4xl w-full overflow-hidden flex flex-col scale-in-center max-h-[90vh] my-auto">
             {/* Modal Header */}
             <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
               <div className="flex items-center gap-3.5">
@@ -46846,8 +46827,8 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses =
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-3xl w-full flex flex-col overflow-hidden max-h-[90vh] scale-in-center animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-3xl w-full flex flex-col overflow-hidden max-h-[90vh] scale-in-center animate-in zoom-in-95 duration-150 my-auto">
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
           <div className="flex items-center gap-3">

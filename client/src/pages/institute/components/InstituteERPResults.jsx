@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Search,
   Filter,
@@ -52,6 +52,10 @@ const InstituteERPResults = ({ user }) => {
   const itemsPerPage = 10;
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
+  // Only auto-select the first course once (initial load) so background polls
+  // never clobber a filter the user has already chosen.
+  const autoSelectCourseRef = useRef(false);
+
   const fetchData = useCallback(async (showLoading = true) => {
     const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
     if (!token) {
@@ -81,9 +85,10 @@ const InstituteERPResults = ({ user }) => {
       setStudents(studentsData);
       setResults(resultsData);
 
-      // Auto-select first course if available
-      if (coursesData.length > 0) {
+      // Auto-select first course if available (only on the first load)
+      if (!autoSelectCourseRef.current && coursesData.length > 0) {
         setSelectedCourse(coursesData[0]._id || coursesData[0].id);
+        autoSelectCourseRef.current = true;
       }
     } catch (err) {
       if (showLoading) {
@@ -110,6 +115,7 @@ const InstituteERPResults = ({ user }) => {
   }, [fetchData]);
 
   // ─── Computed Data ──────────────────────────────────────────────────────
+  // Filter batches based on selected course
   const filteredBatches = useMemo(() => {
     if (!selectedCourse) return batches;
     return batches.filter(b => {
@@ -118,8 +124,55 @@ const InstituteERPResults = ({ user }) => {
     });
   }, [batches, selectedCourse]);
 
-  // Effective batch — auto-defaults to the first batch of the selected course
-  const effectiveSelectedBatch = selectedBatch || (filteredBatches[0]?._id || filteredBatches[0]?.id || '');
+  // Auto-select first batch when course changes and no valid batch is selected
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (selectedCourse && filteredBatches.length > 0) {
+      const currentBatchExists = filteredBatches.some(b =>
+        String(b._id || b.id) === String(selectedBatch)
+      );
+      if (!selectedBatch || !currentBatchExists) {
+        setSelectedBatch(filteredBatches[0]._id || filteredBatches[0].id);
+      }
+    } else if (!selectedCourse) {
+      setSelectedBatch('');
+    }
+  }, [selectedCourse, filteredBatches, selectedBatch]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Get students for the selected batch (drives semester options)
+  const studentsForBatch = useMemo(() => {
+    if (!selectedBatch) return students;
+    return students.filter(s => {
+      const batchId = s.batch?._id || s.batch || s.batchId;
+      return String(batchId) === String(selectedBatch);
+    });
+  }, [students, selectedBatch]);
+
+  // Get available semesters for the selected batch
+  const availableSemesters = useMemo(() => {
+    const semSet = new Set();
+    studentsForBatch.forEach(s => {
+      if (s.semesters) {
+        s.semesters.forEach(sem => semSet.add(sem.semesterNumber));
+      }
+    });
+    return Array.from(semSet).sort((a, b) => a - b);
+  }, [studentsForBatch]);
+
+  // Auto-select first semester when batch changes and no valid semester is selected
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (selectedBatch && availableSemesters.length > 0) {
+      const currentSemExists = availableSemesters.includes(Number(selectedSemester));
+      if (!selectedSemester || !currentSemExists) {
+        setSelectedSemester(String(availableSemesters[0]));
+      }
+    } else if (!selectedBatch) {
+      setSelectedSemester('');
+    }
+  }, [selectedBatch, availableSemesters, selectedSemester]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Get student lookup map
   const studentMap = useMemo(() => {
@@ -164,9 +217,9 @@ const InstituteERPResults = ({ user }) => {
     }
 
     // Filter by batch
-    if (effectiveSelectedBatch) {
+    if (selectedBatch) {
       const studentIdsInBatch = students
-        .filter(s => String(s.batch?._id || s.batch || s.batchId) === String(effectiveSelectedBatch))
+        .filter(s => String(s.batch?._id || s.batch || s.batchId) === String(selectedBatch))
         .map(s => s._id || s.id);
       filtered = filtered.filter(r => studentIdsInBatch.includes(String(r.student?._id || r.student)));
     }
@@ -193,7 +246,7 @@ const InstituteERPResults = ({ user }) => {
     }
 
     return filtered;
-  }, [results, selectedCourse, effectiveSelectedBatch, selectedSemester, resultStatusFilter, searchQuery, students, studentMap]);
+  }, [results, selectedCourse, selectedBatch, selectedSemester, resultStatusFilter, searchQuery, students, studentMap]);
 
   // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
@@ -464,7 +517,9 @@ const InstituteERPResults = ({ user }) => {
                 value={selectedCourse}
                 onChange={(e) => {
                   setSelectedCourse(e.target.value);
+                  // Reset dependent filters
                   setSelectedBatch('');
+                  setSelectedSemester('');
                   setCurrentPage(1);
                 }}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
@@ -489,30 +544,32 @@ const InstituteERPResults = ({ user }) => {
             <div className="relative">
               <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <select
-                value={effectiveSelectedBatch}
+                value={selectedBatch}
                 onChange={(e) => {
                   setSelectedBatch(e.target.value);
+                  setSelectedSemester('');
                   setCurrentPage(1);
                 }}
                 disabled={!selectedCourse || filteredBatches.length === 0}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {filteredBatches.map(b => (
-                  <option key={b._id || b.id} value={b._id || b.id}>
-                    {b.name || `Batch ${b.year}`}
-                  </option>
-                ))}
-                {filteredBatches.length === 0 && (
-                  <option value="">No batches available</option>
+                {filteredBatches.length > 0 ? (
+                  filteredBatches.map(b => (
+                    <option key={b._id || b.id} value={b._id || b.id}>
+                      {b.name || `Batch ${b.year}`}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">{selectedCourse ? 'No batches available' : 'Select course first'}</option>
                 )}
               </select>
             </div>
           </div>
 
-          {/* Semester Filter */}
+          {/* Semester Filter - Dependent on Batch */}
           <div>
             <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
-              Semester
+              Semester <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -522,12 +579,16 @@ const InstituteERPResults = ({ user }) => {
                   setSelectedSemester(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                disabled={!selectedBatch || availableSemesters.length === 0}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="">All Semesters</option>
-                {[1, 2, 3, 4, 5, 6].map(sem => (
-                  <option key={sem} value={sem}>Semester {sem}</option>
-                ))}
+                {availableSemesters.length > 0 ? (
+                  availableSemesters.map(sem => (
+                    <option key={sem} value={sem}>Semester {sem}</option>
+                  ))
+                ) : (
+                  <option value="">{selectedBatch ? 'No semesters available' : 'Select batch first'}</option>
+                )}
               </select>
             </div>
           </div>
@@ -588,6 +649,30 @@ const InstituteERPResults = ({ user }) => {
               <X className="w-3.5 h-3.5" />
               Clear Filters
             </button>
+          )}
+        </div>
+
+        {/* Active filters display */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {selectedCourse && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-full text-[10px] font-bold text-blue-700">
+              Course: {courses.find(c => String(c._id || c.id) === String(selectedCourse))?.name || 'Selected'}
+            </span>
+          )}
+          {selectedBatch && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 border border-indigo-200 rounded-full text-[10px] font-bold text-indigo-700">
+              Batch: {batches.find(b => String(b._id || b.id) === String(selectedBatch))?.name || 'Selected'}
+            </span>
+          )}
+          {selectedSemester && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 border border-purple-200 rounded-full text-[10px] font-bold text-purple-700">
+              Semester {selectedSemester}
+            </span>
+          )}
+          {resultStatusFilter !== 'All' && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full text-[10px] font-bold text-amber-700">
+              Status: {resultStatusFilter}
+            </span>
           )}
         </div>
       </div>

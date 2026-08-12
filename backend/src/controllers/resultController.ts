@@ -7,6 +7,7 @@ import { Marksheet } from '../models/marksheetModel';
 import resultService from '../services/resultService';
 import pdfGeneratorService from '../services/pdfGeneratorService';
 import fileParserService from '../services/fileParserService';
+import notificationService from '../services/notificationService';
 import { ParsedResultData } from '../services/fileParserService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { createResultSchema, updateResultSchema, bulkUploadSchema } from '../validators/resultValidator';
@@ -315,6 +316,26 @@ export const publishResult = async (req: Request, res: Response) => {
           certNumber,
         });
       }
+    }
+
+    // Notify institute (and student if email known) that results are published
+    try {
+      const student = await Student.findById(result.student).populate('course', 'name');
+      if (student) {
+        const institute = await Institute.findById(student.institute).populate('user');
+        const instituteUser = (institute as any)?.user as any;
+        await notificationService.notifyResultsPublished({
+          instituteName: institute?.orgName || 'N/A',
+          instituteEmail: instituteUser?.email || institute?.emailAddress || 'N/A',
+          studentName: `${student.firstName} ${student.lastName}`.trim(),
+          studentEmail: student.email,
+          courseName: (student as any).course?.name || 'N/A',
+          semesterNumber: result.semester,
+          resultStatus: result.resultStatus,
+        });
+      }
+    } catch (emailErr: any) {
+      console.error('Failed to send result published notification:', emailErr);
     }
 
     return sendSuccess({ req, res, message: 'Result published successfully', data: result });

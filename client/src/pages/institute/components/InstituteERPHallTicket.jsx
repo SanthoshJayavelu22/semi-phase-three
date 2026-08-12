@@ -13,7 +13,8 @@ import {
   X,
   FileText,
   Sliders,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import examService from '../../../api/exams';
 import { getUploadUrl } from '../../../api/apiClient';
@@ -69,11 +70,25 @@ const InstituteERPHallTicket = ({
     subjects: []
   });
 
-  // ─── NEW: Fetch exam application details when selected ──────────────────
+  // ─── Exam application students ──────────────────────────────────────────
+  const [examAppStudents, setExamAppStudents] = useState([]);
+
+  // ─── Fetch exam application details when selected ──────────────────────
   useEffect(() => {
     const fetchExamDetails = async () => {
       if (!selectedExamAppId) {
+        setExamAppStudents([]);
         setSelectedStudents([]);
+        setExamDetails({
+          ...examDetails,
+          theoryCentre: '',
+          theoryAddress: '',
+          theoryTime: '',
+          subjects: [],
+          practicalExam: { name: '', venue: '', date: '', time: '', subjects: [] },
+          showPracticalSection: false,
+          headerTitle: 'CCT-EM Examination Hall Ticket'
+        });
         return;
       }
 
@@ -135,11 +150,13 @@ const InstituteERPHallTicket = ({
           showPracticalSection: !!(practicalExam.venue || practicalExam.name),
         }));
 
-        // Auto-select students from the application
-        if (app.students && app.students.length > 0) {
-          const studentIds = app.students.map(s => s._id || s.id);
-          setSelectedStudents(studentIds);
-        }
+        // Set the students from the exam application
+        const appStudents = app.students || [];
+        setExamAppStudents(appStudents);
+        
+        // Auto-select all students from the application
+        const studentIds = appStudents.map(s => s._id || s.id);
+        setSelectedStudents(studentIds);
 
         // Set course and batch filters
         if (app.course?._id) {
@@ -149,8 +166,7 @@ const InstituteERPHallTicket = ({
           setSelectedBatchId(app.batch._id);
         }
 
-        // Show success message
-        setSuccessMsg(`✅ Loaded exam application: ${courseName} - ${semesterLabel}`);
+        setSuccessMsg(`✅ Loaded exam application: ${courseName} - ${semesterLabel} (${appStudents.length} students)`);
       } catch (err) {
         console.error('Failed to fetch exam application details:', err);
         setErrorMsg(err.parsedMessage || err.message || 'Failed to load exam details. Please try again.');
@@ -164,19 +180,18 @@ const InstituteERPHallTicket = ({
 
   // ─── Filter students based on search criteria ──────────────────────────
   const filteredStudents = useMemo(() => {
-    return students.filter(s => {
+    // If no exam application is selected, return empty array
+    if (!selectedExamAppId) return [];
+
+    return examAppStudents.filter(s => {
+      // Search filter
       const name = `${s.firstName || ''} ${s.lastName || ''} ${s.fullName || ''}`.toLowerCase();
       const enroll = (s.enrollmentNo || s.enrollmentId || '').toLowerCase();
-      const matchesSearch = name.includes(searchQuery.toLowerCase()) || enroll.includes(searchQuery.toLowerCase());
+      const matchesSearch = !searchQuery || name.includes(searchQuery.toLowerCase()) || enroll.includes(searchQuery.toLowerCase());
 
-      const bId = String(s.batchId || s.batch?._id || s.batch || '');
-      const cId = String(s.courseId || s.course?._id || s.course || '');
-      const matchesBatch = !selectedBatchId || bId === String(selectedBatchId);
-      const matchesCourse = !selectedCourseId || cId === String(selectedCourseId);
-
-      return matchesSearch && (matchesBatch || !selectedBatchId) && (matchesCourse || !selectedCourseId);
+      return matchesSearch;
     });
-  }, [students, searchQuery, selectedBatchId, selectedCourseId]);
+  }, [examAppStudents, searchQuery, selectedExamAppId]);
 
   // ─── Select / Deselect handlers ─────────────────────────────────────────
   const handleStudentSelect = (studentId) => {
@@ -188,10 +203,11 @@ const InstituteERPHallTicket = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedStudents.length === filteredStudents.length && filteredStudents.length > 0) {
+    const allIds = filteredStudents.map(s => s._id || s.id);
+    if (selectedStudents.length === allIds.length && allIds.length > 0) {
       setSelectedStudents([]);
     } else {
-      setSelectedStudents(filteredStudents.map(s => s._id || s.id));
+      setSelectedStudents(allIds);
     }
   };
 
@@ -524,6 +540,16 @@ const InstituteERPHallTicket = ({
     return html;
   };
 
+  // ─── Get available exam applications ────────────────────────────────────
+  const availableExamApps = useMemo(() => {
+    return examApplications
+      .filter(app => app.status === 'Approved' || app.status === 'SchedulePublished')
+      .map(app => ({
+        id: app._id,
+        label: `${app.course?.name || app.courseName || 'Course'} - Semester ${app.semesterNumber} (${app.students?.length || 0} students) ${app.examVenue ? '✅ Scheduled' : ''}`
+      }));
+  }, [examApplications]);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300 text-left font-sans pb-12">
       {/* ── Top Header Banner ────────────────────────────────────────────────── */}
@@ -568,9 +594,9 @@ const InstituteERPHallTicket = ({
         </div>
       )}
 
-      {/* ─── Exam Application Selector ───────────────────────────────────────── */}
+      {/* ─── Step 1: Select Exam Application ─────────────────────────────────── */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1">
             <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
               Select Exam Application <span className="text-rose-500">*</span>
@@ -581,20 +607,15 @@ const InstituteERPHallTicket = ({
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
             >
               <option value="">Select an approved exam application...</option>
-              {examApplications
-                .filter(app => app.status === 'Approved' || app.status === 'SchedulePublished')
-                .map(app => (
-                  <option key={app._id} value={app._id}>
-                    {app.course?.name || app.courseName || 'Course'} - Semester {app.semesterNumber} ({app.students?.length || 0} students)
-                    {app.examVenue ? ' ✅ Scheduled' : ''}
-                  </option>
-                ))}
-              {examApplications.filter(app => app.status === 'Approved' || app.status === 'SchedulePublished').length === 0 && (
+              {availableExamApps.map(app => (
+                <option key={app.id} value={app.id}>{app.label}</option>
+              ))}
+              {availableExamApps.length === 0 && (
                 <option value="">No approved exam applications available</option>
               )}
             </select>
           </div>
-          <div className="md:w-48 flex items-end">
+          <div className="md:w-48">
             <button
               type="button"
               onClick={handleGenerateHallTickets}
@@ -602,7 +623,7 @@ const InstituteERPHallTicket = ({
               className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black rounded-2xl text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {generating ? (
-                <><RefreshCw className="w-4 h-4 animate-spin" /> Generating...</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
               ) : (
                 <><Ticket className="w-4 h-4" /> Issue {selectedStudents.length} Ticket(s)</>
               )}
@@ -623,275 +644,252 @@ const InstituteERPHallTicket = ({
         )}
       </div>
 
-      {/* ─── Main Layout ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* ─── Step 2: Student Selection (only shown after exam app is selected) ── */}
+      {selectedExamAppId && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        {/* Left Panel: Candidate Selector */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-sm font-black text-slate-800 tracking-tight flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-blue-600" />
-                  Candidate Fellows
-                </h3>
-                <p className="text-[11px] text-slate-400 font-semibold">Select students for hall tickets</p>
+          {/* Left Panel: Candidate Selector */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 tracking-tight flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-blue-600" />
+                    Candidate Fellows ({filteredStudents.length})
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-semibold">Select students for hall tickets</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-[10px] uppercase tracking-wider transition-all"
+                >
+                  {selectedStudents.length === filteredStudents.length && filteredStudents.length > 0 ? 'Deselect All' : 'Select All'}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleSelectAll}
-                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-lg text-[10px] uppercase tracking-wider transition-all"
-              >
-                {selectedStudents.length === filteredStudents.length && filteredStudents.length > 0 ? 'Deselect' : 'Select All'}
-              </button>
-            </div>
 
-            {/* Filter inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {/* Search input */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search by name or enrollment ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
                 />
               </div>
-              <select
-                value={selectedBatchId}
-                onChange={(e) => setSelectedBatchId(e.target.value)}
-                className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-              >
-                <option value="">All Batches</option>
-                {batches.map(b => (
-                  <option key={b.id || b._id} value={b.id || b._id}>
-                    {b.name || `Batch ${b.year}`}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedCourseId}
-                onChange={(e) => setSelectedCourseId(e.target.value)}
-                className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
-              >
-                <option value="">All Courses</option>
-                {courses.map(c => (
-                  <option key={c.id || c._id} value={c.id || c._id}>
-                    {c.courseName || c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
 
-            {/* Student Cards */}
-            <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-              {filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => {
-                  const studentId = student._id || student.id;
-                  const isSelected = selectedStudents.includes(studentId);
-                  const name = student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Candidate';
-                  const enrollNo = student.enrollmentNo || student.enrollmentId || `SEMI-${studentId.substring(0, 6)}`;
-                  const course = student.courseName || student.course?.name || 'General Medicine';
-                  const batch = student.batchName || (student.batch?.year ? `Batch ${student.batch.year}` : 'Batch 2026');
+              {/* Student Cards */}
+              <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  </div>
+                ) : filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => {
+                    const studentId = student._id || student.id;
+                    const isSelected = selectedStudents.includes(studentId);
+                    const name = student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Dr. Candidate';
+                    const enrollNo = student.enrollmentNo || student.enrollmentId || `SEMI-${studentId?.substring(0, 6) || '0000'}`;
 
-                  return (
-                    <div
-                      key={studentId}
-                      onClick={() => handleStudentSelect(studentId)}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 ${
-                        isSelected
-                          ? 'bg-blue-50/70 border-blue-500 shadow-md shadow-blue-500/10'
-                          : 'bg-white border-slate-200/80 hover:border-blue-300 hover:bg-slate-50/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                          isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
-                        }`}>
-                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                        </div>
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-100 to-slate-200 text-slate-700 flex items-center justify-center font-black text-sm flex-shrink-0 shadow-inner">
-                          {name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-black text-slate-800 truncate">{name}</h4>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] font-mono font-bold text-blue-600">{enrollNo}</span>
-                            <span className="text-slate-300">·</span>
-                            <span className="text-[10px] text-slate-400 font-medium truncate">{course}</span>
+                    return (
+                      <div
+                        key={studentId}
+                        onClick={() => handleStudentSelect(studentId)}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 ${
+                          isSelected
+                            ? 'bg-blue-50/70 border-blue-500 shadow-md shadow-blue-500/10'
+                            : 'bg-white border-slate-200/80 hover:border-blue-300 hover:bg-slate-50/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                            isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
+                          }`}>
+                            {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                          </div>
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-100 to-slate-200 text-slate-700 flex items-center justify-center font-black text-sm flex-shrink-0 shadow-inner">
+                            {name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-black text-slate-800 truncate">{name}</h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-mono font-bold text-blue-600">{enrollNo}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                          {batch}
-                        </span>
+                    );
+                  })
+                ) : (
+                  <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-3xl space-y-2">
+                    <UserCheck className="w-10 h-10 text-slate-300 mx-auto" />
+                    <p className="text-xs font-bold text-slate-500">No students in this exam application</p>
+                    <p className="text-[10px] text-slate-400">The selected exam application has no students enrolled</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel: Exam Details */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-6">
+              <div className="border-b border-slate-100 pb-4">
+                <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+                  <Sliders className="w-5 h-5 text-indigo-600" />
+                  Examination Details
+                </h3>
+                <p className="text-xs text-slate-400 font-semibold mt-0.5">
+                  Schedule loaded from exam application
+                </p>
+              </div>
+
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-4 text-xs">
+                  {/* Theory Venue */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Theory Centre Name</label>
+                      <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs">
+                        {examDetails.theoryCentre || 'Not published yet'}
                       </div>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-3xl space-y-2">
-                  <UserCheck className="w-10 h-10 text-slate-300 mx-auto" />
-                  <p className="text-xs font-bold text-slate-500">No matching candidates found</p>
-                  <p className="text-[10px] text-slate-400">Try adjusting your search filters</p>
+                    <div>
+                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Time Slot</label>
+                      <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs">
+                        {examDetails.theoryTime || 'Not published yet'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Theory Papers */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Theory Papers & Schedule</label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {(examDetails.subjects || []).length > 0 ? (
+                        examDetails.subjects.map((sub, idx) => (
+                          <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-black uppercase text-blue-600">Paper {sub.paperNumber}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="col-span-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold">
+                                {sub.paperName}
+                              </div>
+                              <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold">
+                                {sub.date ? new Date(sub.date).toLocaleDateString() : 'TBD'}
+                              </div>
+                              <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold">
+                                {sub.time || examDetails.theoryTime || '10:00 AM'}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4 text-slate-400 font-medium">
+                          No subjects published yet
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Practical Exam Section */}
+                  <div className="pt-2 border-t border-slate-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider">Practical Exam Section</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${examDetails.showPracticalSection ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                        {examDetails.showPracticalSection ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+
+                    {examDetails.showPracticalSection && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Exam Name</label>
+                            <div className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs">
+                              {examDetails.practicalExam?.name || 'Practical Examination'}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Venue</label>
+                            <div className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs">
+                              {examDetails.practicalExam?.venue || 'Not published yet'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Date</label>
+                            <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-[10px]">
+                              {examDetails.practicalExam?.date ? new Date(examDetails.practicalExam.date).toLocaleDateString() : 'TBD'}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Time</label>
+                            <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs">
+                              {examDetails.practicalExam?.time || 'Not published yet'}
+                            </div>
+                          </div>
+                        </div>
+                        {(examDetails.practicalExam?.subjects || []).length > 0 && (
+                          <div>
+                            <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Subjects</label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {examDetails.practicalExam.subjects.map((sub, idx) => (
+                                <span key={idx} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-semibold">
+                                  {sub}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Controller Signatory */}
+                  <div className="pt-2 border-t border-slate-100 space-y-3">
+                    <span className="block text-[10px] font-black uppercase text-indigo-600 tracking-wider">Controller Signatory</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Name</label>
+                        <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs">
+                          {examDetails.controllerName || 'Dr Sowjanya Patibandla'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Title</label>
+                        <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs">
+                          {examDetails.controllerTitle || 'Controller - Examinations, SEMI'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
+      )}
 
-        {/* Right Panel: Exam Details */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-6">
-            <div className="border-b border-slate-100 pb-4">
-              <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-indigo-600" />
-                Examination Details
-              </h3>
-              <p className="text-xs text-slate-400 font-semibold mt-0.5">
-                {selectedExamAppId ? 'Schedule loaded from exam application' : 'Select an exam application to load details'}
-              </p>
-            </div>
-
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
-              </div>
-            ) : selectedExamAppId ? (
-              <div className="space-y-4 text-xs">
-                {/* Theory Venue */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Theory Centre Name</label>
-                    <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs">
-                      {examDetails.theoryCentre || 'Not published yet'}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Time Slot</label>
-                    <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs">
-                      {examDetails.theoryTime || 'Not published yet'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Theory Papers */}
-                <div className="space-y-2">
-                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Theory Papers & Schedule</label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {(examDetails.subjects || []).length > 0 ? (
-                      examDetails.subjects.map((sub, idx) => (
-                        <div key={idx} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-black uppercase text-blue-600">Paper {sub.paperNumber}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="col-span-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold">
-                              {sub.paperName}
-                            </div>
-                            <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold">
-                              {sub.date ? new Date(sub.date).toLocaleDateString() : 'TBD'}
-                            </div>
-                            <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold">
-                              {sub.time || examDetails.theoryTime || '10:00 AM'}
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-4 text-slate-400 font-medium">
-                        No subjects published yet
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Practical Exam Section */}
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider">Practical Exam Section</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${examDetails.showPracticalSection ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                      {examDetails.showPracticalSection ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </div>
-
-                  {examDetails.showPracticalSection && (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Exam Name</label>
-                          <div className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs">
-                            {examDetails.practicalExam?.name || 'Practical Examination'}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Venue</label>
-                          <div className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs">
-                            {examDetails.practicalExam?.venue || 'Not published yet'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Date</label>
-                          <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-[10px]">
-                            {examDetails.practicalExam?.date ? new Date(examDetails.practicalExam.date).toLocaleDateString() : 'TBD'}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Time</label>
-                          <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs">
-                            {examDetails.practicalExam?.time || 'Not published yet'}
-                          </div>
-                        </div>
-                      </div>
-                      {(examDetails.practicalExam?.subjects || []).length > 0 && (
-                        <div>
-                          <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Practical Subjects</label>
-                          <div className="flex flex-wrap gap-1.5">
-                            {examDetails.practicalExam.subjects.map((sub, idx) => (
-                              <span key={idx} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-semibold">
-                                {sub}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Controller Signatory */}
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <span className="block text-[10px] font-black uppercase text-indigo-600 tracking-wider">Controller Signatory</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Name</label>
-                      <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs">
-                        {examDetails.controllerName || 'Dr Sowjanya Patibandla'}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[9px] uppercase font-bold text-slate-400 mb-1">Controller Title</label>
-                      <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-semibold text-slate-800 text-xs">
-                        {examDetails.controllerTitle || 'Controller - Examinations, SEMI'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="py-12 text-center text-slate-400 font-medium">
-                <FileText className="w-12 h-12 mx-auto text-slate-200 mb-3" />
-                <p>Select an exam application to load the schedule</p>
-                <p className="text-xs mt-1">Only approved applications with published schedules are shown</p>
-              </div>
-            )}
-          </div>
+      {/* ─── No Exam Selected State ──────────────────────────────────────────── */}
+      {!selectedExamAppId && (
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-12 shadow-sm text-center">
+          <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4 stroke-1" />
+          <h3 className="text-lg font-black text-slate-600">No Exam Application Selected</h3>
+          <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
+            Please select an approved exam application from the dropdown above to view enrolled students and generate hall tickets.
+          </p>
+          <p className="text-xs text-slate-400 mt-1">Only applications with status "Approved" or "Schedule Published" are shown.</p>
         </div>
-      </div>
+      )}
 
       {/* ─── PRINT PREVIEW MODAL ────────────────────────────────────────────── */}
       {viewingTickets && viewingTickets.length > 0 && (

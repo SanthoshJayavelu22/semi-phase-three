@@ -8,6 +8,7 @@ import { Student } from '../models/studentModel';
 import { Institute } from '../models/instituteModel';
 import { FeeRecord } from '../models/feeRecordModel';
 import revaluationService from '../services/revaluationService';
+import notificationService from '../services/notificationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { emitEvent } from '../config/socket';
 import razorpayInstance, { isRazorpayConfigured, keyId } from '../config/razorpay';
@@ -199,6 +200,28 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
     await Result.findByIdAndUpdate(resultId, {
       $push: { revaluationRequests: revaluationRequest._id },
     });
+
+    // Notify institute + academy of the revaluation payment/request
+    try {
+      const student = await Student.findById(studentId).populate('course', 'name');
+      const institute = await Institute.findById(instituteId).populate('user');
+      const instituteUser = (institute as any)?.user as any;
+      await notificationService.notifyRevaluationPaymentSubmitted({
+        instituteName: institute?.orgName || 'N/A',
+        instituteEmail: instituteUser?.email || institute?.emailAddress || 'N/A',
+        studentName: student ? `${student.firstName} ${student.lastName}`.trim() : 'N/A',
+        studentEmail: student?.email || 'N/A',
+        courseName: (student as any)?.course?.name || 'N/A',
+        semesterNumber: semester,
+        subjects: (Array.isArray(subjects) ? subjects : []).map((s: any) =>
+          s?.subjectName || s?.subjectCode || String(s)
+        ),
+        totalFee: totalFee || 0,
+        paymentId: razorpay_payment_id,
+      });
+    } catch (emailErr: any) {
+      console.error('Failed to send revaluation payment notification:', emailErr);
+    }
 
     return sendSuccess({
       req,
@@ -1070,6 +1093,33 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
       studentId: request.student,
       revaluationRequestId: request._id,
     });
+
+    // Notify institute (and student if email known) of the revaluation result update
+    try {
+      const student = await Student.findById(request.student).populate('course', 'name');
+      const institute = await Institute.findById(request.institute).populate('user');
+      const revalResults = await RevaluationResult.find({
+        revaluationRequest: request._id,
+        reviewStatus: 'APPROVED',
+      });
+      const instituteUser = (institute as any)?.user as any;
+      await notificationService.notifyRevaluationResultUpdated({
+        instituteName: institute?.orgName || 'N/A',
+        instituteEmail: instituteUser?.email || institute?.emailAddress || 'N/A',
+        studentName: student ? `${student.firstName} ${student.lastName}`.trim() : 'N/A',
+        studentEmail: student?.email || 'N/A',
+        courseName: (student as any)?.course?.name || 'N/A',
+        semesterNumber: request.semester,
+        revaluationResults: revalResults.map((r: any) => ({
+          subjectName: r.subjectName,
+          originalMarks: r.originalMarks,
+          revisedTotalMarks: r.revisedTotalMarks ?? r.originalMarks,
+          marksChange: r.marksChange ?? 0,
+        })),
+      });
+    } catch (emailErr: any) {
+      console.error('Failed to send revaluation result notification:', emailErr);
+    }
 
     return sendSuccess({ req, res, message: 'Revaluation result approved successfully', data: revalResult });
   } catch (error: any) {

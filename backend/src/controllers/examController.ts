@@ -7,6 +7,8 @@ import { Institute } from '../models/instituteModel';
 import { Course } from '../models/courseModel';
 import { Batch } from '../models/batchModel';
 import { FeeRecord } from '../models/feeRecordModel';  // ← ADD THIS IMPORT
+import { User } from '../models/userModel';
+import notificationService from '../services/notificationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { emitEvent } from '../config/socket';
 
@@ -175,6 +177,22 @@ export const applyForExam = async (req: Request, res: Response) => {
     });
 
     emitEvent('EXAM_APPLICATION_UPDATED', { applicationId: application._id, status: 'Pending' });
+
+    // Send confirmation email to institute + notification to academy
+    try {
+      const user = await User.findById(institute.user);
+      await notificationService.notifyExamApplicationSubmitted({
+        instituteName: institute.orgName,
+        instituteEmail: user?.email || institute.emailAddress,
+        courseName: course.name,
+        semesterNumber: validatedData.semesterNumber,
+        subjects: validatedData.subjects,
+        totalFee: 0,
+        paymentId: validatedData.utrNumber || 'N/A',
+      });
+    } catch (emailErr: any) {
+      console.error('Failed to send exam application notification:', emailErr);
+    }
 
     return sendSuccess({ req, res, statusCode: 201, message: 'Exam application submitted successfully', data: application });
   } catch (error: any) {
@@ -349,6 +367,30 @@ export const reviewExamApplication = async (req: Request, res: Response) => {
     }
 
     await application.save();
+
+    // Notify institute when the application is approved
+    if (validatedData.status === 'Approved') {
+      try {
+        const [instituteDoc, courseDoc] = await Promise.all([
+          Institute.findById(application.institute).populate('user'),
+          Course.findById(application.course),
+        ]);
+        if (instituteDoc) {
+          const instituteUser = (instituteDoc as any).user as any;
+          await notificationService.notifyExamApplicationApproved({
+            instituteName: instituteDoc.orgName,
+            instituteEmail: instituteUser?.email || instituteDoc.emailAddress,
+            courseName: courseDoc?.name || 'N/A',
+            semesterNumber: application.semesterNumber,
+            examDate: application.scheduledDate || new Date(),
+            remarks: validatedData.remarks || 'Approved by Academic Board',
+          });
+        }
+      } catch (emailErr: any) {
+        console.error('Failed to send exam approval notification:', emailErr);
+      }
+    }
+
     return sendSuccess({ req, res, message: `Exam application ${validatedData.status.toLowerCase()} successfully`, data: application });
   } catch (error: any) {
     if (error instanceof z.ZodError) throw error;
@@ -402,12 +444,25 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
 
     await application.save();
 
-    // Send email to institute (mock implementation as Razorpay is in mock mode, assuming email service is similar)
-    const instituteDoc = await Institute.findById(application.institute).populate('user');
-    if (instituteDoc && instituteDoc.emailAddress) {
-      console.log(`[EMAIL MOCK] Sending Exam Schedule Publish Email to: ${instituteDoc.emailAddress}`);
-      console.log(`[EMAIL MOCK] Subject: Exam Schedule Published for ${application.course} - ${application.batch}`);
-      console.log(`[EMAIL MOCK] Body: Please check your institute panel for the published exam dates.`);
+    // Send schedule published email to institute
+    try {
+      const instituteDoc = await Institute.findById(application.institute).populate('user');
+      if (instituteDoc) {
+        const instituteUser = (instituteDoc as any).user as any;
+        await notificationService.notifyExamSchedulePublished({
+          instituteName: instituteDoc.orgName,
+          instituteEmail: instituteUser?.email || instituteDoc.emailAddress,
+          courseName: (application as any).course?.name || 'N/A',
+          semesterNumber: application.semesterNumber,
+          examVenue: application.examVenue,
+          examCenter: application.examCenter,
+          examDate: application.scheduledDate || new Date(),
+          reportingTime: application.reportingTime,
+          subjects: application.subjects || [],
+        });
+      }
+    } catch (emailErr: any) {
+      console.error('Failed to send schedule published notification:', emailErr);
     }
 
     return sendSuccess({
