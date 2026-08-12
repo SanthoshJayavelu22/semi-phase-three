@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import InstituteStudentEditModal from './InstituteStudentEditModal';
+import Pagination from '../../../Components/Pagination';
 
 const InstituteERPStudents = ({
   students,
@@ -227,32 +228,13 @@ const InstituteERPStudents = ({
         </div>
 
         {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
-            <span className="text-xs text-slate-500 font-medium">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredList.length)} of {filteredList.length} entries
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Prev
-              </button>
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
-                {currentPage} / {totalPages}
-              </div>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredList.length}
+          itemsPerPage={itemsPerPage}
+        />
       </div>
 
       {/* VIEW DETAILS MODAL */}

@@ -31,6 +31,7 @@ import {
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import revaluationService from '../../../api/revaluation';
+import Pagination from '../../../Components/Pagination';
 
 const STATUS_OPTIONS = [
   { value: 'All', label: 'All Status' },
@@ -167,6 +168,10 @@ const AcademyRevaluation = () => {
 
     return filtered;
   }, [requests, statusFilter, instituteFilter, semesterFilter, academicYearFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, instituteFilter, semesterFilter, academicYearFilter]);
 
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
   const paginatedRequests = useMemo(() => {
@@ -1468,7 +1473,13 @@ const AcademyRevaluation = () => {
           ) : (
             <>
               {renderRequestsTable()}
-              {totalPages > 1 && renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredRequests.length}
+                itemsPerPage={itemsPerPage}
+              />
             </>
           )}
         </div>

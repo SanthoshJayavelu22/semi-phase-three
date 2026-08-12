@@ -31,6 +31,7 @@ import academicService from '../../../api/academic';
 import instituteService from '../../../api/institutes';
 import revaluationService from '../../../api/revaluation';
 import examService from '../../../api/exams';
+import Pagination from '../../../Components/Pagination';
 
 const CATEGORY_CONFIG = {
   ALL: { label: 'All Payments', color: 'bg-slate-100 text-slate-800 border-slate-200', icon: SlidersHorizontal },
@@ -278,6 +279,19 @@ const AcademyRemittance = () => {
     });
   }, [allTransactions, selectedCategory, selectedInstitute, dateRange, searchTerm]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedInstitute, dateRange]);
+
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredTransactions.slice(start, start + itemsPerPage);
+  }, [filteredTransactions, currentPage, itemsPerPage]);
+
   // Aggregate Metrics
   const metrics = useMemo(() => {
     const totalCollected = filteredTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
@@ -503,7 +517,7 @@ const AcademyRemittance = () => {
                   </td>
                 </tr>
               ) : filteredTransactions.length > 0 ? (
-                filteredTransactions.map((tx) => {
+                paginatedTransactions.map((tx) => {
                   const cfg = CATEGORY_CONFIG[tx.category] || CATEGORY_CONFIG.ALL;
                   const Icon = cfg.icon;
 
@@ -587,6 +601,15 @@ const AcademyRemittance = () => {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredTransactions.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
 
       {/* ── Transaction Receipt Detail Modal ────────────────────────────────── */}

@@ -23,6 +23,7 @@ import {
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import marksService from '../../../api/marks';
+import Pagination from '../../../Components/Pagination';
 
 const AcademyMarksUpdating = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
@@ -40,6 +41,8 @@ const AcademyMarksUpdating = () => {
   const [availableSemesters] = useState([1, 2, 3, 4, 5, 6]);
   const [editingCell, setEditingCell] = useState(null); // { subjectCode, field }
   const [editValue, setEditValue] = useState('');
+  const [studentListPage, setStudentListPage] = useState(1);
+  const studentsPerPage = 10;
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const fetchStudents = useCallback(async () => {
@@ -133,6 +136,16 @@ const AcademyMarksUpdating = () => {
       return matchSearch && matchBatch && matchCourse && matchInstitute;
     });
   }, [students, searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
+
+  useEffect(() => {
+    setStudentListPage(1);
+  }, [searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
+
+  const totalStudentPages = Math.ceil(filteredStudents.length / studentsPerPage);
+  const paginatedStudents = useMemo(
+    () => filteredStudents.slice((studentListPage - 1) * studentsPerPage, studentListPage * studentsPerPage),
+    [filteredStudents, studentListPage, studentsPerPage]
+  );
 
   // ─── Student Selection ─────────────────────────────────────────────────────
   const handleSelectStudent = useCallback(async (student) => {
@@ -499,7 +512,7 @@ const AcademyMarksUpdating = () => {
                   <p className="text-sm text-slate-500 font-medium">No students found.</p>
                 </div>
               ) : (
-                filteredStudents.map((student) => {
+                paginatedStudents.map((student) => {
                   const isSelected = selectedStudent?._id === student._id;
                   const hasMarks = student.marks && student.marks.length > 0;
                   const allEntered = student.marks?.every((m) => m.isAbsent === true || m.marksObtained !== null);
@@ -552,6 +565,13 @@ const AcademyMarksUpdating = () => {
                 })
               )}
             </div>
+            <Pagination
+              currentPage={studentListPage}
+              totalPages={totalStudentPages}
+              onPageChange={setStudentListPage}
+              totalItems={filteredStudents.length}
+              itemsPerPage={studentsPerPage}
+            />
           </div>
         </div>
 

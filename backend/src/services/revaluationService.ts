@@ -1,6 +1,7 @@
 import { RevaluationRequest } from '../models/revaluationRequestModel';
 import { RevaluationResult } from '../models/revaluationResultModel';
 import { Result } from '../models/resultModel';
+import { Student } from '../models/studentModel';
 import { emitEvent } from '../config/socket';
 import { calculateGrade } from '../utils/helpers';
 
@@ -199,6 +200,46 @@ class RevaluationService {
     });
 
     await result.save();
+
+    // Sync updated revaluation marks back to Student model
+    try {
+      const studentDoc = await Student.findById(result.student);
+      if (studentDoc) {
+        let semRecord = studentDoc.semesters.find((s: any) => s.semesterNumber === result.semester);
+        if (!semRecord) {
+          studentDoc.semesters.push({
+            semesterNumber: result.semester,
+            attendancePercentage: 80,
+            thesisApproved: false,
+            eligibilityStatus: 'Approved',
+            marks: []
+          });
+          semRecord = studentDoc.semesters[studentDoc.semesters.length - 1];
+        }
+
+        result.subjects.forEach((resSubj: any) => {
+          const mIdx = semRecord.marks.findIndex((m: any) => m.subjectCode === resSubj.subjectCode);
+          if (mIdx !== -1) {
+            semRecord.marks[mIdx].marksObtained = resSubj.totalMarks;
+            semRecord.marks[mIdx].grade = resSubj.grade;
+            semRecord.marks[mIdx].totalMarks = 100;
+          } else {
+            semRecord.marks.push({
+              subjectCode: resSubj.subjectCode,
+              subjectName: resSubj.subjectName,
+              marksObtained: resSubj.totalMarks,
+              totalMarks: 100,
+              isAbsent: resSubj.grade === 'ABSENT',
+              grade: resSubj.grade
+            });
+          }
+        });
+
+        await studentDoc.save();
+      }
+    } catch (err) {
+      console.error('Error syncing revaluation marks to student model:', err);
+    }
 
     // Emit event for real-time updates
     emitEvent('RESULT_UPDATED', {

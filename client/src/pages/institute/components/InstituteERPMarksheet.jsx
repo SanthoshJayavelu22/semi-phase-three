@@ -692,8 +692,6 @@ const InstituteERPMarksheet = ({
                           <tr className="border-b border-black bg-slate-100 text-left font-bold">
                             <th className="p-2 border-r border-black w-16 text-center">Code</th>
                             <th className="p-2 border-r border-black">Subject Title</th>
-                            <th className="p-2 border-r border-black w-20 text-center">Internal</th>
-                            <th className="p-2 border-r border-black w-20 text-center">External</th>
                             <th className="p-2 border-r border-black w-20 text-center">Total</th>
                             <th className="p-2 text-center w-16">Result</th>
                           </tr>
@@ -703,8 +701,6 @@ const InstituteERPMarksheet = ({
                             <tr key={sIdx} className="border-b border-black last:border-b-0">
                               <td className="p-2 border-r border-black font-mono text-center">{sub.code}</td>
                               <td className="p-2 border-r border-black font-medium">{sub.name}</td>
-                              <td className="p-2 border-r border-black text-center font-mono">{sub.internal}</td>
-                              <td className="p-2 border-r border-black text-center font-mono">{sub.external}</td>
                               <td className="p-2 border-r border-black text-center font-mono font-bold">{sub.total}</td>
                               <td className="p-2 text-center font-bold">
                                 <span className={sub.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}>
@@ -716,7 +712,7 @@ const InstituteERPMarksheet = ({
                         </tbody>
                         <tfoot>
                           <tr className="border-t-2 border-black bg-slate-50 font-bold">
-                            <td colSpan="4" className="p-2 text-right border-r border-black uppercase text-[11px]">
+                            <td colSpan="2" className="p-2 text-right border-r border-black uppercase text-[11px]">
                               Aggregate Total Marks
                             </td>
                             <td className="p-2 text-center border-r border-black font-mono">

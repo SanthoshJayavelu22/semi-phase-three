@@ -3,6 +3,7 @@ import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap
 import examService from '../../../api/exams';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
+import Pagination from '../../../Components/Pagination';
 
 const STEPS = [
   { num: 1, label: 'Select Course', icon: BookOpen },
@@ -572,38 +573,13 @@ const InstituteERPExams = ({
             </div>
           </div>
           {examApplications.length > 0 && (
-            <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-600 pt-4 border-t border-slate-50 mt-4">
-              <button
-                type="button"
-                disabled={activePage === 1}
-                onClick={() => setActivePage(prev => Math.max(prev - 1, 1))}
-                className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(num => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => setActivePage(num)}
-                  className={`w-8 h-8 rounded-lg border text-xs font-black transition-all cursor-pointer ${
-                    activePage === num
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/10'
-                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  {num}
-                </button>
-              ))}
-              <button
-                type="button"
-                disabled={activePage === totalPages}
-                onClick={() => setActivePage(prev => Math.min(prev + 1, totalPages))}
-                className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <Pagination
+              currentPage={activePage}
+              totalPages={totalPages}
+              onPageChange={setActivePage}
+              totalItems={examApplications.length}
+              itemsPerPage={itemsPerPage}
+            />
           )}
         </div>
       </div>

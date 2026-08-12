@@ -3,6 +3,7 @@ import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle, Loader2 } fr
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
+import Pagination from '../../../Components/Pagination';
 
 // Helper to calculate required semester count based on course duration and durationType
 const getSemesterCount = (duration, durationType) => {
@@ -819,32 +820,13 @@ const InstituteERPCourses = ({
         </div>
         
         {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCoursesList.length)} of {filteredCoursesList.length} Courses
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Prev
-              </button>
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
-                {currentPage} / {totalPages}
-              </div>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredCoursesList.length}
+          itemsPerPage={itemsPerPage}
+        />
       </div>
 
       {/* ─── EDIT COURSE MODAL ────────────────────────────────────────────────── */}

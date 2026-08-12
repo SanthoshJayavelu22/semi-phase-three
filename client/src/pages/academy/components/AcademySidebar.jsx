@@ -39,7 +39,6 @@ const NAV_GROUPS = [
     groupTitle: 'Marks & Evaluation',
     items: [
       { id: 'marks', path: '/academy/marks', label: 'Enter Student Marks', Icon: FileSpreadsheet },
-      { id: 'student-marks', path: '/academy/student-marks', label: 'Student Marksheets', Icon: BarChart3 },
     ]
   },
   {

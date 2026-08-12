@@ -32,6 +32,7 @@ import revaluationService from '../../../api/revaluation';
 import academicService from '../../../api/academic';
 import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
 import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
+import Pagination from '../../../Components/Pagination';
 
 const InstituteERPRevaluation = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
@@ -1369,32 +1370,13 @@ const InstituteERPRevaluation = () => {
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
-            <span className="text-[10px] text-slate-400 font-semibold">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length}
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
-                {currentPage} / {totalPages}
-              </div>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredRequests.length}
+          itemsPerPage={itemsPerPage}
+        />
       </div>
 
       {/* ─── Request Detail Modal ───────────────────────────────────────────── */}

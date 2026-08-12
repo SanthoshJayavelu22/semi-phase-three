@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
-import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Calendar, UserCheck, X, Send, MapPin } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Calendar, UserCheck, X, Send, MapPin, Building2, User, Eye, FileText, ChevronRight } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import examService from '../../../api/exams';
+import Pagination from '../../../Components/Pagination';
 
 const AcademyEligibility = ({ 
   examApplications = [], 
@@ -44,6 +45,19 @@ const AcademyEligibility = ({
     });
   }, [examApplications, searchQuery, statusFilter]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredList.slice(start, start + itemsPerPage);
+  }, [filteredList, currentPage, itemsPerPage]);
+
   // Open Review Dialog
   const handleOpenReview = (app) => {
     setReviewingApp(app);
@@ -57,16 +71,11 @@ const AcademyEligibility = ({
     e.preventDefault();
     if (!reviewingApp) return;
 
-    if (reviewStatus === 'Approved' && !scheduledDate) {
-      setErrorMsg("A scheduled exam date is required to approve the application.");
-      return;
-    }
-
     setLoading(true);
     try {
       const payload = {
         status: reviewStatus,
-        scheduledDate: reviewStatus === 'Approved' ? scheduledDate : undefined,
+        scheduledDate: scheduledDate || undefined,
         remarks: remarks.trim() || undefined
       };
 
@@ -101,14 +110,37 @@ const AcademyEligibility = ({
        setPubSubjectSchedules(courseSubjects.map(subject => ({ subject, date: '', time: '' })));
     }
 
+    // Auto-fetch practical exam names from course / semester if available
+    const semNum = app.semesterNumber || 1;
+    const targetSem = app.course?.semesters?.find(s => s.semesterNumber === semNum) || app.course?.semesters?.[0];
+    
+    let autoPracticalName = '';
+    let autoSubjectsList = [];
+
+    if (targetSem && targetSem.practicalExams && targetSem.practicalExams.length > 0) {
+      const pracNames = targetSem.practicalExams
+        .map(p => typeof p === 'string' ? p : (p.code ? `[${p.code}] ${p.name}` : p.name))
+        .filter(Boolean);
+      autoPracticalName = pracNames.join(', ');
+      autoSubjectsList = pracNames;
+    } else if (app.course?.practicalExams && app.course.practicalExams.length > 0) {
+      const pracNames = app.course.practicalExams
+        .map(p => typeof p === 'string' ? p : (p.code ? `[${p.code}] ${p.name}` : p.name))
+        .filter(Boolean);
+      autoPracticalName = pracNames.join(', ');
+      autoSubjectsList = pracNames;
+    } else if (app.course?.practicalExamName) {
+      autoPracticalName = app.course.practicalExamName;
+    }
+
     // Pre-fill practical exam details if already published
     const existingPractical = app.practicalExam || {};
     setPubPracticalExam({
-      name: existingPractical.name || '',
+      name: existingPractical.name || autoPracticalName || 'Practical Examination',
       venue: existingPractical.venue || '',
       date: existingPractical.date ? new Date(existingPractical.date).toISOString().split('T')[0] : '',
       time: existingPractical.time || '',
-      subjects: existingPractical.subjects || []
+      subjects: existingPractical.subjects?.length ? existingPractical.subjects : autoSubjectsList
     });
   };
 
@@ -237,8 +269,8 @@ const AcademyEligibility = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-150/60 text-xs font-bold text-slate-700 bg-white">
-              {filteredList.length > 0 ? (
-                filteredList.map((app, idx) => {
+              {paginatedList.length > 0 ? (
+                paginatedList.map((app, idx) => {
                   const status = app.status || 'Pending';
                   const dateText = app.scheduledDate 
                     ? new Date(app.scheduledDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
@@ -247,7 +279,7 @@ const AcademyEligibility = ({
                   return (
                     <tr key={app._id || app.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-4 text-center text-[10px] text-gray-400 font-extrabold">
-                        {String(idx + 1).padStart(2, '0')}
+                        {String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0')}
                       </td>
                       <td className="px-6 py-4 font-extrabold text-slate-900">{app.institute?.orgName || 'N/A'}</td>
                       <td className="px-6 py-4 text-slate-500 font-semibold">{app.course?.name || 'MBBS'}</td>
@@ -317,6 +349,15 @@ const AcademyEligibility = ({
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredList.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
 
       {/* REVIEW DIALOG MODAL */}
@@ -422,25 +463,6 @@ const AcademyEligibility = ({
                   </button>
                 </div>
               </div>
-
-              {/* Scheduled Date Field - ONLY shown and required if Approved */}
-              {reviewStatus === 'Approved' && (
-                <div className="space-y-1.5 animate-in slide-in-from-top-3 duration-200">
-                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Scheduled Examination Date *</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="date"
-                      required
-                      value={scheduledDate}
-                      min={new Date().toISOString().split('T')[0]} // Block historical dates
-                      onChange={(e) => setScheduledDate(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs"
-                    />
-                  </div>
-                  <span className="text-[9px] font-semibold text-slate-400">Select the official schedule date to publish to the Institute portal.</span>
-                </div>
-              )}
 
               {/* Audit Remarks */}
               <div>
@@ -603,22 +625,6 @@ const AcademyEligibility = ({
                 </div>
               )}
 
-              {/* Exam Date (optional update) */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Exam Date (Optional Update)</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="date"
-                    value={pubDate}
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setPubDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                  />
-                </div>
-                <p className="text-[9px] text-slate-400 font-semibold mt-1">Leave blank to keep current scheduled date</p>
-              </div>
-
               {/* Practical Exam Details (Optional) */}
               <div className="pt-2 border-t border-slate-200/60 space-y-3">
                 <div className="flex items-center justify-between">
@@ -635,7 +641,7 @@ const AcademyEligibility = ({
                       type="text"
                       value={pubPracticalExam.name}
                       onChange={(e) => setPubPracticalExam({ ...pubPracticalExam, name: e.target.value })}
-                      placeholder="e.g. Clinical OSCE"
+                      placeholder="Auto-fetched based on semester practicals"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
                     />
                   </div>

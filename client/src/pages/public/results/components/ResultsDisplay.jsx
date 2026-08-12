@@ -189,9 +189,7 @@ const ResultsDisplay = ({ data, onBack }) => {
                         <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200">Sem</th>
                         <th className="py-3.5 px-4 text-center w-28 border-r border-slate-200">Sub-Code</th>
                         <th className="py-3.5 px-6 border-r border-slate-200">Subject Name</th>
-                        <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200" title="Internal Marks">Int</th>
-                        <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200" title="External Marks">Ext</th>
-                        <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200" title="Total Marks">Tot</th>
+                        <th className="py-3.5 px-4 text-center w-20 border-r border-slate-200" title="Total Marks">Marks</th>
                         <th className="py-3.5 px-4 text-center w-20 border-r border-slate-200">Grade</th>
                         <th className="py-3.5 px-4 text-center w-24">Status</th>
                       </tr>
@@ -215,12 +213,6 @@ const ResultsDisplay = ({ data, onBack }) => {
                             </td>
                             <td className="py-3.5 px-6 border-r border-slate-200 font-extrabold text-slate-900">
                               {subjectNameCapitalized}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200 font-semibold text-slate-600">
-                              {subject.internalMarks ?? '-'}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200 font-semibold text-slate-600">
-                              {subject.externalMarks ?? '-'}
                             </td>
                             <td className="py-3.5 px-4 text-center border-r border-slate-200 font-black text-slate-900">
                               {subject.totalMarks ?? '-'}

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
+import Pagination from '../../../Components/Pagination';
 
 const AcademyPublishingDetails = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
@@ -38,6 +39,8 @@ const AcademyPublishingDetails = () => {
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [activeTab, setActiveTab] = useState('published'); // 'published' | 'scheduled' | 'all'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const [publications, setPublications] = useState([]);
@@ -57,24 +60,37 @@ const AcademyPublishingDetails = () => {
         const raw = res.data?.data?.results || res.data?.results || res.data?.data || res.data || [];
         const data = Array.isArray(raw) ? raw : [];
         
-        // Map to expected publication structure in UI
-        const mappedData = data.map(r => ({
-          id: r._id || r.id || Math.random(),
-          exam: r.exam?.name || r.examName || 'CCT-EM Fellowship Exam',
-          batch: r.student?.batch?.name || r.batchName || 'Batch 2026',
-          institute: r.student?.institute?.orgName || r.instituteName || 'Accredited Hospital',
-          course: r.student?.course?.name || r.courseName || 'CCT-EM Fellowship',
-          date: r.publishedDate ? new Date(r.publishedDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          time: r.publishedDate ? new Date(r.publishedDate).toLocaleTimeString() : '10:00:00 AM',
-          ampm: '',
-          status: r.isPublished || r.published ? 'Published' : 'Scheduled',
-          autoPublish: false,
-          studentsCount: 1,
-          publishedBy: 'SEMI Board Controller',
-          publishedAt: r.publishedDate || new Date().toISOString(),
-          notificationSent: true,
-          results: []
-        }));
+        const mappedData = data.map(r => {
+          const studentObj = r.student || {};
+          const courseObj = studentObj.course || {};
+          const batchObj = studentObj.batch || {};
+          const instObj = studentObj.institute || {};
+
+          const examTitle = r.exam?.name || r.examName || courseObj.name || courseObj.courseName || 'Emergency Medicine Examination';
+          const batchTitle = batchObj.name || (batchObj.year ? `Batch ${batchObj.year}` : (r.batchName || 'Batch 2026'));
+          const instTitle = instObj.orgName || r.instituteName || 'SEMI Institute';
+          const courseTitle = courseObj.name || courseObj.courseName || r.courseName || 'Emergency Medicine';
+
+          const pubDateObj = r.publishedDate ? new Date(r.publishedDate) : (r.createdAt ? new Date(r.createdAt) : new Date());
+
+          return {
+            id: r._id || r.id || Math.random(),
+            exam: examTitle,
+            batch: batchTitle,
+            institute: instTitle,
+            course: courseTitle,
+            date: pubDateObj.toISOString().split('T')[0],
+            time: pubDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            ampm: '',
+            status: r.isPublished || r.published ? 'Published' : 'Scheduled',
+            autoPublish: false,
+            studentsCount: 1,
+            publishedBy: 'SEMI Board Controller',
+            publishedAt: pubDateObj.toISOString(),
+            notificationSent: true,
+            results: r.subjects || []
+          };
+        });
         setPublications(mappedData);
       } catch (err) {
         console.warn('Publications fetch fallback:', err);
@@ -134,6 +150,16 @@ const AcademyPublishingDetails = () => {
       return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
     });
   }, [filteredPublications, sortConfig]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedBatch, selectedInstitute, selectedExam, activeTab]);
+
+  const totalPages = Math.ceil(sortedPublications.length / itemsPerPage);
+  const paginatedPublications = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedPublications.slice(start, start + itemsPerPage);
+  }, [sortedPublications, currentPage, itemsPerPage]);
 
   const stats = useMemo(() => {
     const total = publications.length;
@@ -476,10 +502,10 @@ const AcademyPublishingDetails = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 bg-white">
-              {sortedPublications.map((pub, idx) => {
+              {paginatedPublications.map((pub, idx) => {
                 const statusBadge = getStatusBadge(pub.status);
                 const autoBadge = getAutoPublishBadge(pub.autoPublish);
-                const serialNo = String(idx + 1).padStart(2, '0');
+                const serialNo = String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0');
 
                 return (
                   <tr key={pub.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -573,6 +599,16 @@ const AcademyPublishingDetails = () => {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={sortedPublications.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
+      </div>
 
         {/* ─── Footer ────────────────────────────────────────────────────────── */}
         <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-[10px] text-slate-400 font-semibold">

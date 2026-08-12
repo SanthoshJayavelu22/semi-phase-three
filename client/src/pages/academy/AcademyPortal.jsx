@@ -24,7 +24,6 @@ import AcademyVerification from './components/AcademyVerification';
 import AcademyStudentModal from './components/AcademyStudentModal';
 import AcademyRemittance from './components/AcademyRemittance';
 import AcademyMarksUpdating from './components/AcademyMarksUpdating';
-import AcademyStudentMarks from './components/AcademyStudentMarks';
 import AcademyPublishResults from './components/AcademyPublishResults';
 import AcademyPublishingDetails from './components/AcademyPublishingDetails';
 import AcademyRevaluation from './components/AcademyRevaluation';
@@ -42,7 +41,6 @@ const DASHBOARD_PATHS = [
   '/academy/eligibility',
   '/academy/verification',
   '/academy/marks',
-  '/academy/student-marks',
   '/academy/publish-results',
   '/academy/publish-details',
   '/academy/revaluation',
@@ -56,7 +54,6 @@ const getTabFromPath = (pathname) => {
   if (pathname === '/academy/eligibility') return 'eligibility';
   if (pathname === '/academy/verification') return 'verification';
   if (pathname === '/academy/marks') return 'marks';
-  if (pathname === '/academy/student-marks') return 'student-marks';
   if (pathname === '/academy/publish-results') return 'publish-results';
   if (pathname === '/academy/publish-details') return 'publish-details';
   if (pathname === '/academy/revaluation') return 'revaluation';
@@ -103,7 +100,6 @@ const AcademyPortal = () => {
       eligibility: '/academy/eligibility',
       verification: '/academy/verification',
       marks: '/academy/marks',
-      'student-marks': '/academy/student-marks',
       'publish-results': '/academy/publish-results',
       'publish-details': '/academy/publish-details',
       revaluation: '/academy/revaluation',
@@ -181,41 +177,74 @@ const AcademyPortal = () => {
       const studentsRes = await academicService.listStudents();
       const studentsData = extractData(studentsRes) || [];
       if (Array.isArray(studentsData)) {
-        const formatted = studentsData.map(s => ({
-          id: s._id,
-          _id: s._id,
-          enrollmentNo: s.enrollmentId,
-          fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-          email: s.email,
-          mobile: s.contactNumber,
-          courseId: s.course?._id || s.course,
-          batchId: s.batch?._id || s.batch,
-          instituteId: s.institute?._id || s.institute,
-          course: s.course?.name || 'General Medicine',
-          batch: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-          status: s.remittedToAcademy ? 'Completed' : 'Active',
-          institute: s.institute?.orgName || 'N/A',
-          eligibilityStatus: s.remittedToAcademy && s.attendancePercentage >= 75 && s.thesisApproved ? 'Approved' : (s.remittedToAcademy ? 'Pending' : 'Rejected'),
-          rejectionReason: !s.remittedToAcademy ? 'Academy fee remittance is pending.' : (s.attendancePercentage < 75 ? 'Attendance is below 75% threshold.' : 'Thesis approval is pending.'),
-          attendancePercentage: s.attendancePercentage || 0,
-          thesisApproved: s.thesisApproved || false,
-          remittedToAcademy: s.remittedToAcademy || false,
-          documents: s.documents || {},
-          dateOfBirth: s.dateOfBirth ? (new Date(s.dateOfBirth).toISOString().split('T')[0]) : null,
-          dobFormatted: s.dateOfBirth ? (new Date(s.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : 'N/A',
-          qualification: s.qualification,
-          mbbsQualification: s.mbbsQualification,
-          yearOfPassing: s.yearOfPassing,
-          universityName: s.universityName,
-          medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
-          isForeignGraduate: s.isForeignGraduate || false,
-          fmgeClearanceStatus: s.fmgeClearanceStatus || 'Not Applicable',
-          courseDirector: s.courseDirector,
-          utrNumber: s.utrNumber,
-          homeAddress: s.homeAddress,
-          contactNumber: s.contactNumber,
-          semesters: s.semesters || []
-        }));
+        const formatted = studentsData.map(s => {
+          const sSemesters = s.semesters || [];
+          const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+
+          const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
+            ? s.attendancePercentage
+            : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+          const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
+          const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+          const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
+
+          let eligibility = 'Pending';
+          let reason = '';
+          if (!isRemitted) {
+            eligibility = 'Rejected';
+            reason = 'Academy fee remittance is pending.';
+          } else if (attendancePct < 75) {
+            eligibility = 'Rejected';
+            reason = `Attendance (${attendancePct}%) is below mandatory 75% threshold.`;
+          } else if (!isThesisApproved && !isThesisUploaded) {
+            eligibility = 'Rejected';
+            reason = 'Thesis document submission is pending.';
+          } else if (!isThesisApproved && isThesisUploaded) {
+            eligibility = 'Pending';
+            reason = 'Thesis uploaded and awaiting board approval.';
+          } else {
+            eligibility = 'Approved';
+            reason = 'All credentials, attendance, and thesis criteria fulfilled.';
+          }
+
+          return {
+            id: s._id,
+            _id: s._id,
+            enrollmentNo: s.enrollmentId,
+            fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+            email: s.email,
+            mobile: s.contactNumber,
+            courseId: s.course?._id || s.course,
+            batchId: s.batch?._id || s.batch,
+            instituteId: s.institute?._id || s.institute,
+            course: s.course?.name || 'General Medicine',
+            batch: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
+            status: isRemitted ? 'Completed' : 'Active',
+            institute: s.institute?.orgName || 'N/A',
+            eligibilityStatus: eligibility,
+            rejectionReason: reason,
+            attendancePercentage: attendancePct,
+            thesisApproved: isThesisApproved,
+            thesisUploaded: isThesisUploaded,
+            remittedToAcademy: isRemitted,
+            documents: s.documents || {},
+            dateOfBirth: s.dateOfBirth ? (new Date(s.dateOfBirth).toISOString().split('T')[0]) : null,
+            dobFormatted: s.dateOfBirth ? (new Date(s.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : 'N/A',
+            qualification: s.qualification,
+            mbbsQualification: s.mbbsQualification,
+            yearOfPassing: s.yearOfPassing,
+            universityName: s.universityName,
+            medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
+            isForeignGraduate: s.isForeignGraduate || false,
+            fmgeClearanceStatus: s.fmgeClearanceStatus || 'Not Applicable',
+            courseDirector: s.courseDirector,
+            utrNumber: s.utrNumber,
+            homeAddress: s.homeAddress,
+            contactNumber: s.contactNumber,
+            semesters: sSemesters
+          };
+        });
         setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
@@ -574,10 +603,6 @@ const AcademyPortal = () => {
 
                 {activeTab === 'marks' && (
                   <AcademyMarksUpdating />
-                )}
-
-                {activeTab === 'student-marks' && (
-                  <AcademyStudentMarks />
                 )}
 
                 {activeTab === 'publish-results' && (

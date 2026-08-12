@@ -15,7 +15,6 @@ import AcademyInspectorModal from './components/AcademyInspectorModal';
 import AcademyRejectionModal from './components/AcademyRejectionModal';
 import AcademyStudentModal from './components/AcademyStudentModal';
 import AcademyMarksUpdating from './components/AcademyMarksUpdating';
-import AcademyStudentMarks from './components/AcademyStudentMarks';
 import AcademyPublishResults from './components/AcademyPublishResults';
 import AcademyPublishDetails from './components/AcademyPublishDetails';
 import AcademyRevaluation from './components/AcademyRevaluation';
@@ -158,41 +157,57 @@ export default function AcademyLayout() {
       const studentsData = extractData(studentsRes) || [];
       
       if (Array.isArray(studentsData)) {
-        const formatted = studentsData.map(s => ({
-          id: s._id,
-          _id: s._id,
-          enrollmentNo: s.enrollmentId,
-          fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-          email: s.email,
-          mobile: s.contactNumber,
-          course: s.course?.name || 'General Medicine',
-          courseId: s.course?._id || s.course,
-          batch: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-          batchId: s.batch?._id || s.batch,
-          status: s.remittedToAcademy ? 'Completed' : 'Active',
-          institute: s.institute?.orgName || 'N/A',
-          // Pass the full semesters array so AcademyVerification can iterate per-semester eligibility
-          semesters: (s.semesters || []).map(sem => ({
-            semesterNumber: sem.semesterNumber,
-            attendancePercentage: sem.attendancePercentage ?? 0,
-            thesisApproved: sem.thesisApproved ?? false,
-            thesisDocumentUrl: sem.thesisDocumentUrl || '',
-            eligibilityStatus: sem.eligibilityStatus || 'Pending',
-          })),
-          // Eligibility calculation matching backend logic
-          eligibilityStatus: s.remittedToAcademy && s.attendancePercentage >= 75 && s.thesisApproved
-            ? 'Approved'
-            : s.remittedToAcademy
-            ? 'Pending'
-            : 'Rejected',
-          rejectionReason: !s.remittedToAcademy
-            ? 'Academy fee remittance is pending.'
-            : s.attendancePercentage < 75
-            ? 'Attendance is below 75% threshold.'
-            : 'Thesis approval is pending.',
-          attendancePercentage: s.attendancePercentage || 0,
-          thesisApproved: s.thesisApproved || false,
-          remittedToAcademy: s.remittedToAcademy || false,
+        const formatted = studentsData.map(s => {
+          const sSemesters = s.semesters || [];
+          const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+
+          const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
+            ? s.attendancePercentage
+            : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+          const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
+          const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+          const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
+
+          let eligibility = 'Pending';
+          let reason = '';
+          if (!isRemitted) {
+            eligibility = 'Rejected';
+            reason = 'Academy fee remittance is pending.';
+          } else if (attendancePct < 75) {
+            eligibility = 'Rejected';
+            reason = `Attendance (${attendancePct}%) is below mandatory 75% threshold.`;
+          } else if (!isThesisApproved && !isThesisUploaded) {
+            eligibility = 'Rejected';
+            reason = 'Thesis document submission is pending.';
+          } else if (!isThesisApproved && isThesisUploaded) {
+            eligibility = 'Pending';
+            reason = 'Thesis uploaded and awaiting board approval.';
+          } else {
+            eligibility = 'Approved';
+            reason = 'All credentials, attendance, and thesis criteria fulfilled.';
+          }
+
+          return {
+            id: s._id,
+            _id: s._id,
+            enrollmentNo: s.enrollmentId,
+            fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+            email: s.email,
+            mobile: s.contactNumber,
+            course: s.course?.name || 'General Medicine',
+            courseId: s.course?._id || s.course,
+            batch: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
+            batchId: s.batch?._id || s.batch,
+            status: isRemitted ? 'Completed' : 'Active',
+            institute: s.institute?.orgName || 'N/A',
+            semesters: sSemesters,
+            eligibilityStatus: eligibility,
+            rejectionReason: reason,
+            attendancePercentage: attendancePct,
+            thesisApproved: isThesisApproved,
+            thesisUploaded: isThesisUploaded,
+            remittedToAcademy: isRemitted,
           documents: s.documents || {},
           dateOfBirth: s.dateOfBirth ? (new Date(s.dateOfBirth).toISOString().split('T')[0]) : null,
           dobFormatted: s.dateOfBirth ? (new Date(s.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : 'N/A',
@@ -555,7 +570,6 @@ export default function AcademyLayout() {
     examApplications,
     setExamApplications,
     AcademyMarksUpdating,
-    AcademyStudentMarks,
     AcademyPublishResults,
     AcademyPublishDetails,
     AcademyRevaluation,

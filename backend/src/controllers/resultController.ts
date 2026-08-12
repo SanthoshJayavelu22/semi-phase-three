@@ -49,7 +49,17 @@ export const getAllResults = async (req: Request, res: Response) => {
     const options = {
       page: parseInt(page as string),
       limit: parseInt(limit as string),
-      populate: [{ path: 'student', select: 'firstName lastName enrollmentId email' }],
+      populate: [
+        {
+          path: 'student',
+          select: 'firstName lastName enrollmentId email course batch institute',
+          populate: [
+            { path: 'course', select: 'name courseName' },
+            { path: 'batch', select: 'name year' },
+            { path: 'institute', select: 'orgName' }
+          ]
+        }
+      ],
       sort: { createdAt: -1 } as any,
     };
 

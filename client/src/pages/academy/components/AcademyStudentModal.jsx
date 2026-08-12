@@ -1,4 +1,4 @@
-import { User, Award, FileText, CheckCircle, XCircle, ExternalLink, BookOpen, UserCheck, ShieldAlert } from 'lucide-react';
+import { User, Award, FileText, CheckCircle, XCircle, ExternalLink, BookOpen, UserCheck, ShieldAlert, Layers } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const AcademyStudentModal = ({ student, isOpen, onClose }) => {
@@ -13,6 +13,20 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
   };
 
   const docs = student.documents || {};
+  const sSemesters = student.semesters || [];
+  const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+  
+  // Calculate attendance: root property OR latest semester OR average
+  const attendancePct = (student.attendancePercentage !== undefined && student.attendancePercentage !== null && student.attendancePercentage > 0)
+    ? student.attendancePercentage
+    : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+  // Remittance status: student.remittedToAcademy OR razorpayPaymentId
+  const isRemitted = Boolean(student.remittedToAcademy || student.razorpayPaymentId);
+
+  // Thesis status: approved if student.thesisApproved or any sem thesisApproved. Uploaded if any thesisDocumentUrl exists.
+  const isThesisApproved = Boolean(student.thesisApproved || sSemesters.some(s => s.thesisApproved));
+  const isThesisUploaded = Boolean(student.thesisUploaded || sSemesters.some(s => s.thesisDocumentUrl));
 
   return (
     <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -98,23 +112,23 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                   </div>
                 </div>
                 <div>
-  <span className="text-[10px] text-slate-400 font-medium block">FMGE Clearance</span>
-  <span className={`inline-flex px-2 py-0.5 rounded text-[8px] uppercase tracking-wider font-black ${
-    student.fmgeClearanceStatus === 'Cleared' ? 'bg-emerald-100 text-emerald-800' : 
-    student.fmgeClearanceStatus === 'Failed' ? 'bg-rose-100 text-rose-800' : 
-    'bg-slate-200 text-slate-700'
-  }`}>
-    {student.fmgeClearanceStatus || 'Not Applicable'}
-  </span>
-</div>
+                  <span className="text-[10px] text-slate-400 font-medium block">FMGE Clearance</span>
+                  <span className={`inline-flex px-2 py-0.5 rounded text-[8px] uppercase tracking-wider font-black ${
+                    student.fmgeClearanceStatus === 'Cleared' ? 'bg-emerald-100 text-emerald-800' : 
+                    student.fmgeClearanceStatus === 'Failed' ? 'bg-rose-100 text-rose-800' : 
+                    'bg-slate-200 text-slate-700'
+                  }`}>
+                    {student.fmgeClearanceStatus || 'Not Applicable'}
+                  </span>
+                </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-medium block">Course Director</span>
                   <span className="text-slate-700">{student.courseDirector || 'N/A'}</span>
                 </div>
-              <div>
-  <span className="text-[10px] text-slate-400 font-medium block">Home Address</span>
-  <span className="text-slate-600 font-medium leading-relaxed block">{student.homeAddress || student.address || 'N/A'}</span>
-</div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-medium block">Home Address</span>
+                  <span className="text-slate-600 font-medium leading-relaxed block">{student.homeAddress || student.address || 'N/A'}</span>
+                </div>
               </div>
             </div>
 
@@ -167,27 +181,29 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <span className="text-[10px] text-slate-400 font-medium block">Remittance status</span>
-                <span className={`inline-flex items-center gap-1 mt-1 text-[9px] uppercase tracking-wider ${student.remittedToAcademy ? 'text-emerald-700' : 'text-rose-700'}`}>
-                  {student.remittedToAcademy ? (
-                    <><CheckCircle className="w-3.5 h-3.5" /> Paid</>
+                <span className={`inline-flex items-center gap-1 mt-1 text-[9px] uppercase tracking-wider ${isRemitted ? 'text-emerald-700 font-extrabold' : 'text-rose-700 font-extrabold'}`}>
+                  {isRemitted ? (
+                    <><CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Paid</>
                   ) : (
-                    <><XCircle className="w-3.5 h-3.5" /> Pending</>
+                    <><XCircle className="w-3.5 h-3.5 text-rose-600" /> Pending</>
                   )}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-medium block">Attendance Tracker</span>
-                <span className={`text-xs ${student.attendancePercentage >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {student.attendancePercentage}% (Min 75%)
+                <span className={`text-xs ${attendancePct >= 75 ? 'text-emerald-600 font-extrabold' : 'text-rose-600 font-extrabold'}`}>
+                  {attendancePct}% (Min 75%)
                 </span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-medium block">Thesis Status</span>
-                <span className={`inline-flex items-center gap-1 mt-1 text-[9px] uppercase tracking-wider ${student.thesisApproved ? 'text-emerald-700' : 'text-rose-700'}`}>
-                  {student.thesisApproved ? (
-                    <><CheckCircle className="w-3.5 h-3.5" /> Approved</>
+                <span className={`inline-flex items-center gap-1 mt-1 text-[9px] uppercase tracking-wider ${isThesisApproved ? 'text-emerald-700 font-extrabold' : (isThesisUploaded ? 'text-amber-700 font-extrabold' : 'text-rose-700 font-extrabold')}`}>
+                  {isThesisApproved ? (
+                    <><CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Approved</>
+                  ) : isThesisUploaded ? (
+                    <><FileText className="w-3.5 h-3.5 text-amber-600" /> Submitted (Pending Approval)</>
                   ) : (
-                    <><XCircle className="w-3.5 h-3.5" /> Pending</>
+                    <><XCircle className="w-3.5 h-3.5 text-rose-600" /> Pending</>
                   )}
                 </span>
               </div>
@@ -200,6 +216,95 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                   {student.rejectionReason}
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Semester-Wise Detailed Breakdown (Fee, Attendance & Thesis) */}
+          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-4">
+            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5 border-b border-slate-200/60 pb-2">
+              <Layers className="w-3.5 h-3.5 text-blue-600" /> Semester-Wise Breakdown (Fee, Attendance & Thesis)
+            </h4>
+
+            {sSemesters.length > 0 ? (
+              <div className="space-y-3">
+                {sSemesters.map((sem) => {
+                  const semAtt = sem.attendancePercentage ?? 0;
+                  const semAttValid = semAtt >= 75;
+                  const semThesisDoc = sem.thesisDocumentUrl;
+                  const semThesisApproved = sem.thesisApproved;
+                  const semRemitted = isRemitted || sem.feeRemitted;
+
+                  return (
+                    <div key={sem.semesterNumber} className="bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-sm space-y-3 text-xs">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <span className="font-extrabold text-blue-700 text-xs uppercase tracking-wider">
+                          Semester {sem.semesterNumber}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                          semAttValid && (semThesisApproved || semThesisDoc) ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {sem.eligibilityStatus || (semAttValid && semThesisApproved ? 'Approved' : 'Pending Review')}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* 1. Exam & Board Fee Remittance */}
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150 space-y-1">
+                          <span className="text-[9px] uppercase font-bold text-slate-400 block">Exam & Board Fee</span>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold ${semRemitted ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {semRemitted ? (
+                              <><CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Paid / Remitted</>
+                            ) : (
+                              <><XCircle className="w-3.5 h-3.5 text-rose-600" /> Remittance Pending</>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* 2. Semester Attendance */}
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150 space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[9px] uppercase font-bold text-slate-400">Attendance</span>
+                            <span className={`text-[10px] font-extrabold ${semAttValid ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {semAtt}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all ${semAttValid ? 'bg-emerald-500' : semAtt >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                              style={{ width: `${Math.min(100, Math.max(0, semAtt))}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-[8px] text-slate-400 block">Min 75% required</span>
+                        </div>
+
+                        {/* 3. Thesis Document & Status */}
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150 space-y-1">
+                          <span className="text-[9px] uppercase font-bold text-slate-400 block">Thesis Document</span>
+                          {semThesisDoc ? (
+                            <div className="space-y-1">
+                              <a
+                                href={getDocUrl(semThesisDoc)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-bold underline truncate max-w-full"
+                              >
+                                <FileText className="w-3 h-3 shrink-0" /> View Thesis PDF
+                              </a>
+                              <span className={`block text-[9px] font-extrabold uppercase ${semThesisApproved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {semThesisApproved ? '✓ Approved' : '⏳ Pending Review'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic block">Not Uploaded</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 italic">No semester breakdown records initialized for this candidate.</p>
             )}
           </div>
 

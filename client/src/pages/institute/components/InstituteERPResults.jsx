@@ -26,6 +26,7 @@ import resultService from '../../../api/results';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
 import InstituteERPMarksheet from './InstituteERPMarksheet';
+import Pagination from '../../../Components/Pagination';
 
 const InstituteERPResults = ({ user }) => {
   // ─── State ──────────────────────────────────────────────────────────────────
@@ -787,32 +788,13 @@ const InstituteERPResults = ({ user }) => {
         </div>
 
         {/* ─── Pagination ────────────────────────────────────────────────────── */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <span className="text-[10px] text-slate-400 font-semibold">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredResults.length)} of {filteredResults.length}
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
-                {currentPage} / {totalPages}
-              </div>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredResults.length}
+          itemsPerPage={itemsPerPage}
+        />
       </div>
 
       {/* ─── Result Detail Modal ────────────────────────────────────────────── */}
@@ -923,8 +905,6 @@ const InstituteERPResults = ({ user }) => {
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Code</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Name</th>
-                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Internal</th>
-                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">External</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
                         </tr>
@@ -942,8 +922,6 @@ const InstituteERPResults = ({ user }) => {
                               </td>
                               <td className="px-3 py-2.5 font-mono font-bold text-slate-600">{subject.subjectCode || 'N/A'}</td>
                               <td className="px-3 py-2.5 font-bold text-slate-700">{subject.subjectName || 'N/A'}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-slate-700">{subject.internalMarks || 0}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-slate-700">{subject.externalMarks || 0}</td>
                               <td className="px-3 py-2.5 text-center font-bold text-slate-800">{total}</td>
                               <td className="px-3 py-2.5 text-center">
                                 <span className={`inline-flex px-2.5 py-0.5 rounded-lg text-[9px] font-bold border ${gradeBg} ${gradeColor}`}>
@@ -956,7 +934,7 @@ const InstituteERPResults = ({ user }) => {
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-50/70 border-t border-slate-200">
-                          <td colSpan="5" className="px-3 py-2.5 font-black text-xs text-slate-700 text-right">
+                          <td colSpan="3" className="px-3 py-2.5 font-black text-xs text-slate-700 text-right">
                             Overall Total
                           </td>
                           <td className="px-3 py-2.5 text-center font-black text-slate-800">{viewingResult.totalMarks || 0}</td>

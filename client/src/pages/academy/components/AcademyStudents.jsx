@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Compass, Eye } from 'lucide-react';
+import Pagination from '../../../Components/Pagination';
 
 const AcademyStudents = ({ 
   filteredStudents = [], 
@@ -8,6 +9,8 @@ const AcademyStudents = ({
   handleView
 }) => {
   const [instituteFilter, setInstituteFilter] = React.useState('');
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage, setItemsPerPage] = React.useState(10);
 
   const safeStudents = Array.isArray(filteredStudents) ? filteredStudents : [];
 
@@ -20,6 +23,16 @@ const AcademyStudents = ({
     if (!instituteFilter) return safeStudents;
     return safeStudents.filter(s => (s?.institute || s?.assignedInstitute || s?.instituteName) === instituteFilter);
   }, [safeStudents, instituteFilter]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [studentSearchQuery, instituteFilter]);
+
+  const totalPages = Math.ceil(displayedStudents.length / itemsPerPage);
+  const paginatedStudents = React.useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return displayedStudents.slice(start, start + itemsPerPage);
+  }, [displayedStudents, currentPage, itemsPerPage]);
 
   return (
     <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm text-left space-y-6 animate-in fade-in duration-300">
@@ -71,11 +84,11 @@ const AcademyStudents = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-150/60 text-xs font-bold text-slate-700 bg-white">
-              {displayedStudents.length > 0 ? (
-                displayedStudents.map((s, idx) => (
-                  <tr key={s.enrollmentNo} className="hover:bg-slate-50/50 transition-colors group">
+              {paginatedStudents.length > 0 ? (
+                paginatedStudents.map((s, idx) => (
+                  <tr key={s.enrollmentNo || idx} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-4 text-center text-[10px] text-gray-400 font-extrabold">
-                      {String(idx + 1).padStart(2, '0')}
+                      {String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0')}
                     </td>
                     <td className="px-6 py-4 font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">{s.batch || 'Batch 2024-A'}</td>
                     <td className="px-6 py-4 font-mono font-black text-slate-600">{s.enrollmentNo}</td>
@@ -108,6 +121,15 @@ const AcademyStudents = ({
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={displayedStudents.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
     </div>
   );

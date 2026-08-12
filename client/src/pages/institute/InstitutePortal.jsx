@@ -659,38 +659,52 @@ const InstitutePortal = () => {
           academicService.listStudents().then(res => {
             const data = extractData(res) || [];
             if (Array.isArray(data)) {
-              const formatted = data.map(s => ({
-                id: s._id,
-                _id: s._id,
-                fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-                email: s.email,
-                phone: s.contactNumber,
-                qualification: s.qualification,
-                graduationYear: s.yearOfPassing?.toString() || '',
-                enrollmentNo: s.enrollmentId,
-                admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-                status: s.remittedToAcademy ? 'Completed' : 'Active',
-                remittedToAcademy: s.remittedToAcademy || false,
-                attendancePercentage: s.attendancePercentage || 0,
-                thesisApproved: s.thesisApproved || false,
-                courseId: s.course?._id || s.course,
-                batchId: s.batch?._id || s.batch,
-                courseName: s.course?.name || 'General Medicine',
-                batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-                homeAddress: s.homeAddress,
-                contactNumber: s.contactNumber,
-                courseDirector: s.courseDirector,
-                razorpayOrderId: s.razorpayOrderId,
-                razorpayPaymentId: s.razorpayPaymentId,
-                razorpaySignature: s.razorpaySignature,
-                medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
-                universityName: s.universityName,
-                mbbsQualification: s.mbbsQualification,
-                fmgeClearanceStatus: s.fmgeClearanceStatus,
-                isForeignGraduate: s.isForeignGraduate,
-                documents: s.documents || {},
-                semesters: s.semesters || [],
-              }));
+              const formatted = data.map(s => {
+                const sSemesters = s.semesters || [];
+                const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+
+                const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
+                  ? s.attendancePercentage
+                  : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+                const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
+                const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+                const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
+
+                return {
+                  id: s._id,
+                  _id: s._id,
+                  fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+                  email: s.email,
+                  phone: s.contactNumber,
+                  qualification: s.qualification,
+                  graduationYear: s.yearOfPassing?.toString() || '',
+                  enrollmentNo: s.enrollmentId,
+                  admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+                  status: isRemitted ? 'Completed' : 'Active',
+                  remittedToAcademy: isRemitted,
+                  attendancePercentage: attendancePct,
+                  thesisApproved: isThesisApproved,
+                  thesisUploaded: isThesisUploaded,
+                  semesters: sSemesters,
+                  courseId: s.course?._id || s.course,
+                  batchId: s.batch?._id || s.batch,
+                  courseName: s.course?.name || 'General Medicine',
+                  batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
+                  homeAddress: s.homeAddress,
+                  contactNumber: s.contactNumber,
+                  courseDirector: s.courseDirector,
+                  razorpayOrderId: s.razorpayOrderId,
+                  razorpayPaymentId: s.razorpayPaymentId,
+                  razorpaySignature: s.razorpaySignature,
+                  medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
+                  universityName: s.universityName,
+                  mbbsQualification: s.mbbsQualification,
+                  fmgeClearanceStatus: s.fmgeClearanceStatus,
+                  isForeignGraduate: s.isForeignGraduate,
+                  documents: s.documents || {},
+                };
+              });
               setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
             }
           }).catch(() => {});

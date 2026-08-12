@@ -99,6 +99,43 @@ const getSubjectsForCourse = async (courseId: any) => {
   }
 };
 
+const resolveMergedMarks = async (studentId: any, semesterNumber: number, existingMarks: any[]) => {
+  try {
+    const resultDoc = await Result.findOne({ student: studentId, semester: semesterNumber });
+    if (!resultDoc || !resultDoc.subjects || resultDoc.subjects.length === 0) {
+      return existingMarks;
+    }
+    const merged = [...existingMarks];
+    resultDoc.subjects.forEach((resSubj: any) => {
+      const idx = merged.findIndex(
+        (m: any) =>
+          (m.subjectCode && resSubj.subjectCode && m.subjectCode.toLowerCase() === resSubj.subjectCode.toLowerCase()) ||
+          (m.subjectName && resSubj.subjectName && m.subjectName.toLowerCase() === resSubj.subjectName.toLowerCase())
+      );
+      if (idx !== -1) {
+        merged[idx] = {
+          ...merged[idx],
+          marksObtained: resSubj.totalMarks ?? merged[idx].marksObtained,
+          grade: resSubj.grade || merged[idx].grade,
+          isAbsent: resSubj.grade === 'ABSENT'
+        };
+      } else {
+        merged.push({
+          subjectCode: resSubj.subjectCode,
+          subjectName: resSubj.subjectName,
+          marksObtained: resSubj.totalMarks,
+          totalMarks: 100,
+          isAbsent: resSubj.grade === 'ABSENT',
+          grade: resSubj.grade
+        });
+      }
+    });
+    return merged;
+  } catch {
+    return existingMarks;
+  }
+};
+
 // ─── Get All Students with Marks ─────────────────────────────────────────────
 
 export const getStudentsWithMarks = async (req: Request, res: Response) => {
@@ -139,6 +176,9 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
 
         const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
 
+        const baseMarks = semesterRecord ? (semesterRecord.marks || []) : buildDefaultMarks(await getSubjectsForCourse(student.course));
+        const mergedMarks = await resolveMergedMarks(student._id, semNum, baseMarks);
+
         if (semesterRecord) {
           return {
             id: student._id,
@@ -156,14 +196,11 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
             attendancePercentage: semesterRecord.attendancePercentage || 0,
             thesisApproved: semesterRecord.thesisApproved || false,
             eligibilityStatus: semesterRecord.eligibilityStatus || 'Pending',
-            marks: semesterRecord.marks || [],
+            marks: mergedMarks,
             documents: student.documents || {},
             remittedToAcademy: student.remittedToAcademy || false,
           };
         }
-
-        // No semester record yet - seed default subjects from the course
-        const courseSubjects = await getSubjectsForCourse(student.course);
 
         return {
           id: student._id,
@@ -181,7 +218,7 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
           attendancePercentage: 0,
           thesisApproved: false,
           eligibilityStatus: 'Pending',
-          marks: buildDefaultMarks(courseSubjects),
+          marks: mergedMarks,
           documents: student.documents || {},
           remittedToAcademy: student.remittedToAcademy || false,
         };
@@ -227,11 +264,13 @@ export const getStudentMarks = async (req: Request, res: Response) => {
     const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
     const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
 
-    let marks = semesterRecord?.marks || [];
+    let rawMarks = semesterRecord?.marks || [];
     if (!semesterRecord) {
       const courseSubjects = await getSubjectsForCourse(student.course);
-      marks = buildDefaultMarks(courseSubjects);
+      rawMarks = buildDefaultMarks(courseSubjects);
     }
+
+    const marks = await resolveMergedMarks(student._id, semNum, rawMarks);
 
     return sendSuccess({
       req,

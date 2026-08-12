@@ -1,9 +1,5 @@
-import AcademyStudentMarks from '../components/AcademyStudentMarks';
+import { Navigate } from 'react-router-dom';
 
-/**
- * Academy Student Marks Page  (/academy/student-marks)
- * Displays all students with their marks and allows viewing detailed subject marks.
- */
 export default function AcademyStudentMarksPage() {
-  return <AcademyStudentMarks />;
+  return <Navigate to="/academy/dashboard" replace />;
 }

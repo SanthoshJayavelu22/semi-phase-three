@@ -1144,19 +1144,34 @@ export const listStudents = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 });
 
     const formattedStudents = students.map((student) => {
-      // Find current sem if provided, else use first one or calculate generally
+      const sObj = student.toObject();
+      const sSemesters = sObj.semesters || [];
+      const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+
+      const attendancePct = (sObj.attendancePercentage !== undefined && sObj.attendancePercentage !== null && sObj.attendancePercentage > 0)
+        ? sObj.attendancePercentage
+        : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+      const isThesisApproved = Boolean(sObj.thesisApproved || sSemesters.some((sem: any) => sem.thesisApproved));
+      const isThesisUploaded = Boolean(sSemesters.some((sem: any) => sem.thesisDocumentUrl));
+      const isRemitted = Boolean(sObj.remittedToAcademy || sObj.razorpayPaymentId);
+
       let isStudentEligible = false;
       if (semesterNumber) {
-        const sem = student.semesters.find(s => s.semesterNumber === parseInt(semesterNumber as string));
+        const sem = sSemesters.find((s: any) => s.semesterNumber === parseInt(semesterNumber as string));
         if (sem) {
           isStudentEligible = sem.attendancePercentage >= 75 && sem.thesisApproved;
         }
       } else {
-        // Just general fallback
-        isStudentEligible = student.semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+        isStudentEligible = isRemitted && attendancePct >= 75 && (isThesisApproved || isThesisUploaded);
       }
+
       return {
-        ...student.toObject(),
+        ...sObj,
+        attendancePercentage: attendancePct,
+        thesisApproved: isThesisApproved,
+        thesisUploaded: isThesisUploaded,
+        remittedToAcademy: isRemitted,
         isEligible: isStudentEligible,
       };
     });
