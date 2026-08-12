@@ -22,6 +22,15 @@ export interface IExamApplication extends Document {
   schedulePublishedAt?: Date;
   subjectSchedules?: { subject: string; date: Date; time: string }[];
 
+  // NEW: Practical exam details
+  practicalExam?: {
+    name: string;
+    venue: string;
+    date?: Date;
+    time: string;
+    subjects: string[];
+  };
+
   // Hall ticket tracking
   hallTicketsGenerated: boolean;
   hallTicketsGeneratedAt?: Date;
@@ -85,6 +94,15 @@ const examApplicationSchema: Schema = new Schema(
         time: { type: String, required: true }
       }
     ],
+
+    // NEW: Practical exam details
+    practicalExam: {
+      name:     { type: String },
+      venue:    { type: String },
+      date:     { type: Date },
+      time:     { type: String },
+      subjects: { type: [String] }
+    },
 
     // Hall ticket tracking
     hallTicketsGenerated:   { type: Boolean, default: false },

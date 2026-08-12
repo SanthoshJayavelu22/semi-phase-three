@@ -16,6 +16,14 @@ export interface IHallTicket extends Document {
   batchName?: string;
   batchYear?: number;
   subjects?: string[];
+  subjectSchedules?: { subject: string; date: Date; time: string }[];
+  practicalExam?: {
+    name: string;
+    venue: string;
+    date: Date;
+    time: string;
+    subjects: string[];
+  };
   examDate?: Date;
   examVenue?: string;
   examAddress?: string;
@@ -97,6 +105,20 @@ const HallTicketSchema = new Schema({
   batchName: { type: String },
   batchYear: { type: Number },
   subjects: { type: [Schema.Types.Mixed] },
+  subjectSchedules: [
+    {
+      subject: { type: String },
+      date: { type: Date },
+      time: { type: String }
+    }
+  ],
+  practicalExam: {
+    name: { type: String },
+    venue: { type: String },
+    date: { type: Date },
+    time: { type: String },
+    subjects: { type: [String] }
+  },
   examDate: { type: Date },
   examVenue: { type: String },
   examAddress: { type: String },

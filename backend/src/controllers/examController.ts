@@ -74,6 +74,14 @@ const publishScheduleSchema = z.object({
     date: z.string().transform(val => new Date(val)),
     time: z.string()
   })).optional(),
+  // NEW: Practical exam fields
+  practicalExam: z.object({
+    name:     z.string().optional(),
+    venue:    z.string().optional(),
+    date:     z.string().optional().transform(val => val ? new Date(val) : undefined),
+    time:     z.string().optional(),
+    subjects: z.array(z.string()).optional()
+  }).optional(),
 });
 
 // ─── UC 4.1: Apply for Exam (Institute) ──────────────────────────────────────
@@ -376,6 +384,17 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
       application.subjectSchedules = validatedData.subjectSchedules;
     }
 
+    // NEW: Save practical exam details
+    if (validatedData.practicalExam) {
+      application.practicalExam = {
+        name:     validatedData.practicalExam.name     || 'Practical Examination',
+        venue:    validatedData.practicalExam.venue    || '',
+        date:     validatedData.practicalExam.date,
+        time:     validatedData.practicalExam.time     || '',
+        subjects: validatedData.practicalExam.subjects || [],
+      };
+    }
+
     // Allow updating the scheduled date if provided
     if (validatedData.scheduledDate) {
       application.scheduledDate = validatedData.scheduledDate;
@@ -405,6 +424,8 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
         course:               application.course,
         batch:                application.batch,
         subjects:             application.subjects,
+        subjectSchedules:     application.subjectSchedules,
+        practicalExam:        application.practicalExam, // NEW: Return practical exam details
       },
     });
   } catch (error: any) {
@@ -419,7 +440,7 @@ export const generateHallTickets = async (req: Request, res: Response) => {
   try {
     const application = await ExamApplication.findById(req.params.id)
       .populate('institute', 'orgName instituteAddress')
-      .populate('course', 'name')
+      .populate('course', 'name subjects')
       .populate('batch', 'year')
       .populate('students', 'firstName lastName enrollmentId contactNumber documents');
 
@@ -450,6 +471,16 @@ export const generateHallTickets = async (req: Request, res: Response) => {
     const reportingTime    = application.reportingTime;
     const examDate         = application.scheduledDate || new Date();
     const subjectSchedules = application.subjectSchedules || [];
+    const subjects         = application.subjects || [];
+
+    // NEW: Get practical exam details
+    const practicalExam = application.practicalExam || {
+      name:     '',
+      venue:    '',
+      date:     undefined,
+      time:     '',
+      subjects: []
+    };
 
     // Require the published schedule details before generating hall tickets
     if (!examVenue || !examCenter || !reportingTime) {
@@ -486,12 +517,22 @@ export const generateHallTickets = async (req: Request, res: Response) => {
           courseName: courseDoc.name,
           batchYear:  batchDoc.year,
 
-          // Exam details
-          subjects:      application.subjects,
-          examDate:      examDate,
-          examVenue:     examVenue,
-          examCenter:    examCenter,
-          reportingTime: reportingTime,
+          // Exam details from application
+          examVenue:         examVenue,
+          examCenter:        examCenter,
+          reportingTime:     reportingTime,
+          examDate:          examDate,
+          subjects:          subjects,
+          subjectSchedules:  subjectSchedules,
+
+          // NEW: Practical exam details
+          practicalExam: {
+            name:     practicalExam.name,
+            venue:    practicalExam.venue,
+            date:     practicalExam.date,
+            time:     practicalExam.time,
+            subjects: practicalExam.subjects,
+          },
         });
       })
     );
@@ -514,8 +555,17 @@ export const generateHallTickets = async (req: Request, res: Response) => {
           reportingTime,
           examDate,
           subjectSchedules,
-          subjects: application.subjects,
+          subjects,
+          courseName: courseDoc.name,
           semesterNumber: application.semesterNumber,
+          // NEW: Practical details
+          practicalExam: {
+            name:     practicalExam.name,
+            venue:    practicalExam.venue,
+            date:     practicalExam.date,
+            time:     practicalExam.time,
+            subjects: practicalExam.subjects,
+          },
         },
       },
     });
