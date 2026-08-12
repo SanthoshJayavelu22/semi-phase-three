@@ -217,14 +217,19 @@ class RevaluationService {
           semRecord = studentDoc.semesters[studentDoc.semesters.length - 1];
         }
 
+        if (!semRecord.marks) {
+          semRecord.marks = [];
+        }
+
+        const semMarks = semRecord.marks;
         result.subjects.forEach((resSubj: any) => {
-          const mIdx = semRecord.marks.findIndex((m: any) => m.subjectCode === resSubj.subjectCode);
+          const mIdx = semMarks.findIndex((m: any) => m.subjectCode === resSubj.subjectCode);
           if (mIdx !== -1) {
-            semRecord.marks[mIdx].marksObtained = resSubj.totalMarks;
-            semRecord.marks[mIdx].grade = resSubj.grade;
-            semRecord.marks[mIdx].totalMarks = 100;
+            semMarks[mIdx].marksObtained = resSubj.totalMarks;
+            semMarks[mIdx].grade = resSubj.grade;
+            semMarks[mIdx].totalMarks = 100;
           } else {
-            semRecord.marks.push({
+            semMarks.push({
               subjectCode: resSubj.subjectCode,
               subjectName: resSubj.subjectName,
               marksObtained: resSubj.totalMarks,

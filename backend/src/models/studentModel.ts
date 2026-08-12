@@ -22,6 +22,8 @@ export interface IStudent extends Document {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
+  attendancePercentage?: number;
+  thesisApproved?: boolean;
   documents: {
     passportPhotoUrl: string;
     mbbsCertificateUrl: string;

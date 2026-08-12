@@ -1144,7 +1144,7 @@ export const listStudents = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 });
 
     const formattedStudents = students.map((student) => {
-      const sObj = student.toObject();
+      const sObj: any = student.toObject();
       const sSemesters = sObj.semesters || [];
       const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
 
