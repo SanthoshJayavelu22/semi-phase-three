@@ -109,7 +109,6 @@ const instituteSchema: Schema = new Schema(
       type: String,
       enum: ['Pending Review', 'Approved', 'Rejected'],
       default: 'Pending Review',
-      index: true
     },
     paymentStatus: {
       type: String, 
@@ -149,7 +148,6 @@ const instituteSchema: Schema = new Schema(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
     deletedAt: {
       type: Date,

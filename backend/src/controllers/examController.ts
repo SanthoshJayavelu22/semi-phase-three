@@ -189,6 +189,7 @@ export const applyForExam = async (req: Request, res: Response) => {
         subjects: validatedData.subjects,
         totalFee: 0,
         paymentId: validatedData.utrNumber || 'N/A',
+        studentsCount: validatedData.studentIds.length,
       });
     } catch (emailErr: any) {
       console.error('Failed to send exam application notification:', emailErr);

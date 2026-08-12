@@ -57,8 +57,6 @@ const studentSchema: Schema = new Schema(
     enrollmentId: {
       type: String,
       required: true,
-      unique: true,
-      index: true,
     },
     firstName: {
       type: String,

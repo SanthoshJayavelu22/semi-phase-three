@@ -26,6 +26,8 @@ export interface EmailTemplateData {
     marksChange?: number;
   }>;
   remarks?: string;
+  studentsCount?: number;
+  requestId?: string;
 }
 
 class NotificationService {
@@ -36,7 +38,7 @@ class NotificationService {
    * Send exam application confirmation to institute and notification to academy
    */
   async notifyExamApplicationSubmitted(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, courseName, semesterNumber, subjects, totalFee, paymentId } = data;
+    const { instituteName, instituteEmail, courseName, semesterNumber, subjects, totalFee, paymentId, studentsCount } = data;
 
     // 1. Institute confirmation
     await this.sendInstituteEmail({
@@ -48,6 +50,7 @@ class NotificationService {
         subjectsList: subjects?.join(', ') || 'N/A',
         totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
         paymentId: paymentId || 'N/A',
+        studentsCount: studentsCount || 'N/A',
       },
     });
 
@@ -63,6 +66,7 @@ class NotificationService {
         subjects: subjects?.join(', ') || 'N/A',
         totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
         paymentId: paymentId || 'N/A',
+        studentsCount: studentsCount || 'N/A',
         actionRequired: 'Please review and approve/reject this exam application.',
       },
     });
@@ -138,22 +142,15 @@ class NotificationService {
     });
 
     if (studentEmail) {
-      await sendEmail({
-        email: studentEmail,
+      await this.sendStudentEmail({
+        to: studentEmail,
         subject: '📊 Your Examination Results - SEMI',
-        message: `Dear ${studentName},\n\nYour results for ${courseName} (Semester ${semesterNumber}) are now available.\n\nStatus: ${resultStatus || 'Published'}\n\nPlease log in to the results portal using your enrollment ID to view your detailed marksheet.\n\nRegards,\nSEMI Academic Board`,
-        html: this.buildHtmlEmail({
-          title: 'Examination Results Available',
-          greeting: `Dear ${studentName},`,
-          body: `
-            <p>Your results for <strong>${courseName}</strong> (Semester ${semesterNumber}) are now available.</p>
-            <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
-              <p style="margin: 0; font-weight: 600; color: #166534;">Status: ${resultStatus || 'Published'}</p>
-            </div>
-            <p>Please log in to the results portal using your enrollment ID to view your detailed marksheet.</p>
-          `,
-          footer: 'SEMI Academic Board',
-        }),
+        template: 'results-published-student',
+        data: {
+          ...data,
+          studentName: studentName || 'Student',
+          resultStatus: resultStatus || 'Published',
+        },
       });
     }
   }
@@ -222,33 +219,19 @@ class NotificationService {
     });
 
     if (studentEmail) {
-      const gradeChange = changes.map(r =>
-        `${r.subjectName}: ${r.originalMarks}% → ${r.revisedTotalMarks}%`
-      ).join('\n');
-
-      await sendEmail({
-        email: studentEmail,
+      await this.sendStudentEmail({
+        to: studentEmail,
         subject: `${changeEmoji} Revaluation Results Updated - SEMI`,
-        message: `Dear ${studentName},\n\nYour revaluation request for ${courseName} (Semester ${semesterNumber}) has been processed.\n\nChanges:\n${gradeChange}\n\nOverall change: ${totalChange > 0 ? '+' : ''}${totalChange}%\n\nPlease log in to view your updated results.\n\nRegards,\nSEMI Academic Board`,
-        html: this.buildHtmlEmail({
-          title: 'Revaluation Results Updated',
-          greeting: `Dear ${studentName},`,
-          body: `
-            <p>Your revaluation request for <strong>${courseName}</strong> (Semester ${semesterNumber}) has been processed.</p>
-            <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
-              <p style="font-weight: 600; color: #0369a1;">Changes:</p>
-              ${changes.map(r => `
-                <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #e0f2fe;">
-                  <span>${r.subjectName}</span>
-                  <span>${r.originalMarks}% → ${r.revisedTotalMarks}% <span style="color: ${(r.marksChange || 0) > 0 ? '#16a34a' : (r.marksChange || 0) < 0 ? '#dc2626' : '#f59e0b'};">(${(r.marksChange || 0) > 0 ? '+' : ''}${r.marksChange || 0}%)</span></span>
-                </div>
-              `).join('')}
-              <p style="margin-top: 12px; font-weight: 600;">Overall change: <span style="color: ${totalChange > 0 ? '#16a34a' : totalChange < 0 ? '#dc2626' : '#f59e0b'};">${totalChange > 0 ? '+' : ''}${totalChange}%</span></p>
-            </div>
-            <p>Please log in to view your updated results.</p>
-          `,
-          footer: 'SEMI Academic Board',
-        }),
+        template: 'revaluation-result-updated-student',
+        data: {
+          ...data,
+          studentName: studentName || 'Student',
+          changesSummary: changes.map(r =>
+            `${r.subjectName}: ${r.originalMarks}% → ${r.revisedTotalMarks}% (${(r.marksChange || 0) > 0 ? '+' : ''}${r.marksChange || 0}%)`
+          ).join('\n'),
+          totalChange: totalChange > 0 ? `+${totalChange}` : totalChange.toString(),
+          changeEmoji,
+        },
       });
     }
   }
@@ -286,6 +269,22 @@ class NotificationService {
   }
 
   /**
+   * Generic send to student email
+   */
+  private async sendStudentEmail(params: { to: string; subject: string; template: string; data: any }): Promise<void> {
+    const { to, subject, template, data } = params;
+    const html = this.buildTemplateEmail(template, data);
+    const text = this.buildPlainTextEmail(template, data);
+
+    try {
+      await sendEmail({ email: to, subject, message: text, html });
+      logger.info(`Email sent to student: ${to} | Subject: ${subject}`);
+    } catch (error: any) {
+      logger.error(`Failed to send student email to ${to}: ${error?.message || error}`);
+    }
+  }
+
+  /**
    * Build HTML template for emails
    */
   private buildTemplateEmail(template: string, data: any): string {
@@ -304,6 +303,7 @@ class NotificationService {
             <p style="font-weight: 600; color: #0369a1;">Application Summary:</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
             <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Students:</strong> ${data.studentsCount || data.students?.length || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
             <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
@@ -323,6 +323,7 @@ class NotificationService {
             <p><strong>Institute:</strong> ${data.instituteName}</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
             <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Students:</strong> ${data.studentsCount || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjects || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
             <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
@@ -437,6 +438,32 @@ class NotificationService {
         `;
         break;
 
+      case 'results-published-student':
+        title = '📊 Your Examination Results';
+        greeting = `Dear ${data.studentName || 'Student'},`;
+        body = `
+          <p>Your results for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}) are now available.</p>
+          <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #166534;">Status: ${data.resultStatus || 'Published'}</p>
+          </div>
+          <p>Please log in to the results portal using your enrollment ID to view your detailed marksheet.</p>
+        `;
+        break;
+
+      case 'revaluation-result-updated-student':
+        title = `${data.changeEmoji || '📋'} Revaluation Results Updated`;
+        greeting = `Dear ${data.studentName || 'Student'},`;
+        body = `
+          <p>Your revaluation request for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}) has been processed.</p>
+          <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #0369a1;">Changes:</p>
+            <pre style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 14px; white-space: pre-wrap;">${data.changesSummary || 'N/A'}</pre>
+            <p><strong>Overall Change:</strong> <span style="color: ${Number(data.totalChange) > 0 ? '#16a34a' : Number(data.totalChange) < 0 ? '#dc2626' : '#f59e0b'};">${data.totalChange > 0 ? '+' : ''}${data.totalChange}%</span></p>
+          </div>
+          <p>Please log in to view your updated results.</p>
+        `;
+        break;
+
       default:
         body = `<p>${JSON.stringify(data, null, 2)}</p>`;
     }
@@ -461,6 +488,7 @@ Your exam application has been successfully submitted to the Academic Board.
 Application Summary:
 - Course: ${data.courseName || 'N/A'}
 - Semester: ${data.semesterNumber || 'N/A'}
+- Students: ${data.studentsCount || 'N/A'}
 - Subjects: ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}
 - Total Fee: ${data.totalFee || 'N/A'}
 - Payment ID: ${data.paymentId || 'N/A'}

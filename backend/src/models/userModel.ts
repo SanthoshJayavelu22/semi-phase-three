@@ -28,7 +28,6 @@ const userSchema: Schema = new Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
     },
     password: {
       type: String,
@@ -46,11 +45,9 @@ const userSchema: Schema = new Schema(
     },
     verificationToken: {
       type: String,
-      index: { unique: false, sparse: true },
     },
     resetPasswordToken: {
       type: String,
-      index: { unique: false, sparse: true },
     },
     resetPasswordExpires: Date,
     refreshTokens: [
