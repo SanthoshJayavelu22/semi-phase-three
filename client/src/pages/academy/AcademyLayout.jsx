@@ -222,7 +222,8 @@ export default function AcademyLayout() {
           utrNumber: s.utrNumber,
           homeAddress: s.homeAddress,
           contactNumber: s.contactNumber,
-        }));
+        };
+      });
         setStudents(formatted);
       }
     } catch (err) {

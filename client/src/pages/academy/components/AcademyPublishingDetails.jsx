@@ -628,7 +628,6 @@ const AcademyPublishingDetails = () => {
             </span>
           </div>
         </div>
-      </div>
 
       {/* ─── Publication Detail Modal ───────────────────────────────────────── */}
       {isModalOpen && selectedPublication && (
