@@ -62,11 +62,11 @@ const AcademyApplications = ({
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2.5 bg-slate-50 border border-gray-200 hover:border-gray-300 hover:bg-white rounded-xl text-xs font-extrabold text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 cursor-pointer transition-all"
             >
-              <option value="">All Statuses</option>
-              <option value="Submitted">Submitted (Under Review)</option>
-              <option value="InspectionTriggered">Inspection Scheduled</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
+              <option value="All">All Statuses</option>
+              <option value="pending_review">Submitted (Under Review)</option>
+              <option value="inspection_triggered">Inspection Scheduled</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
             </select>
           </div>
 
@@ -97,48 +97,66 @@ const AcademyApplications = ({
             </thead>
             <tbody className="divide-y divide-gray-150/60 text-xs font-bold text-slate-700 bg-white">
               {paginatedApps.length > 0 ? (
-                paginatedApps.map((app, idx) => (
-                  <tr key={app.id || app._id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4 text-center text-[10px] text-gray-400 font-extrabold">
-                      {String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0')}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors block">{app.collegeName}</span>
-                      <span className="text-[10px] font-bold text-gray-400 font-mono">{app.email}</span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-800 font-extrabold">{app.deanName || app.headName || 'Dr. Unspecified'}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        app.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                        app.status === 'InspectionTriggered' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                        app.status === 'Rejected' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                        'bg-blue-50 text-blue-700 border border-blue-200'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          app.status === 'Approved' ? 'bg-emerald-500' :
-                          app.status === 'InspectionTriggered' ? 'bg-amber-500' :
-                          app.status === 'Rejected' ? 'bg-rose-500' :
-                          'bg-blue-500'
-                        }`}></span>
-                        {app.status === 'InspectionTriggered' ? 'Inspection Scheduled' : app.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500 font-bold">
-                      {app.submittedDate || (app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A')}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => setSelectedApp(app)}
-                          className="p-2 hover:bg-blue-50 border border-transparent hover:border-blue-200 rounded-xl text-blue-600 transition-all active:scale-90"
-                          title="Inspect Documents & Compliance"
-                        >
-                          <Eye className="w-4.5 h-4.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                paginatedApps.map((app, idx) => {
+                  const collegeName = app.orgName || app.collegeName || app.form?.orgName || 'N/A';
+                  const deanName = app.deanName || app.headName || app.form?.headName || app.form?.hodName || 'Dr. Unspecified';
+                  const submissionDate = app.submittedAt || app.submittedDate || (app.createdAt ? new Date(app.createdAt).toLocaleDateString() : (app.form?.createdAt ? new Date(app.form.createdAt).toLocaleDateString() : 'N/A'));
+                  
+                  const isApproved = app.status === 'Approved' || app.status === 'approved' || app.status === 'active_erp';
+                  const isRejected = app.status === 'Rejected' || app.status === 'rejected';
+                  const isInspection = app.status === 'InspectionTriggered' || app.status === 'inspection_triggered' || app.form?.inspectionTriggered;
+                  
+                  let badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+                  let dotClass = 'bg-blue-500';
+                  let statusLabel = 'Submitted';
+                  
+                  if (isApproved) {
+                    badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                    dotClass = 'bg-emerald-500';
+                    statusLabel = 'Approved';
+                  } else if (isRejected) {
+                    badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+                    dotClass = 'bg-rose-500';
+                    statusLabel = 'Rejected';
+                  } else if (isInspection) {
+                    badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+                    dotClass = 'bg-amber-500';
+                    statusLabel = 'Inspection Scheduled';
+                  }
+
+                  return (
+                    <tr key={app.id || app._id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4 text-center text-[10px] text-gray-400 font-extrabold">
+                        {String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0')}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors block">{collegeName}</span>
+                        <span className="text-[10px] font-bold text-gray-400 font-mono">{app.email || 'N/A'}</span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-800 font-extrabold">{deanName}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`}></span>
+                          {statusLabel}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-500 font-bold">
+                        {submissionDate}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => setSelectedApp(app)}
+                            className="p-2 hover:bg-blue-50 border border-transparent hover:border-blue-200 rounded-xl text-blue-600 transition-all active:scale-90"
+                            title="Inspect Documents & Compliance"
+                          >
+                            <Eye className="w-4.5 h-4.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan="6" className="px-6 py-16 text-center text-gray-400 font-medium">

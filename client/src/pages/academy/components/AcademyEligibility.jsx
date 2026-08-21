@@ -71,11 +71,16 @@ const AcademyEligibility = ({
     e.preventDefault();
     if (!reviewingApp) return;
 
+    if (reviewStatus === 'Approved' && !scheduledDate) {
+      setErrorMsg('Please select a scheduled exam date to approve the application.');
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
         status: reviewStatus,
-        scheduledDate: scheduledDate || undefined,
+        scheduledDate: reviewStatus === 'Approved' ? scheduledDate : undefined,
         remarks: remarks.trim() || undefined
       };
 
@@ -463,6 +468,25 @@ const AcademyEligibility = ({
                   </button>
                 </div>
               </div>
+
+              {/* Scheduled Date Input (Mandatory when approving) */}
+              {reviewStatus === 'Approved' && (
+                <div>
+                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+                    <span>Scheduled Exam Date <span className="text-rose-500 font-bold">*</span></span>
+                    <span className="text-[9px] text-slate-400 font-medium">Required for approval</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      required
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 focus:outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Audit Remarks */}
               <div>
