@@ -77,7 +77,11 @@ const seedTestData = async () => {
     console.log('Creating test Course...');
     const course = await Course.create({
       name: 'Emergency Medicine',
-      description: 'Fellowship in Emergency Medicine (FEM)',
+      courseCode: 'FEM',
+      courseType: 'Fellowship',
+      programCategory: 'Emergency Medicine',
+      courseDuration: '2',
+      durationType: 'Years',
       institute: institute._id,
       subjects: ['Emergency Medicine Core', 'Trauma Management', 'Critical Care'],
     });
