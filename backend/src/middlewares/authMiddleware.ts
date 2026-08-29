@@ -43,6 +43,10 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
+    // Super admins always have global bypass
+    if (req.user && (req.user.role === 'super_admin' || req.user.role === 'admin')) {
+      return next();
+    }
     if (!req.user || !roles.includes(req.user.role)) {
       return sendError({ req, res, statusCode: 403, message: `User role ${req.user?.role} is not authorized to access this route` });
     }

@@ -102,8 +102,8 @@ export const applyForExam = async (req: Request, res: Response) => {
     const examFeeReceiptUrl = files?.['examFeeReceipt']?.length ? getFileUrl(files['examFeeReceipt'][0].path) : undefined;
 
     // Verify course & batch
-    const course = await Course.findOne({ _id: validatedData.courseId, institute: institute._id });
-    if (!course) return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist under this institute.' });
+    const course = await Course.findOne({ _id: validatedData.courseId });
+    if (!course) return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist.' });
 
     // Auto-resolve batchId if not provided
     let batchId = validatedData.batchId;

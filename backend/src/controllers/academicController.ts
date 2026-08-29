@@ -50,7 +50,6 @@ const courseSemesterSchema = z.object({
 
 const courseCreateSchema = z.object({
   name: z.string().min(1, 'Course Name is required'),
-  description: z.string().optional(),
   courseCode: z.string().optional(),
   courseType: z.string().optional(),
   programCategory: z.string().optional(),
@@ -60,12 +59,11 @@ const courseCreateSchema = z.object({
   practicalExamName: z.string().optional(),
   practicalExams: z.array(z.string()).optional(),
   semesters: z.array(courseSemesterSchema).optional(),
-  examinationFee: z.string().optional(),
+  status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
 });
 
 const courseUpdateSchema = z.object({
   name: z.string().min(1, 'Course Name is required').optional(),
-  description: z.string().optional(),
   courseCode: z.string().optional(),
   courseType: z.string().optional(),
   programCategory: z.string().optional(),
@@ -75,7 +73,6 @@ const courseUpdateSchema = z.object({
   practicalExamName: z.string().optional(),
   practicalExams: z.array(z.string()).optional(),
   semesters: z.array(courseSemesterSchema).optional(),
-  examinationFee: z.string().optional(),
   status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
 });
 
@@ -178,23 +175,17 @@ const remittanceSchema = z.object({
 // COURSE CRUD OPERATIONS
 // ==========================================
 
-// ─── Create Course ────────────────────────────────────────────────────────────
+// ─── Create Course (Admin / Board only) ───────────────────────────────────────
 export const createCourse = async (req: Request, res: Response) => {
   try {
     const validatedData = courseCreateSchema.parse(req.body);
 
-    const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
-    }
-
-    // Check for duplicate course name within the same institute
+    // Check for duplicate course name globally
     const existingCourse = await Course.findOne({ 
-      institute: institute._id, 
       name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') } 
     });
     if (existingCourse) {
-      return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists for your institute.' });
+      return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists in the centralized catalog.' });
     }
 
     if (validatedData.semesters && Array.isArray(validatedData.semesters)) {
@@ -223,15 +214,15 @@ export const createCourse = async (req: Request, res: Response) => {
     }
 
     const newCourse = await Course.create({
-      institute: institute._id,
       ...validatedData,
+      status: validatedData.status || 'Active',
     });
 
     return sendSuccess({
       req,
       res,
       statusCode: 201,
-      message: 'Course created successfully',
+      message: 'Course created successfully in centralized catalog',
       data: newCourse,
     });
   } catch (error: any) {
@@ -249,7 +240,8 @@ export const getCourses = async (req: Request, res: Response) => {
       if (!institute) {
         return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
       }
-      query.institute = institute._id;
+      // Institutes see all Active courses
+      query.status = 'Active';
     }
     const courses = await Course.find(query).sort({ createdAt: -1 });
     
@@ -281,7 +273,6 @@ export const getCourseById = async (req: Request, res: Response) => {
       if (!institute) {
         return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
       }
-      query.institute = institute._id;
     }
 
     const course = await Course.findOne(query);
@@ -308,31 +299,25 @@ export const getCourseById = async (req: Request, res: Response) => {
   }
 };
 
-// ─── Update Course ────────────────────────────────────────────────────────────
+// ─── Update Course (Admin / Board only) ───────────────────────────────────────
 export const updateCourse = async (req: Request, res: Response) => {
   try {
     const { courseId } = req.params;
     const validatedData = courseUpdateSchema.parse(req.body);
 
-    const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
-    }
-
-    const course = await Course.findOne({ _id: courseId, institute: institute._id });
+    const course = await Course.findById(courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found or does not belong to your institute' });
+      return sendError({ req, res, statusCode: 404, message: 'Course not found' });
     }
 
     // Check for duplicate course name (excluding current course)
     if (validatedData.name) {
       const existingCourse = await Course.findOne({
         _id: { $ne: courseId },
-        institute: institute._id,
         name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') }
       });
       if (existingCourse) {
-        return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists for your institute.' });
+        return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists in the centralized catalog.' });
       }
     }
 
@@ -379,29 +364,24 @@ export const updateCourse = async (req: Request, res: Response) => {
   }
 };
 
-// ─── Delete Course ────────────────────────────────────────────────────────────
+// ─── Delete Course (Admin / Board only) ───────────────────────────────────────
 export const deleteCourse = async (req: Request, res: Response) => {
   try {
     const { courseId } = req.params;
 
-    const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
-    }
-
-    const course = await Course.findOne({ _id: courseId, institute: institute._id });
+    const course = await Course.findById(courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found or does not belong to your institute' });
+      return sendError({ req, res, statusCode: 404, message: 'Course not found' });
     }
 
-    // Check if there are students enrolled in this course
+    // Check if there are students enrolled in this course across any institute
     const studentCount = await Student.countDocuments({ course: courseId });
     if (studentCount > 0) {
       return sendError({
         req,
         res,
         statusCode: 400,
-        message: `Cannot delete course. ${studentCount} student(s) are currently enrolled in this course. Please transfer or de-enroll them first.`
+        message: `Cannot delete course. ${studentCount} student(s) are currently enrolled in this course across institutes. Deactivate the course instead.`
       });
     }
 
@@ -412,7 +392,7 @@ export const deleteCourse = async (req: Request, res: Response) => {
         req,
         res,
         statusCode: 400,
-        message: `Cannot delete course. ${batchCount} batch(es) are associated with this course. Please delete the batches first.`
+        message: `Cannot delete course. ${batchCount} batch(es) are associated with this course across institutes.`
       });
     }
 
@@ -443,31 +423,49 @@ export const createBatch = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
     }
 
-    // Verify course exists
-    const course = await Course.findOne({ _id: validatedData.courseId, institute: institute._id });
+    // Verify course exists in centralized catalog
+    const course = await Course.findById(validatedData.courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found under this institute' });
+      return sendError({ req, res, statusCode: 404, message: 'Course not found in the centralized academic catalog.' });
     }
 
-    // Check for duplicate batch by name if provided
-    if (validatedData.name) {
-      const duplicateBatch = await Batch.findOne({ course: course._id, name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') } });
-      if (duplicateBatch) {
-        return sendError({ req, res, statusCode: 400, message: `Duplicate batch: A batch with the name ${validatedData.name} already exists for this course.` });
-      }
+    if (course.status !== 'Active') {
+      return sendError({ req, res, statusCode: 400, message: 'Cannot create a batch for an Inactive course.' });
     }
 
-    // Generate batch name if not provided
-    const batchName = validatedData.name || `Batch ${validatedData.year}-${String.fromCharCode(65 + (await Batch.countDocuments({ course: course._id })))}`;
+    // Automated Batch Naming Convention
+    // Standard Naming: e.g. DEM-2026-A or FEM-2026-A based on course code/prefix + Year + Batch letter
+    const coursePrefix = (course.courseCode || course.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 4)).toUpperCase();
+    const existingBatchesForYear = await Batch.find({
+      institute: institute._id,
+      course: course._id,
+      year: validatedData.year,
+    }).sort({ createdAt: 1 });
 
-    // Authoritative batch capacity fixed by Academic Board (defaulting to institute's approvedSeats / seatsRequested)
+    const batchIndex = existingBatchesForYear.length;
+    const batchLetter = String.fromCharCode(65 + (batchIndex % 26)) + (batchIndex >= 26 ? String(Math.floor(batchIndex / 26)) : '');
+    const generatedBatchName = `${coursePrefix}-${validatedData.year}-Batch ${batchLetter}`;
+
+    const finalBatchName = validatedData.name?.trim() ? validatedData.name.trim() : generatedBatchName;
+
+    // Check duplicate
+    const duplicateBatch = await Batch.findOne({
+      institute: institute._id,
+      course: course._id,
+      name: { $regex: new RegExp(`^${finalBatchName}$`, 'i') },
+    });
+    if (duplicateBatch) {
+      return sendError({ req, res, statusCode: 400, message: `Duplicate batch: A batch with the name "${finalBatchName}" already exists for this course and year.` });
+    }
+
+    // Authoritative batch capacity fixed by Academic Board (intake quota)
     const boardFixedSeats = institute.approvedSeats || institute.seatsRequested || 5;
 
     const newBatch = await Batch.create({
       institute: institute._id,
       course: course._id,
       year: validatedData.year,
-      name: batchName,
+      name: finalBatchName,
       startDate: validatedData.startDate ? new Date(validatedData.startDate) : new Date(`${validatedData.year}-01-10`),
       seats: boardFixedSeats,
       activeFellows: 0,
@@ -478,7 +476,7 @@ export const createBatch = async (req: Request, res: Response) => {
       req,
       res,
       statusCode: 201,
-      message: 'Batch created successfully',
+      message: 'Batch created successfully with standardized naming convention',
       data: newBatch,
     });
   } catch (error: any) {
@@ -501,7 +499,7 @@ export const getBatches = async (req: Request, res: Response) => {
 
     // Populate course details
     const batches = await Batch.find(query)
-      .populate('course', 'name courseCode')
+      .populate('course', 'name courseCode courseType courseDuration durationType')
       .sort({ year: -1, createdAt: -1 });
 
     return sendSuccess({ req, res, message: 'Batches retrieved successfully', data: batches });
@@ -524,7 +522,7 @@ export const getBatchById = async (req: Request, res: Response) => {
       query.institute = institute._id;
     }
 
-    const batch = await Batch.findOne(query).populate('course', 'name courseCode');
+    const batch = await Batch.findOne(query).populate('course', 'name courseCode courseType courseDuration durationType');
     if (!batch) {
       return sendError({ req, res, statusCode: 404, message: 'Batch not found' });
     }
@@ -566,11 +564,12 @@ export const updateBatch = async (req: Request, res: Response) => {
     if (validatedData.name) {
       const duplicateBatch = await Batch.findOne({
         _id: { $ne: batchId },
+        institute: institute._id,
         course: batch.course,
         name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') },
       });
       if (duplicateBatch) {
-        return sendError({ req, res, statusCode: 400, message: `A batch with the name ${validatedData.name} already exists for this course.` });
+        return sendError({ req, res, statusCode: 400, message: `A batch with the name "${validatedData.name}" already exists for this course.` });
       }
     }
 
@@ -641,9 +640,9 @@ export const getBatchesByCourse = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
     }
 
-    const course = await Course.findOne({ _id: courseId, institute: institute._id });
+    const course = await Course.findById(courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found under this institute' });
+      return sendError({ req, res, statusCode: 404, message: 'Course not found' });
     }
 
     const batches = await Batch.find({ course: courseId, institute: institute._id })
@@ -721,9 +720,9 @@ export const addStudent = async (req: Request, res: Response) => {
       }
     }
 
-    const course = await Course.findOne({ _id: validatedData.courseId, institute: institute._id });
+    const course = await Course.findById(validatedData.courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist or does not belong to this institute.' });
+      return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist in the academic catalog.' });
     }
 
     const batch = await Batch.findOne({ _id: validatedData.batchId, course: course._id });

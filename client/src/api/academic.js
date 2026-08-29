@@ -5,11 +5,11 @@ import apiClient from './apiClient.js';
  */
 export const academicService = {
   // ─── COURSE CRUD ─────────────────────────────────────────────────────────────
-  createCourse: (courseData) => apiClient.post('/academic/courses', courseData),
-  getCourses: () => apiClient.get('/academic/courses'),
-  getCourseById: (courseId) => apiClient.get(`/academic/courses/${courseId}`),
-  updateCourse: (courseId, courseData) => apiClient.put(`/academic/courses/${courseId}`, courseData),
-  deleteCourse: (courseId) => apiClient.delete(`/academic/courses/${courseId}`),
+  createCourse: (courseData, config = {}) => apiClient.post('/academic/courses', courseData, config),
+  getCourses: (config = {}) => apiClient.get('/academic/courses', config),
+  getCourseById: (courseId, config = {}) => apiClient.get(`/academic/courses/${courseId}`, config),
+  updateCourse: (courseId, courseData, config = {}) => apiClient.put(`/academic/courses/${courseId}`, courseData, config),
+  deleteCourse: (courseId, config = {}) => apiClient.delete(`/academic/courses/${courseId}`, config),
 
   // ─── BATCH CRUD ──────────────────────────────────────────────────────────────
   createBatch: (batchData) => apiClient.post('/academic/batches', batchData),

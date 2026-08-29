@@ -1,6 +1,7 @@
 import express from 'express';
 import { protect, authorize } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
+import { sendError } from '../utils/responseFormatter';
 import {
   createCourse,
   getCourses,
@@ -44,14 +45,26 @@ router.post('/payment/verify', protect, authorize('institute'), verifyRazorpayPa
 router.get('/payment/status/:studentId', protect, authorize('institute'), getAcademicPaymentStatus);
 router.get('/payment/verify-order/:orderId', protect, authorize('institute'), verifyAcademicPayment);
 
-// ==========================================
-// COURSE CRUD Routes
-// ==========================================
-router.get('/courses', protect, authorize('institute', 'admin', 'board', 'super_admin'), getCourses);
-router.get('/courses/:courseId', protect, authorize('institute', 'admin', 'board', 'super_admin'), getCourseById);
-router.post('/courses', protect, authorize('institute'), createCourse);
-router.put('/courses/:courseId', protect, authorize('institute', 'admin', 'super_admin'), updateCourse);
-router.delete('/courses/:courseId', protect, authorize('institute', 'admin', 'super_admin'), deleteCourse);
+router.get('/courses', protect, getCourses);
+router.get('/courses/:courseId', protect, getCourseById);
+router.post('/courses', protect, (req, res, next) => {
+  if (req.user?.role === 'institute') {
+    return sendError({ req, res, statusCode: 403, message: 'Institutes are not authorized to create courses. Courses are centrally managed by SEMI Academic Board.' });
+  }
+  next();
+}, createCourse);
+router.put('/courses/:courseId', protect, (req, res, next) => {
+  if (req.user?.role === 'institute') {
+    return sendError({ req, res, statusCode: 403, message: 'Institutes are not authorized to update courses.' });
+  }
+  next();
+}, updateCourse);
+router.delete('/courses/:courseId', protect, (req, res, next) => {
+  if (req.user?.role === 'institute') {
+    return sendError({ req, res, statusCode: 403, message: 'Institutes are not authorized to delete courses.' });
+  }
+  next();
+}, deleteCourse);
 
 // ==========================================
 // BATCH CRUD Routes

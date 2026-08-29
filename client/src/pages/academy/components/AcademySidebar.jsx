@@ -24,6 +24,7 @@ const NAV_GROUPS = [
     groupTitle: 'Colleges & Students',
     items: [
       { id: 'applications', path: '/academy/applications', label: 'College Applications', Icon: Building2 },
+      { id: 'courses', path: '/academy/courses', label: 'Courses & Subjects', Icon: BarChart3 },
       { id: 'students', path: '/academy/students', label: 'All Students Roster', Icon: Users },
     ]
   },

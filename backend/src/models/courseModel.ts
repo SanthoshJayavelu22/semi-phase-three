@@ -18,9 +18,8 @@ export interface ISemesterCourse {
 }
 
 export interface ICourse extends Document {
-  institute: mongoose.Types.ObjectId;
+  institute?: mongoose.Types.ObjectId;
   name: string;
-  description?: string;
   courseCode?: string;
   courseType?: string;
   programCategory?: string;
@@ -30,7 +29,6 @@ export interface ICourse extends Document {
   practicalExamName?: string;
   practicalExams?: string[];
   semesters?: ISemesterCourse[];
-  examinationFee?: string;
   status?: 'Active' | 'Inactive' | 'Pending';
 }
 
@@ -39,16 +37,12 @@ const courseSchema: Schema = new Schema(
     institute: {
       type: Schema.Types.ObjectId,
       ref: 'Institute',
-      required: true,
+      required: false,
     },
     name: {
       type: String,
       required: true,
       trim: true,
-    },
-    description: {
-      type: String,
-      default: '',
     },
     courseCode: {
       type: String,
@@ -106,10 +100,6 @@ const courseSchema: Schema = new Schema(
       ],
       default: [],
     },
-    examinationFee: {
-      type: String,
-      default: '15,000',
-    },
     status: {
       type: String,
       enum: ['Active', 'Inactive', 'Pending'],
@@ -121,7 +111,7 @@ const courseSchema: Schema = new Schema(
   }
 );
 
-// Unique course name per institute
-courseSchema.index({ institute: 1, name: 1 }, { unique: true });
+// Unique course name index (global)
+courseSchema.index({ name: 1 }, { unique: true });
 
 export const Course = mongoose.model<ICourse>('Course', courseSchema);

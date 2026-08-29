@@ -20,6 +20,7 @@ const AcademyLoginPage        = lazy(() => import('./pages/academy/login/index')
 const AcademyLayout           = lazy(() => import('./pages/academy/AcademyLayout'));
 const AcademyDashboardPage    = lazy(() => import('./pages/academy/dashboard/index'));
 const AcademyApplicationsPage = lazy(() => import('./pages/academy/applications/index'));
+const AcademyCoursesPage       = lazy(() => import('./pages/academy/courses/index'));
 const AcademyStudentsPage     = lazy(() => import('./pages/academy/students/index'));
 const AcademyEligibilityPage  = lazy(() => import('./pages/academy/eligibility/index'));
 const AcademyVerificationPage = lazy(() => import('./pages/academy/verification/index'));
@@ -151,6 +152,7 @@ function App() {
         <Route path="/academy" element={<L><AcademyLayout /></L>}>
           <Route path="dashboard"    element={<L><AcademyDashboardPage /></L>} />
           <Route path="applications" element={<L><AcademyApplicationsPage /></L>} />
+          <Route path="courses"      element={<L><AcademyCoursesPage /></L>} />
           <Route path="students"     element={<L><AcademyStudentsPage /></L>} />
           <Route path="eligibility"  element={<L><AcademyEligibilityPage /></L>} />
           <Route path="verification" element={<L><AcademyVerificationPage /></L>} />

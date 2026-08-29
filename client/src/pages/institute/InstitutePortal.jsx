@@ -1761,13 +1761,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     e.preventDefault();
     setErrorBanner(null);
     setSuccessBanner(null);
-    if (!newBatch.name?.trim() || !newBatch.startDate) {
-      setErrorBanner('Please fill out the batch name and commencement date.');
-      return;
-    }
-    const seats = parseInt(newBatch.seats, 10);
-    if (isNaN(seats) || seats <= 0) {
-      setErrorBanner('Number of available seats must be greater than zero.');
+    if (!newBatch.startDate) {
+      setErrorBanner('Please select a commencement date for the batch.');
       return;
     }
     if (!newBatch.courseId) {
@@ -1775,31 +1770,28 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
     
-    if (batches.some(b => b.name?.toLowerCase() === newBatch.name.toLowerCase() && b.course?._id === newBatch.courseId)) {
-      setErrorBanner('A batch with this name already exists for the selected course.');
-      return;
-    }
-    
     try {
       const courseIdVal = newBatch.courseId;
       const yearVal = new Date(newBatch.startDate).getFullYear() || 2026;
+      const seatsVal = newBatch.seats ? parseInt(newBatch.seats, 10) : undefined;
       
-      await academicService.createBatch({
+      const res = await academicService.createBatch({
         courseId: courseIdVal,
         year: yearVal,
-        name: newBatch.name,
+        name: newBatch.name ? newBatch.name.trim() : undefined,
         startDate: newBatch.startDate,
-        seats: seats
+        seats: seatsVal
       });
 
+      const createdBatchData = res.data?.data || res.data || {};
       await fetchERPData();
       setNewBatch({ name: '', startDate: '', seats: '', courseId: '' });
-      setSuccessBanner(`🎉 Batch "${newBatch.name}" created successfully!`);
+      setSuccessBanner(`🎉 Batch "${createdBatchData.name || 'New Batch'}" created successfully with official SEMI naming!`);
     } catch (err) {
       console.error('Backend batch creation failed:', err);
       setErrorBanner(err.parsedMessage || err.response?.data?.message || err.message || 'Failed to create batch.');
     }
-  }, [newBatch, batches, fetchERPData]);
+  }, [newBatch, fetchERPData]);
 
   const handleEnrollmentSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -2167,16 +2159,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         );
       case 'courses':
         return (
-         <InstituteERPCourses 
-      courses={courses}
-      setCourses={setCourses}  // ← ADD THIS
-      courseForm={courseForm}
-      setCourseForm={setCourseForm}
-      courseSearch={courseSearch}
-      setCourseSearch={setCourseSearch}
-      handleCreateCourse={handleCreateCourse}
-      deleteCourse={deleteCourse}  // This can be removed or kept as fallback
-    />
+          <InstituteERPCourses 
+            courses={courses}
+            courseSearch={courseSearch}
+            setCourseSearch={setCourseSearch}
+            setActiveTab={setActiveTab}
+            setNewBatch={setNewBatch}
+          />
         );
       case 'batches':
         return (
