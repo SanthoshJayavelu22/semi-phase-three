@@ -235,12 +235,8 @@ export const createCourse = async (req: Request, res: Response) => {
 export const getCourses = async (req: Request, res: Response) => {
   try {
     const query: any = {};
-    if (req.user.role === 'institute') {
-      const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
-      if (!institute) {
-        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
-      }
-      // Institutes see all Active courses
+    if (req.user?.role === 'institute') {
+      // Institutes see all Active standardized courses defined by the Board
       query.status = 'Active';
     }
     const courses = await Course.find(query).sort({ createdAt: -1 });
