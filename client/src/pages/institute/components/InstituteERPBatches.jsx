@@ -46,12 +46,6 @@ const InstituteERPBatches = ({
       return;
     }
     
-    const seats = parseInt(editForm.seats, 10);
-    if (isNaN(seats) || seats <= 0) {
-      alert('Number of available seats must be greater than zero.');
-      return;
-    }
-
     setSubmitting(true);
     try {
       if (handleUpdateBatch) {
@@ -59,7 +53,7 @@ const InstituteERPBatches = ({
         await handleUpdateBatch(batchId, {
           name: editForm.name,
           startDate: editForm.startDate,
-          seats: Number(editForm.seats)
+          seats: editForm.seats ? Number(editForm.seats) : undefined
         });
       }
       cancelEdit();
@@ -190,33 +184,7 @@ const InstituteERPBatches = ({
               </p>
             </div>
 
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500">
-                  Intake Capacity (Seats)
-                </label>
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                  Board Authorized Quota
-                </span>
-              </div>
-              <input
-                type="number"
-                min="1"
-                placeholder="Intake limit (Fixed by Board)"
-                value={editingBatch ? editForm.seats : (newBatch.seats || '')}
-                onChange={(e) => {
-                  if (editingBatch) {
-                    setEditForm({ ...editForm, seats: e.target.value });
-                  } else {
-                    setNewBatch({ ...newBatch, seats: e.target.value });
-                  }
-                }}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-              />
-              <p className="text-[10px] text-gray-400 mt-1 italic">
-                Defaults to your institute's inspection-approved quota set by Academic Board.
-              </p>
-            </div>
+
 
             <button
               type="submit"

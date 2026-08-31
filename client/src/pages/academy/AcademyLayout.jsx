@@ -101,6 +101,7 @@ export default function AcademyLayout() {
             experience: app.physicianExperience,
             emFacultyCount: app.emFacultyCount,
             teachingSpace: app.teachingSpace,
+            approvedSeats: app.approvedSeats || app.seatsRequested || 5,
             paymentComplete: app.paymentStatus === 'Completed',
             paymentDetails:
               app.paymentStatus === 'Completed'
@@ -434,13 +435,17 @@ export default function AcademyLayout() {
     }
   }, [students, fetchBoardData]);
 
-  const handleReviewApplication = useCallback(async (id, newStatus, reason = null) => {
+  const handleReviewApplication = useCallback(async (id, newStatus, reason = null, approvedSeats = 5) => {
     try {
       const backendStatus = newStatus === 'approved' ? 'Approved' : 'Rejected';
-      await instituteService.reviewInstitute(id, { status: backendStatus, remarks: reason });
+      await instituteService.reviewInstitute(id, { 
+        status: backendStatus, 
+        remarks: reason,
+        approvedSeats: Number(approvedSeats) || 5
+      });
       await fetchBoardData();
       setSelectedApp(prev =>
-        prev?.id === id ? { ...prev, status: newStatus, rejectionReason: reason } : prev
+        prev?.id === id ? { ...prev, status: newStatus, rejectionReason: reason, approvedSeats: Number(approvedSeats) || 5 } : prev
       );
     } catch (err) {
       setErrorMsg(err.parsedMessage || err.message || 'Failed to submit application review.');
@@ -448,18 +453,19 @@ export default function AcademyLayout() {
     }
   }, [fetchBoardData]);
 
-  const handleApprove = useCallback(() => {
+  const handleApprove = useCallback((customApprovedSeats) => {
     if (!selectedApp) return;
+    const seatsToApprove = customApprovedSeats !== undefined ? customApprovedSeats : (selectedApp.form?.seatsRequested || 5);
     setConfirmConfig({
-      title: 'Approve Application',
-      message: `Approve ${selectedApp.orgName}? This will activate their ERP dashboard.`,
+      title: 'Approve Application & Set Batch Quota',
+      message: `Approve ${selectedApp.orgName} with a batch intake quota limit of ${seatsToApprove} students per batch? This will activate their ERP dashboard.`,
       type: 'success',
-      confirmText: 'Yes, Approve',
+      confirmText: 'Yes, Approve with Limit',
       onConfirm: async () => {
         setConfirmConfig(null);
         try {
-          await handleReviewApplication(selectedApp.id, 'approved');
-          setSuccessMsg(`🎉 ${selectedApp.orgName} approved and activated.`);
+          await handleReviewApplication(selectedApp.id, 'approved', null, seatsToApprove);
+          setSuccessMsg(`🎉 ${selectedApp.orgName} approved and activated with ${seatsToApprove} batch seats limit.`);
         } catch { /* ignore */ }
       }
     });

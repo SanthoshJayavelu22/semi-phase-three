@@ -34,6 +34,16 @@ const AcademyInspectorModal = ({
     // The modal remounts per application, so this transient state is safe.
   }, [isVerifyingPayment]);
 
+  const [approvedQuota, setApprovedQuota] = useState(() => {
+    return parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5;
+  });
+
+  useEffect(() => {
+    if (selectedApp) {
+      setApprovedQuota(parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5);
+    }
+  }, [selectedApp]);
+
   const isPaymentComplete = !!selectedApp?.paymentComplete;
   const paymentAmount = selectedApp?.paymentDetails?.amount
     || (selectedApp?.form?.paymentAmount != null
@@ -243,10 +253,14 @@ const AcademyInspectorModal = ({
                     <GraduationCap className="w-3.5 h-3.5" /> Academic Specifications
                   </h4>
                 </div>
-                <div className="p-4 grid grid-cols-3 gap-x-4 gap-y-2.5 text-xs">
+                <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 text-xs">
                   <div>
                     <span className="text-slate-400 font-medium block">Seats Requested</span>
                     <span className="text-slate-800 font-bold">{selectedApp.form?.seatsRequested || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">Approved Batch Limit</span>
+                    <span className="text-indigo-600 font-black">{selectedApp.approvedSeats || selectedApp.form?.approvedSeats || approvedQuota} Seats</span>
                   </div>
                   <div>
                     <span className="text-slate-400 font-medium block">Commencement</span>
@@ -342,11 +356,28 @@ const AcademyInspectorModal = ({
         </div>
 
         {/* ─── FOOTER ────────────────────────────────────────────────────────── */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-shrink-0">
-          <div className="text-[10px] text-slate-400 font-medium">
-            {isPaymentComplete ? '✅ All checks passed' : '⏳ Payment verification required'}
-          </div>
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 flex-shrink-0">
           <div className="flex items-center gap-3">
+            {selectedApp.status === 'pending_review' && isPaymentComplete ? (
+              <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl">
+                <span className="text-[10px] font-black uppercase text-indigo-700 tracking-wider">Set Batch Quota Limit:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={approvedQuota}
+                  onChange={(e) => setApprovedQuota(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="w-16 px-2 py-1 bg-white border border-indigo-300 rounded-lg text-xs font-black text-indigo-900 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <span className="text-[10px] font-bold text-indigo-500">Seats/Batch</span>
+              </div>
+            ) : (
+              <div className="text-[10px] text-slate-400 font-medium">
+                {isPaymentComplete ? '✅ Inspection Fee Paid' : '⏳ Payment verification required'}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-3">
             {selectedApp.status === 'pending_review' && (
               <>
                 <button
@@ -356,17 +387,17 @@ const AcademyInspectorModal = ({
                   Reject
                 </button>
                 <button
-                  onClick={handleApprove}
+                  onClick={() => handleApprove(approvedQuota)}
                   disabled={!isPaymentComplete}
                   className={`px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
                     isPaymentComplete
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 cursor-pointer'
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}
                   title={!isPaymentComplete ? 'Payment must be completed before approval' : ''}
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  Approve
+                  Approve ({approvedQuota} Seats Limit)
                 </button>
               </>
             )}
