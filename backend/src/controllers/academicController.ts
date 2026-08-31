@@ -1082,7 +1082,7 @@ const studentMetricsUpdateSchema = z.object({
 
 export const listStudents = async (req: Request, res: Response) => {
   try {
-    const { courseId, batchId, search, isEligible, semesterNumber } = req.query;
+    const { courseId, batchId, search, isEligible, semesterNumber, verificationStatus, instituteId } = req.query;
     const query: any = {};
 
     if (req.user.role === 'institute') {
@@ -1091,6 +1091,12 @@ export const listStudents = async (req: Request, res: Response) => {
         return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
       }
       query.institute = institute._id;
+    } else if (instituteId) {
+      query.institute = instituteId;
+    }
+
+    if (verificationStatus) {
+      query.verificationStatus = verificationStatus;
     }
 
     if (courseId) {
@@ -1104,6 +1110,8 @@ export const listStudents = async (req: Request, res: Response) => {
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
         { enrollmentId: { $regex: search, $options: 'i' } },
+        { medicalCouncilRegistrationNumber: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -1310,9 +1318,20 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
           ? 'Thesis evaluation has been approved by the board.'
           : 'Thesis submission is pending approval or has not been approved.',
       },
+      courseCertificates: {
+        status: (student.documents?.nblsCertificateUrl || student.documents?.nclsCertificateUrl || student.documents?.ntlsCertificateUrl || student.documents?.nulsCertificateUrl) ? 'Completed' : 'Incomplete',
+        isValid: !!(student.documents?.nblsCertificateUrl || student.documents?.nclsCertificateUrl || student.documents?.ntlsCertificateUrl || student.documents?.nulsCertificateUrl),
+        nbls: !!student.documents?.nblsCertificateUrl,
+        ncls: !!student.documents?.nclsCertificateUrl,
+        ntls: !!student.documents?.ntlsCertificateUrl,
+        nuls: !!student.documents?.nulsCertificateUrl,
+        description: (student.documents?.nblsCertificateUrl || student.documents?.nclsCertificateUrl || student.documents?.ntlsCertificateUrl || student.documents?.nulsCertificateUrl)
+          ? 'Mandatory course completion certificate (NBLS/NCLS/NTLS/NULS) is uploaded.'
+          : 'Missing mandatory course completion certificate (at least one of NBLS, NCLS, NTLS, NULS required before exam).',
+      },
     };
 
-    const isEligible = checklist.feeStatus.isValid && checklist.attendance.isValid && checklist.thesisApproval.isValid;
+    const isEligible = checklist.feeStatus.isValid && checklist.attendance.isValid && checklist.thesisApproval.isValid && checklist.courseCertificates.isValid;
 
     return sendSuccess({
       req,
@@ -1477,7 +1496,8 @@ export const updateStudent = async (req: Request, res: Response) => {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       const docFields = [
         'passportPhoto', 'mbbsCertificate', 'medicalCouncilRegistrationCertificate',
-        'fmgeResultCopy', 'semiMembershipForm', 'studentSignature', 'hodSignature'
+        'fmgeResultCopy', 'semiMembershipForm', 'studentSignature', 'hodSignature',
+        'nblsCertificate', 'nclsCertificate', 'ntlsCertificate', 'nulsCertificate'
       ];
       
       const newDocs: any = { ...student.documents };
@@ -1489,6 +1509,12 @@ export const updateStudent = async (req: Request, res: Response) => {
       student.documents = newDocs;
     }
 
+    // If an institute updates/resubmits details for a student flagged with Correction Required, reset to Pending Verification
+    if (student.verificationStatus === 'Correction Required' && req.user.role === 'institute') {
+      student.verificationStatus = 'Pending Verification';
+      student.correctionResubmittedAt = new Date();
+    }
+
     await student.save();
 
     const latestSemester = student.semesters?.[student.semesters.length - 1];
@@ -1498,7 +1524,8 @@ export const updateStudent = async (req: Request, res: Response) => {
     const updatedStudent = await Student.findById(student._id)
       .populate('course', 'name')
       .populate('batch', 'year')
-      .populate('institute', 'orgName');
+      .populate('institute', 'orgName instituteAddress phoneNumber emailAddress headName hodName')
+      .populate('verifiedBy', 'name email role');
 
     const formattedStudent = {
       ...updatedStudent?.toObject(),
@@ -1747,3 +1774,121 @@ export const verifyAcademicPayment = async (req: Request, res: Response) => {
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
+
+// ==========================================
+// STUDENT ENROLLMENT VERIFICATION (ACADEMIC DEPARTMENT)
+// ==========================================
+
+export const verifyStudentEnrollment = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const { status, remarks } = req.body;
+
+    if (!['Approved', 'Rejected', 'Correction Required'].includes(status)) {
+      return sendError({ 
+        req, 
+        res, 
+        statusCode: 400, 
+        message: 'Invalid status. Allowed values: Approved, Rejected, Correction Required.' 
+      });
+    }
+
+    if ((status === 'Rejected' || status === 'Correction Required') && (!remarks || !remarks.trim())) {
+      return sendError({ 
+        req, 
+        res, 
+        statusCode: 400, 
+        message: `Remarks/reason are mandatory when marking student enrollment as ${status}.` 
+      });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found.' });
+    }
+
+    student.verificationStatus = status;
+    student.verificationRemarks = remarks?.trim() || '';
+    student.verifiedBy = req.user._id;
+    student.verifiedAt = new Date();
+
+    if (status === 'Correction Required') {
+      student.correctionRequestedAt = new Date();
+    }
+
+    await student.save();
+
+    const updatedStudent = await Student.findById(studentId)
+      .populate('course', 'name courseDuration durationType')
+      .populate('batch', 'year')
+      .populate('institute', 'orgName instituteAddress phoneNumber emailAddress headName hodName')
+      .populate('verifiedBy', 'name email role');
+
+    return sendSuccess({
+      req,
+      res,
+      message: `Student enrollment has been successfully set to '${status}'.`,
+      data: updatedStudent,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ==========================================
+// COURSE COMPLETION CERTIFICATES (NBLS, NCLS, NTLS, NULS)
+// ==========================================
+
+export const uploadCourseCertificates = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const query: any = { _id: studentId };
+
+    if (req.user.role === 'institute') {
+      const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
+      if (!institute) {
+        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute is not approved.' });
+      }
+      query.institute = institute._id;
+    }
+
+    const student = await Student.findOne(query);
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized.' });
+    }
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const certFields = ['nblsCertificate', 'nclsCertificate', 'ntlsCertificate', 'nulsCertificate'];
+
+    const newDocs: any = { ...student.documents };
+    let uploadedCount = 0;
+
+    for (const field of certFields) {
+      if (files && files[field] && files[field].length > 0) {
+        newDocs[`${field}Url`] = getFileUrl(files[field][0].path);
+        uploadedCount++;
+      }
+    }
+
+    student.documents = newDocs;
+    await student.save();
+
+    return sendSuccess({
+      req,
+      res,
+      message: `Course completion certificates updated successfully (${uploadedCount} uploaded).`,
+      data: {
+        documents: student.documents,
+        hasMandatoryCertificate: !!(
+          student.documents?.nblsCertificateUrl ||
+          student.documents?.nclsCertificateUrl ||
+          student.documents?.ntlsCertificateUrl ||
+          student.documents?.nulsCertificateUrl
+        ),
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+

@@ -43,12 +43,19 @@ const InstituteERPStudents = ({
       const name = s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
       const email = s.email || '';
       const enroll = s.enrollmentNo || s.applicationId || s.enrollmentId || '';
+      const regNo = s.medicalCouncilRegistrationNumber || '';
       const matchesSearch = name.toLowerCase().includes(studentSearch.toLowerCase()) || 
                             enroll.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                            email.toLowerCase().includes(studentSearch.toLowerCase());
+                            email.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                            regNo.toLowerCase().includes(studentSearch.toLowerCase());
       
-      const currentStatus = s.status || 'Active';
-      const matchesStatus = studentFilter === 'All' || currentStatus === studentFilter;
+      const vStatus = s.verificationStatus || 'Pending Verification';
+      const matchesStatus = studentFilter === 'All' || 
+        (studentFilter === 'Approved' && vStatus === 'Approved') ||
+        (studentFilter === 'Pending' && vStatus === 'Pending Verification') ||
+        (studentFilter === 'Correction' && vStatus === 'Correction Required') ||
+        (studentFilter === 'Rejected' && vStatus === 'Rejected') ||
+        s.status === studentFilter;
       
       const bName = s.batchName || (typeof s.batch === 'string' ? s.batch : (s.batch?.name || (s.batch?.year ? `Batch ${s.batch.year}` : ''))) || '';
       const matchesBatch = selectedStudentFilterBatch === 'All' || bName === selectedStudentFilterBatch || String(s.batchId || s.batch?._id) === String(selectedStudentFilterBatch);
@@ -59,6 +66,11 @@ const InstituteERPStudents = ({
       return matchesSearch && matchesStatus && matchesBatch && matchesCourse;
     });
   }, [students, studentSearch, studentFilter, selectedStudentFilterBatch, selectedStudentFilterCourse]);
+
+  // Count candidates needing correction
+  const correctionCount = useMemo(() => {
+    return students.filter(s => s.verificationStatus === 'Correction Required').length;
+  }, [students]);
 
   // Reset page when filters change
   useMemo(() => {
@@ -71,13 +83,66 @@ const InstituteERPStudents = ({
     return filteredList.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredList, currentPage]);
 
+  const getVerificationBadge = (vStatus) => {
+    switch (vStatus) {
+      case 'Approved':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+            ✓ Approved
+          </span>
+        );
+      case 'Correction Required':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 animate-pulse">
+            ↻ Correction
+          </span>
+        );
+      case 'Rejected':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">
+            ✕ Rejected
+          </span>
+        );
+      case 'Pending Verification':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+            ⏳ Pending
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200 text-left font-sans">
+      {/* Correction Required Alert Banner */}
+      {correctionCount > 0 && (
+        <div className="bg-purple-50 border-2 border-purple-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-purple-900 shadow-sm animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wider">
+                Action Required: {correctionCount} Candidate Enrollment(s) Need Correction
+              </h4>
+              <p className="text-xs text-purple-700 mt-0.5">
+                The Academic Department requested corrections for document or candidate details. Click on the candidate's edit icon to view remarks and resubmit.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setStudentFilter('Correction')}
+            className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl transition-colors whitespace-nowrap shadow-sm"
+          >
+            View Flagged Students
+          </button>
+        </div>
+      )}
+
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-slate-800 tracking-tight">Total Students</h2>
-          <p className="text-xs text-slate-400 font-semibold mt-1">Institutional registry of enrolled fellows and application history</p>
+          <p className="text-xs text-slate-400 font-semibold mt-1">Institutional registry of enrolled fellows, verification status, and academic history</p>
         </div>
         <button
           onClick={() => {
@@ -99,7 +164,7 @@ const InstituteERPStudents = ({
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by name, ID, or email..."
+              placeholder="Search by name, ID, email, reg no..."
               value={studentSearch}
               onChange={(e) => setStudentSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
@@ -132,19 +197,25 @@ const InstituteERPStudents = ({
             </div>
 
             <div className="flex items-center gap-1">
-              <span className="mr-1 text-[10px] uppercase font-black tracking-wider text-slate-400">Status:</span>
-              {['All', 'Active', 'Completed'].map((filter) => (
+              <span className="mr-1 text-[10px] uppercase font-black tracking-wider text-slate-400">Verification:</span>
+              {[
+                { id: 'All', label: 'All' },
+                { id: 'Pending', label: 'Pending' },
+                { id: 'Approved', label: 'Approved' },
+                { id: 'Correction', label: 'Correction' },
+                { id: 'Rejected', label: 'Rejected' },
+              ].map((filter) => (
                 <button
-                  key={filter}
+                  key={filter.id}
                   type="button"
-                  onClick={() => setStudentFilter(filter)}
-                  className={`px-3 py-1.5 rounded-lg border text-[10px] uppercase tracking-wider transition-all font-bold cursor-pointer ${
-                    studentFilter === filter 
+                  onClick={() => setStudentFilter(filter.id)}
+                  className={`px-2.5 py-1.5 rounded-lg border text-[10px] uppercase tracking-wider transition-all font-bold cursor-pointer ${
+                    studentFilter === filter.id 
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
                       : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500'
                   }`}
                 >
-                  {filter}
+                  {filter.label}
                 </button>
               ))}
             </div>
@@ -158,10 +229,10 @@ const InstituteERPStudents = ({
               <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px]">
                 <th className="px-6 py-4 font-black w-16 text-center">#</th>
                 <th className="px-6 py-4 font-black">Batch</th>
-                <th className="px-6 py-4 font-black">Application ID</th>
-                <th className="px-6 py-4 font-black">Student name</th>
+                <th className="px-6 py-4 font-black">Enrollment ID</th>
+                <th className="px-6 py-4 font-black">Student Name</th>
                 <th className="px-6 py-4 font-black">Course</th>
-                <th className="px-6 py-4 font-black">Email</th>
+                <th className="px-6 py-4 font-black">Verification Status</th>
                 <th className="px-6 py-4 font-black text-center">Actions</th>
               </tr>
             </thead>
@@ -172,8 +243,8 @@ const InstituteERPStudents = ({
                 const appId = student.enrollmentNo || student.applicationId || student.enrollmentId || `SEMI00${student.id || idx}`;
                 const name = student.fullName || 'Dr. Arjun Kumar';
                 const course = student.courseName || student.course || 'General Medicine';
-                const email = student.email || 'arjun@gmail.com';
                 const studentId = student._id || student.id;
+                const vStatus = student.verificationStatus || 'Pending Verification';
 
                 return (
                   <tr key={studentId || idx} className="hover:bg-slate-50/30 transition-colors">
@@ -181,10 +252,20 @@ const InstituteERPStudents = ({
                     <td className="px-6 py-4 font-bold text-slate-700">{batch}</td>
                     <td className="px-6 py-4 font-mono font-bold text-blue-600 tracking-tight">{appId}</td>
                     <td className="px-6 py-4">
-                      <span className="font-extrabold text-slate-800">{name}</span>
+                      <span className="font-extrabold text-slate-800 block">{name}</span>
+                      <span className="text-[11px] text-slate-400 font-mono">{student.email}</span>
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-700">{course}</td>
-                    <td className="px-6 py-4 text-slate-500 font-medium">{email}</td>
+                    <td className="px-6 py-4">
+                      <div>
+                        {getVerificationBadge(vStatus)}
+                        {student.verificationRemarks && (
+                          <p className="text-[10px] text-slate-500 mt-1 truncate max-w-xs italic" title={student.verificationRemarks}>
+                            "{student.verificationRemarks}"
+                          </p>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
@@ -198,8 +279,12 @@ const InstituteERPStudents = ({
                         <button
                           type="button"
                           onClick={() => setSelectedStudentForEdit(student)}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer"
-                          title="Edit Profile"
+                          className={`p-2 rounded-xl transition-all cursor-pointer ${
+                            vStatus === 'Correction Required'
+                              ? 'text-purple-600 bg-purple-50 hover:bg-purple-100 font-bold'
+                              : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
+                          }`}
+                          title={vStatus === 'Correction Required' ? 'Correction Requested - Edit & Resubmit' : 'Edit Profile'}
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
@@ -271,7 +356,8 @@ const InstituteERPStudents = ({
                 <div>
                   <span className="text-2xl font-black text-slate-900 block leading-tight">{selectedStudentForView.fullName}</span>
                   <div className="flex flex-wrap gap-2.5 items-center mt-2">
-                    <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-sm">
+                    {getVerificationBadge(selectedStudentForView.verificationStatus || 'Pending Verification')}
+                    <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
                       {selectedStudentForView.status || 'Active'}
                     </span>
                     <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60 font-mono tracking-tight">
@@ -280,6 +366,25 @@ const InstituteERPStudents = ({
                   </div>
                 </div>
               </div>
+
+              {/* Verification Audit Alert if Remarks Present */}
+              {selectedStudentForView.verificationRemarks && (
+                <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
+                  selectedStudentForView.verificationStatus === 'Correction Required'
+                    ? 'bg-purple-50 border-purple-200 text-purple-900'
+                    : selectedStudentForView.verificationStatus === 'Rejected'
+                    ? 'bg-red-50 border-red-200 text-red-900'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                }`}>
+                  <span className="text-lg">📢</span>
+                  <div>
+                    <strong className="font-black block uppercase tracking-wider text-[10px]">
+                      Academic Department Verification Note:
+                    </strong>
+                    <p className="mt-1 font-medium">{selectedStudentForView.verificationRemarks}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Grid sections */}
               <div className="space-y-7">
@@ -470,6 +575,64 @@ const InstituteERPStudents = ({
                           <span className="truncate text-slate-700 group-hover:text-blue-700">PG Degree Certificate / HOD Confirmation</span>
                         </a>
                       )}
+                    </div>
+
+                    {/* Mandatory Pre-Exam Course Completion Certificates */}
+                    <div className="mt-5 pt-4 border-t border-slate-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs uppercase font-black tracking-widest text-slate-400">
+                          Course Completion Certificates (NBLS / NCLS / NTLS / NULS)
+                        </span>
+                        {(selectedStudentForView.documents?.nblsCertificateUrl ||
+                          selectedStudentForView.documents?.nclsCertificateUrl ||
+                          selectedStudentForView.documents?.ntlsCertificateUrl ||
+                          selectedStudentForView.documents?.nulsCertificateUrl) ? (
+                          <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                            ✓ Exam Eligible (Certificate Attached)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-black uppercase text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                            ⚠️ Min 1 Certificate Required for Exam
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-bold">
+                        {[
+                          { key: 'nblsCertificateUrl', label: 'NBLS (Basic Life Support)', icon: '🩺' },
+                          { key: 'nclsCertificateUrl', label: 'NCLS (Comprehensive Life Support)', icon: '❤️' },
+                          { key: 'ntlsCertificateUrl', label: 'NTLS (Trauma Life Support)', icon: '🩹' },
+                          { key: 'nulsCertificateUrl', label: 'NULS (Ultrasound Life Support)', icon: '📡' },
+                        ].map(cert => {
+                          const url = selectedStudentForView.documents?.[cert.key];
+                          return url ? (
+                            <a
+                              key={cert.key}
+                              href={getDocUrl(url)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-3 p-3 bg-emerald-50/60 hover:bg-emerald-100/60 border border-emerald-200/80 rounded-2xl transition-all group"
+                            >
+                              <span className="text-lg">{cert.icon}</span>
+                              <div className="min-w-0 flex-1">
+                                <span className="truncate block text-slate-800 group-hover:text-emerald-800 text-xs font-extrabold">{cert.label}</span>
+                                <span className="text-[10px] text-emerald-600 font-bold">Verified & Linked</span>
+                              </div>
+                            </a>
+                          ) : (
+                            <div
+                              key={cert.key}
+                              className="flex items-center gap-3 p-3 bg-slate-50 border border-dashed border-slate-200 rounded-2xl opacity-75"
+                            >
+                              <span className="text-lg">{cert.icon}</span>
+                              <div className="min-w-0 flex-1">
+                                <span className="truncate block text-slate-500 text-xs font-bold">{cert.label}</span>
+                                <span className="text-[10px] text-rose-500 font-bold">Missing - Upload Required</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}

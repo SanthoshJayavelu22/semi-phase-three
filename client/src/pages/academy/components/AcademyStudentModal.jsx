@@ -387,6 +387,54 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                 </a>
               )}
 
+              {docs.nblsCertificateUrl && (
+                <a
+                  href={getDocUrl(docs.nblsCertificateUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-emerald-50/60 border border-emerald-200 hover:border-emerald-300 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-emerald-800 text-[11px] block truncate">🩺 NBLS Certificate (Basic Life Support)</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-800 transition-colors" />
+                </a>
+              )}
+
+              {docs.nclsCertificateUrl && (
+                <a
+                  href={getDocUrl(docs.nclsCertificateUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-emerald-50/60 border border-emerald-200 hover:border-emerald-300 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-emerald-800 text-[11px] block truncate">❤️ NCLS Certificate (Comprehensive Life Support)</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-800 transition-colors" />
+                </a>
+              )}
+
+              {docs.ntlsCertificateUrl && (
+                <a
+                  href={getDocUrl(docs.ntlsCertificateUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-emerald-50/60 border border-emerald-200 hover:border-emerald-300 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-emerald-800 text-[11px] block truncate">🩹 NTLS Certificate (Trauma Life Support)</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-800 transition-colors" />
+                </a>
+              )}
+
+              {docs.nulsCertificateUrl && (
+                <a
+                  href={getDocUrl(docs.nulsCertificateUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-emerald-50/60 border border-emerald-200 hover:border-emerald-300 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-emerald-800 text-[11px] block truncate">📡 NULS Certificate (Ultrasound Life Support)</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-800 transition-colors" />
+                </a>
+              )}
+
             </div>
           </div>
 

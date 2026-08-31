@@ -32,9 +32,19 @@ export interface IStudent extends Document {
     semiMembershipFormUrl: string;
     studentSignatureUrl?: string;
     hodSignatureUrl?: string;
+    nblsCertificateUrl?: string;
+    nclsCertificateUrl?: string;
+    ntlsCertificateUrl?: string;
+    nulsCertificateUrl?: string;
   };
   remittedToAcademy: boolean;
   remittanceRecord?: mongoose.Types.ObjectId;
+  verificationStatus: 'Pending Verification' | 'Approved' | 'Rejected' | 'Correction Required';
+  verificationRemarks?: string;
+  verifiedBy?: mongoose.Types.ObjectId;
+  verifiedAt?: Date;
+  correctionRequestedAt?: Date;
+  correctionResubmittedAt?: Date;
   semesters: {
     semesterNumber: number;
     attendancePercentage: number;
@@ -150,6 +160,10 @@ const studentSchema: Schema = new Schema(
       semiMembershipFormUrl: { type: String, required: true },
       studentSignatureUrl: { type: String },
       hodSignatureUrl: { type: String },
+      nblsCertificateUrl: { type: String },
+      nclsCertificateUrl: { type: String },
+      ntlsCertificateUrl: { type: String },
+      nulsCertificateUrl: { type: String },
     },
     remittedToAcademy: {
       type: Boolean,
@@ -159,6 +173,29 @@ const studentSchema: Schema = new Schema(
     remittanceRecord: {
       type: Schema.Types.ObjectId,
       ref: 'Remittance',
+    },
+    verificationStatus: {
+      type: String,
+      enum: ['Pending Verification', 'Approved', 'Rejected', 'Correction Required'],
+      default: 'Pending Verification',
+      required: true,
+    },
+    verificationRemarks: {
+      type: String,
+      default: '',
+    },
+    verifiedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    verifiedAt: {
+      type: Date,
+    },
+    correctionRequestedAt: {
+      type: Date,
+    },
+    correctionResubmittedAt: {
+      type: Date,
     },
     semesters: [
       {
@@ -198,6 +235,7 @@ studentSchema.index({ institute: 1, course: 1 });
 studentSchema.index({ institute: 1, batch: 1 });
 studentSchema.index({ isEligible: 1 });
 studentSchema.index({ email: 1 });
+studentSchema.index({ verificationStatus: 1 });
 studentSchema.index({ 'semesters.eligibilityStatus': 1 });
 
 

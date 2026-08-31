@@ -89,22 +89,42 @@ const InstituteERPExams = ({
         map[s.id || s._id] = { isEligible: false, reasonsText: `No record for Sem ${selectedSemester}` };
         return;
       }
+      const isVerified = s.verificationStatus === 'Approved';
       const isAttendanceOk = (sem.attendancePercentage || 0) >= 75;
       const isThesisOk = !!sem.thesisApproved;
       const isExamFeePaid = feeRecords.some(r =>
         (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id || r.student === s.id) &&
         r.paymentPurpose === 'Examination fee' && r.semesterNumber?.toString() === selectedSemester.toString()
       );
-      const isEligible = isAttendanceOk && isThesisOk && isExamFeePaid;
+      const hasNbls = !!s.documents?.nblsCertificateUrl;
+      const hasNcls = !!s.documents?.nclsCertificateUrl;
+      const hasNtls = !!s.documents?.ntlsCertificateUrl;
+      const hasNuls = !!s.documents?.nulsCertificateUrl;
+      const certCount = [hasNbls, hasNcls, hasNtls, hasNuls].filter(Boolean).length;
+      const isCourseCertsOk = certCount >= 1;
+
+      const isEligible = isVerified && isAttendanceOk && isThesisOk && isExamFeePaid && isCourseCertsOk;
       const reasons = [];
+      if (!isVerified) reasons.push(`Verification pending (${s.verificationStatus || 'Pending'})`);
       if (!isAttendanceOk) reasons.push(`Attendance low (${sem.attendancePercentage || 0}%)`);
       if (!isThesisOk) reasons.push("Thesis not uploaded");
       if (!isExamFeePaid) reasons.push("Exam fee not paid");
+      if (!isCourseCertsOk) {
+        reasons.push("Missing Course Completion Certificate (at least one of NBLS, NCLS, NTLS, NULS required)");
+      }
+
       map[s.id || s._id] = {
         isEligible,
+        isVerified,
         isAttendanceOk,
         isThesisOk,
         isExamFeePaid,
+        isCourseCertsOk,
+        certCount,
+        hasNbls,
+        hasNcls,
+        hasNtls,
+        hasNuls,
         reasonsText: reasons.join(", "),
       };
     });
@@ -308,6 +328,7 @@ const InstituteERPExams = ({
               <th className="px-4 py-3 font-black text-center">Attendance</th>
               <th className="px-4 py-3 font-black text-center">Thesis</th>
               <th className="px-4 py-3 font-black text-center">Fee Paid</th>
+              <th className="px-4 py-3 font-black text-center">Certificates (NBLS/NCLS/NTLS/NULS)</th>
               <th className="px-4 py-3 font-black text-center">Status</th>
             </tr>
           </thead>
@@ -315,6 +336,7 @@ const InstituteERPExams = ({
             {filteredStudents.map(s => {
               const e = studentEligibility[s.id || s._id];
               const sid = s.id || s._id;
+              const certsOk = e?.isCourseCertsOk;
               return (
                 <tr key={sid} className="hover:bg-slate-50/30 transition-colors">
                   <td className="px-4 py-3">
@@ -340,6 +362,32 @@ const InstituteERPExams = ({
                       e.isExamFeePaid
                         ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
                         : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      certsOk ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            {e.certCount}/4 Uploaded
+                          </span>
+                          <div className="flex gap-1 text-[8px] font-bold">
+                            <span className={e.hasNbls ? "text-emerald-700" : "text-slate-300"}>NBLS</span>
+                            <span className={e.hasNcls ? "text-emerald-700" : "text-slate-300"}>NCLS</span>
+                            <span className={e.hasNtls ? "text-emerald-700" : "text-slate-300"}>NTLS</span>
+                            <span className={e.hasNuls ? "text-emerald-700" : "text-slate-300"}>NULS</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-black" title="At least one course completion certificate is mandatory">
+                            <XCircle className="w-3 h-3 text-amber-600" />
+                            0/4 Missing
+                          </span>
+                          <span className="text-[8px] font-semibold text-rose-500">Min 1 Required</span>
+                        </div>
+                      )
                     ) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-center">

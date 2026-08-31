@@ -10,6 +10,11 @@ const DOC_FIELDS = [
   { key: 'semiMembershipForm', urlKey: 'semiMembershipFormUrl', label: 'SEMI Membership Form (PDF/DOC)', icon: '🗳️', isImage: false },
   { key: 'studentSignature', urlKey: 'studentSignatureUrl', label: 'Student Signature (JPG/PNG)', icon: '✍️', isImage: true },
   { key: 'hodSignature', urlKey: 'hodSignatureUrl', label: 'PG Degree / HOD Confirmation (PDF)', icon: '🎓', isImage: false },
+  // Mandatory Pre-Examination Course Completion Certificates
+  { key: 'nblsCertificate', urlKey: 'nblsCertificateUrl', label: 'NBLS Certificate (National Basic Life Support)', icon: '🩺', isImage: false },
+  { key: 'nclsCertificate', urlKey: 'nclsCertificateUrl', label: 'NCLS Certificate (National Comprehensive Life Support)', icon: '❤️', isImage: false },
+  { key: 'ntlsCertificate', urlKey: 'ntlsCertificateUrl', label: 'NTLS Certificate (National Trauma Life Support)', icon: '🩹', isImage: false },
+  { key: 'nulsCertificate', urlKey: 'nulsCertificateUrl', label: 'NULS Certificate (National Ultrasound Life Support)', icon: '📡', isImage: false },
 ];
 
 const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses = [], batches = [] }) => {
@@ -215,6 +220,25 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses =
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
+          {/* Correction Required Banner */}
+          {student?.verificationStatus === 'Correction Required' && (
+            <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl text-xs text-purple-900 space-y-2">
+              <div className="flex items-center gap-2 font-black uppercase tracking-wider text-[11px] text-purple-800">
+                <span className="text-base">⚠️</span>
+                <span>Academic Department Correction Request</span>
+              </div>
+              {student?.verificationRemarks && (
+                <div className="bg-white/80 p-3 rounded-xl border border-purple-200/60">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Examiner / Reviewer Note:</span>
+                  <p className="font-semibold text-slate-800 leading-relaxed">{student.verificationRemarks}</p>
+                </div>
+              )}
+              <p className="text-[11px] text-purple-700">
+                Please update the relevant fields or upload updated/clearer documents below. Saving will automatically resubmit this candidate back to <strong>Pending Verification</strong> for Academic Department re-audit.
+              </p>
+            </div>
+          )}
+
           {error && (
             <div className="p-3.5 bg-rose-50 border-l-4 border-rose-500 rounded-r-xl text-xs font-bold text-rose-800 flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />

@@ -173,6 +173,12 @@ export default function AcademyLayout() {
           const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
           const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
 
+          const hasNbls = !!s.documents?.nblsCertificateUrl;
+          const hasNcls = !!s.documents?.nclsCertificateUrl;
+          const hasNtls = !!s.documents?.ntlsCertificateUrl;
+          const hasNuls = !!s.documents?.nulsCertificateUrl;
+          const isCourseCertsOk = hasNbls || hasNcls || hasNtls || hasNuls;
+
           let eligibility = 'Pending';
           let reason = '';
           if (!isRemitted) {
@@ -187,9 +193,12 @@ export default function AcademyLayout() {
           } else if (!isThesisApproved && isThesisUploaded) {
             eligibility = 'Pending';
             reason = 'Thesis uploaded and awaiting board approval.';
+          } else if (!isCourseCertsOk) {
+            eligibility = 'Pending';
+            reason = 'Mandatory Course completion certificate (NBLS, NCLS, NTLS, or NULS) pending upload.';
           } else {
             eligibility = 'Approved';
-            reason = 'All credentials, attendance, and thesis criteria fulfilled.';
+            reason = 'All credentials, attendance, thesis, and course completion certificate criteria fulfilled.';
           }
 
           return {
@@ -226,6 +235,14 @@ export default function AcademyLayout() {
           utrNumber: s.utrNumber,
           homeAddress: s.homeAddress,
           contactNumber: s.contactNumber,
+          verificationStatus: s.verificationStatus || 'Pending Verification',
+          verificationRemarks: s.verificationRemarks || '',
+          verifiedAt: s.verifiedAt,
+          verifiedBy: s.verifiedBy,
+          correctionRequestedAt: s.correctionRequestedAt,
+          correctionResubmittedAt: s.correctionResubmittedAt,
+          instituteDetails: s.institute,
+          rawStudent: s,
         };
       });
         setStudents(formatted);

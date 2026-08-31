@@ -141,6 +141,18 @@ export const academicService = {
 
   getStudentById: (studentId) => apiClient.get(`/academic/students/${studentId}`),
 
+  verifyStudentEnrollment: (studentId, data) =>
+    apiClient.patch(`/academic/students/${studentId}/verify-enrollment`, data),
+
+  uploadCourseCertificates: (studentId, formData) => {
+    let payload = formData;
+    const headers = {};
+    if (formData instanceof FormData) {
+      headers['Content-Type'] = undefined;
+    }
+    return apiClient.post(`/academic/students/${studentId}/course-certificates`, payload, { headers });
+  },
+
   // ─── RAZORPAY PAYMENT ────────────────────────────────────────────────────────
   createRazorpayOrder: (data) => apiClient.post('/academic/payment/create-order', data),
   verifyRazorpayPayment: (data) => apiClient.post('/academic/payment/verify', data),

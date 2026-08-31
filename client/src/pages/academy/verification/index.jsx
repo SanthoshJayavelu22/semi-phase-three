@@ -1,25 +1,25 @@
 import { useOutletContext } from 'react-router-dom';
-import AcademyVerification from '../components/AcademyVerification';
+import AcademyStudentVerification from '../components/AcademyStudentVerification';
 
 /**
- * Academy Eligibility Verification Page  (/academy/verification)
- * Allows board members to approve or reject student exam eligibility.
+ * Academy Student Enrollment Verification Page (/academy/verification)
+ * Allows Academic Department to audit and approve, reject, or request correction for student enrollments.
  */
 export default function AcademyVerificationPage() {
   const {
-    students,
-    selectedStudentId, setSelectedStudentId,
-    handleVerifyStudentEligibility,
+    students = [],
     fetchBoardData,
-  } = useOutletContext();
+    setErrorMsg,
+    setSuccessMsg,
+  } = useOutletContext() || {};
 
   return (
-    <AcademyVerification
+    <AcademyStudentVerification
       students={students}
-      selectedStudentId={selectedStudentId}
-      setSelectedStudentId={setSelectedStudentId}
-      onVerifyStudent={handleVerifyStudentEligibility}
       fetchBoardData={fetchBoardData}
+      setErrorMsg={setErrorMsg}
+      setSuccessMsg={setSuccessMsg}
     />
   );
 }
+

@@ -27,6 +27,8 @@ import {
   getStudentById,
   updateStudent,
   deleteStudent,
+  verifyStudentEnrollment,
+  uploadCourseCertificates,
   createRazorpayOrder,
   verifyRazorpayPayment,
   getAcademicPaymentStatus,
@@ -158,11 +160,35 @@ router.put(
     { name: 'semiMembershipForm', maxCount: 1 },
     { name: 'studentSignature', maxCount: 1 },
     { name: 'hodSignature', maxCount: 1 },
+    { name: 'nblsCertificate', maxCount: 1 },
+    { name: 'nclsCertificate', maxCount: 1 },
+    { name: 'ntlsCertificate', maxCount: 1 },
+    { name: 'nulsCertificate', maxCount: 1 },
   ]),
   updateStudent
 );
 
+router.post(
+  '/students/:studentId/course-certificates',
+  protect,
+  authorize('institute', 'admin', 'super_admin'),
+  upload.fields([
+    { name: 'nblsCertificate', maxCount: 1 },
+    { name: 'nclsCertificate', maxCount: 1 },
+    { name: 'ntlsCertificate', maxCount: 1 },
+    { name: 'nulsCertificate', maxCount: 1 },
+  ]),
+  uploadCourseCertificates
+);
+
 router.delete('/students/:studentId', protect, authorize('institute', 'admin', 'super_admin'), deleteStudent);
+
+router.patch(
+  '/students/:studentId/verify-enrollment',
+  protect,
+  authorize('admin', 'board', 'super_admin'),
+  verifyStudentEnrollment
+);
 
 router.patch(
   '/students/:studentId/academic-metrics',

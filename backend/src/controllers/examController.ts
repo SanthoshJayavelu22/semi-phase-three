@@ -130,6 +130,36 @@ export const applyForExam = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to the specified course.' });
     }
 
+    const unapprovedStudents = students.filter((s: any) => s.verificationStatus && s.verificationStatus !== 'Approved');
+    if (unapprovedStudents.length > 0) {
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: `Cannot enroll unverified students for examinations. ${unapprovedStudents.length} student(s) have verification status: Pending or Correction Required.`
+      });
+    }
+
+    // Mandatory Course Completion Certificates Check (At least one: NBLS / NCLS / NTLS / NULS)
+    const missingCertificateStudents = students.filter((s: any) => {
+      const hasNbls = !!s.documents?.nblsCertificateUrl;
+      const hasNcls = !!s.documents?.nclsCertificateUrl;
+      const hasNtls = !!s.documents?.ntlsCertificateUrl;
+      const hasNuls = !!s.documents?.nulsCertificateUrl;
+      return !(hasNbls || hasNcls || hasNtls || hasNuls);
+    });
+
+    if (missingCertificateStudents.length > 0) {
+      const names = missingCertificateStudents.map((s: any) => `${s.firstName} ${s.lastName}`);
+
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: `Mandatory Course Completion Certificate missing. At least one course completion certificate (NBLS, NCLS, NTLS, or NULS) must be uploaded before examination for: ${names.join(', ')}.`
+      });
+    }
+
     // Fetch fee records for examination fees
     const feeRecords = await FeeRecord.find({
       student: { $in: validatedData.studentIds },
