@@ -94,7 +94,7 @@ const seedTestData = async () => {
       institute: institute._id,
     });
 
-    console.log('Creating 5 test Students with semester data...');
+    console.log('Creating 5 test Students with examination data...');
     const studentsData = [
       {
         enrollmentId: 'SEMI-2026-1001',
@@ -102,7 +102,7 @@ const seedTestData = async () => {
         lastName: 'Sharma',
         email: 'aarav.sharma@example.com',
         utrNumber: 'UTR111111',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 85, thesisApproved: true }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 85, thesisApproved: true }],
         remittedToAcademy: true,
       },
       {
@@ -111,7 +111,7 @@ const seedTestData = async () => {
         lastName: 'Patel',
         email: 'neha.patel@example.com',
         utrNumber: 'UTR222222',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 68, thesisApproved: true }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 68, thesisApproved: true }],
         remittedToAcademy: true,
       },
       {
@@ -120,7 +120,7 @@ const seedTestData = async () => {
         lastName: 'Verma',
         email: 'rahul.verma@example.com',
         utrNumber: 'UTR333333',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 92, thesisApproved: false }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 92, thesisApproved: false }],
         remittedToAcademy: true,
       },
       {
@@ -129,7 +129,7 @@ const seedTestData = async () => {
         lastName: 'Nair',
         email: 'priya.nair@example.com',
         utrNumber: 'UTR444444',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 88, thesisApproved: true }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 88, thesisApproved: true }],
         remittedToAcademy: false,
       },
       {
@@ -138,13 +138,13 @@ const seedTestData = async () => {
         lastName: 'Malhotra',
         email: 'karan.malhotra@example.com',
         utrNumber: 'UTR555555',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 62, thesisApproved: false }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 62, thesisApproved: false }],
         remittedToAcademy: false,
       },
     ];
 
     for (const s of studentsData) {
-      const { remittedToAcademy, semesters, ...rest } = s;
+      const { remittedToAcademy, examinations, ...rest } = s;
       await Student.create({
         ...rest,
         homeAddress: '456 Residency Road, Mumbai',
@@ -160,7 +160,7 @@ const seedTestData = async () => {
         batch: batch._id,
         institute: institute._id,
         courseDirector: 'Dr. Rajesh Khanna',
-        semesters,
+        examinations,
         remittedToAcademy,
         documents: {
           passportPhotoUrl: 'http://example.com/photo.jpg',

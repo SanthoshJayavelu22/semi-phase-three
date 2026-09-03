@@ -8,16 +8,14 @@ import {
   Download,
   Printer,
   Award,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Users,
   Calendar,
   Filter,
   X,
   BarChart3,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  CheckCircle2
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import marksService from '../../../api/marks';
@@ -54,36 +52,20 @@ const AcademyStudentMarks = () => {
           const rawMarks = s.marks || s.subjects || [];
           const subjects = rawMarks.length > 0
             ? rawMarks.map(m => {
-                const obtained = m.marksObtained ?? m.marks ?? 0;
-                const total = m.totalMarks || m.total || 100;
-                const percentage = total > 0 ? (obtained / total) * 100 : 0;
-                let grade = m.grade;
-                if (!grade) {
-                  if (percentage >= 90) grade = 'O';
-                  else if (percentage >= 80) grade = 'A+';
-                  else if (percentage >= 70) grade = 'A';
-                  else if (percentage >= 60) grade = 'B+';
-                  else if (percentage >= 50) grade = 'B';
-                  else if (percentage >= 40) grade = 'C';
-                  else grade = 'F';
-                }
+                const status = (m.status || m.result || '').toUpperCase();
                 return {
                   name: m.subjectName || m.name || `Subject ${idx + 1}`,
-                  marks: obtained,
-                  total,
-                  grade
+                  status: status === 'FAIL' || status === 'SUPPLEMENTARY' || status === 'REVALUATION_PENDING' ? 'FAIL' : 'PASS'
                 };
               })
             : [
-                { name: 'Anatomy', marks: 85, total: 100, grade: 'A' },
-                { name: 'Physiology', marks: 80, total: 100, grade: 'A' },
-                { name: 'Emergency Medicine', marks: 88, total: 100, grade: 'A' },
-                { name: 'Pharmacology', marks: 82, total: 100, grade: 'B+' }
+                { name: 'Anatomy', status: 'PASS' },
+                { name: 'Physiology', status: 'PASS' },
+                { name: 'Emergency Medicine', status: 'PASS' },
+                { name: 'Pharmacology', status: 'PASS' }
               ];
 
-          const totalObtained = subjects.reduce((acc, sub) => acc + (sub.marks || 0), 0);
-          const totalMax = subjects.reduce((acc, sub) => acc + (sub.total || 100), 0);
-          const computedPct = totalMax > 0 ? Math.round((totalObtained / totalMax) * 100) : 0;
+          const resultStatus = s.resultStatus || (subjects.some(sub => sub.status === 'FAIL') ? 'FAIL' : 'PASS');
 
           return {
             id: s._id || s.id || idx + 1,
@@ -94,7 +76,7 @@ const AcademyStudentMarks = () => {
             course: typeof s.course === 'object' ? (s.course?.name) : (s.course || 'Emergency Medicine'),
             email: s.email || 'N/A',
             phone: s.contactNumber || s.mobile || 'N/A',
-            percentage: s.percentage ?? computedPct,
+            resultStatus,
             subjects,
             attendance: s.attendancePercentage ?? s.attendance ?? 85,
             thesisStatus: s.thesisApproved ? 'Approved' : 'Pending'
@@ -127,12 +109,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'aarav.sharma@example.com',
       phone: '+91 98765 43210',
-      percentage: 87,
+      resultStatus: 'PASS',
       subjects: [
-        { name: 'Anatomy', marks: 92, total: 100, grade: 'A' },
-        { name: 'Physiology', marks: 85, total: 100, grade: 'A' },
-        { name: 'Emergency Medicine', marks: 88, total: 100, grade: 'A' },
-        { name: 'Pharmacology', marks: 82, total: 100, grade: 'B+' },
+        { name: 'Anatomy', status: 'PASS' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 85,
       thesisStatus: 'Approved'
@@ -146,12 +128,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'priya.nair@example.com',
       phone: '+91 98765 43211',
-      percentage: 76,
+      resultStatus: 'PASS',
       subjects: [
-        { name: 'Anatomy', marks: 78, total: 100, grade: 'B' },
-        { name: 'Physiology', marks: 72, total: 100, grade: 'B-' },
-        { name: 'Emergency Medicine', marks: 80, total: 100, grade: 'B+' },
-        { name: 'Pharmacology', marks: 74, total: 100, grade: 'B' },
+        { name: 'Anatomy', status: 'PASS' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 92,
       thesisStatus: 'Approved'
@@ -165,12 +147,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'rahul.verma@example.com',
       phone: '+91 98765 43212',
-      percentage: 76,
+      resultStatus: 'FAIL',
       subjects: [
-        { name: 'Anatomy', marks: 70, total: 100, grade: 'B-' },
-        { name: 'Physiology', marks: 75, total: 100, grade: 'B' },
-        { name: 'Emergency Medicine', marks: 82, total: 100, grade: 'A-' },
-        { name: 'Pharmacology', marks: 76, total: 100, grade: 'B' },
+        { name: 'Anatomy', status: 'FAIL' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 68,
       thesisStatus: 'Pending'
@@ -184,12 +166,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'neha.patel@example.com',
       phone: '+91 98765 43213',
-      percentage: 84,
+      resultStatus: 'PASS',
       subjects: [
-        { name: 'Anatomy', marks: 88, total: 100, grade: 'A' },
-        { name: 'Physiology', marks: 82, total: 100, grade: 'A-' },
-        { name: 'Emergency Medicine', marks: 85, total: 100, grade: 'A' },
-        { name: 'Pharmacology', marks: 81, total: 100, grade: 'A-' },
+        { name: 'Anatomy', status: 'PASS' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 76,
       thesisStatus: 'Approved'
@@ -203,12 +185,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'karan.malhotra@example.com',
       phone: '+91 98765 43214',
-      percentage: 62,
+      resultStatus: 'FAIL',
       subjects: [
-        { name: 'Anatomy', marks: 65, total: 100, grade: 'C+' },
-        { name: 'Physiology', marks: 58, total: 100, grade: 'C' },
-        { name: 'Emergency Medicine', marks: 68, total: 100, grade: 'B-' },
-        { name: 'Pharmacology', marks: 55, total: 100, grade: 'C' },
+        { name: 'Anatomy', status: 'FAIL' },
+        { name: 'Physiology', status: 'FAIL' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'FAIL' },
       ],
       attendance: 62,
       thesisStatus: 'Rejected'
@@ -222,12 +204,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'ananya.sen@example.com',
       phone: '+91 98765 43215',
-      percentage: 91,
+      resultStatus: 'PASS',
       subjects: [
-        { name: 'Anatomy', marks: 95, total: 100, grade: 'A+' },
-        { name: 'Physiology', marks: 90, total: 100, grade: 'A+' },
-        { name: 'Emergency Medicine', marks: 92, total: 100, grade: 'A+' },
-        { name: 'Pharmacology', marks: 88, total: 100, grade: 'A' },
+        { name: 'Anatomy', status: 'PASS' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 94,
       thesisStatus: 'Approved'
@@ -271,9 +253,6 @@ const AcademyStudentMarks = () => {
     return [...filteredStudents].sort((a, b) => {
       let aVal = a[sortConfig.key];
       let bVal = b[sortConfig.key];
-      if (sortConfig.key === 'percentage') {
-        return sortConfig.direction === 'asc' ? (aVal || 0) - (bVal || 0) : (bVal || 0) - (aVal || 0);
-      }
       if (typeof aVal === 'string') {
         return sortConfig.direction === 'asc' 
           ? aVal.localeCompare(bVal || '') 
@@ -286,10 +265,9 @@ const AcademyStudentMarks = () => {
   // ─── Statistics ─────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const total = activeStudents.length;
-    const avgPercentage = total > 0 ? Math.round(activeStudents.reduce((sum, s) => sum + (s.percentage || 0), 0) / total) : 0;
-    const above75 = activeStudents.filter(s => (s.percentage || 0) >= 75).length;
-    const below60 = activeStudents.filter(s => (s.percentage || 0) < 60).length;
-    return { total, avgPercentage, above75, below60 };
+    const passed = activeStudents.filter(s => (s.resultStatus || 'PASS') === 'PASS').length;
+    const reappearing = total - passed;
+    return { total, passed, reappearing };
   }, [activeStudents]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
@@ -321,36 +299,11 @@ const AcademyStudentMarks = () => {
   };
 
   // ─── Render Helpers ────────────────────────────────────────────────────────
-  const getPercentageColor = (percentage) => {
-    if (percentage >= 80) return 'text-emerald-600';
-    if (percentage >= 60) return 'text-amber-600';
-    return 'text-rose-600';
-  };
-
-  const getPercentageBg = (percentage) => {
-    if (percentage >= 80) return 'bg-emerald-50 border-emerald-200 text-emerald-700';
-    if (percentage >= 60) return 'bg-amber-50 border-amber-200 text-amber-700';
-    return 'bg-rose-50 border-rose-200 text-rose-700';
-  };
-
-  const getGradeColor = (grade) => {
-    const map = {
-      'A+': 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      'A': 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      'A-': 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      'B+': 'text-blue-600 bg-blue-50 border-blue-200',
-      'B': 'text-blue-600 bg-blue-50 border-blue-200',
-      'B-': 'text-amber-600 bg-amber-50 border-amber-200',
-      'C+': 'text-amber-600 bg-amber-50 border-amber-200',
-      'C': 'text-rose-600 bg-rose-50 border-rose-200',
-    };
-    return map[grade] || 'text-slate-500 bg-slate-50 border-slate-200';
-  };
-
-  const getStatusIcon = (percentage) => {
-    if (percentage >= 80) return <TrendingUp className="w-4 h-4" />;
-    if (percentage >= 60) return <Minus className="w-4 h-4" />;
-    return <TrendingDown className="w-4 h-4" />;
+  const getStatusBadge = (status) => {
+    const isPass = (status || 'PASS') === 'PASS';
+    return isPass
+      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+      : 'bg-rose-50 border-rose-200 text-rose-700';
   };
 
   return (
@@ -404,24 +357,17 @@ const AcademyStudentMarks = () => {
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Avg Percentage</span>
-            <Award className="w-4 h-4 text-emerald-500" />
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Passed</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
-          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.avgPercentage}%</p>
+          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.passed}</p>
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Above 75%</span>
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Reappearing</span>
+            <Award className="w-4 h-4 text-amber-500" />
           </div>
-          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.above75}</p>
-        </div>
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Below 60%</span>
-            <TrendingDown className="w-4 h-4 text-rose-500" />
-          </div>
-          <p className="text-2xl font-black text-rose-600 mt-1">{stats.below60}</p>
+          <p className="text-2xl font-black text-amber-600 mt-1">{stats.reappearing}</p>
         </div>
       </div>
 
@@ -537,11 +483,11 @@ const AcademyStudentMarks = () => {
                 </th>
                 <th 
                   className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center cursor-pointer hover:text-slate-700 transition-colors group"
-                  onClick={() => handleSort('percentage')}
+                  onClick={() => handleSort('resultStatus')}
                 >
                   <div className="flex items-center justify-center gap-1">
-                    Percentage
-                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'percentage' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                    Result
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'resultStatus' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
                   </div>
                 </th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-28">Actions</th>
@@ -589,14 +535,10 @@ const AcademyStudentMarks = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className={`text-sm font-black ${getPercentageColor(student.percentage)}`}>
-                        {student.percentage}%
-                      </span>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${getPercentageBg(student.percentage)}`}>
-                        {getStatusIcon(student.percentage)}
-                      </span>
-                    </div>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadge(student.resultStatus)}`}>
+                      {student.resultStatus === 'PASS' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                      {student.resultStatus === 'PASS' ? 'Pass' : 'Fail'}
+                    </span>
                   </td>
                   <td className="px-4 py-3.5 text-center">
                     <button
@@ -637,15 +579,11 @@ const AcademyStudentMarks = () => {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              ≥ 75% ({mockStudents.filter(s => s.percentage >= 75).length})
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-              60-74% ({mockStudents.filter(s => s.percentage >= 60 && s.percentage < 75).length})
+              Passed ({mockStudents.filter(s => (s.resultStatus || 'PASS') === 'PASS').length})
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-              &lt; 60% ({mockStudents.filter(s => s.percentage < 60).length})
+              Reappearing ({mockStudents.filter(s => (s.resultStatus || 'PASS') !== 'PASS').length})
             </span>
           </div>
         </div>
@@ -685,9 +623,9 @@ const AcademyStudentMarks = () => {
               {/* Quick Stats */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 text-center">
-                  <span className="text-[9px] uppercase font-black text-slate-400">Overall</span>
-                  <p className={`text-xl font-black ${getPercentageColor(selectedStudent.percentage)}`}>
-                    {selectedStudent.percentage}%
+                  <span className="text-[9px] uppercase font-black text-slate-400">Overall Result</span>
+                  <p className={`text-sm font-black ${selectedStudent.resultStatus === 'PASS' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {selectedStudent.resultStatus === 'PASS' ? 'PASS' : 'FAIL'}
                   </p>
                 </div>
                 <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 text-center">
@@ -704,55 +642,32 @@ const AcademyStudentMarks = () => {
                 </div>
               </div>
 
-              {/* Subject Marks Table */}
+              {/* Subject Results Table */}
               <div>
                 <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
-                  Subject-wise Marks
+                  Subject-wise Results
                 </h4>
                 <div className="overflow-x-auto border border-slate-100 rounded-2xl">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50/70 border-b border-slate-100">
                         <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject</th>
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Marks</th>
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 bg-white">
                       {selectedStudent.subjects.map((subject, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-4 py-2.5 font-bold text-slate-700">{subject.name}</td>
-                          <td className="px-4 py-2.5 text-center font-bold text-slate-800">
-                            {subject.marks} / {subject.total}
-                          </td>
                           <td className="px-4 py-2.5 text-center">
-                            <span className={`font-bold ${getPercentageColor(Math.round((subject.marks / subject.total) * 100))}`}>
-                              {Math.round((subject.marks / subject.total) * 100)}%
-                            </span>
-                          </td>
-                          <td className="px-4 py-2.5 text-center">
-                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getGradeColor(subject.grade)}`}>
-                              {subject.grade}
+                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadge(subject.status)}`}>
+                              {subject.status === 'PASS' ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                              {subject.status === 'PASS' ? 'Pass' : 'Fail'}
                             </span>
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot>
-                      <tr className="bg-slate-50/70 border-t border-slate-200">
-                        <td className="px-4 py-2.5 font-black text-xs text-slate-700">Overall</td>
-                        <td className="px-4 py-2.5 text-center font-bold text-slate-800">
-                          {selectedStudent.subjects.reduce((sum, s) => sum + s.marks, 0)} / {selectedStudent.subjects.reduce((sum, s) => sum + s.total, 0)}
-                        </td>
-                        <td className="px-4 py-2.5 text-center">
-                          <span className={`font-black ${getPercentageColor(selectedStudent.percentage)}`}>
-                            {selectedStudent.percentage}%
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-center"></td>
-                      </tr>
-                    </tfoot>
                   </table>
                 </div>
               </div>

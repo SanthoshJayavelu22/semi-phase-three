@@ -11,7 +11,7 @@ export interface ICertificate extends Document {
   certificateNumber: string;
   type: 'PROVISIONAL' | 'CONSOLIDATED' | 'DUPLICATE' | 'TRANSFER';
   academicYear: string;
-  semester?: number;
+  examination?: number;
   result?: Types.ObjectId;
   certificatePDF: string;
   isVerified: boolean;
@@ -48,10 +48,10 @@ const certificateSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    semester: {
+    examination: {
       type: Number,
       min: 1,
-      max: 8,
+      max: 2,
     },
     result: {
       type: Schema.Types.ObjectId,

@@ -16,9 +16,6 @@ import {
   FileSpreadsheet,
   Plus,
   Loader2,
-  TrendingUp,
-  TrendingDown,
-  Minus,
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
@@ -30,7 +27,7 @@ const AcademyMarksUpdating = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [selectedSemester, setSelectedSemester] = useState(1);
+  const [selectedExamination, setSelectedExamination] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('All');
   const [selectedCourse, setSelectedCourse] = useState('All');
@@ -38,9 +35,7 @@ const AcademyMarksUpdating = () => {
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableSemesters] = useState([1, 2, 3, 4, 5, 6]);
-  const [editingCell, setEditingCell] = useState(null); // { subjectCode, field }
-  const [editValue, setEditValue] = useState('');
+  const [availableExaminations] = useState([1, 2]);
   const [studentListPage, setStudentListPage] = useState(1);
   const studentsPerPage = 10;
 
@@ -53,7 +48,7 @@ const AcademyMarksUpdating = () => {
       if (selectedCourse !== 'All') params.courseId = selectedCourse;
       if (selectedInstitute !== 'All') params.instituteId = selectedInstitute;
       if (searchQuery) params.search = searchQuery;
-      if (selectedSemester) params.semesterNumber = selectedSemester;
+      if (selectedExamination) params.examinationNumber = selectedExamination;
 
       const res = await marksService.getStudentsWithMarks(params);
       const data = res.data?.data || res.data || [];
@@ -64,19 +59,19 @@ const AcademyMarksUpdating = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedBatch, selectedCourse, selectedInstitute, searchQuery, selectedSemester]);
+  }, [selectedBatch, selectedCourse, selectedInstitute, searchQuery, selectedExamination]);
 
   useEffect(() => {
     const id = setTimeout(() => fetchStudents(), 0);
     return () => clearTimeout(id);
   }, [fetchStudents]);
 
-  // Refresh selected student's marks when semester changes
+  // Refresh selected student's marks when examination changes
   useEffect(() => {
     if (!selectedStudent?._id) return;
     let cancelled = false;
     marksService
-      .getStudentMarks(selectedStudent._id, selectedSemester)
+      .getStudentMarks(selectedStudent._id, selectedExamination)
       .then((res) => {
         if (cancelled) return;
         const data = res.data?.data || res.data;
@@ -87,7 +82,7 @@ const AcademyMarksUpdating = () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSemester]);
+  }, [selectedExamination]);
 
   // ─── Derived Data ──────────────────────────────────────────────────────────
   const batchOptions = useMemo(() => {
@@ -150,22 +145,21 @@ const AcademyMarksUpdating = () => {
   // ─── Student Selection ─────────────────────────────────────────────────────
   const handleSelectStudent = useCallback(async (student) => {
     setSelectedStudent(student);
-    setEditingCell(null);
-    setEditValue('');
 
     if (student.course?._id) {
       try {
         const res = await marksService.getCourseSubjects(student.course._id);
         const subjects = res.data?.data || [];
-        // Seed marks from course subjects if the student has none saved yet
+        // Seed subjects from course subjects if the student has none saved yet
         if (subjects.length > 0 && (!student.marks || student.marks.length === 0)) {
           const seeded = subjects.map((s) => ({
             subjectCode: s.code,
             subjectName: s.name,
             marksObtained: null,
             totalMarks: 100,
-            isAbsent: null,
+            isAbsent: false,
             grade: '',
+            status: '',
           }));
           setSelectedStudent({ ...student, marks: seeded });
         }
@@ -175,38 +169,40 @@ const AcademyMarksUpdating = () => {
     }
   }, []);
 
-  // ─── Marks Handlers ──────────────────────────────────────────────────────
-  const handleMarksChange = useCallback(
-    (subjectCode, value) => {
+  // ─── Result Handlers ──────────────────────────────────────────────────────
+  const STATUS_CYCLE = ['', 'PASS', 'FAIL', 'ABSENT'];
+
+  const deriveMarkFromStatus = (status) => {
+    if (status === 'ABSENT') return null;
+    if (status === 'PASS') return 100;
+    if (status === 'FAIL') return 50;
+    return null;
+  };
+
+  const handleStatusChange = useCallback(
+    (subjectCode, status) => {
       if (!selectedStudent) return;
-
-      const updatedMarks = selectedStudent.marks.map((m) => {
+      const marks = (selectedStudent.marks || []).map((m) => {
         if (m.subjectCode !== subjectCode) return m;
-        const numVal = value === '' || value === null ? null : parseFloat(value);
-        return { ...m, marksObtained: numVal, isAbsent: numVal === null ? null : false };
+        return {
+          ...m,
+          status,
+          isAbsent: status === 'ABSENT',
+          marksObtained: deriveMarkFromStatus(status),
+        };
       });
-
-      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
+      setSelectedStudent({ ...selectedStudent, marks });
     },
     [selectedStudent]
   );
 
-  const handleStatusToggle = useCallback(
-    (subjectCode) => {
-      if (!selectedStudent) return;
-
-      const updatedMarks = selectedStudent.marks.map((m) => {
-        if (m.subjectCode !== subjectCode) return m;
-        let newIsAbsent;
-        if (m.isAbsent === true) newIsAbsent = null;
-        else if (m.isAbsent === false) newIsAbsent = true;
-        else newIsAbsent = false;
-        return { ...m, isAbsent: newIsAbsent, marksObtained: newIsAbsent === true ? null : m.marksObtained };
-      });
-
-      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
+  const handleCycleStatus = useCallback(
+    (subjectCode, current) => {
+      const idx = STATUS_CYCLE.indexOf(current);
+      const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+      handleStatusChange(subjectCode, next);
     },
-    [selectedStudent]
+    [handleStatusChange]
   );
 
   const handleAddSubject = useCallback(() => {
@@ -216,8 +212,9 @@ const AcademyMarksUpdating = () => {
       subjectName: 'New Subject',
       marksObtained: null,
       totalMarks: 100,
-      isAbsent: null,
+      isAbsent: false,
       grade: '',
+      status: '',
     };
     setSelectedStudent({
       ...selectedStudent,
@@ -246,25 +243,7 @@ const AcademyMarksUpdating = () => {
     [selectedStudent]
   );
 
-  // ─── Start Editing ──────────────────────────────────────────────────────
-  const startEditing = useCallback((subjectCode, field, currentValue) => {
-    setEditingCell({ subjectCode, field });
-    setEditValue(currentValue !== null && currentValue !== undefined ? String(currentValue) : '');
-  }, []);
-
-  const finishEditing = useCallback(() => {
-    if (!editingCell) return;
-    const { subjectCode, field } = editingCell;
-
-    if (field === 'marksObtained') {
-      handleMarksChange(subjectCode, editValue === '' ? null : editValue);
-    }
-
-    setEditingCell(null);
-    setEditValue('');
-  }, [editingCell, editValue, handleMarksChange]);
-
-  // ─── Save Marks ────────────────────────────────────────────────────────────
+  // ─── Save Results ────────────────────────────────────────────────────────
   const handleSaveMarks = useCallback(async () => {
     const studentId = selectedStudent?._id || selectedStudent?.id;
     if (!selectedStudent || !studentId) {
@@ -278,12 +257,10 @@ const AcademyMarksUpdating = () => {
       return;
     }
 
-    const emptySubjects = marks.filter(
-      (m) => !m.isAbsent && (m.marksObtained === null || m.marksObtained === undefined || m.marksObtained === '')
-    );
+    const emptySubjects = marks.filter((m) => !m.status);
     if (emptySubjects.length > 0) {
       setToast({
-        message: `Cannot save — ${emptySubjects.length} subject(s) have no marks entered.`,
+        message: `Cannot save — ${emptySubjects.length} subject(s) have no result recorded.`,
         type: 'warning',
       });
       return;
@@ -292,90 +269,53 @@ const AcademyMarksUpdating = () => {
     setIsSubmitting(true);
     try {
       const payload = {
-        semesterNumber: Number(selectedSemester),
-        subjects: marks.map((m) => {
-          const isAbs = m.isAbsent === true;
-          let val = null;
-          if (!isAbs && m.marksObtained !== null && m.marksObtained !== undefined && m.marksObtained !== '') {
-            val = Number(m.marksObtained);
-          }
-          return {
-            subjectCode: m.subjectCode,
-            subjectName: m.subjectName,
-            marksObtained: val,
-            isAbsent: isAbs,
-            totalMarks: Number(m.totalMarks) || 100,
-          };
-        }),
+        examinationNumber: Number(selectedExamination),
+        subjects: marks.map((m) => ({
+          subjectCode: m.subjectCode,
+          subjectName: m.subjectName,
+          marksObtained: deriveMarkFromStatus(m.status),
+          isAbsent: m.status === 'ABSENT',
+          totalMarks: Number(m.totalMarks) || 100,
+        })),
       };
 
       await marksService.updateStudentMarks(studentId, payload);
 
       await fetchStudents();
 
-      const updatedRes = await marksService.getStudentMarks(studentId, selectedSemester);
+      const updatedRes = await marksService.getStudentMarks(studentId, selectedExamination);
       const updatedData = updatedRes.data?.data || updatedRes.data;
       if (updatedData) {
         setSelectedStudent(updatedData);
       }
 
-      setToast({ message: 'Marks saved successfully!', type: 'success' });
+      setToast({ message: 'Results saved successfully!', type: 'success' });
     } catch (err) {
-      console.error('Error saving marks:', err);
-      setToast({ message: err.parsedMessage || err.response?.data?.message || 'Failed to save marks.', type: 'error' });
+      console.error('Error saving results:', err);
+      setToast({ message: err.parsedMessage || err.response?.data?.message || 'Failed to save results.', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedStudent, selectedSemester, fetchStudents]);
+  }, [selectedStudent, selectedExamination, fetchStudents]);
 
   // ─── Render Helpers ──────────────────────────────────────────────────────
-  const getGrade = (marks, total = 100) => {
-    if (marks === null || marks === undefined) return '';
-    const percentage = (marks / total) * 100;
-    if (percentage >= 90) return 'O';
-    if (percentage >= 80) return 'A+';
-    if (percentage >= 70) return 'A';
-    if (percentage >= 60) return 'B+';
-    if (percentage >= 50) return 'B';
-    if (percentage >= 40) return 'C';
-    if (percentage >= 35) return 'D';
-    return 'F';
-  };
-
-  const getGradeColor = (grade) => {
-    const map = {
-      O: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      'A+': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      A: 'bg-blue-100 text-blue-800 border-blue-200',
-      'B+': 'bg-blue-100 text-blue-800 border-blue-200',
-      B: 'bg-amber-100 text-amber-800 border-amber-200',
-      C: 'bg-amber-100 text-amber-800 border-amber-200',
-      D: 'bg-rose-100 text-rose-800 border-rose-200',
-      F: 'bg-rose-100 text-rose-800 border-rose-200',
-      ABSENT: 'bg-rose-100 text-rose-800 border-rose-200',
-    };
-    return map[grade] || 'bg-slate-100 text-slate-600 border-slate-200';
-  };
-
-  const getStatusIcon = (marks) => {
-    if (marks === null || marks === undefined) return <XCircle className="w-5 h-5 text-rose-500" />;
-    if (marks >= 80) return <TrendingUp className="w-5 h-5 text-emerald-600" />;
-    if (marks >= 60) return <Minus className="w-5 h-5 text-amber-500" />;
-    return <TrendingDown className="w-5 h-5 text-rose-500" />;
-  };
-
-  const calculateOverall = (marks) => {
-    if (!marks || marks.length === 0) return { obtained: 0, total: 0, percentage: 0, count: 0 };
-    const validMarks = marks.filter((m) => !m.isAbsent && m.marksObtained !== null);
-    const obtained = validMarks.reduce((sum, m) => sum + (m.marksObtained || 0), 0);
-    const total = validMarks.reduce((sum, m) => sum + (m.totalMarks || 100), 0);
-    const count = validMarks.length;
-    return { obtained, total, percentage: total > 0 ? Math.round((obtained / total) * 100) : 0, count };
+  const getStatusBadge = (status) => {
+    if (status === 'PASS') return 'bg-emerald-100 text-emerald-700 border-emerald-300';
+    if (status === 'FAIL') return 'bg-rose-100 text-rose-700 border-rose-300';
+    if (status === 'ABSENT') return 'bg-slate-200 text-slate-600 border-slate-300';
+    return 'bg-slate-100 text-slate-500 border-slate-300';
   };
 
   const overall = selectedStudent
-    ? calculateOverall(selectedStudent.marks)
-    : { obtained: 0, total: 0, percentage: 0, count: 0 };
+    ? (() => {
+        const rows = selectedStudent.marks || [];
+        const entered = rows.filter((r) => !!r.status);
+        const passed = entered.filter((r) => r.status === 'PASS').length;
+        const failed = entered.filter((r) => r.status === 'FAIL' || r.status === 'ABSENT').length;
+        const status = passed > 0 && failed === 0 ? 'PASS' : entered.length > 0 ? 'FAIL' : '';
+        return { total: rows.length, entered: entered.length, passed, failed, status };
+      })()
+    : { total: 0, entered: 0, passed: 0, failed: 0, status: '' };
 
   return (
     <div className="space-y-5 animate-in fade-in duration-300 text-left font-sans">
@@ -388,7 +328,7 @@ const AcademyMarksUpdating = () => {
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Marks Management</h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Enter and manage student examination marks •{' '}
+              Record and manage student examination results •{' '}
               <span className="font-bold text-blue-600">{students.length}</span> students
             </p>
           </div>
@@ -476,23 +416,23 @@ const AcademyMarksUpdating = () => {
             </div>
           </div>
 
-          {/* Semester Selector */}
+          {/* Examination Selector */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
             <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-2.5">
-              Select Semester
+              Select Examination
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {availableSemesters.map((sem) => (
+              {availableExaminations.map((exam) => (
                 <button
-                  key={sem}
-                  onClick={() => setSelectedSemester(sem)}
+                  key={exam}
+                  onClick={() => setSelectedExamination(exam)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    selectedSemester === sem
+                    selectedExamination === exam
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  Sem {sem}
+                  Exam {exam}
                 </button>
               ))}
             </div>
@@ -515,7 +455,7 @@ const AcademyMarksUpdating = () => {
                 paginatedStudents.map((student) => {
                   const isSelected = selectedStudent?._id === student._id;
                   const hasMarks = student.marks && student.marks.length > 0;
-                  const allEntered = student.marks?.every((m) => m.isAbsent === true || m.marksObtained !== null);
+                  const allEntered = student.marks?.every((m) => !!m.status || !!m.resultStatus || m.isAbsent === true || m.marksObtained !== null);
 
                   return (
                     <button
@@ -551,7 +491,7 @@ const AcademyMarksUpdating = () => {
                               </span>
                             ) : (
                               <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
-                                ✗ No Marks
+                                ✗ No Result
                               </span>
                             )}
                             <span className="text-xs text-slate-400">•</span>
@@ -598,7 +538,7 @@ const AcademyMarksUpdating = () => {
                         <span className="text-slate-300">|</span>
                         <span className="flex items-center gap-1.5 text-slate-600 font-medium">
                           <Calendar className="w-3.5 h-3.5" />
-                          Semester {selectedSemester}
+                          Examination {selectedExamination}
                         </span>
                       </div>
                     </div>
@@ -608,33 +548,33 @@ const AcademyMarksUpdating = () => {
                     <span className="text-xs font-bold text-slate-700">Overall:</span>
                     <span
                       className={`text-lg font-black ${
-                        overall.percentage >= 75
-                          ? 'text-emerald-600'
-                          : overall.percentage >= 60
-                            ? 'text-amber-600'
-                            : 'text-rose-600'
+                        overall.status === 'PASS' ? 'text-emerald-600' : 'text-rose-600'
                       }`}
                     >
-                      {overall.count > 0 ? `${overall.percentage}%` : 'N/A'}
+                      {overall.status === 'PASS' ? 'PASS' : overall.status === 'FAIL' ? 'FAIL' : 'N/A'}
                     </span>
-                    {overall.count > 0 && (
-                      <span className="text-xs text-slate-500">
-                        ({overall.obtained}/{overall.total})
-                      </span>
+                    {overall.entered > 0 && (
+                      <span className="text-xs text-slate-500">({overall.passed} passed, {overall.failed} failed)</span>
                     )}
                   </div>
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-100">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 pt-4 border-t border-slate-100">
                   <div className="bg-slate-50 rounded-xl p-3 text-center">
                     <span className="text-xs uppercase font-bold text-slate-500">Subjects</span>
                     <p className="text-lg font-black text-slate-800">{selectedStudent.marks?.length || 0}</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 text-center">
-                    <span className="text-xs uppercase font-bold text-slate-500">Scored</span>
-                    <p className="text-lg font-black text-slate-800">
-                      {overall.obtained}/{overall.total}
+                    <span className="text-xs uppercase font-bold text-slate-500">Passed</span>
+                    <p className="text-lg font-black text-emerald-600">
+                      {overall.passed}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <span className="text-xs uppercase font-bold text-slate-500">Failed</span>
+                    <p className="text-lg font-black text-rose-600">
+                      {overall.failed}
                     </p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 text-center">
@@ -665,7 +605,7 @@ const AcademyMarksUpdating = () => {
                 <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
                   <div className="flex items-center gap-2.5">
                     <BookOpen className="w-4 h-4 text-blue-600" />
-                    <h4 className="text-sm font-bold text-slate-700">Marks Entry - Semester {selectedSemester}</h4>
+                    <h4 className="text-sm font-bold text-slate-700">Result Entry - Examination {selectedExamination}</h4>
                     <span className="text-xs text-slate-400">|</span>
                     <span className="text-xs font-medium text-slate-500">
                       {selectedStudent.marks?.length || 0} subjects
@@ -691,13 +631,7 @@ const AcademyMarksUpdating = () => {
                         </th>
                         <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider">Subject</th>
                         <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-44 text-center">
-                          Marks Obtained
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-28 text-center">
-                          Status
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-24 text-center">
-                          Grade
+                          Result
                         </th>
                         <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-20 text-center">
                           Action
@@ -706,19 +640,8 @@ const AcademyMarksUpdating = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
                       {(selectedStudent.marks || []).map((subject, idx) => {
-                        const grade = subject.isAbsent === true
-                          ? 'ABSENT'
-                          : getGrade(subject.marksObtained, subject.totalMarks || 100);
-                        const isEditing = editingCell?.subjectCode === subject.subjectCode;
-                        const isAbsent = subject.isAbsent === true;
-                        const isUnmarked = subject.isAbsent === null || subject.isAbsent === undefined;
-
-                        // Status badge colors: Present = Green (emerald), Absent = Red (rose), Unmarked = Gray
-                        const statusColor = isAbsent
-                          ? 'bg-rose-100 border-rose-300 text-rose-700 hover:bg-rose-200'
-                          : isUnmarked
-                            ? 'bg-slate-100 border-slate-300 text-slate-500 hover:bg-slate-200'
-                            : 'bg-emerald-100 border-emerald-300 text-emerald-700 hover:bg-emerald-200';
+                        const status = subject.status || '';
+                        const isAbsent = status === 'ABSENT';
 
                         return (
                           <tr
@@ -734,74 +657,16 @@ const AcademyMarksUpdating = () => {
                                 <span className="ml-2.5 text-xs font-mono text-slate-400">{subject.subjectCode}</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3.5">
-                              {isEditing && editingCell?.field === 'marksObtained' ? (
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max={subject.totalMarks || 100}
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onBlur={finishEditing}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') finishEditing();
-                                    }}
-                                    autoFocus
-                                    className="w-20 px-2.5 py-1.5 border-2 border-blue-500 rounded-xl text-center text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/20"
-                                  />
-                                  <span className="text-xs text-slate-400 font-bold">/ {subject.totalMarks || 100}</span>
-                                </div>
-                              ) : (
-                                <div
-                                  className={`flex items-center gap-2.5 cursor-pointer group ${isAbsent ? 'opacity-60' : ''}`}
-                                  onClick={() =>
-                                    !isAbsent && startEditing(subject.subjectCode, 'marksObtained', subject.marksObtained)
-                                  }
-                                >
-                                  <span
-                                    className={`text-sm font-bold ${
-                                      isAbsent ? 'text-slate-400' : 'text-slate-800'
-                                    }`}
-                                  >
-                                    {isAbsent || subject.marksObtained === null ? '—' : subject.marksObtained}
-                                  </span>
-                                  <span className="text-xs text-slate-400 font-bold">/ {subject.totalMarks || 100}</span>
-                                  {!isAbsent && (
-                                    <span className="text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      (click to edit)
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </td>
                             <td className="px-4 py-3.5 text-center">
                               <button
-                                onClick={() => handleStatusToggle(subject.subjectCode)}
-                                title="Click to cycle: NOT MARKED → PRESENT → ABSENT"
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${statusColor}`}
+                                onClick={() => handleCycleStatus(subject.subjectCode, status)}
+                                title="Click to cycle: NOT RECORDED → PASS → FAIL → ABSENT"
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${getStatusBadge(status)}`}
                               >
-                                {isAbsent ? 'ABSENT' : isUnmarked ? 'NOT MARKED' : 'PRESENT'}
+                                {status === 'PASS' && <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />}
+                                {status === 'FAIL' && <XCircle className="w-3.5 h-3.5 inline mr-1 text-rose-600" />}
+                                {isAbsent ? 'ABSENT' : status || 'NOT RECORDED'}
                               </button>
-                            </td>
-                            <td className="px-4 py-3.5 text-center">
-                              {subject.isAbsent ? (
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${getGradeColor('ABSENT')}`}
-                                >
-                                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                                  ABSENT
-                                </span>
-                              ) : grade ? (
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${getGradeColor(grade)}`}
-                                >
-                                  {getStatusIcon(subject.marksObtained)}
-                                  {grade}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-slate-400 font-medium">—</span>
-                              )}
                             </td>
                             <td className="px-4 py-3.5 text-center">
                               <button
@@ -817,10 +682,10 @@ const AcademyMarksUpdating = () => {
                       })}
                       {(selectedStudent.marks || []).length === 0 && (
                         <tr>
-                          <td colSpan="6" className="px-5 py-12 text-center">
+                          <td colSpan="4" className="px-5 py-12 text-center">
                             <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                             <p className="text-base font-medium text-slate-500">No subjects added yet.</p>
-                            <p className="text-sm text-slate-400 mt-1">Click "Add Subject" to begin entering marks.</p>
+                            <p className="text-sm text-slate-400 mt-1">Click "Add Subject" to begin recording results.</p>
                           </td>
                         </tr>
                       )}
@@ -831,24 +696,21 @@ const AcademyMarksUpdating = () => {
                           <td colSpan="2" className="px-4 py-3.5 font-black text-sm text-slate-700">
                             Total / Overall
                           </td>
-                          <td className="px-4 py-3.5 text-center font-black text-lg text-slate-800">
-                            {overall.obtained} / {overall.total}
-                          </td>
-                          <td className="px-4 py-3.5 text-center">
+                          <td colSpan="2" className="px-4 py-3.5 text-center">
                             <span
                               className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-black border ${
-                                overall.percentage >= 75
+                                overall.status === 'PASS'
                                   ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
-                                  : overall.percentage >= 60
-                                    ? 'bg-amber-100 border-amber-200 text-amber-700'
-                                    : 'bg-rose-100 border-rose-200 text-rose-700'
+                                  : overall.status === 'FAIL'
+                                    ? 'bg-rose-100 border-rose-200 text-rose-700'
+                                    : 'bg-slate-100 border-slate-300 text-slate-500'
                               }`}
                             >
-                              {getStatusIcon(overall.percentage)}
-                              {overall.count > 0 ? `${overall.percentage}%` : 'N/A'}
+                              {overall.status === 'PASS' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                              {overall.status === 'FAIL' && <XCircle className="w-4 h-4 text-rose-600" />}
+                              {overall.status ? overall.status : 'NOT RECORDED'}
                             </span>
                           </td>
-                          <td colSpan="2" className="px-4 py-3.5 text-center"></td>
                         </tr>
                       </tfoot>
                     )}
@@ -861,8 +723,9 @@ const AcademyMarksUpdating = () => {
                 <div className="flex items-center gap-2.5 text-xs text-slate-600">
                   <AlertCircle className="w-4 h-4 text-amber-500" />
                   <span className="font-medium">
-                    <span className="font-bold text-emerald-700">PRESENT</span> = Green •
-                    <span className="font-bold text-rose-700 ml-1">ABSENT</span> = Red
+                    <span className="font-bold text-emerald-700">PASS</span> = Green •
+                    <span className="font-bold text-rose-700 ml-1">FAIL / ABSENT</span> = Red •
+                    Click the result to cycle through options
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -872,7 +735,7 @@ const AcademyMarksUpdating = () => {
                     className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md cursor-pointer active:scale-95"
                   >
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Submit Marks
+                    Submit Results
                   </button>
                 </div>
               </div>

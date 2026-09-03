@@ -4,7 +4,7 @@ export const issueCertificateSchema = z.object({
   student: z.string().min(1, 'Student ID is required'),
   type: z.enum(['PROVISIONAL', 'CONSOLIDATED', 'DUPLICATE', 'TRANSFER']),
   academicYear: z.string().min(1, 'Academic year is required'),
-  semester: z.coerce.number().int().min(1).max(8).optional(),
+  examination: z.coerce.number().int().min(1).max(2).optional(),
   result: z.string().optional(),
   certificatePDF: z.string().optional(),
   expiryDate: z.string().optional(),

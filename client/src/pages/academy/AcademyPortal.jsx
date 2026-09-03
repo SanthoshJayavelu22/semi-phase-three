@@ -181,15 +181,15 @@ const AcademyPortal = () => {
       const studentsData = extractData(studentsRes) || [];
       if (Array.isArray(studentsData)) {
         const formatted = studentsData.map(s => {
-          const sSemesters = s.semesters || [];
-          const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+          const sExaminations = s.examinations || [];
+          const latestExam = sExaminations.length > 0 ? sExaminations[sExaminations.length - 1] : null;
 
           const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
             ? s.attendancePercentage
-            : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+            : (latestExam && latestExam.attendancePercentage !== undefined ? latestExam.attendancePercentage : 0);
 
-          const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
-          const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+          const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(exam => exam.thesisApproved));
+          const isThesisUploaded = Boolean(sExaminations.some(exam => exam.thesisDocumentUrl));
           const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
 
           let eligibility = 'Pending';
@@ -245,7 +245,7 @@ const AcademyPortal = () => {
             utrNumber: s.utrNumber,
             homeAddress: s.homeAddress,
             contactNumber: s.contactNumber,
-            semesters: sSemesters
+            examinations: sExaminations
           };
         });
         setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
@@ -377,18 +377,18 @@ const AcademyPortal = () => {
     setIsStudentModalOpen(true);
   }, []);
 
-  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus) => {
+  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, examinationNumber, eligibilityStatus) => {
     try {
       const student = students.find(s => s.enrollmentNo === enrollmentNo);
       if (student && (student._id || student.id)) {
         const targetId = student._id || student.id;
         
         await academicService.updateAcademicMetrics(targetId, {
-          semesterNumber: semesterNumber,
+          examinationNumber: examinationNumber,
           eligibilityStatus: eligibilityStatus
         });
         await fetchBoardData();
-        setSuccessMsg(`Eligibility status for student ${enrollmentNo} (Sem ${semesterNumber}) updated successfully.`);
+        setSuccessMsg(`Eligibility status for student ${enrollmentNo} (Exam ${examinationNumber}) updated successfully.`);
       }
     } catch (err) {
       setErrorMsg(err.parsedMessage || err.message || 'Failed to update student eligibility.');

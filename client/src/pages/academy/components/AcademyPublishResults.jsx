@@ -79,7 +79,7 @@ const AcademyPublishResults = () => {
   const [selectedInstitute, setSelectedInstitute] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
   const [publishDate, setPublishDate] = useState('');
   const [publishTime, setPublishTime] = useState('');
@@ -132,29 +132,29 @@ const AcademyPublishResults = () => {
 
   // ─── Fetch Publication Status ───────────────────────────────────────────────
   const fetchPublicationStatus = useCallback(async () => {
-    if (!selectedBatch || !selectedCourse || !selectedSemester) return;
+    if (!selectedBatch || !selectedCourse || !selectedExamination) return;
 
     try {
       const res = await marksService.getPublicationStatus({
         batchId: selectedBatch,
         courseId: selectedCourse,
-        semesterNumber: selectedSemester,
+        examinationNumber: selectedExamination,
       });
       const data = res.data?.data || res.data;
       setPublicationStatus(data);
     } catch {
       setToast({ message: 'Failed to load publication status', type: 'error' });
     }
-  }, [selectedBatch, selectedCourse, selectedSemester]);
+  }, [selectedBatch, selectedCourse, selectedExamination]);
 
   useEffect(() => {
-    if (selectedBatch && selectedCourse && selectedSemester) {
+    if (selectedBatch && selectedCourse && selectedExamination) {
       const timer = setTimeout(() => {
         fetchPublicationStatus();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [selectedBatch, selectedCourse, selectedSemester, fetchPublicationStatus]);
+    }, [selectedBatch, selectedCourse, selectedExamination, fetchPublicationStatus]);
 
   // ─── Derived Data ──────────────────────────────────────────────────────────
   const filteredBatches = useMemo(() => {
@@ -207,7 +207,7 @@ const AcademyPublishResults = () => {
 
         try {
           const payload = {
-            semesterNumber: parseInt(selectedSemester),
+            examinationNumber: parseInt(selectedExamination),
             batchId: selectedBatch,
             courseId: selectedCourse,
             academicYear: selectedAcademicYear || new Date().getFullYear().toString(),
@@ -258,7 +258,7 @@ const AcademyPublishResults = () => {
 
         try {
           const payload = {
-            semesterNumber: parseInt(selectedSemester),
+            examinationNumber: parseInt(selectedExamination),
             batchId: selectedBatch,
             courseId: selectedCourse,
             academicYear: selectedAcademicYear || new Date().getFullYear().toString(),
@@ -296,7 +296,7 @@ const AcademyPublishResults = () => {
     setSelectedInstitute('');
     setSelectedCourse('');
     setSelectedBatch('');
-    setSelectedSemester('');
+    setSelectedExamination('');
     setSelectedAcademicYear('');
     setPublishDate('');
     setPublishTime('');
@@ -408,20 +408,20 @@ const AcademyPublishResults = () => {
           </div>
         </div>
 
-        {/* Semester */}
+        {/* Examination */}
         <div>
           <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
-            Semester <span className="text-rose-500">*</span>
+            Examination <span className="text-rose-500">*</span>
           </label>
           <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(e.target.value)}
+            value={selectedExamination}
+            onChange={(e) => setSelectedExamination(e.target.value)}
             disabled={!selectedBatch}
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50"
           >
-            <option value="">Select Semester</option>
-            {[1, 2, 3, 4, 5, 6].map((sem) => (
-              <option key={sem} value={sem}>Semester {sem}</option>
+            <option value="">Select Examination</option>
+            {[1, 2].map((exam) => (
+              <option key={exam} value={exam}>Examination {exam}</option>
             ))}
           </select>
         </div>
@@ -453,7 +453,7 @@ const AcademyPublishResults = () => {
           </button>
           <button
             onClick={fetchPublicationStatus}
-            disabled={!selectedBatch || !selectedCourse || !selectedSemester}
+            disabled={!selectedBatch || !selectedCourse || !selectedExamination}
             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -846,7 +846,6 @@ const AcademyPublishResults = () => {
                 <tr className="bg-slate-50/70 border-b border-slate-200">
                   <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Percentage</th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Certificate</th>
                 </tr>
@@ -861,7 +860,6 @@ const AcademyPublishResults = () => {
                       {r.student?.firstName} {r.student?.lastName}
                       <span className="ml-2 text-[10px] font-mono text-slate-400">{r.student?.enrollmentId}</span>
                     </td>
-                    <td className="px-4 py-3 font-bold text-slate-800">{r.percentage}%</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                         r.resultStatus === 'PASS'

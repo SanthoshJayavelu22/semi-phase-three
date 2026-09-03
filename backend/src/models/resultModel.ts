@@ -26,7 +26,7 @@ export interface IAuditEntry {
 export interface IResult extends Document {
   student: Types.ObjectId;
   academicYear: string;
-  semester: number;
+  examination: number;
   subjects: ISubjectResult[];
   totalMarks: number;
   totalCredits: number;
@@ -54,11 +54,11 @@ const resultSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    semester: {
+    examination: {
       type: Number,
       required: true,
       min: 1,
-      max: 8,
+      max: 2,
     },
     subjects: [
       {
@@ -120,7 +120,7 @@ const resultSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-resultSchema.index({ student: 1, academicYear: 1, semester: 1 });
+resultSchema.index({ student: 1, academicYear: 1, examination: 1 });
 resultSchema.index({ 'subjects.subjectCode': 1 });
 resultSchema.index({ resultStatus: 1 });
 resultSchema.index({ isPublished: 1 });

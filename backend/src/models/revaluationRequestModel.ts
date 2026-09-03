@@ -33,7 +33,7 @@ export interface IRevaluationRequest extends Document {
   student: Types.ObjectId;
   result: Types.ObjectId;
   academicYear: string;
-  semester: number;
+  examination: number;
   subjects: IRevaluationSubject[];
   feePerSubject: number;
   totalFee: number;
@@ -80,11 +80,11 @@ const revaluationRequestSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    semester: {
+    examination: {
       type: Number,
       required: true,
       min: 1,
-      max: 8,
+      max: 2,
     },
     subjects: [
       {

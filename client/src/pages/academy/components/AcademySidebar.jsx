@@ -10,7 +10,8 @@ import {
   Globe,           // For Publish Results
   RefreshCw,       // For Publishing Details
   Award,           // For Revaluation
-  CreditCard       // For Remittance Audit
+  CreditCard,      // For Remittance Audit
+  Settings         // For Exam Fee Configuration
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -34,6 +35,7 @@ const NAV_GROUPS = [
       { id: 'verification', path: '/academy/verification', label: 'Student Verification', Icon: UserCheck },
       { id: 'eligibility', path: '/academy/eligibility', label: 'Exam Approvals', Icon: ClipboardList },
       { id: 'remittance', path: '/academy/remittance', label: 'Fee Payment Audit', Icon: CreditCard },
+      { id: 'fee-config', path: '/academy/fee-config', label: 'Exam Fee Settings', Icon: Settings },
     ]
   },
   {

@@ -29,6 +29,7 @@ const AcademyPublishResultsPage = lazy(() => import('./pages/academy/publish-res
 const AcademyPublishDetailsPage = lazy(() => import('./pages/academy/publish-details/index'));
 const AcademyRevaluationPage = lazy(() => import('./pages/academy/revaluation/index'));
 const AcademyRemittancePage = lazy(() => import('./pages/academy/remittance/index'));
+const AcademyFeeConfigPage = lazy(() => import('./pages/academy/fee-config/index'));
 
 // ─── Email Verification Page ─────────────────────────────────────────────────
 // Standalone page for email verification links
@@ -161,6 +162,7 @@ function App() {
           <Route path="publish-details"  element={<L><AcademyPublishDetailsPage /></L>} />
           <Route path="revaluation"      element={<L><AcademyRevaluationPage /></L>} />
           <Route path="remittance"       element={<L><AcademyRemittancePage /></L>} />
+          <Route path="fee-config"       element={<L><AcademyFeeConfigPage /></L>} />
         </Route>
 
         {/* Catch-all */}

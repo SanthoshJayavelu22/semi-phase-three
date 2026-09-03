@@ -72,7 +72,7 @@ class MarksheetService {
         const marksheet = await Marksheet.create({
           student: (result.student as any)._id,
           academicYear: result.academicYear,
-          semester: result.semester,
+          examination: result.examination,
           result: resultId,
           marksheetNumber,
           marksheetPDF: pdfUrl,

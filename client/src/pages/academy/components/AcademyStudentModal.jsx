@@ -13,10 +13,10 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
   };
 
   const docs = student.documents || {};
-  const sSemesters = student.semesters || [];
-  const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+  const sExaminations = student.examinations || [];
+  const latestSem = sExaminations.length > 0 ? sExaminations[sExaminations.length - 1] : null;
   
-  // Calculate attendance: root property OR latest semester OR average
+  // Calculate attendance: root property OR latest examination OR average
   const attendancePct = (student.attendancePercentage !== undefined && student.attendancePercentage !== null && student.attendancePercentage > 0)
     ? student.attendancePercentage
     : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
@@ -24,9 +24,9 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
   // Remittance status: student.remittedToAcademy OR razorpayPaymentId
   const isRemitted = Boolean(student.remittedToAcademy || student.razorpayPaymentId);
 
-  // Thesis status: approved if student.thesisApproved or any sem thesisApproved. Uploaded if any thesisDocumentUrl exists.
-  const isThesisApproved = Boolean(student.thesisApproved || sSemesters.some(s => s.thesisApproved));
-  const isThesisUploaded = Boolean(student.thesisUploaded || sSemesters.some(s => s.thesisDocumentUrl));
+  // Thesis status: approved if student.thesisApproved or any exam thesisApproved. Uploaded if any thesisDocumentUrl exists.
+  const isThesisApproved = Boolean(student.thesisApproved || sExaminations.some(s => s.thesisApproved));
+  const isThesisUploaded = Boolean(student.thesisUploaded || sExaminations.some(s => s.thesisDocumentUrl));
 
   return (
     <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -219,15 +219,15 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
             )}
           </div>
 
-          {/* Semester-Wise Detailed Breakdown (Fee, Attendance & Thesis) */}
+          {/* Examination-Wise Detailed Breakdown (Fee, Attendance & Thesis) */}
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-4">
             <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5 border-b border-slate-200/60 pb-2">
-              <Layers className="w-3.5 h-3.5 text-blue-600" /> Semester-Wise Breakdown (Fee, Attendance & Thesis)
+              <Layers className="w-3.5 h-3.5 text-blue-600" /> Examination-Wise Breakdown (Fee, Attendance & Thesis)
             </h4>
 
-            {sSemesters.length > 0 ? (
+            {sExaminations.length > 0 ? (
               <div className="space-y-3">
-                {sSemesters.map((sem) => {
+                {sExaminations.map((sem) => {
                   const semAtt = sem.attendancePercentage ?? 0;
                   const semAttValid = semAtt >= 75;
                   const semThesisDoc = sem.thesisDocumentUrl;
@@ -235,10 +235,10 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                   const semRemitted = isRemitted || sem.feeRemitted;
 
                   return (
-                    <div key={sem.semesterNumber} className="bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-sm space-y-3 text-xs">
+                    <div key={sem.examinationNumber} className="bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-sm space-y-3 text-xs">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <span className="font-extrabold text-blue-700 text-xs uppercase tracking-wider">
-                          Semester {sem.semesterNumber}
+                          Examination {sem.examinationNumber}
                         </span>
                         <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
                           semAttValid && (semThesisApproved || semThesisDoc) ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
@@ -260,7 +260,7 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                           </span>
                         </div>
 
-                        {/* 2. Semester Attendance */}
+                        {/* 2. Examination Attendance */}
                         <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150 space-y-1">
                           <div className="flex justify-between items-center">
                             <span className="text-[9px] uppercase font-bold text-slate-400">Attendance</span>
@@ -304,7 +304,7 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                 })}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 italic">No semester breakdown records initialized for this candidate.</p>
+              <p className="text-xs text-slate-400 italic">No examination breakdown records initialized for this candidate.</p>
             )}
           </div>
 

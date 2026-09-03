@@ -41,7 +41,7 @@ export const PaymentStatusChecker = ({
           ? {
               params: {
                 studentId: pendingState.additionalData.studentId,
-                semester: pendingState.additionalData.semester,
+                examination: pendingState.additionalData.examination,
                 purpose: pendingState.additionalData.purpose,
               },
             }

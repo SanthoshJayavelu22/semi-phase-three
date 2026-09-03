@@ -13,7 +13,7 @@ export interface ParsedSubject {
 export interface ParsedResultData {
   studentId: string;
   academicYear: string;
-  semester: number;
+  examination: number;
   subjects: ParsedSubject[];
 }
 
@@ -76,15 +76,15 @@ class FileParserService {
         continue;
       }
 
-      if (line.match(/^(Academic Year|Year|Semester):/i)) {
+      if (line.match(/^(Academic Year|Year|Examination|Semester):/i)) {
         const parts = line.split(/[:,]\s*/);
         if (parts.length === 2) {
           const key = parts[0].toLowerCase();
           const value = parts[1];
           if (key.includes('year')) {
             currentStudent.academicYear = value;
-          } else if (key.includes('semester')) {
-            currentStudent.semester = parseInt(value) || 1;
+          } else if (key.includes('examination') || key.includes('semester')) {
+            currentStudent.examination = parseInt(value) || 1;
           }
         }
         continue;
@@ -166,7 +166,7 @@ class FileParserService {
       const studentData: ParsedResultData = {
         studentId: String(studentId),
         academicYear: firstRow['Academic Year'] || firstRow['Year'] || '2024-25',
-        semester: parseInt(firstRow['Semester']) || 1,
+        examination: parseInt(firstRow['Examination'] || firstRow['Semester']) || 1,
         subjects: [],
       };
 

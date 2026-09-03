@@ -277,11 +277,9 @@ const InstitutePortal = () => {
     programCategory: 'Emergency Medicine',
     courseDuration: '2',
     durationType: 'Years',
-    semesters: [
-      { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-      { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-      { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-      { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] }
+    examinations: [
+      { examinationNumber: 1, examinationName: 'Examination 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }], monthsRequired: 0 },
+      { examinationNumber: 2, examinationName: 'Examination 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }], monthsRequired: 0 }
     ],
     examinationFee: '15000',
   });
@@ -360,7 +358,7 @@ const InstitutePortal = () => {
           subjects: c.subjects || [],
           practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
           practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
-          semesters: c.semesters || [],
+          examinations: c.examinations || [],
           totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
           courseFee: c.courseFee || '0',
           registrationFee: c.registrationFee || '0',
@@ -431,7 +429,7 @@ const InstitutePortal = () => {
           fmgeClearanceStatus: s.fmgeClearanceStatus,
           isForeignGraduate: s.isForeignGraduate,
           documents: s.documents || {},
-          semesters: s.semesters || [],
+          examinations: s.examinations || [],
         }));
         setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
@@ -624,7 +622,7 @@ const InstitutePortal = () => {
                 subjects: c.subjects || [],
                 practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
                 practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
-                semesters: c.semesters || [],
+                examinations: c.examinations || [],
                 totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
                 courseFee: c.courseFee || '0',
                 registrationFee: c.registrationFee || '0',
@@ -660,15 +658,15 @@ const InstitutePortal = () => {
             const data = extractData(res) || [];
             if (Array.isArray(data)) {
               const formatted = data.map(s => {
-                const sSemesters = s.semesters || [];
-                const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+                const sExaminations = s.examinations || [];
+                const latestExam = sExaminations.length > 0 ? sExaminations[sExaminations.length - 1] : null;
 
                 const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
                   ? s.attendancePercentage
-                  : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+                  : (latestExam && latestExam.attendancePercentage !== undefined ? latestExam.attendancePercentage : 0);
 
-                const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
-                const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+                const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(sem => sem.thesisApproved));
+                const isThesisUploaded = Boolean(sExaminations.some(sem => sem.thesisDocumentUrl));
                 const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
 
                 return {
@@ -686,7 +684,7 @@ const InstitutePortal = () => {
                   attendancePercentage: attendancePct,
                   thesisApproved: isThesisApproved,
                   thesisUploaded: isThesisUploaded,
-                  semesters: sSemesters,
+                  examinations: sExaminations,
                   courseId: s.course?._id || s.course,
                   batchId: s.batch?._id || s.batch,
                   courseName: s.course?.name || 'General Medicine',
@@ -1709,14 +1707,14 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
 
-    // Ensure at least one subject exists across semesters
-    const hasSubjects = (courseForm.semesters || []).some(s => s.subjects && s.subjects.some(sub => sub.name?.trim()));
+    // Ensure at least one subject exists across examinations
+    const hasSubjects = (courseForm.examinations || []).some(s => s.subjects && s.subjects.some(sub => sub.name?.trim()));
     if (!hasSubjects) {
-      setErrorBanner('Please add at least one subject with a valid name in your semesters.');
+      setErrorBanner('Please add at least one subject with a valid name in your examinations.');
       return;
     }
 
-    const cleanedSemesters = (courseForm.semesters || []).map(s => ({
+    const cleanedExaminations = (courseForm.examinations || []).map(s => ({
       ...s,
       subjects: (s.subjects || []).filter(sub => sub && sub.name && sub.name.trim() !== ''),
       practicalExams: (s.practicalExams || []).filter(prac => prac && prac.name && prac.name.trim() !== ''),
@@ -1729,7 +1727,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         programCategory: courseForm.programCategory || 'Emergency Medicine',
         courseDuration: courseForm.courseDuration || '2',
         durationType: courseForm.durationType || 'Years',
-        semesters: cleanedSemesters,
+        examinations: cleanedExaminations,
         examinationFee: courseForm.examinationFee,
         description: `${courseForm.courseType || 'Postgraduate'} - ${courseForm.programCategory || 'Emergency Medicine'}`
       });
@@ -1743,11 +1741,9 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         programCategory: 'Emergency Medicine',
         courseDuration: '2',
         durationType: 'Years',
-        semesters: [
-          { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-          { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-          { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-          { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] }
+        examinations: [
+          { examinationNumber: 1, examinationName: 'Examination 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }], monthsRequired: 0 },
+          { examinationNumber: 2, examinationName: 'Examination 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }], monthsRequired: 0 }
         ],
         examinationFee: '15000'
       });

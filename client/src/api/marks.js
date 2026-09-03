@@ -5,8 +5,8 @@ export const marksService = {
   getStudentsWithMarks: (params) => apiClient.get('/marks/students', { params }),
 
   // Get a single student's marks
-  getStudentMarks: (studentId, semesterNumber) =>
-    apiClient.get(`/marks/students/${studentId}`, { params: { semesterNumber } }),
+  getStudentMarks: (studentId, examinationNumber) =>
+    apiClient.get(`/marks/students/${studentId}`, { params: { examinationNumber } }),
 
   // Update a single student's marks
   updateStudentMarks: (studentId, data) =>

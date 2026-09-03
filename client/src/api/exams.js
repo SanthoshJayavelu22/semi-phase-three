@@ -45,6 +45,13 @@ export const examService = {
   getHallTicketById: (id, hid) => apiClient.get(`/exams/${id}/hall-tickets/${hid}`),
 
   downloadHallTicket: (id, hid) => apiClient.get(`/exams/${id}/hall-tickets/${hid}/download`),
+
+  // ─── Exam Fee Applicability & Configuration ─────────────────────────────────
+  checkExamFeeApplicability: (studentId, examinationNumber) =>
+    apiClient.get(`/exams/fee-check/${studentId}/${examinationNumber}`),
+
+  getFeeConfiguration: (courseId, examinationNumber) =>
+    apiClient.get(`/exams/fee-configuration/${courseId}/${examinationNumber}`),
 };
 
 export default examService;

@@ -32,17 +32,17 @@ import academicService from '../../../api/academic';
 
 import ConfirmModal from '../../../Components/ConfirmModal';
 
-const isSemComplete = (sem) => {
+const isExamComplete = (sem) => {
   return (sem.attendancePercentage || 0) >= 75 && !!sem.thesisApproved;
 };
 
-const getVisibleSemesters = (semesters) => {
-  if (!semesters || semesters.length === 0) return [];
-  const sorted = [...semesters].sort((a, b) => a.semesterNumber - b.semesterNumber);
+const getVisibleExaminations = (examinations) => {
+  if (!examinations || examinations.length === 0) return [];
+  const sorted = [...examinations].sort((a, b) => a.examinationNumber - b.examinationNumber);
   const visible = [];
   for (const sem of sorted) {
     visible.push(sem);
-    if (!isSemComplete(sem)) break;
+    if (!isExamComplete(sem)) break;
   }
   return visible;
 };
@@ -54,7 +54,7 @@ const InstituteERPStudentDetails = ({
 }) => {
   // ─── State ──────────────────────────────────────────────────────────────────
   const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
   const [attendance, setAttendance] = useState('');
   const [studentSearchText, setStudentSearchText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,7 +72,7 @@ const InstituteERPStudentDetails = ({
   const fileInputRef = useRef(null);
 
   const [viewingStudent, setViewingStudent] = useState(null);
-  const [viewingSemester, setViewingSemester] = useState(null);
+  const [viewingExamination, setViewingExamination] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [toast, setToast] = useState(null);
@@ -95,13 +95,13 @@ const InstituteERPStudentDetails = ({
       if (!groups[studentId]) {
         groups[studentId] = {
           ...s,
-          semesters: []
+          examinations: []
         };
       }
-      if (s.semesters && s.semesters.length > 0) {
-        s.semesters.forEach(sem => {
-          groups[studentId].semesters.push({
-            semesterNumber: sem.semesterNumber,
+      if (s.examinations && s.examinations.length > 0) {
+        s.examinations.forEach(sem => {
+          groups[studentId].examinations.push({
+            examinationNumber: sem.examinationNumber,
             attendancePercentage: sem.attendancePercentage ?? 0,
             thesisApproved: sem.thesisApproved ?? false,
             thesisDocumentUrl: sem.thesisDocumentUrl || '',
@@ -109,7 +109,7 @@ const InstituteERPStudentDetails = ({
           });
         });
       }
-      groups[studentId].semesters.sort((a, b) => a.semesterNumber - b.semesterNumber);
+      groups[studentId].examinations.sort((a, b) => a.examinationNumber - b.examinationNumber);
     });
     return Object.values(groups);
   }, [students]);
@@ -137,12 +137,12 @@ const InstituteERPStudentDetails = ({
     
     if (filterStatus === 'Complete') {
       result = result.filter(g => {
-        const visible = getVisibleSemesters(g.semesters);
+        const visible = getVisibleExaminations(g.examinations);
         return visible.length > 0 && visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
       });
     } else if (filterStatus === 'Incomplete') {
       result = result.filter(g => {
-        const visible = getVisibleSemesters(g.semesters);
+        const visible = getVisibleExaminations(g.examinations);
         return visible.some(s => s.attendancePercentage < 75 || !s.thesisApproved);
       });
     }
@@ -182,24 +182,24 @@ const InstituteERPStudentDetails = ({
     const student = students.find(s => String(s.id) === studentId || String(s._id) === studentId);
     if (student) {
       setStudentSearchText(`${student.enrollmentNo || `STUD00${student.id}`} - ${student.fullName}`);
-      if (student.semesters && student.semesters.length > 0) {
-        const firstSem = student.semesters.find(s => s.attendancePercentage > 0 || s.thesisDocumentUrl);
+      if (student.examinations && student.examinations.length > 0) {
+        const firstSem = student.examinations.find(s => s.attendancePercentage > 0 || s.thesisDocumentUrl);
         if (firstSem) {
-          setSelectedSemester(firstSem.semesterNumber);
+          setSelectedExamination(firstSem.examinationNumber);
           setAttendance(firstSem.attendancePercentage || '');
         } else {
-          setSelectedSemester(student.semesters[0]?.semesterNumber || '');
+          setSelectedExamination(student.examinations[0]?.examinationNumber || '');
           setAttendance('');
         }
       }
     }
   };
 
-  const handleSemesterChange = (semNum) => {
-    setSelectedSemester(semNum);
+  const handleExaminationChange = (semNum) => {
+    setSelectedExamination(semNum);
     const student = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
-    if (student && student.semesters) {
-      const sem = student.semesters.find(s => String(s.semesterNumber) === String(semNum));
+    if (student && student.examinations) {
+      const sem = student.examinations.find(s => String(s.examinationNumber) === String(semNum));
       if (sem) setAttendance(sem.attendancePercentage || '');
       else setAttendance('');
     }
@@ -262,8 +262,8 @@ const InstituteERPStudentDetails = ({
   // ─── Submit Handler ────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedStudentId || !selectedSemester) {
-      setToast({ message: 'Please select a student and semester.', type: 'warning' });
+    if (!selectedStudentId || !selectedExamination) {
+      setToast({ message: 'Please select a student and examination.', type: 'warning' });
       return;
     }
 
@@ -278,7 +278,7 @@ const InstituteERPStudentDetails = ({
 
     try {
       const payload = {
-        semesterNumber: parseInt(selectedSemester),
+        examinationNumber: parseInt(selectedExamination),
         attendancePercentage: attendanceNum
       };
       if (uploadedFile) {
@@ -294,7 +294,7 @@ const InstituteERPStudentDetails = ({
 
       setSelectedStudentId('');
       setStudentSearchText('');
-      setSelectedSemester('');
+      setSelectedExamination('');
       setAttendance('');
       setUploadedFile(null);
       setUploadProgress(0);
@@ -308,16 +308,16 @@ const InstituteERPStudentDetails = ({
   };
 
   // ─── View Student Details ──────────────────────────────────────────────────
-  const handleViewStudent = (student, semester) => {
+  const handleViewStudent = (student, examination) => {
     setViewingStudent(student);
-    setViewingSemester(semester);
+    setViewingExamination(examination);
   };
 
   // ─── Delete Record ─────────────────────────────────────────────────────────
   const handleDeleteRecord = (studentId, semNum) => {
     setConfirmConfig({
       title: 'Clear Academic Record',
-      message: `Are you sure you want to clear this student's attendance and thesis records for Semester ${semNum}?`,
+      message: `Are you sure you want to clear this student's attendance and thesis records for Examination ${semNum}?`,
       type: 'danger',
       confirmText: 'Clear Record',
       onConfirm: async () => {
@@ -325,7 +325,7 @@ const InstituteERPStudentDetails = ({
         setIsSubmitting(true);
         try {
           await academicService.updateAcademicMetrics(studentId, {
-            semesterNumber: semNum,
+            examinationNumber: semNum,
             clearAttendance: true,
             clearThesis: true,
           });
@@ -366,9 +366,9 @@ const InstituteERPStudentDetails = ({
     return { label: 'Missing', color: 'text-slate-400', icon: <AlertCircle className="w-3.5 h-3.5 text-slate-400" /> };
   };
 
-  const getOverallStatus = (semesters) => {
-    if (!semesters || semesters.length === 0) return { label: 'No Data', color: 'bg-slate-100 text-slate-500' };
-    const visible = getVisibleSemesters(semesters);
+  const getOverallStatus = (examinations) => {
+    if (!examinations || examinations.length === 0) return { label: 'No Data', color: 'bg-slate-100 text-slate-500' };
+    const visible = getVisibleExaminations(examinations);
     const allComplete = visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
     if (allComplete) {
       return { label: 'All Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
@@ -400,7 +400,7 @@ const InstituteERPStudentDetails = ({
       )}
       {students.length > 0 && studentGroups.length === 0 && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-bold text-amber-800">
-          Debug: {students.length} students received but 0 groups created. Check if students have a `semesters` array.
+          Debug: {students.length} students received but 0 groups created. Check if students have an `examinations` array.
         </div>
       )}
       {/* ─── PAGE HEADER ────────────────────────────────────────────────────── */}
@@ -412,7 +412,7 @@ const InstituteERPStudentDetails = ({
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Student Academic Records</h2>
             <p className="text-xs text-slate-400 font-semibold mt-1">
-              {filteredGroups.length} students · {studentGroups.reduce((acc, g) => acc + g.semesters.length, 0)} records
+              {filteredGroups.length} students · {studentGroups.reduce((acc, g) => acc + g.examinations.length, 0)} records
             </p>
           </div>
         </div>
@@ -421,7 +421,7 @@ const InstituteERPStudentDetails = ({
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">All Complete</span>
             <span className="text-lg font-black text-emerald-600">
               {studentGroups.filter(g => {
-                const visible = getVisibleSemesters(g.semesters);
+                const visible = getVisibleExaminations(g.examinations);
                 return visible.length > 0 && visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
               }).length}
             </span>
@@ -430,7 +430,7 @@ const InstituteERPStudentDetails = ({
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Partial</span>
             <span className="text-lg font-black text-amber-600">
               {studentGroups.filter(g => {
-                const visible = getVisibleSemesters(g.semesters);
+                const visible = getVisibleExaminations(g.examinations);
                 return visible.some(s => s.attendancePercentage >= 75 && s.thesisApproved) &&
                   visible.some(s => s.attendancePercentage < 75 || !s.thesisApproved);
               }).length}
@@ -440,7 +440,7 @@ const InstituteERPStudentDetails = ({
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Incomplete</span>
             <span className="text-lg font-black text-rose-600">
               {studentGroups.filter(g => {
-                const visible = getVisibleSemesters(g.semesters);
+                const visible = getVisibleExaminations(g.examinations);
                 return visible.length > 0 && visible.every(s => s.attendancePercentage < 75 || !s.thesisApproved);
               }).length}
             </span>
@@ -514,7 +514,7 @@ const InstituteERPStudentDetails = ({
           {/* Student Cards */}
           <div className="space-y-3">
             {paginatedGroups.map((group) => {
-              const overallStatus = getOverallStatus(group.semesters);
+              const overallStatus = getOverallStatus(group.examinations);
               const studentKey = group._id || group.id || group.enrollmentNo;
               const isExpanded = expandedStudentId === (group._id || group.id);
 
@@ -526,7 +526,7 @@ const InstituteERPStudentDetails = ({
                   }`}
                 >
                   {(() => {
-                    const visibleSemesters = getVisibleSemesters(group.semesters);
+                    const visibleExaminations = getVisibleExaminations(group.examinations);
                     return (
                   <>
                   {/* ─── Card Header (always visible) ──────────────────────── */}
@@ -553,7 +553,7 @@ const InstituteERPStudentDetails = ({
                             {overallStatus.label}
                           </span>
                           <span className="text-[10px] text-slate-400 font-medium">
-                            {visibleSemesters.length} semester{visibleSemesters.length > 1 ? 's' : ''}
+                            {visibleExaminations.length} examination{visibleExaminations.length > 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>
@@ -562,13 +562,13 @@ const InstituteERPStudentDetails = ({
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {/* Quick status dots */}
                       <div className="flex items-center gap-1">
-                        {visibleSemesters.map((sem, idx) => {
-                          const isComplete = isSemComplete(sem);
+                        {visibleExaminations.map((sem, idx) => {
+                          const isComplete = isExamComplete(sem);
                           return (
                             <div 
-                              key={sem._id || sem.semesterNumber || `sem-dot-${idx}`}
+                              key={sem._id || sem.examinationNumber || `sem-dot-${idx}`}
                               className={`w-2.5 h-2.5 rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                              title={`Sem ${sem.semesterNumber}: ${isComplete ? 'Complete' : 'Incomplete'}`}
+                              title={`Exam ${sem.examinationNumber}: ${isComplete ? 'Complete' : 'Incomplete'}`}
                             />
                           );
                         })}
@@ -590,7 +590,7 @@ const InstituteERPStudentDetails = ({
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
                             <tr className="bg-slate-50/70 border-b border-slate-100">
-                              <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Sem</th>
+                              <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Exam</th>
                               <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Attendance</th>
                               <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Thesis</th>
                               <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
@@ -598,15 +598,15 @@ const InstituteERPStudentDetails = ({
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
-                            {visibleSemesters.map((sem) => {
+                            {visibleExaminations.map((sem) => {
                               const status = getStatusBadge(sem);
                               const thesis = getThesisStatus(sem);
-                              const isComplete = isSemComplete(sem);
+                              const isComplete = isExamComplete(sem);
 
                               return (
-                                <tr key={sem.semesterNumber} className="hover:bg-slate-50/50 transition-colors">
+                                <tr key={sem.examinationNumber} className="hover:bg-slate-50/50 transition-colors">
                                   <td className="px-3 py-3 text-center font-bold text-slate-700">
-                                    Sem {sem.semesterNumber}
+                                    Exam {sem.examinationNumber}
                                   </td>
                                   <td className="px-3 py-3 text-center">
                                     <span className={`font-bold ${isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
@@ -640,7 +640,7 @@ const InstituteERPStudentDetails = ({
                                     <div className="flex items-center justify-center gap-1">
                                       <button
                                         type="button"
-                                        onClick={() => handleViewStudent(group, sem.semesterNumber)}
+                                        onClick={() => handleViewStudent(group, sem.examinationNumber)}
                                         className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
                                         title="View Details"
                                       >
@@ -650,7 +650,7 @@ const InstituteERPStudentDetails = ({
                                         type="button"
                                         onClick={() => {
                                           const targetId = group._id || group.id;
-                                          handleDeleteRecord(targetId, sem.semesterNumber);
+                                          handleDeleteRecord(targetId, sem.examinationNumber);
                                         }}
                                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
                                         title="Clear Record"
@@ -755,35 +755,35 @@ const InstituteERPStudentDetails = ({
               </datalist>
             </div>
 
-            {/* Semester Selection */}
+            {/* Examination Selection */}
             {selectedStudentId && (
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
-                  Select Semester <span className="text-rose-500">*</span>
+                  Select Examination <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {(() => {
                     const student = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
-                    const selectableSems = getVisibleSemesters(student?.semesters || []);
+                    const selectableSems = getVisibleExaminations(student?.examinations || []);
                     if (selectableSems.length === 0) return null;
                     return selectableSems.map(sem => {
                       const hasSem = true;
-                      const semNum = sem.semesterNumber;
+                      const semNum = sem.examinationNumber;
                       return (
                         <button
                           key={semNum}
                           type="button"
-                          onClick={() => handleSemesterChange(semNum)}
+                          onClick={() => handleExaminationChange(semNum)}
                           disabled={!hasSem}
                           className={`flex-1 min-w-[30%] py-2.5 rounded-xl text-xs font-bold transition-all border ${
-                            String(selectedSemester) === String(semNum)
+                            String(selectedExamination) === String(semNum)
                               ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
                               : hasSem
                                 ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:border-slate-300'
                                 : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed opacity-50'
                           }`}
                         >
-                          Sem {semNum}
+                          Exam {semNum}
                         </button>
                       );
                     });
@@ -793,7 +793,7 @@ const InstituteERPStudentDetails = ({
             )}
 
             {/* Attendance */}
-            {selectedSemester && (
+            {selectedExamination && (
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
                   Attendance Percentage <span className="text-rose-500">*</span>
@@ -897,8 +897,8 @@ const InstituteERPStudentDetails = ({
       </div>
 
       {/* ─── VIEW DETAILS MODAL ────────────────────────────────────────────── */}
-      {viewingStudent && viewingSemester && (() => {
-        const semData = (viewingStudent.semesters || []).find(s => String(s.semesterNumber) === String(viewingSemester));
+      {viewingStudent && viewingExamination && (() => {
+        const semData = (viewingStudent.examinations || []).find(s => String(s.examinationNumber) === String(viewingExamination));
         const semAttendance = semData?.attendancePercentage || 0;
         const semThesisApproved = semData?.thesisApproved || false;
         const semThesisUrl = semData?.thesisDocumentUrl || '';
@@ -915,13 +915,13 @@ const InstituteERPStudentDetails = ({
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Academic Record</h3>
                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {viewingStudent.fullName} · Sem {viewingSemester}
+                    {viewingStudent.fullName} · Exam {viewingExamination}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => { setViewingStudent(null); setViewingSemester(null); }}
+                onClick={() => { setViewingStudent(null); setViewingExamination(null); }}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
               >
                 <X className="w-5 h-5" />
@@ -943,8 +943,8 @@ const InstituteERPStudentDetails = ({
 
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">{viewingSemester}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">{viewingExamination}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Attendance</span>
@@ -1011,7 +1011,7 @@ const InstituteERPStudentDetails = ({
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
               <button
                 type="button"
-                onClick={() => { setViewingStudent(null); setViewingSemester(null); }}
+                onClick={() => { setViewingStudent(null); setViewingExamination(null); }}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
               >
                 Close

@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createResultSchema = z.object({
   student: z.string().min(1, 'Student ID is required'),
   academicYear: z.string().min(1, 'Academic year is required'),
-  semester: z.coerce.number().int().min(1, 'Semester must be at least 1').max(8, 'Semester must be at most 8'),
+  examination: z.coerce.number().int().min(1, 'Examination must be at least 1').max(2, 'Examination must be at most 2'),
   subjects: z
     .array(
       z.object({
@@ -23,7 +23,7 @@ export const createResultSchema = z.object({
 export const updateResultSchema = z.object({
   student: z.string().min(1).optional(),
   academicYear: z.string().min(1).optional(),
-  semester: z.coerce.number().int().min(1).max(8).optional(),
+  examination: z.coerce.number().int().min(1).max(2).optional(),
   subjects: z
     .array(
       z.object({
@@ -47,7 +47,7 @@ export const bulkUploadSchema = z.object({
       z.object({
         student: z.string().min(1, 'Student ID is required'),
         academicYear: z.string().min(1, 'Academic year is required'),
-        semester: z.coerce.number().int().min(1).max(8),
+        examination: z.coerce.number().int().min(1).max(2),
         subjects: z
           .array(
             z.object({

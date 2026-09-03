@@ -10,7 +10,7 @@ export interface IMarksheetVersion {
 export interface IMarksheet extends Document {
   student: Types.ObjectId;
   academicYear: string;
-  semester: number;
+  examination: number;
   result: Types.ObjectId;
   marksheetNumber: string;
   marksheetPDF: string;
@@ -33,11 +33,11 @@ const marksheetSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    semester: {
+    examination: {
       type: Number,
       required: true,
       min: 1,
-      max: 8,
+      max: 2,
     },
     result: {
       type: Schema.Types.ObjectId,
@@ -84,6 +84,6 @@ const marksheetSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-marksheetSchema.index({ student: 1, academicYear: 1, semester: 1 });
+marksheetSchema.index({ student: 1, academicYear: 1, examination: 1 });
 
 export const Marksheet = mongoose.model<IMarksheet>('Marksheet', marksheetSchema);

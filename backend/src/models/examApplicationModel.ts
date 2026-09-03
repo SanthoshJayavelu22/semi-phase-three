@@ -4,7 +4,7 @@ export interface IExamApplication extends Document {
   institute: mongoose.Types.ObjectId;
   course: mongoose.Types.ObjectId;
   batch: mongoose.Types.ObjectId;
-  semesterNumber: number;
+  examinationNumber: number;
   students: mongoose.Types.ObjectId[];
   subjects: string[];
 
@@ -38,6 +38,14 @@ export interface IExamApplication extends Document {
   // Exam fee payment (now optional as fee is collected elsewhere)
   utrNumber?: string;
   examFeeReceiptUrl?: string;
+
+  // NEW: Fee applicability tracking (first-time vs reappearing students)
+  examFeeApplicable?: boolean;
+  examFeeAmount?: number;
+  reappearingFeeAmount?: number;
+  firstAttemptFeeAmount?: number;
+  reappearingStudents?: mongoose.Types.ObjectId[];
+  firstAttemptStudents?: mongoose.Types.ObjectId[];
 }
 
 const examApplicationSchema: Schema = new Schema(
@@ -57,9 +65,10 @@ const examApplicationSchema: Schema = new Schema(
       ref: 'Batch',
       required: true,
     },
-    semesterNumber: {
+    examinationNumber: {
       type: Number,
       required: true,
+      enum: [1, 2],
     },
     students: [
       {
@@ -117,6 +126,14 @@ const examApplicationSchema: Schema = new Schema(
       type: String,
       required: false,
     },
+
+    // Fee applicability tracking
+    examFeeApplicable: { type: Boolean, default: false },
+    examFeeAmount: { type: Number, default: 0 },
+    reappearingFeeAmount: { type: Number, default: 0 },
+    firstAttemptFeeAmount: { type: Number, default: 0 },
+    reappearingStudents: [{ type: Schema.Types.ObjectId, ref: 'Student' }],
+    firstAttemptStudents: [{ type: Schema.Types.ObjectId, ref: 'Student' }],
   },
   { timestamps: true }
 );

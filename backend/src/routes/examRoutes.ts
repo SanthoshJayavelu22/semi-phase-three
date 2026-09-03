@@ -11,6 +11,8 @@ import {
   listHallTickets,
   getHallTicketById,
   downloadHallTicket,
+  checkExamFeeApplicability,
+  getExamFeeConfiguration,
 } from '../controllers/examController';
 import { protect, authorize } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
@@ -24,6 +26,12 @@ const router = express.Router();
 // GET all applications (Institute sees own | Board/Admin sees all)
 // Supports filters: ?status=Pending&courseId=&batchId=
 router.get('/', protect, listExamApplications);
+
+// GET exam fee applicability for a student & examination
+router.get('/fee-check/:studentId/:examinationNumber', protect, checkExamFeeApplicability);
+
+// GET exam fee configuration for a course & examination
+router.get('/fee-configuration/:courseId/:examinationNumber', protect, getExamFeeConfiguration);
 
 // GET single application by ID
 router.get('/:id', protect, getExamApplicationById);

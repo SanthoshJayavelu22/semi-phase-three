@@ -49,7 +49,7 @@ export const generateProvisionalCertificate = async (req: Request, res: Response
       certificateNumber: certNumber,
       type: 'PROVISIONAL',
       academicYear: result.academicYear,
-      semester: result.semester,
+      examination: result.examination,
       result: resultId,
       certificatePDF: pdfUrl,
       issuedDate: new Date(),
@@ -118,7 +118,7 @@ export const getAllCertificates = async (req: Request, res: Response) => {
       limit: parseInt(limit as string),
       populate: [
         { path: 'student', select: 'firstName lastName enrollmentId email' },
-        { path: 'result', select: 'academicYear semester totalMarks percentage' },
+        { path: 'result', select: 'academicYear examination totalMarks percentage' },
       ],
       sort: { createdAt: -1 } as any,
     };
@@ -135,7 +135,7 @@ export const getCertificateById = async (req: Request, res: Response) => {
   try {
     const certificate = await Certificate.findById(req.params.id)
       .populate('student', 'firstName lastName enrollmentId email')
-      .populate('result', 'academicYear semester totalMarks percentage cgpa division')
+      .populate('result', 'academicYear examination totalMarks percentage cgpa division')
       .populate('verifiedBy', 'name email');
 
     if (!certificate) {
@@ -254,7 +254,7 @@ export const getStudentCertificates = async (req: Request, res: Response) => {
     const { studentId } = req.params;
 
     const certificates = await Certificate.find({ student: studentId, isRevoked: false })
-      .populate('result', 'academicYear semester totalMarks percentage cgpa division')
+      .populate('result', 'academicYear examination totalMarks percentage cgpa division')
       .sort({ issuedDate: -1 });
 
     if (!certificates || certificates.length === 0) {

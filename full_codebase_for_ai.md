@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-08-12T08:15:30.838Z
+> Auto-generated on 2026-09-01T11:18:07.266Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -100,9 +100,11 @@ semi-phase-three/
 │   │   │   ├── auditService.ts
 │   │   │   ├── cacheService.ts
 │   │   │   ├── certificateService.ts
+│   │   │   ├── examFeeService.ts
 │   │   │   ├── fileParserService.ts
 │   │   │   ├── hallTicketService.ts
 │   │   │   ├── marksheetService.ts
+│   │   │   ├── notificationService.ts
 │   │   │   ├── pdfGeneratorService.ts
 │   │   │   ├── resultService.ts
 │   │   │   └── revaluationService.ts
@@ -161,6 +163,7 @@ semi-phase-three/
 │   │   │   ├── ConfirmModal.jsx
 │   │   │   ├── ErrorBoundary.jsx
 │   │   │   ├── Loader.jsx
+│   │   │   ├── Pagination.jsx
 │   │   │   ├── PaymentStatusChecker.jsx
 │   │   │   └── Toast.jsx
 │   │   ├── contexts
@@ -175,9 +178,11 @@ semi-phase-three/
 │   │   │   │   │   └── index.jsx
 │   │   │   │   ├── components
 │   │   │   │   │   ├── AcademyApplications.jsx
+│   │   │   │   │   ├── AcademyCoursesManagement.jsx
 │   │   │   │   │   ├── AcademyDashboard.jsx
 │   │   │   │   │   ├── AcademyEditModal.jsx
 │   │   │   │   │   ├── AcademyEligibility.jsx
+│   │   │   │   │   ├── AcademyFeeConfiguration.jsx
 │   │   │   │   │   ├── AcademyHeader.jsx
 │   │   │   │   │   ├── AcademyInspectorModal.jsx
 │   │   │   │   │   ├── AcademyLogin.jsx
@@ -192,10 +197,15 @@ semi-phase-three/
 │   │   │   │   │   ├── AcademyStudentMarks.jsx
 │   │   │   │   │   ├── AcademyStudentModal.jsx
 │   │   │   │   │   ├── AcademyStudents.jsx
+│   │   │   │   │   ├── AcademyStudentVerification.jsx
 │   │   │   │   │   └── AcademyVerification.jsx
+│   │   │   │   ├── courses
+│   │   │   │   │   └── index.jsx
 │   │   │   │   ├── dashboard
 │   │   │   │   │   └── index.jsx
 │   │   │   │   ├── eligibility
+│   │   │   │   │   └── index.jsx
+│   │   │   │   ├── fee-config
 │   │   │   │   │   └── index.jsx
 │   │   │   │   ├── login
 │   │   │   │   │   └── index.jsx
@@ -822,6 +832,14 @@ Warning: A student with this Email Address or Medical Council Registration Numbe
 [INFO] [2026-08-05T10:37:44.866Z] APM: Mongoose connected to MongoDB cluster. 
 [INFO] [2026-08-05T10:51:42.708Z] Server is running on port 5003 
 [INFO] [2026-08-05T10:51:42.722Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-01T10:16:08.681Z] Server is running on port 5003 
+[INFO] [2026-09-01T10:16:08.714Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-01T10:18:42.955Z] Server is running on port 5003 
+[INFO] [2026-09-01T10:18:42.974Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-01T10:23:49.340Z] Server is running on port 5003 
+[INFO] [2026-09-01T10:23:49.359Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-01T10:24:01.572Z] Server is running on port 5003 
+[INFO] [2026-09-01T10:24:01.608Z] APM: Mongoose connected to MongoDB cluster. 
 
 ```
 
@@ -5050,8 +5068,10 @@ import { Student } from '../models/studentModel';
 import { FeeRecord } from '../models/feeRecordModel';
 import { Remittance } from '../models/remittanceModel';
 import { Institute } from '../models/instituteModel';
+import { Result } from '../models/resultModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { getFeeCategory, getFeeCategoryLabel } from '../utils/feeCategories';
+import { resolveFeeConfiguration, checkStudentReappearance } from '../services/examFeeService';
 import path from 'path';
 import razorpayInstance, { isRazorpayConfigured, keyId, keySecret } from '../config/razorpay';
 import crypto from 'crypto';
@@ -5069,29 +5089,67 @@ const getFileUrl = (filePath: string) => {
 // VALIDATION SCHEMAS
 // ==========================================
 
+const semesterSubjectSchema = z.object({
+  code: z.string().optional().default(''),
+  name: z.string().min(1, 'Subject Name is required'),
+});
+
+const semesterPracticalSchema = z.object({
+  code: z.string().optional().default(''),
+  name: z.string().min(1, 'Practical Exam Name is required'),
+});
+
+const courseSemesterSchema = z.object({
+  semesterNumber: z.coerce.number(),
+  semesterName: z.string().optional().default(''),
+  subjects: z.preprocess(
+    (val) => (Array.isArray(val) ? val.filter((s: any) => s && typeof s.name === 'string' && s.name.trim().length > 0) : []),
+    z.array(semesterSubjectSchema).optional().default([])
+  ),
+  practicalExams: z.preprocess(
+    (val) => (Array.isArray(val) ? val.filter((p: any) => p && typeof p.name === 'string' && p.name.trim().length > 0) : []),
+    z.array(semesterPracticalSchema).optional().default([])
+  ),
+});
+
 const courseCreateSchema = z.object({
   name: z.string().min(1, 'Course Name is required'),
-  description: z.string().optional(),
   courseCode: z.string().optional(),
   courseType: z.string().optional(),
   programCategory: z.string().optional(),
   courseDuration: z.string().optional(),
   durationType: z.string().optional(),
   subjects: z.array(z.string()).optional(),
-  examinationFee: z.string().optional(),
+  practicalExamName: z.string().optional(),
+  practicalExams: z.array(z.string()).optional(),
+  semesters: z.array(courseSemesterSchema).optional(),
+  status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
+  examinationFee: z.coerce.number().min(0).optional(),
+  reappearingExaminationFee: z.coerce.number().min(0).optional(),
+  feeApplicableForFirstAttempt: z.preprocess(
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
+    z.boolean()
+  ).optional(),
 });
 
 const courseUpdateSchema = z.object({
   name: z.string().min(1, 'Course Name is required').optional(),
-  description: z.string().optional(),
   courseCode: z.string().optional(),
   courseType: z.string().optional(),
   programCategory: z.string().optional(),
   courseDuration: z.string().optional(),
   durationType: z.string().optional(),
   subjects: z.array(z.string()).optional(),
-  examinationFee: z.string().optional(),
+  practicalExamName: z.string().optional(),
+  practicalExams: z.array(z.string()).optional(),
+  semesters: z.array(courseSemesterSchema).optional(),
   status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
+  examinationFee: z.coerce.number().min(0).optional(),
+  reappearingExaminationFee: z.coerce.number().min(0).optional(),
+  feeApplicableForFirstAttempt: z.preprocess(
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
+    z.boolean()
+  ).optional(),
 });
 
 const batchCreateSchema = z.object({
@@ -5173,6 +5231,17 @@ const feeRecordSchema = z.object({
   razorpaySignature: z.string().optional(),
 });
 
+const reimbursableFeeSchema = z.object({
+  courseId: z.string().min(1, 'Course ID is required'),
+  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
+  firstAttemptFee: z.coerce.number().min(0, 'First attempt fee cannot be negative').optional().default(0),
+  reappearingFee: z.coerce.number().min(0, 'Reappearing fee cannot be negative').optional().default(0),
+  feeApplicableForFirstAttempt: z.preprocess(
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
+    z.boolean()
+  ).optional().default(false),
+});
+
 const remittanceSchema = z.object({
   totalAmount: z.coerce.number().min(0.01, 'Total Amount must be greater than 0'),
   paymentPurpose: z.string().optional().default('Student Fellowship Fee Remittance'),
@@ -5193,35 +5262,54 @@ const remittanceSchema = z.object({
 // COURSE CRUD OPERATIONS
 // ==========================================
 
-// ─── Create Course ────────────────────────────────────────────────────────────
+// ─── Create Course (Admin / Board only) ───────────────────────────────────────
 export const createCourse = async (req: Request, res: Response) => {
   try {
     const validatedData = courseCreateSchema.parse(req.body);
 
-    const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
-    }
-
-    // Check for duplicate course name within the same institute
+    // Check for duplicate course name globally
     const existingCourse = await Course.findOne({ 
-      institute: institute._id, 
       name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') } 
     });
     if (existingCourse) {
-      return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists for your institute.' });
+      return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists in the centralized catalog.' });
+    }
+
+    if (validatedData.semesters && Array.isArray(validatedData.semesters)) {
+      if (!validatedData.subjects || validatedData.subjects.length === 0) {
+        const flatSubs: string[] = [];
+        validatedData.semesters.forEach(s => {
+          (s.subjects || []).forEach(sub => {
+            if (sub.name) {
+              flatSubs.push(sub.code ? `${sub.code}: ${sub.name}` : sub.name);
+            }
+          });
+        });
+        validatedData.subjects = flatSubs;
+      }
+      if (!validatedData.practicalExams || validatedData.practicalExams.length === 0) {
+        const flatPracs: string[] = [];
+        validatedData.semesters.forEach(s => {
+          (s.practicalExams || []).forEach(prac => {
+            if (prac.name) {
+              flatPracs.push(prac.code ? `${prac.code}: ${prac.name}` : prac.name);
+            }
+          });
+        });
+        validatedData.practicalExams = flatPracs;
+      }
     }
 
     const newCourse = await Course.create({
-      institute: institute._id,
       ...validatedData,
+      status: validatedData.status || 'Active',
     });
 
     return sendSuccess({
       req,
       res,
       statusCode: 201,
-      message: 'Course created successfully',
+      message: 'Course created successfully in centralized catalog',
       data: newCourse,
     });
   } catch (error: any) {
@@ -5234,12 +5322,9 @@ export const createCourse = async (req: Request, res: Response) => {
 export const getCourses = async (req: Request, res: Response) => {
   try {
     const query: any = {};
-    if (req.user.role === 'institute') {
-      const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
-      if (!institute) {
-        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
-      }
-      query.institute = institute._id;
+    if (req.user?.role === 'institute') {
+      // Institutes see all Active standardized courses defined by the Board
+      query.status = 'Active';
     }
     const courses = await Course.find(query).sort({ createdAt: -1 });
     
@@ -5271,7 +5356,6 @@ export const getCourseById = async (req: Request, res: Response) => {
       if (!institute) {
         return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
       }
-      query.institute = institute._id;
     }
 
     const course = await Course.findOne(query);
@@ -5298,31 +5382,50 @@ export const getCourseById = async (req: Request, res: Response) => {
   }
 };
 
-// ─── Update Course ────────────────────────────────────────────────────────────
+// ─── Update Course (Admin / Board only) ───────────────────────────────────────
 export const updateCourse = async (req: Request, res: Response) => {
   try {
     const { courseId } = req.params;
     const validatedData = courseUpdateSchema.parse(req.body);
 
-    const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
-    }
-
-    const course = await Course.findOne({ _id: courseId, institute: institute._id });
+    const course = await Course.findById(courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found or does not belong to your institute' });
+      return sendError({ req, res, statusCode: 404, message: 'Course not found' });
     }
 
     // Check for duplicate course name (excluding current course)
     if (validatedData.name) {
       const existingCourse = await Course.findOne({
         _id: { $ne: courseId },
-        institute: institute._id,
         name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') }
       });
       if (existingCourse) {
-        return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists for your institute.' });
+        return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists in the centralized catalog.' });
+      }
+    }
+
+    if (validatedData.semesters && Array.isArray(validatedData.semesters)) {
+      if (!validatedData.subjects || validatedData.subjects.length === 0) {
+        const flatSubs: string[] = [];
+        validatedData.semesters.forEach(s => {
+          (s.subjects || []).forEach(sub => {
+            if (sub.name) {
+              flatSubs.push(sub.code ? `${sub.code}: ${sub.name}` : sub.name);
+            }
+          });
+        });
+        validatedData.subjects = flatSubs;
+      }
+      if (!validatedData.practicalExams || validatedData.practicalExams.length === 0) {
+        const flatPracs: string[] = [];
+        validatedData.semesters.forEach(s => {
+          (s.practicalExams || []).forEach(prac => {
+            if (prac.name) {
+              flatPracs.push(prac.code ? `${prac.code}: ${prac.name}` : prac.name);
+            }
+          });
+        });
+        validatedData.practicalExams = flatPracs;
       }
     }
 
@@ -5344,29 +5447,24 @@ export const updateCourse = async (req: Request, res: Response) => {
   }
 };
 
-// ─── Delete Course ────────────────────────────────────────────────────────────
+// ─── Delete Course (Admin / Board only) ───────────────────────────────────────
 export const deleteCourse = async (req: Request, res: Response) => {
   try {
     const { courseId } = req.params;
 
-    const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
-    if (!institute) {
-      return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
-    }
-
-    const course = await Course.findOne({ _id: courseId, institute: institute._id });
+    const course = await Course.findById(courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found or does not belong to your institute' });
+      return sendError({ req, res, statusCode: 404, message: 'Course not found' });
     }
 
-    // Check if there are students enrolled in this course
+    // Check if there are students enrolled in this course across any institute
     const studentCount = await Student.countDocuments({ course: courseId });
     if (studentCount > 0) {
       return sendError({
         req,
         res,
         statusCode: 400,
-        message: `Cannot delete course. ${studentCount} student(s) are currently enrolled in this course. Please transfer or de-enroll them first.`
+        message: `Cannot delete course. ${studentCount} student(s) are currently enrolled in this course across institutes. Deactivate the course instead.`
       });
     }
 
@@ -5377,7 +5475,7 @@ export const deleteCourse = async (req: Request, res: Response) => {
         req,
         res,
         statusCode: 400,
-        message: `Cannot delete course. ${batchCount} batch(es) are associated with this course. Please delete the batches first.`
+        message: `Cannot delete course. ${batchCount} batch(es) are associated with this course across institutes.`
       });
     }
 
@@ -5408,31 +5506,49 @@ export const createBatch = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
     }
 
-    // Verify course exists
-    const course = await Course.findOne({ _id: validatedData.courseId, institute: institute._id });
+    // Verify course exists in centralized catalog
+    const course = await Course.findById(validatedData.courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found under this institute' });
+      return sendError({ req, res, statusCode: 404, message: 'Course not found in the centralized academic catalog.' });
     }
 
-    // Check for duplicate batch by name if provided
-    if (validatedData.name) {
-      const duplicateBatch = await Batch.findOne({ course: course._id, name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') } });
-      if (duplicateBatch) {
-        return sendError({ req, res, statusCode: 400, message: `Duplicate batch: A batch with the name ${validatedData.name} already exists for this course.` });
-      }
+    if (course.status !== 'Active') {
+      return sendError({ req, res, statusCode: 400, message: 'Cannot create a batch for an Inactive course.' });
     }
 
-    // Generate batch name if not provided
-    const batchName = validatedData.name || `Batch ${validatedData.year}-${String.fromCharCode(65 + (await Batch.countDocuments({ course: course._id })))}`;
+    // Automated Batch Naming Convention
+    // Standard Naming: e.g. DEM-2026-A or FEM-2026-A based on course code/prefix + Year + Batch letter
+    const coursePrefix = (course.courseCode || course.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 4)).toUpperCase();
+    const existingBatchesForYear = await Batch.find({
+      institute: institute._id,
+      course: course._id,
+      year: validatedData.year,
+    }).sort({ createdAt: 1 });
 
-    // Authoritative batch capacity fixed by Academic Board (defaulting to institute's approvedSeats / seatsRequested)
+    const batchIndex = existingBatchesForYear.length;
+    const batchLetter = String.fromCharCode(65 + (batchIndex % 26)) + (batchIndex >= 26 ? String(Math.floor(batchIndex / 26)) : '');
+    const generatedBatchName = `${coursePrefix}-${validatedData.year}-Batch ${batchLetter}`;
+
+    const finalBatchName = validatedData.name?.trim() ? validatedData.name.trim() : generatedBatchName;
+
+    // Check duplicate
+    const duplicateBatch = await Batch.findOne({
+      institute: institute._id,
+      course: course._id,
+      name: { $regex: new RegExp(`^${finalBatchName}$`, 'i') },
+    });
+    if (duplicateBatch) {
+      return sendError({ req, res, statusCode: 400, message: `Duplicate batch: A batch with the name "${finalBatchName}" already exists for this course and year.` });
+    }
+
+    // Authoritative batch capacity fixed by Academic Board (intake quota)
     const boardFixedSeats = institute.approvedSeats || institute.seatsRequested || 5;
 
     const newBatch = await Batch.create({
       institute: institute._id,
       course: course._id,
       year: validatedData.year,
-      name: batchName,
+      name: finalBatchName,
       startDate: validatedData.startDate ? new Date(validatedData.startDate) : new Date(`${validatedData.year}-01-10`),
       seats: boardFixedSeats,
       activeFellows: 0,
@@ -5443,7 +5559,7 @@ export const createBatch = async (req: Request, res: Response) => {
       req,
       res,
       statusCode: 201,
-      message: 'Batch created successfully',
+      message: 'Batch created successfully with standardized naming convention',
       data: newBatch,
     });
   } catch (error: any) {
@@ -5466,7 +5582,7 @@ export const getBatches = async (req: Request, res: Response) => {
 
     // Populate course details
     const batches = await Batch.find(query)
-      .populate('course', 'name courseCode')
+      .populate('course', 'name courseCode courseType courseDuration durationType')
       .sort({ year: -1, createdAt: -1 });
 
     return sendSuccess({ req, res, message: 'Batches retrieved successfully', data: batches });
@@ -5489,7 +5605,7 @@ export const getBatchById = async (req: Request, res: Response) => {
       query.institute = institute._id;
     }
 
-    const batch = await Batch.findOne(query).populate('course', 'name courseCode');
+    const batch = await Batch.findOne(query).populate('course', 'name courseCode courseType courseDuration durationType');
     if (!batch) {
       return sendError({ req, res, statusCode: 404, message: 'Batch not found' });
     }
@@ -5531,11 +5647,12 @@ export const updateBatch = async (req: Request, res: Response) => {
     if (validatedData.name) {
       const duplicateBatch = await Batch.findOne({
         _id: { $ne: batchId },
+        institute: institute._id,
         course: batch.course,
         name: { $regex: new RegExp(`^${validatedData.name}$`, 'i') },
       });
       if (duplicateBatch) {
-        return sendError({ req, res, statusCode: 400, message: `A batch with the name ${validatedData.name} already exists for this course.` });
+        return sendError({ req, res, statusCode: 400, message: `A batch with the name "${validatedData.name}" already exists for this course.` });
       }
     }
 
@@ -5606,9 +5723,9 @@ export const getBatchesByCourse = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
     }
 
-    const course = await Course.findOne({ _id: courseId, institute: institute._id });
+    const course = await Course.findById(courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found under this institute' });
+      return sendError({ req, res, statusCode: 404, message: 'Course not found' });
     }
 
     const batches = await Batch.find({ course: courseId, institute: institute._id })
@@ -5686,9 +5803,9 @@ export const addStudent = async (req: Request, res: Response) => {
       }
     }
 
-    const course = await Course.findOne({ _id: validatedData.courseId, institute: institute._id });
+    const course = await Course.findById(validatedData.courseId);
     if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist or does not belong to this institute.' });
+      return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist in the academic catalog.' });
     }
 
     const batch = await Batch.findOne({ _id: validatedData.batchId, course: course._id });
@@ -5841,6 +5958,36 @@ export const recordStudentFee = async (req: Request, res: Response) => {
     const student = await Student.findOne({ _id: studentId, institute: institute._id });
     if (!student) {
       return sendError({ req, res, statusCode: 404, message: 'Student not found under this institute' });
+    }
+
+    // Exam fee eligibility guard: an exam fee may only be collected when the
+    // configured fee is actually applicable (waived for first attempt unless
+    // opted-in; removed for reappearing when the fee is set to 0).
+    const isExamFeePurpose =
+      String(validatedData.paymentPurpose).toLowerCase().includes('exam');
+    if (isExamFeePurpose) {
+      const course = student.course || await Course.findById(
+        (student as any).courseId || (student as any).course
+      );
+      const status = await checkStudentReappearance(String(student._id), validatedData.semesterNumber);
+      const feeConfig = course
+        ? resolveFeeConfiguration(course, validatedData.semesterNumber)
+        : { firstAttemptFee: 0, reappearingFee: 0, feeApplicableForFirstAttempt: false };
+
+      const feeApplicable = status.isReappearing
+        ? feeConfig.reappearingFee > 0
+        : feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0;
+
+      if (!feeApplicable) {
+        return sendError({
+          req,
+          res,
+          statusCode: 422,
+          message: status.isReappearing
+            ? 'Exam fee has been waived for reappearing students for this course/semester. Payment cannot be recorded.'
+            : 'Exam fee is waived for first-attempt students for this course/semester. Payment cannot be recorded.',
+        });
+      }
     }
 
     const feeRecord = await FeeRecord.create({
@@ -6052,7 +6199,7 @@ const studentMetricsUpdateSchema = z.object({
 
 export const listStudents = async (req: Request, res: Response) => {
   try {
-    const { courseId, batchId, search, isEligible, semesterNumber } = req.query;
+    const { courseId, batchId, search, isEligible, semesterNumber, verificationStatus, instituteId } = req.query;
     const query: any = {};
 
     if (req.user.role === 'institute') {
@@ -6061,6 +6208,12 @@ export const listStudents = async (req: Request, res: Response) => {
         return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute application is not approved yet.' });
       }
       query.institute = institute._id;
+    } else if (instituteId) {
+      query.institute = instituteId;
+    }
+
+    if (verificationStatus) {
+      query.verificationStatus = verificationStatus;
     }
 
     if (courseId) {
@@ -6074,6 +6227,8 @@ export const listStudents = async (req: Request, res: Response) => {
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
         { enrollmentId: { $regex: search, $options: 'i' } },
+        { medicalCouncilRegistrationNumber: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -6109,19 +6264,34 @@ export const listStudents = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 });
 
     const formattedStudents = students.map((student) => {
-      // Find current sem if provided, else use first one or calculate generally
+      const sObj: any = student.toObject();
+      const sSemesters = sObj.semesters || [];
+      const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+
+      const attendancePct = (sObj.attendancePercentage !== undefined && sObj.attendancePercentage !== null && sObj.attendancePercentage > 0)
+        ? sObj.attendancePercentage
+        : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+      const isThesisApproved = Boolean(sObj.thesisApproved || sSemesters.some((sem: any) => sem.thesisApproved));
+      const isThesisUploaded = Boolean(sSemesters.some((sem: any) => sem.thesisDocumentUrl));
+      const isRemitted = Boolean(sObj.remittedToAcademy || sObj.razorpayPaymentId);
+
       let isStudentEligible = false;
       if (semesterNumber) {
-        const sem = student.semesters.find(s => s.semesterNumber === parseInt(semesterNumber as string));
+        const sem = sSemesters.find((s: any) => s.semesterNumber === parseInt(semesterNumber as string));
         if (sem) {
           isStudentEligible = sem.attendancePercentage >= 75 && sem.thesisApproved;
         }
       } else {
-        // Just general fallback
-        isStudentEligible = student.semesters.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
+        isStudentEligible = isRemitted && attendancePct >= 75 && (isThesisApproved || isThesisUploaded);
       }
+
       return {
-        ...student.toObject(),
+        ...sObj,
+        attendancePercentage: attendancePct,
+        thesisApproved: isThesisApproved,
+        thesisUploaded: isThesisUploaded,
+        remittedToAcademy: isRemitted,
         isEligible: isStudentEligible,
       };
     });
@@ -6240,16 +6410,46 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
     }
 
     // Check fee record for this student and semester
+    // ── NEW: Fee is only required when applicable (reappearing students).
+    //    First-attempt students are waived unless the course opts in.
     const feeRecord = await FeeRecord.findOne({ student: student._id, semesterNumber: semNum, paymentPurpose: 'Examination fee' });
+    const courseDoc = student.course as any;
+    const courseForFee = await Course.findById(courseDoc?._id || courseDoc);
+    const perSemesterFee = courseForFee?.examFeeConfig?.[`semester_${semNum}`];
+    const feeApplicableForFirstAttempt =
+      perSemesterFee?.feeApplicableForFirstAttempt ??
+      courseForFee?.feeApplicableForFirstAttempt ??
+      false;
+
+    const priorResults = await Result.find({
+      student: student._id,
+      semester: semNum,
+      isPublished: true,
+    }).sort({ createdAt: -1 });
+    const latestResult = priorResults[0];
+    const isReappearing = !!latestResult && (
+      latestResult.resultStatus === 'FAIL' ||
+      latestResult.resultStatus === 'SUPPLEMENTARY' ||
+      latestResult.resultStatus === 'REVALUATION_PENDING'
+    );
+
+    const feeRequired = isReappearing || feeApplicableForFirstAttempt;
+    const feeStatus = {
+      status: !feeRequired ? 'Waived' : feeRecord ? 'Paid' : 'Pending',
+      isValid: !feeRequired || !!feeRecord,
+      isReappearing,
+      feeApplicable: feeRequired,
+      description: !feeRequired
+        ? 'Exam fee is waived for this student (first attempt).'
+        : feeRecord
+          ? 'Exam fee payment has been verified for this semester.'
+          : isReappearing
+            ? 'Exam fee payment is required (reappearing student) but has not been recorded.'
+            : 'Exam fee payment is missing for this semester.',
+    };
 
     const checklist = {
-      feeStatus: {
-        status: feeRecord ? 'Paid' : 'Pending',
-        isValid: !!feeRecord,
-        description: feeRecord
-          ? 'Exam fee payment has been verified for this semester.'
-          : 'Exam fee payment is missing for this semester.',
-      },
+      feeStatus,
       attendance: {
         value: semesterRecord.attendancePercentage,
         threshold: 75,
@@ -6265,9 +6465,20 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
           ? 'Thesis evaluation has been approved by the board.'
           : 'Thesis submission is pending approval or has not been approved.',
       },
+      courseCertificates: {
+        status: (student.documents?.nblsCertificateUrl || student.documents?.nclsCertificateUrl || student.documents?.ntlsCertificateUrl || student.documents?.nulsCertificateUrl) ? 'Completed' : 'Incomplete',
+        isValid: !!(student.documents?.nblsCertificateUrl || student.documents?.nclsCertificateUrl || student.documents?.ntlsCertificateUrl || student.documents?.nulsCertificateUrl),
+        nbls: !!student.documents?.nblsCertificateUrl,
+        ncls: !!student.documents?.nclsCertificateUrl,
+        ntls: !!student.documents?.ntlsCertificateUrl,
+        nuls: !!student.documents?.nulsCertificateUrl,
+        description: (student.documents?.nblsCertificateUrl || student.documents?.nclsCertificateUrl || student.documents?.ntlsCertificateUrl || student.documents?.nulsCertificateUrl)
+          ? 'Mandatory course completion certificate (NBLS/NCLS/NTLS/NULS) is uploaded.'
+          : 'Missing mandatory course completion certificate (at least one of NBLS, NCLS, NTLS, NULS required before exam).',
+      },
     };
 
-    const isEligible = checklist.feeStatus.isValid && checklist.attendance.isValid && checklist.thesisApproval.isValid;
+    const isEligible = checklist.feeStatus.isValid && checklist.attendance.isValid && checklist.thesisApproval.isValid && checklist.courseCertificates.isValid;
 
     return sendSuccess({
       req,
@@ -6432,7 +6643,8 @@ export const updateStudent = async (req: Request, res: Response) => {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       const docFields = [
         'passportPhoto', 'mbbsCertificate', 'medicalCouncilRegistrationCertificate',
-        'fmgeResultCopy', 'semiMembershipForm', 'studentSignature', 'hodSignature'
+        'fmgeResultCopy', 'semiMembershipForm', 'studentSignature', 'hodSignature',
+        'nblsCertificate', 'nclsCertificate', 'ntlsCertificate', 'nulsCertificate'
       ];
       
       const newDocs: any = { ...student.documents };
@@ -6444,6 +6656,12 @@ export const updateStudent = async (req: Request, res: Response) => {
       student.documents = newDocs;
     }
 
+    // If an institute updates/resubmits details for a student flagged with Correction Required, reset to Pending Verification
+    if (student.verificationStatus === 'Correction Required' && req.user.role === 'institute') {
+      student.verificationStatus = 'Pending Verification';
+      student.correctionResubmittedAt = new Date();
+    }
+
     await student.save();
 
     const latestSemester = student.semesters?.[student.semesters.length - 1];
@@ -6453,7 +6671,8 @@ export const updateStudent = async (req: Request, res: Response) => {
     const updatedStudent = await Student.findById(student._id)
       .populate('course', 'name')
       .populate('batch', 'year')
-      .populate('institute', 'orgName');
+      .populate('institute', 'orgName instituteAddress phoneNumber emailAddress headName hodName')
+      .populate('verifiedBy', 'name email role');
 
     const formattedStudent = {
       ...updatedStudent?.toObject(),
@@ -6702,6 +6921,200 @@ export const verifyAcademicPayment = async (req: Request, res: Response) => {
     return sendError({ req, res, statusCode: 500, message: error.message });
   }
 };
+
+// ==========================================
+// EXAM FEE CONFIGURATION (Academy / Board)
+// ==========================================
+
+export const getExamFeeConfigurationByCourse = async (req: Request, res: Response) => {
+  try {
+    const courseId = String(req.params.courseId);
+    const semesterNumber = parseInt(String(req.params.semesterNumber));
+
+    const course = await Course.findById(courseId);
+    if (!course) return sendError({ req, res, statusCode: 404, message: 'Course not found' });
+
+    const perSemester = course.examFeeConfig?.[`semester_${semesterNumber}`];
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Exam fee configuration retrieved successfully',
+      data: {
+        courseId,
+        semesterNumber,
+        firstAttemptFee: perSemester?.firstAttemptFee ?? course.examinationFee ?? 0,
+        reappearingFee:
+          perSemester?.reappearingFee ??
+          course.reappearingExaminationFee ??
+          course.examinationFee ??
+          0,
+        feeApplicableForFirstAttempt:
+          perSemester?.feeApplicableForFirstAttempt ??
+          course.feeApplicableForFirstAttempt ??
+          false,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const updateExamFeeConfiguration = async (req: Request, res: Response) => {
+  try {
+    const validatedData = reimbursableFeeSchema.parse(req.body);
+
+    const course = await Course.findById(validatedData.courseId);
+    if (!course) return sendError({ req, res, statusCode: 404, message: 'Course not found' });
+
+    if (!course.examFeeConfig) course.examFeeConfig = {} as any;
+
+    (course.examFeeConfig as any)[`semester_${validatedData.semesterNumber}`] = {
+      // Respect an explicit 0 (fee removed) so the Academy can waive the
+      // reappearing fee as well.
+      firstAttemptFee: validatedData.firstAttemptFee != null ? validatedData.firstAttemptFee : 0,
+      reappearingFee:
+        validatedData.reappearingFee != null
+          ? validatedData.reappearingFee
+          : Number(course.reappearingExaminationFee) ||
+            Number(course.examinationFee) ||
+            0,
+      feeApplicableForFirstAttempt: validatedData.feeApplicableForFirstAttempt,
+      updatedBy: req.user._id,
+      updatedAt: new Date(),
+    };
+
+    await course.save();
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Exam fee configuration updated successfully',
+      data: course.examFeeConfig,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ==========================================
+// STUDENT ENROLLMENT VERIFICATION (ACADEMIC DEPARTMENT)
+// ==========================================
+
+export const verifyStudentEnrollment = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const { status, remarks } = req.body;
+
+    if (!['Approved', 'Rejected', 'Correction Required'].includes(status)) {
+      return sendError({ 
+        req, 
+        res, 
+        statusCode: 400, 
+        message: 'Invalid status. Allowed values: Approved, Rejected, Correction Required.' 
+      });
+    }
+
+    if ((status === 'Rejected' || status === 'Correction Required') && (!remarks || !remarks.trim())) {
+      return sendError({ 
+        req, 
+        res, 
+        statusCode: 400, 
+        message: `Remarks/reason are mandatory when marking student enrollment as ${status}.` 
+      });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found.' });
+    }
+
+    student.verificationStatus = status;
+    student.verificationRemarks = remarks?.trim() || '';
+    student.verifiedBy = req.user._id;
+    student.verifiedAt = new Date();
+
+    if (status === 'Correction Required') {
+      student.correctionRequestedAt = new Date();
+    }
+
+    await student.save();
+
+    const updatedStudent = await Student.findById(studentId)
+      .populate('course', 'name courseDuration durationType')
+      .populate('batch', 'year')
+      .populate('institute', 'orgName instituteAddress phoneNumber emailAddress headName hodName')
+      .populate('verifiedBy', 'name email role');
+
+    return sendSuccess({
+      req,
+      res,
+      message: `Student enrollment has been successfully set to '${status}'.`,
+      data: updatedStudent,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ==========================================
+// COURSE COMPLETION CERTIFICATES (NBLS, NCLS, NTLS, NULS)
+// ==========================================
+
+export const uploadCourseCertificates = async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    const query: any = { _id: studentId };
+
+    if (req.user.role === 'institute') {
+      const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
+      if (!institute) {
+        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute is not approved.' });
+      }
+      query.institute = institute._id;
+    }
+
+    const student = await Student.findOne(query);
+    if (!student) {
+      return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized.' });
+    }
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const certFields = ['nblsCertificate', 'nclsCertificate', 'ntlsCertificate', 'nulsCertificate'];
+
+    const newDocs: any = { ...student.documents };
+    let uploadedCount = 0;
+
+    for (const field of certFields) {
+      if (files && files[field] && files[field].length > 0) {
+        newDocs[`${field}Url`] = getFileUrl(files[field][0].path);
+        uploadedCount++;
+      }
+    }
+
+    student.documents = newDocs;
+    await student.save();
+
+    return sendSuccess({
+      req,
+      res,
+      message: `Course completion certificates updated successfully (${uploadedCount} uploaded).`,
+      data: {
+        documents: student.documents,
+        hasMandatoryCertificate: !!(
+          student.documents?.nblsCertificateUrl ||
+          student.documents?.nclsCertificateUrl ||
+          student.documents?.ntlsCertificateUrl ||
+          student.documents?.nulsCertificateUrl
+        ),
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
 ```
 
 ### `backend/src/controllers/authController.ts`
@@ -7819,8 +8232,11 @@ import { Institute } from '../models/instituteModel';
 import { Course } from '../models/courseModel';
 import { Batch } from '../models/batchModel';
 import { FeeRecord } from '../models/feeRecordModel';  // ← ADD THIS IMPORT
+import { User } from '../models/userModel';
+import notificationService from '../services/notificationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { emitEvent } from '../config/socket';
+import { classifyStudentsForExamFee, checkStudentReappearance, resolveFeeConfiguration } from '../services/examFeeService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -7912,8 +8328,8 @@ export const applyForExam = async (req: Request, res: Response) => {
     const examFeeReceiptUrl = files?.['examFeeReceipt']?.length ? getFileUrl(files['examFeeReceipt'][0].path) : undefined;
 
     // Verify course & batch
-    const course = await Course.findOne({ _id: validatedData.courseId, institute: institute._id });
-    if (!course) return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist under this institute.' });
+    const course = await Course.findOne({ _id: validatedData.courseId });
+    if (!course) return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist.' });
 
     // Auto-resolve batchId if not provided
     let batchId = validatedData.batchId;
@@ -7940,6 +8356,43 @@ export const applyForExam = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to the specified course.' });
     }
 
+    const unapprovedStudents = students.filter((s: any) => s.verificationStatus && s.verificationStatus !== 'Approved');
+    if (unapprovedStudents.length > 0) {
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: `Cannot enroll unverified students for examinations. ${unapprovedStudents.length} student(s) have verification status: Pending or Correction Required.`
+      });
+    }
+
+    // Mandatory Course Completion Certificates Check (At least one: NBLS / NCLS / NTLS / NULS)
+    const missingCertificateStudents = students.filter((s: any) => {
+      const hasNbls = !!s.documents?.nblsCertificateUrl;
+      const hasNcls = !!s.documents?.nclsCertificateUrl;
+      const hasNtls = !!s.documents?.ntlsCertificateUrl;
+      const hasNuls = !!s.documents?.nulsCertificateUrl;
+      return !(hasNbls || hasNcls || hasNtls || hasNuls);
+    });
+
+    if (missingCertificateStudents.length > 0) {
+      const names = missingCertificateStudents.map((s: any) => `${s.firstName} ${s.lastName}`);
+
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: `Mandatory Course Completion Certificate missing. At least one course completion certificate (NBLS, NCLS, NTLS, or NULS) must be uploaded before examination for: ${names.join(', ')}.`
+      });
+    }
+
+    // ── NEW: Classify students (first-attempt vs reappearing) & resolve fee ──
+    const feeSummary = await classifyStudentsForExamFee(
+      validatedData.studentIds,
+      validatedData.semesterNumber,
+      course
+    );
+
     // Fetch fee records for examination fees
     const feeRecords = await FeeRecord.find({
       student: { $in: validatedData.studentIds },
@@ -7948,18 +8401,26 @@ export const applyForExam = async (req: Request, res: Response) => {
     });
     const paidStudentIds = new Set(feeRecords.map((f: any) => f.student.toString()));
 
+    // Reappearing students who have a payable fee must have paid it;
+    // first-attempt students are fee-waived by default so no payment required.
+    const feeRequiredSet = new Set(
+      (feeSummary.examFeeApplicable ? feeSummary.reappearingStudents : [])
+    );
+
     // Eligibility check
     const ineligible = students.filter(s => {
       const sem = s.semesters.find((sm: any) => sm.semesterNumber === validatedData.semesterNumber);
       if (!sem) return true; // ineligible if no semester record
-      return !(sem.attendancePercentage >= 75 && sem.thesisApproved && paidStudentIds.has(s._id.toString()));
+
+      const feeSatisfied = !feeRequiredSet.has(s._id.toString()) || paidStudentIds.has(s._id.toString());
+      return !(sem.attendancePercentage >= 75 && sem.thesisApproved && feeSatisfied);
     });
 
     if (ineligible.length > 0) {
       return sendError({
         req, res, statusCode: 400,
         message: 'Cannot apply for exam. One or more selected students are ineligible.',
-        errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or exam fee) for this semester' })),
+        errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or applicable exam fee) for this semester' })),
       });
     }
 
@@ -7984,9 +8445,32 @@ export const applyForExam = async (req: Request, res: Response) => {
       status: 'Pending',
       utrNumber: validatedData.utrNumber,
       examFeeReceiptUrl,
+      examFeeApplicable: feeSummary.examFeeApplicable,
+      examFeeAmount: feeSummary.examFeeAmount,
+      reappearingFeeAmount: feeSummary.reappearingFeeAmount,
+      firstAttemptFeeAmount: feeSummary.firstAttemptFeeAmount,
+      reappearingStudents: feeSummary.reappearingStudents,
+      firstAttemptStudents: feeSummary.firstAttemptStudents,
     });
 
     emitEvent('EXAM_APPLICATION_UPDATED', { applicationId: application._id, status: 'Pending' });
+
+    // Send confirmation email to institute + notification to academy
+    try {
+      const user = await User.findById(institute.user);
+      await notificationService.notifyExamApplicationSubmitted({
+        instituteName: institute.orgName,
+        instituteEmail: user?.email || institute.emailAddress,
+        courseName: course.name,
+        semesterNumber: validatedData.semesterNumber,
+        subjects: validatedData.subjects,
+        totalFee: 0,
+        paymentId: validatedData.utrNumber || 'N/A',
+        studentsCount: validatedData.studentIds.length,
+      });
+    } catch (emailErr: any) {
+      console.error('Failed to send exam application notification:', emailErr);
+    }
 
     return sendSuccess({ req, res, statusCode: 201, message: 'Exam application submitted successfully', data: application });
   } catch (error: any) {
@@ -8033,7 +8517,7 @@ export const getExamApplicationById = async (req: Request, res: Response) => {
       .populate('institute', 'orgName instituteAddress')
       .populate('course', 'name')
       .populate('batch', 'year')
-      .populate('students', 'firstName lastName enrollmentId email attendancePercentage thesisApproved remittedToAcademy');
+      .populate('students', 'firstName lastName enrollmentId email attendancePercentage thesisApproved remittedToAcademy examAttempts');
 
     if (!application) return sendError({ req, res, statusCode: 404, message: 'Exam application not found' });
 
@@ -8083,20 +8567,38 @@ export const updateExamApplication = async (req: Request, res: Response) => {
       });
       const paidStudentIds = new Set(feeRecords.map((f: any) => f.student.toString()));
 
+      // ── NEW: Recompute fee classification for the updated students ──
+      const course = await Course.findById(application.course);
+      const feeSummary = await classifyStudentsForExamFee(
+        validatedData.studentIds,
+        application.semesterNumber,
+        course
+      );
+      const feeRequiredSet = new Set(
+        (feeSummary.examFeeApplicable ? feeSummary.reappearingStudents : [])
+      );
+
       const ineligible = students.filter(s => {
         const sem = s.semesters.find((sm: any) => sm.semesterNumber === application.semesterNumber);
         if (!sem) return true;
-        return !(sem.attendancePercentage >= 75 && sem.thesisApproved && paidStudentIds.has(s._id.toString()));
+        const feeSatisfied = !feeRequiredSet.has(s._id.toString()) || paidStudentIds.has(s._id.toString());
+        return !(sem.attendancePercentage >= 75 && sem.thesisApproved && feeSatisfied);
       });
 
       if (ineligible.length > 0) {
         return sendError({
           req, res, statusCode: 400,
           message: 'One or more updated students are ineligible.',
-          errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or exam fee) for this semester' })),
+          errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or applicable exam fee) for this semester' })),
         });
       }
       application.students = validatedData.studentIds.map((id: string) => id as any);
+      application.examFeeApplicable = feeSummary.examFeeApplicable;
+      application.examFeeAmount = feeSummary.examFeeAmount;
+      application.reappearingFeeAmount = feeSummary.reappearingFeeAmount;
+      application.firstAttemptFeeAmount = feeSummary.firstAttemptFeeAmount;
+      application.reappearingStudents = feeSummary.reappearingStudents as any;
+      application.firstAttemptStudents = feeSummary.firstAttemptStudents as any;
     }
 
     await application.save();
@@ -8161,6 +8663,30 @@ export const reviewExamApplication = async (req: Request, res: Response) => {
     }
 
     await application.save();
+
+    // Notify institute when the application is approved
+    if (validatedData.status === 'Approved') {
+      try {
+        const [instituteDoc, courseDoc] = await Promise.all([
+          Institute.findById(application.institute).populate('user'),
+          Course.findById(application.course),
+        ]);
+        if (instituteDoc) {
+          const instituteUser = (instituteDoc as any).user as any;
+          await notificationService.notifyExamApplicationApproved({
+            instituteName: instituteDoc.orgName,
+            instituteEmail: instituteUser?.email || instituteDoc.emailAddress,
+            courseName: courseDoc?.name || 'N/A',
+            semesterNumber: application.semesterNumber,
+            examDate: application.scheduledDate || new Date(),
+            remarks: validatedData.remarks || 'Approved by Academic Board',
+          });
+        }
+      } catch (emailErr: any) {
+        console.error('Failed to send exam approval notification:', emailErr);
+      }
+    }
+
     return sendSuccess({ req, res, message: `Exam application ${validatedData.status.toLowerCase()} successfully`, data: application });
   } catch (error: any) {
     if (error instanceof z.ZodError) throw error;
@@ -8214,12 +8740,25 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
 
     await application.save();
 
-    // Send email to institute (mock implementation as Razorpay is in mock mode, assuming email service is similar)
-    const instituteDoc = await Institute.findById(application.institute).populate('user');
-    if (instituteDoc && instituteDoc.emailAddress) {
-      console.log(`[EMAIL MOCK] Sending Exam Schedule Publish Email to: ${instituteDoc.emailAddress}`);
-      console.log(`[EMAIL MOCK] Subject: Exam Schedule Published for ${application.course} - ${application.batch}`);
-      console.log(`[EMAIL MOCK] Body: Please check your institute panel for the published exam dates.`);
+    // Send schedule published email to institute
+    try {
+      const instituteDoc = await Institute.findById(application.institute).populate('user');
+      if (instituteDoc) {
+        const instituteUser = (instituteDoc as any).user as any;
+        await notificationService.notifyExamSchedulePublished({
+          instituteName: instituteDoc.orgName,
+          instituteEmail: instituteUser?.email || instituteDoc.emailAddress,
+          courseName: (application as any).course?.name || 'N/A',
+          semesterNumber: application.semesterNumber,
+          examVenue: application.examVenue,
+          examCenter: application.examCenter,
+          examDate: application.scheduledDate || new Date(),
+          reportingTime: application.reportingTime,
+          subjects: application.subjects || [],
+        });
+      }
+    } catch (emailErr: any) {
+      console.error('Failed to send schedule published notification:', emailErr);
     }
 
     return sendSuccess({
@@ -8411,6 +8950,91 @@ export const listHallTickets = async (req: Request, res: Response) => {
       req, res,
       message: `${tickets.length} hall ticket(s) retrieved successfully`,
       data: tickets,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── GET Single Hall Ticket by ID ────────────────────────────────────────────
+
+export const checkExamFeeApplicability = async (req: Request, res: Response) => {
+  try {
+    const studentId = String(req.params.studentId);
+    const semesterNumber = parseInt(String(req.params.semesterNumber));
+
+    const student = await Student.findById(studentId).populate('course');
+    if (!student) return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+
+    const course = student.course || await Course.findById(
+      (student as any).courseId || (student as any).course
+    );
+
+    const status = await checkStudentReappearance(studentId, semesterNumber);
+
+    const feeConfig = course
+      ? resolveFeeConfiguration(course, semesterNumber)
+      : { firstAttemptFee: 0, reappearingFee: 0, feeApplicableForFirstAttempt: false };
+
+    // First attempt: fee applies only when the course opts in AND fee > 0.
+    // Reappearing: fee applies only when the reappearing fee > 0.
+    let examFeeApplicable = false;
+    let examFeeAmount = 0;
+    let applicableFee = '';
+    if (status.isReappearing) {
+      examFeeApplicable = feeConfig.reappearingFee > 0;
+      examFeeAmount = feeConfig.reappearingFee;
+      applicableFee = 'reappearing';
+    } else {
+      examFeeApplicable = feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0;
+      examFeeAmount = feeConfig.firstAttemptFee;
+      applicableFee = 'firstAttempt';
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Exam fee applicability checked',
+      data: {
+        studentId,
+        semesterNumber,
+        isReappearing: status.isReappearing,
+        attemptCount: status.attemptCount,
+        previousResult: status.previousResult,
+        firstAttemptFee: feeConfig.firstAttemptFee,
+        reappearingFee: feeConfig.reappearingFee,
+        feeApplicableForFirstAttempt: feeConfig.feeApplicableForFirstAttempt,
+        applicableFee,
+        examFeeApplicable,
+        examFeeAmount,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getExamFeeConfiguration = async (req: Request, res: Response) => {
+  try {
+    const courseId = String(req.params.courseId);
+    const semesterNumber = parseInt(String(req.params.semesterNumber));
+
+    const course = await Course.findById(courseId);
+    if (!course) return sendError({ req, res, statusCode: 404, message: 'Course not found' });
+
+    const feeConfig = resolveFeeConfiguration(course, semesterNumber);
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Exam fee configuration retrieved successfully',
+      data: {
+        courseId,
+        semesterNumber,
+        firstAttemptFee: feeConfig.firstAttemptFee,
+        reappearingFee: feeConfig.reappearingFee,
+        feeApplicableForFirstAttempt: feeConfig.feeApplicableForFirstAttempt,
+      },
     });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
@@ -9587,6 +10211,43 @@ const getSubjectsForCourse = async (courseId: any) => {
   }
 };
 
+const resolveMergedMarks = async (studentId: any, semesterNumber: number, existingMarks: any[]) => {
+  try {
+    const resultDoc = await Result.findOne({ student: studentId, semester: semesterNumber });
+    if (!resultDoc || !resultDoc.subjects || resultDoc.subjects.length === 0) {
+      return existingMarks;
+    }
+    const merged = [...existingMarks];
+    resultDoc.subjects.forEach((resSubj: any) => {
+      const idx = merged.findIndex(
+        (m: any) =>
+          (m.subjectCode && resSubj.subjectCode && m.subjectCode.toLowerCase() === resSubj.subjectCode.toLowerCase()) ||
+          (m.subjectName && resSubj.subjectName && m.subjectName.toLowerCase() === resSubj.subjectName.toLowerCase())
+      );
+      if (idx !== -1) {
+        merged[idx] = {
+          ...merged[idx],
+          marksObtained: resSubj.totalMarks ?? merged[idx].marksObtained,
+          grade: resSubj.grade || merged[idx].grade,
+          isAbsent: resSubj.grade === 'ABSENT'
+        };
+      } else {
+        merged.push({
+          subjectCode: resSubj.subjectCode,
+          subjectName: resSubj.subjectName,
+          marksObtained: resSubj.totalMarks,
+          totalMarks: 100,
+          isAbsent: resSubj.grade === 'ABSENT',
+          grade: resSubj.grade
+        });
+      }
+    });
+    return merged;
+  } catch {
+    return existingMarks;
+  }
+};
+
 // ─── Get All Students with Marks ─────────────────────────────────────────────
 
 export const getStudentsWithMarks = async (req: Request, res: Response) => {
@@ -9627,6 +10288,9 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
 
         const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
 
+        const baseMarks = semesterRecord ? (semesterRecord.marks || []) : buildDefaultMarks(await getSubjectsForCourse(student.course));
+        const mergedMarks = await resolveMergedMarks(student._id, semNum, baseMarks);
+
         if (semesterRecord) {
           return {
             id: student._id,
@@ -9644,14 +10308,11 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
             attendancePercentage: semesterRecord.attendancePercentage || 0,
             thesisApproved: semesterRecord.thesisApproved || false,
             eligibilityStatus: semesterRecord.eligibilityStatus || 'Pending',
-            marks: semesterRecord.marks || [],
+            marks: mergedMarks,
             documents: student.documents || {},
             remittedToAcademy: student.remittedToAcademy || false,
           };
         }
-
-        // No semester record yet - seed default subjects from the course
-        const courseSubjects = await getSubjectsForCourse(student.course);
 
         return {
           id: student._id,
@@ -9669,7 +10330,7 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
           attendancePercentage: 0,
           thesisApproved: false,
           eligibilityStatus: 'Pending',
-          marks: buildDefaultMarks(courseSubjects),
+          marks: mergedMarks,
           documents: student.documents || {},
           remittedToAcademy: student.remittedToAcademy || false,
         };
@@ -9715,11 +10376,13 @@ export const getStudentMarks = async (req: Request, res: Response) => {
     const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
     const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
 
-    let marks = semesterRecord?.marks || [];
+    let rawMarks = semesterRecord?.marks || [];
     if (!semesterRecord) {
       const courseSubjects = await getSubjectsForCourse(student.course);
-      marks = buildDefaultMarks(courseSubjects);
+      rawMarks = buildDefaultMarks(courseSubjects);
     }
+
+    const marks = await resolveMergedMarks(student._id, semNum, rawMarks);
 
     return sendSuccess({
       req,
@@ -10632,6 +11295,7 @@ import { Marksheet } from '../models/marksheetModel';
 import resultService from '../services/resultService';
 import pdfGeneratorService from '../services/pdfGeneratorService';
 import fileParserService from '../services/fileParserService';
+import notificationService from '../services/notificationService';
 import { ParsedResultData } from '../services/fileParserService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { createResultSchema, updateResultSchema, bulkUploadSchema } from '../validators/resultValidator';
@@ -10673,7 +11337,17 @@ export const getAllResults = async (req: Request, res: Response) => {
     const options = {
       page: parseInt(page as string),
       limit: parseInt(limit as string),
-      populate: [{ path: 'student', select: 'firstName lastName enrollmentId email' }],
+      populate: [
+        {
+          path: 'student',
+          select: 'firstName lastName enrollmentId email course batch institute',
+          populate: [
+            { path: 'course', select: 'name courseName' },
+            { path: 'batch', select: 'name year' },
+            { path: 'institute', select: 'orgName' }
+          ]
+        }
+      ],
       sort: { createdAt: -1 } as any,
     };
 
@@ -10942,6 +11616,53 @@ export const publishResult = async (req: Request, res: Response) => {
       }
     }
 
+    // ── NEW: Track exam attempt on the student record ──
+    try {
+      const student = await Student.findById(result.student);
+      if (student) {
+        if (!student.examAttempts) student.examAttempts = [];
+        const attemptIndex = student.examAttempts.findIndex(
+          (e) => e.semesterNumber === result.semester
+        );
+
+        if (attemptIndex !== -1) {
+          student.examAttempts[attemptIndex].attemptCount += 1;
+          student.examAttempts[attemptIndex].lastResultStatus = result.resultStatus;
+          student.examAttempts[attemptIndex].lastExamDate = new Date();
+        } else {
+          student.examAttempts.push({
+            semesterNumber: result.semester,
+            attemptCount: 1,
+            lastResultStatus: result.resultStatus,
+            lastExamDate: new Date(),
+          });
+        }
+        await student.save();
+      }
+    } catch (attemptErr) {
+      console.error('Failed to update student exam attempts on result publish:', attemptErr);
+    }
+
+    // Notify institute (and student if email known) that results are published
+    try {
+      const student = await Student.findById(result.student).populate('course', 'name');
+      if (student) {
+        const institute = await Institute.findById(student.institute).populate('user');
+        const instituteUser = (institute as any)?.user as any;
+        await notificationService.notifyResultsPublished({
+          instituteName: institute?.orgName || 'N/A',
+          instituteEmail: instituteUser?.email || institute?.emailAddress || 'N/A',
+          studentName: `${student.firstName} ${student.lastName}`.trim(),
+          studentEmail: student.email,
+          courseName: (student as any).course?.name || 'N/A',
+          semesterNumber: result.semester,
+          resultStatus: result.resultStatus,
+        });
+      }
+    } catch (emailErr: any) {
+      console.error('Failed to send result published notification:', emailErr);
+    }
+
     return sendSuccess({ req, res, message: 'Result published successfully', data: result });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
@@ -11198,6 +11919,7 @@ import { Student } from '../models/studentModel';
 import { Institute } from '../models/instituteModel';
 import { FeeRecord } from '../models/feeRecordModel';
 import revaluationService from '../services/revaluationService';
+import notificationService from '../services/notificationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { emitEvent } from '../config/socket';
 import razorpayInstance, { isRazorpayConfigured, keyId } from '../config/razorpay';
@@ -11389,6 +12111,28 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
     await Result.findByIdAndUpdate(resultId, {
       $push: { revaluationRequests: revaluationRequest._id },
     });
+
+    // Notify institute + academy of the revaluation payment/request
+    try {
+      const student = await Student.findById(studentId).populate('course', 'name');
+      const institute = await Institute.findById(instituteId).populate('user');
+      const instituteUser = (institute as any)?.user as any;
+      await notificationService.notifyRevaluationPaymentSubmitted({
+        instituteName: institute?.orgName || 'N/A',
+        instituteEmail: instituteUser?.email || institute?.emailAddress || 'N/A',
+        studentName: student ? `${student.firstName} ${student.lastName}`.trim() : 'N/A',
+        studentEmail: student?.email || 'N/A',
+        courseName: (student as any)?.course?.name || 'N/A',
+        semesterNumber: semester,
+        subjects: (Array.isArray(subjects) ? subjects : []).map((s: any) =>
+          s?.subjectName || s?.subjectCode || String(s)
+        ),
+        totalFee: totalFee || 0,
+        paymentId: razorpay_payment_id,
+      });
+    } catch (emailErr: any) {
+      console.error('Failed to send revaluation payment notification:', emailErr);
+    }
 
     return sendSuccess({
       req,
@@ -12261,6 +13005,33 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
       revaluationRequestId: request._id,
     });
 
+    // Notify institute (and student if email known) of the revaluation result update
+    try {
+      const student = await Student.findById(request.student).populate('course', 'name');
+      const institute = await Institute.findById(request.institute).populate('user');
+      const revalResults = await RevaluationResult.find({
+        revaluationRequest: request._id,
+        reviewStatus: 'APPROVED',
+      });
+      const instituteUser = (institute as any)?.user as any;
+      await notificationService.notifyRevaluationResultUpdated({
+        instituteName: institute?.orgName || 'N/A',
+        instituteEmail: instituteUser?.email || institute?.emailAddress || 'N/A',
+        studentName: student ? `${student.firstName} ${student.lastName}`.trim() : 'N/A',
+        studentEmail: student?.email || 'N/A',
+        courseName: (student as any)?.course?.name || 'N/A',
+        semesterNumber: request.semester,
+        revaluationResults: revalResults.map((r: any) => ({
+          subjectName: r.subjectName,
+          originalMarks: r.originalMarks,
+          revisedTotalMarks: r.revisedTotalMarks ?? r.originalMarks,
+          marksChange: r.marksChange ?? 0,
+        })),
+      });
+    } catch (emailErr: any) {
+      console.error('Failed to send revaluation result notification:', emailErr);
+    }
+
     return sendSuccess({ req, res, message: 'Revaluation result approved successfully', data: revalResult });
   } catch (error: any) {
     if (error instanceof z.ZodError) throw error;
@@ -13104,6 +13875,10 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
+    // Super admins always have global bypass
+    if (req.user && (req.user.role === 'super_admin' || req.user.role === 'admin')) {
+      return next();
+    }
     if (!req.user || !roles.includes(req.user.role)) {
       return sendError({ req, res, statusCode: 403, message: `User role ${req.user?.role} is not authorized to access this route` });
     }
@@ -13648,10 +14423,34 @@ export const Certificate = mongoose.model<ICertificate>('Certificate', certifica
 ```typescript
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface ICourse extends Document {
-  institute: mongoose.Types.ObjectId;
+export interface ISemesterSubject {
+  code?: string;
   name: string;
-  description?: string;
+}
+
+export interface ISemesterPractical {
+  code?: string;
+  name: string;
+}
+
+export interface ISemesterCourse {
+  semesterNumber: number;
+  semesterName?: string;
+  subjects?: ISemesterSubject[];
+  practicalExams?: ISemesterPractical[];
+}
+
+export interface IExamFeeConfig {
+  firstAttemptFee: number;
+  reappearingFee: number;
+  feeApplicableForFirstAttempt: boolean;
+  updatedBy?: mongoose.Types.ObjectId;
+  updatedAt?: Date;
+}
+
+export interface ICourse extends Document {
+  institute?: mongoose.Types.ObjectId;
+  name: string;
   courseCode?: string;
   courseType?: string;
   programCategory?: string;
@@ -13660,8 +14459,14 @@ export interface ICourse extends Document {
   subjects?: string[];
   practicalExamName?: string;
   practicalExams?: string[];
-  examinationFee?: string;
+  semesters?: ISemesterCourse[];
   status?: 'Active' | 'Inactive' | 'Pending';
+  examFeeConfig?: {
+    [semesterKey: string]: IExamFeeConfig;
+  };
+  examinationFee?: number;
+  reappearingExaminationFee?: number;
+  feeApplicableForFirstAttempt?: boolean;
 }
 
 const courseSchema: Schema = new Schema(
@@ -13669,16 +14474,12 @@ const courseSchema: Schema = new Schema(
     institute: {
       type: Schema.Types.ObjectId,
       ref: 'Institute',
-      required: true,
+      required: false,
     },
     name: {
       type: String,
       required: true,
       trim: true,
-    },
-    description: {
-      type: String,
-      default: '',
     },
     courseCode: {
       type: String,
@@ -13715,14 +14516,57 @@ const courseSchema: Schema = new Schema(
       type: [String],
       default: [],
     },
-    examinationFee: {
-      type: String,
-      default: '15,000',
+    semesters: {
+      type: [
+        {
+          semesterNumber: { type: Number, required: true },
+          semesterName: { type: String, default: '' },
+          subjects: [
+            {
+              code: { type: String, default: '' },
+              name: { type: String, required: true },
+            },
+          ],
+          practicalExams: [
+            {
+              code: { type: String, default: '' },
+              name: { type: String, required: true },
+            },
+          ],
+        },
+      ],
+      default: [],
     },
     status: {
       type: String,
       enum: ['Active', 'Inactive', 'Pending'],
       default: 'Active',
+    },
+    examinationFee: {
+      type: Number,
+      default: 0,
+    },
+    reappearingExaminationFee: {
+      type: Number,
+      default: 0,
+    },
+    feeApplicableForFirstAttempt: {
+      type: Boolean,
+      default: false,
+    },
+    examFeeConfig: {
+      type: Map,
+      of: new Schema(
+        {
+          firstAttemptFee: { type: Number, default: 0 },
+          reappearingFee: { type: Number, default: 0 },
+          feeApplicableForFirstAttempt: { type: Boolean, default: false },
+          updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+          updatedAt: { type: Date, default: Date.now },
+        },
+        { _id: false }
+      ),
+      default: {},
     },
   },
   {
@@ -13730,8 +14574,8 @@ const courseSchema: Schema = new Schema(
   }
 );
 
-// Unique course name per institute
-courseSchema.index({ institute: 1, name: 1 }, { unique: true });
+// Unique course name index (global)
+courseSchema.index({ name: 1 }, { unique: true });
 
 export const Course = mongoose.model<ICourse>('Course', courseSchema);
 ```
@@ -13779,6 +14623,14 @@ export interface IExamApplication extends Document {
   // Exam fee payment (now optional as fee is collected elsewhere)
   utrNumber?: string;
   examFeeReceiptUrl?: string;
+
+  // NEW: Fee applicability tracking (first-time vs reappearing students)
+  examFeeApplicable?: boolean;
+  examFeeAmount?: number;
+  reappearingFeeAmount?: number;
+  firstAttemptFeeAmount?: number;
+  reappearingStudents?: mongoose.Types.ObjectId[];
+  firstAttemptStudents?: mongoose.Types.ObjectId[];
 }
 
 const examApplicationSchema: Schema = new Schema(
@@ -13858,6 +14710,14 @@ const examApplicationSchema: Schema = new Schema(
       type: String,
       required: false,
     },
+
+    // Fee applicability tracking
+    examFeeApplicable: { type: Boolean, default: false },
+    examFeeAmount: { type: Number, default: 0 },
+    reappearingFeeAmount: { type: Number, default: 0 },
+    firstAttemptFeeAmount: { type: Number, default: 0 },
+    reappearingStudents: [{ type: Schema.Types.ObjectId, ref: 'Student' }],
+    firstAttemptStudents: [{ type: Schema.Types.ObjectId, ref: 'Student' }],
   },
   { timestamps: true }
 );
@@ -14354,7 +15214,6 @@ const instituteSchema: Schema = new Schema(
       type: String,
       enum: ['Pending Review', 'Approved', 'Rejected'],
       default: 'Pending Review',
-      index: true
     },
     paymentStatus: {
       type: String, 
@@ -14394,7 +15253,6 @@ const instituteSchema: Schema = new Schema(
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
     deletedAt: {
       type: Date,
@@ -15033,6 +15891,8 @@ export interface IStudent extends Document {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
+  attendancePercentage?: number;
+  thesisApproved?: boolean;
   documents: {
     passportPhotoUrl: string;
     mbbsCertificateUrl: string;
@@ -15041,9 +15901,19 @@ export interface IStudent extends Document {
     semiMembershipFormUrl: string;
     studentSignatureUrl?: string;
     hodSignatureUrl?: string;
+    nblsCertificateUrl?: string;
+    nclsCertificateUrl?: string;
+    ntlsCertificateUrl?: string;
+    nulsCertificateUrl?: string;
   };
   remittedToAcademy: boolean;
   remittanceRecord?: mongoose.Types.ObjectId;
+  verificationStatus: 'Pending Verification' | 'Approved' | 'Rejected' | 'Correction Required';
+  verificationRemarks?: string;
+  verifiedBy?: mongoose.Types.ObjectId;
+  verifiedAt?: Date;
+  correctionRequestedAt?: Date;
+  correctionResubmittedAt?: Date;
   semesters: {
     semesterNumber: number;
     attendancePercentage: number;
@@ -15061,6 +15931,12 @@ export interface IStudent extends Document {
       updatedAt?: Date;
     }[];
   }[];
+  examAttempts?: {
+    semesterNumber: number;
+    attemptCount: number;
+    lastResultStatus?: string;
+    lastExamDate?: Date;
+  }[];
 }
 
 const studentSchema: Schema = new Schema(
@@ -15068,8 +15944,6 @@ const studentSchema: Schema = new Schema(
     enrollmentId: {
       type: String,
       required: true,
-      unique: true,
-      index: true,
     },
     firstName: {
       type: String,
@@ -15161,6 +16035,10 @@ const studentSchema: Schema = new Schema(
       semiMembershipFormUrl: { type: String, required: true },
       studentSignatureUrl: { type: String },
       hodSignatureUrl: { type: String },
+      nblsCertificateUrl: { type: String },
+      nclsCertificateUrl: { type: String },
+      ntlsCertificateUrl: { type: String },
+      nulsCertificateUrl: { type: String },
     },
     remittedToAcademy: {
       type: Boolean,
@@ -15170,6 +16048,29 @@ const studentSchema: Schema = new Schema(
     remittanceRecord: {
       type: Schema.Types.ObjectId,
       ref: 'Remittance',
+    },
+    verificationStatus: {
+      type: String,
+      enum: ['Pending Verification', 'Approved', 'Rejected', 'Correction Required'],
+      default: 'Pending Verification',
+      required: true,
+    },
+    verificationRemarks: {
+      type: String,
+      default: '',
+    },
+    verifiedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    verifiedAt: {
+      type: Date,
+    },
+    correctionRequestedAt: {
+      type: Date,
+    },
+    correctionResubmittedAt: {
+      type: Date,
     },
     semesters: [
       {
@@ -15196,6 +16097,14 @@ const studentSchema: Schema = new Schema(
         ],
       }
     ],
+    examAttempts: [
+      {
+        semesterNumber: { type: Number, required: true },
+        attemptCount: { type: Number, default: 0 },
+        lastResultStatus: { type: String },
+        lastExamDate: { type: Date },
+      },
+    ],
   },
   {
     timestamps: true,
@@ -15209,6 +16118,7 @@ studentSchema.index({ institute: 1, course: 1 });
 studentSchema.index({ institute: 1, batch: 1 });
 studentSchema.index({ isEligible: 1 });
 studentSchema.index({ email: 1 });
+studentSchema.index({ verificationStatus: 1 });
 studentSchema.index({ 'semesters.eligibilityStatus': 1 });
 
 
@@ -15250,7 +16160,6 @@ const userSchema: Schema = new Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
     },
     password: {
       type: String,
@@ -15268,11 +16177,9 @@ const userSchema: Schema = new Schema(
     },
     verificationToken: {
       type: String,
-      index: { unique: false, sparse: true },
     },
     resetPasswordToken: {
       type: String,
-      index: { unique: false, sparse: true },
     },
     resetPasswordExpires: Date,
     refreshTokens: [
@@ -15317,6 +16224,7 @@ export const User = mongoose.model<IUser>('User', userSchema);
 import express from 'express';
 import { protect, authorize } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
+import { sendError } from '../utils/responseFormatter';
 import {
   createCourse,
   getCourses,
@@ -15342,10 +16250,14 @@ import {
   getStudentById,
   updateStudent,
   deleteStudent,
+  verifyStudentEnrollment,
+  uploadCourseCertificates,
   createRazorpayOrder,
   verifyRazorpayPayment,
   getAcademicPaymentStatus,
   verifyAcademicPayment,
+  getExamFeeConfigurationByCourse,
+  updateExamFeeConfiguration,
 } from '../controllers/academicController';
 
 const router = express.Router();
@@ -15361,13 +16273,31 @@ router.get('/payment/status/:studentId', protect, authorize('institute'), getAca
 router.get('/payment/verify-order/:orderId', protect, authorize('institute'), verifyAcademicPayment);
 
 // ==========================================
-// COURSE CRUD Routes
+// EXAM FEE CONFIGURATION (Academy / Board)
 // ==========================================
-router.get('/courses', protect, authorize('institute', 'admin', 'board', 'super_admin'), getCourses);
-router.get('/courses/:courseId', protect, authorize('institute', 'admin', 'board', 'super_admin'), getCourseById);
-router.post('/courses', protect, authorize('institute'), createCourse);
-router.put('/courses/:courseId', protect, authorize('institute', 'admin', 'super_admin'), updateCourse);
-router.delete('/courses/:courseId', protect, authorize('institute', 'admin', 'super_admin'), deleteCourse);
+router.get('/fee-configuration/:courseId/:semesterNumber', protect, authorize('admin', 'board', 'super_admin', 'institute'), getExamFeeConfigurationByCourse);
+router.put('/fee-configuration', protect, authorize('admin', 'board', 'super_admin'), updateExamFeeConfiguration);
+
+router.get('/courses', protect, getCourses);
+router.get('/courses/:courseId', protect, getCourseById);
+router.post('/courses', protect, (req, res, next) => {
+  if (req.user?.role === 'institute') {
+    return sendError({ req, res, statusCode: 403, message: 'Institutes are not authorized to create courses. Courses are centrally managed by SEMI Academic Board.' });
+  }
+  next();
+}, createCourse);
+router.put('/courses/:courseId', protect, (req, res, next) => {
+  if (req.user?.role === 'institute') {
+    return sendError({ req, res, statusCode: 403, message: 'Institutes are not authorized to update courses.' });
+  }
+  next();
+}, updateCourse);
+router.delete('/courses/:courseId', protect, (req, res, next) => {
+  if (req.user?.role === 'institute') {
+    return sendError({ req, res, statusCode: 403, message: 'Institutes are not authorized to delete courses.' });
+  }
+  next();
+}, deleteCourse);
 
 // ==========================================
 // BATCH CRUD Routes
@@ -15461,11 +16391,35 @@ router.put(
     { name: 'semiMembershipForm', maxCount: 1 },
     { name: 'studentSignature', maxCount: 1 },
     { name: 'hodSignature', maxCount: 1 },
+    { name: 'nblsCertificate', maxCount: 1 },
+    { name: 'nclsCertificate', maxCount: 1 },
+    { name: 'ntlsCertificate', maxCount: 1 },
+    { name: 'nulsCertificate', maxCount: 1 },
   ]),
   updateStudent
 );
 
+router.post(
+  '/students/:studentId/course-certificates',
+  protect,
+  authorize('institute', 'admin', 'super_admin'),
+  upload.fields([
+    { name: 'nblsCertificate', maxCount: 1 },
+    { name: 'nclsCertificate', maxCount: 1 },
+    { name: 'ntlsCertificate', maxCount: 1 },
+    { name: 'nulsCertificate', maxCount: 1 },
+  ]),
+  uploadCourseCertificates
+);
+
 router.delete('/students/:studentId', protect, authorize('institute', 'admin', 'super_admin'), deleteStudent);
+
+router.patch(
+  '/students/:studentId/verify-enrollment',
+  protect,
+  authorize('admin', 'board', 'super_admin'),
+  verifyStudentEnrollment
+);
 
 router.patch(
   '/students/:studentId/academic-metrics',
@@ -15569,6 +16523,8 @@ import {
   listHallTickets,
   getHallTicketById,
   downloadHallTicket,
+  checkExamFeeApplicability,
+  getExamFeeConfiguration,
 } from '../controllers/examController';
 import { protect, authorize } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
@@ -15582,6 +16538,12 @@ const router = express.Router();
 // GET all applications (Institute sees own | Board/Admin sees all)
 // Supports filters: ?status=Pending&courseId=&batchId=
 router.get('/', protect, listExamApplications);
+
+// GET exam fee applicability for a student & semester
+router.get('/fee-check/:studentId/:semesterNumber', protect, checkExamFeeApplicability);
+
+// GET exam fee configuration for a course & semester
+router.get('/fee-configuration/:courseId/:semesterNumber', protect, getExamFeeConfiguration);
 
 // GET single application by ID
 router.get('/:id', protect, getExamApplicationById);
@@ -16250,7 +17212,11 @@ const seedTestData = async () => {
     console.log('Creating test Course...');
     const course = await Course.create({
       name: 'Emergency Medicine',
-      description: 'Fellowship in Emergency Medicine (FEM)',
+      courseCode: 'FEM',
+      courseType: 'Fellowship',
+      programCategory: 'Emergency Medicine',
+      courseDuration: '2',
+      durationType: 'Years',
       institute: institute._id,
       subjects: ['Emergency Medicine Core', 'Trauma Management', 'Critical Care'],
     });
@@ -16627,6 +17593,149 @@ class CertificateService {
 export default new CertificateService();
 
 
+```
+
+### `backend/src/services/examFeeService.ts`
+
+```typescript
+import { Result } from '../models/resultModel';
+import { Student } from '../models/studentModel';
+
+/**
+ * A student is considered "reappearing" for a semester when the most recent
+ * published result carries a non-PASS status (FAIL / SUPPLEMENTARY /
+ * REVALUATION_PENDING), i.e. they must sit the same semester again.
+ *
+ * First attempt (not reappearing) = no prior result, OR a PASS status.
+ */
+export const checkStudentReappearance = async (
+  studentId: string,
+  semesterNumber: number
+) => {
+  const results = await Result.find({
+    student: studentId,
+    semester: semesterNumber,
+    isPublished: true,
+  }).sort({ createdAt: -1 });
+
+  if (results.length === 0) {
+    return { isReappearing: false, attemptCount: 1, previousResult: null };
+  }
+
+  const latestResult = results[0];
+  const isReappearing =
+    latestResult.resultStatus === 'FAIL' ||
+    latestResult.resultStatus === 'SUPPLEMENTARY' ||
+    latestResult.resultStatus === 'REVALUATION_PENDING';
+
+  return {
+    isReappearing,
+    attemptCount: results.length,
+    previousResult: latestResult,
+    previousAttempts: results,
+  };
+};
+
+/**
+ * Resolve the applicable fee for a course/semester and whether a fee applies
+ * at all. Fee configuration can be supplied per-course/per-semester (via the
+ * `examFeeConfig` Map), otherwise falls back to the course-level fields.
+ *
+ * First-attempt fee defaults to 0 (waived) unless the course opts in via
+ * `feeApplicableForFirstAttempt`.
+ */
+export const resolveFeeConfiguration = (
+  course: any,
+  semesterNumber: number
+) => {
+  let firstAttemptFee = 0;
+  let reappearingFee = 0;
+  let feeApplicableForFirstAttempt = false;
+
+  const perSemester = course?.examFeeConfig?.[`semester_${semesterNumber}`];
+  if (perSemester) {
+    // Use nullish coalescing so an explicit 0 (fee removed) is respected.
+    firstAttemptFee =
+      perSemester.firstAttemptFee !== undefined && perSemester.firstAttemptFee !== null
+        ? Number(perSemester.firstAttemptFee) || 0
+        : Number(course?.examinationFee) || 0;
+    reappearingFee =
+      perSemester.reappearingFee !== undefined && perSemester.reappearingFee !== null
+        ? Number(perSemester.reappearingFee) || 0
+        : Number(course?.reappearingExaminationFee) ||
+          Number(course?.examinationFee) ||
+          0;
+    feeApplicableForFirstAttempt =
+      Boolean(perSemester.feeApplicableForFirstAttempt);
+  } else {
+    firstAttemptFee = Number(course?.examinationFee) || 0;
+    reappearingFee =
+      Number(course?.reappearingExaminationFee) ||
+      Number(course?.examinationFee) ||
+      0;
+    feeApplicableForFirstAttempt =
+      Boolean(course?.feeApplicableForFirstAttempt);
+  }
+
+  // Reappearing students always pay the reappearing fee.
+  return {
+    firstAttemptFee,
+    reappearingFee,
+    feeApplicableForFirstAttempt,
+    feeForAttempt: (isReappearing: boolean) =>
+      isReappearing ? reappearingFee : feeApplicableForFirstAttempt ? firstAttemptFee : 0,
+  };
+};
+
+/**
+ * Classify a list of students into first-attempt vs reappearing for a given
+ * semester, and compute the total applicable exam fee.
+ *
+ * Returns per-student classification plus summary fee fields suitable for
+ * persisting onto an ExamApplication.
+ */
+export const classifyStudentsForExamFee = async (
+  studentIds: string[],
+  semesterNumber: number,
+  course: any
+) => {
+  const reappearingStudents: string[] = [];
+  const firstAttemptStudents: string[] = [];
+
+  for (const studentId of studentIds) {
+    const status = await checkStudentReappearance(studentId, semesterNumber);
+    if (status.isReappearing) {
+      reappearingStudents.push(studentId);
+    } else {
+      firstAttemptStudents.push(studentId);
+    }
+  }
+
+  const feeConfig = resolveFeeConfiguration(course, semesterNumber);
+
+  const examFeeApplicable = reappearingStudents.length > 0
+    ? feeConfig.reappearingFee > 0
+    : feeConfig.firstAttemptFee > 0 && feeConfig.feeApplicableForFirstAttempt;
+
+  const reappearingFeeAmount = reappearingStudents.length * feeConfig.reappearingFee;
+  const firstAttemptFeeAmount = feeConfig.feeApplicableForFirstAttempt
+    ? firstAttemptStudents.length * feeConfig.firstAttemptFee
+    : 0;
+
+  return {
+    reappearingStudents,
+    firstAttemptStudents,
+    reappearingCount: reappearingStudents.length,
+    firstAttemptCount: firstAttemptStudents.length,
+    feePerReappearing: feeConfig.reappearingFee,
+    feePerFirstAttempt: feeConfig.firstAttemptFee,
+    examFeeApplicable,
+    examFeeAmount: reappearingFeeAmount + firstAttemptFeeAmount,
+    reappearingFeeAmount,
+    firstAttemptFeeAmount,
+    feeConfig,
+  };
+};
 ```
 
 ### `backend/src/services/fileParserService.ts`
@@ -17124,6 +18233,664 @@ export default new MarksheetService();
 
 ```
 
+### `backend/src/services/notificationService.ts`
+
+```typescript
+// backend/src/services/notificationService.ts
+import sendEmail from '../utils/sendEmail';
+import { logger } from '../config/logger';
+
+export interface EmailTemplateData {
+  instituteName: string;
+  instituteEmail: string;
+  studentName?: string;
+  studentEmail?: string;
+  courseName?: string;
+  semesterNumber?: number;
+  examVenue?: string;
+  examCenter?: string;
+  examDate?: Date | string;
+  reportingTime?: string;
+  subjects?: string[];
+  totalFee?: number;
+  paymentId?: string;
+  orderId?: string;
+  resultStatus?: string;
+  marks?: any[];
+  revaluationResults?: Array<{
+    subjectName?: string;
+    originalMarks?: number;
+    revisedTotalMarks?: number;
+    marksChange?: number;
+  }>;
+  remarks?: string;
+  studentsCount?: number;
+  requestId?: string;
+}
+
+class NotificationService {
+  private readonly ACADEMY_EMAIL = process.env.BOARD_EMAIL || 'admin@semiphase3.com';
+  private readonly SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || 'support@semiphase3.com';
+
+  /**
+   * Send exam application confirmation to institute and notification to academy
+   */
+  async notifyExamApplicationSubmitted(data: EmailTemplateData): Promise<void> {
+    const { instituteName, instituteEmail, courseName, semesterNumber, subjects, totalFee, paymentId, studentsCount } = data;
+
+    // 1. Institute confirmation
+    await this.sendInstituteEmail({
+      to: instituteEmail,
+      subject: 'Exam Application Submitted - SEMI',
+      template: 'exam-application-submitted-institute',
+      data: {
+        ...data,
+        subjectsList: subjects?.join(', ') || 'N/A',
+        totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
+        paymentId: paymentId || 'N/A',
+        studentsCount: studentsCount || 'N/A',
+      },
+    });
+
+    // 2. Academy notification
+    await this.sendAcademyEmail({
+      subject: '🆕 New Exam Application Submitted',
+      template: 'exam-application-submitted-academy',
+      data: {
+        ...data,
+        instituteName,
+        courseName,
+        semesterNumber,
+        subjects: subjects?.join(', ') || 'N/A',
+        totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
+        paymentId: paymentId || 'N/A',
+        studentsCount: studentsCount || 'N/A',
+        actionRequired: 'Please review and approve/reject this exam application.',
+      },
+    });
+  }
+
+  /**
+   * Send exam application approval notification to institute
+   */
+  async notifyExamApplicationApproved(data: EmailTemplateData): Promise<void> {
+    const { instituteName, instituteEmail, courseName, semesterNumber, examDate, remarks } = data;
+
+    await this.sendInstituteEmail({
+      to: instituteEmail,
+      subject: '✅ Exam Application Approved - SEMI',
+      template: 'exam-application-approved-institute',
+      data: {
+        ...data,
+        examDate: examDate ? new Date(examDate).toLocaleDateString('en-IN', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        }) : 'TBD',
+        remarks: remarks || 'No additional remarks provided.',
+        nextSteps: 'Please await schedule publication from the Academic Board.',
+      },
+    });
+  }
+
+  /**
+   * Send exam schedule published notification to institute
+   */
+  async notifyExamSchedulePublished(data: EmailTemplateData): Promise<void> {
+    const { instituteName, instituteEmail, courseName, semesterNumber, examVenue, examCenter, examDate, reportingTime, subjects } = data;
+
+    await this.sendInstituteEmail({
+      to: instituteEmail,
+      subject: '📅 Exam Schedule Published - SEMI',
+      template: 'exam-schedule-published-institute',
+      data: {
+        ...data,
+        venue: examVenue || 'TBD',
+        center: examCenter || 'TBD',
+        date: examDate ? new Date(examDate).toLocaleDateString('en-IN', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        }) : 'TBD',
+        reportingTime: reportingTime || 'TBD',
+        subjectsList: subjects?.map((s, i) => `${i + 1}. ${s}`).join('\n') || 'N/A',
+        nextSteps: 'Please log in to your dashboard to generate hall tickets for eligible students.',
+      },
+    });
+  }
+
+  /**
+   * Send exam result published notification to institute (and student if email known)
+   */
+  async notifyResultsPublished(data: EmailTemplateData): Promise<void> {
+    const { instituteName, instituteEmail, studentName, studentEmail, courseName, semesterNumber, resultStatus } = data;
+
+    await this.sendInstituteEmail({
+      to: instituteEmail,
+      subject: '📊 Results Published - SEMI',
+      template: 'results-published-institute',
+      data: {
+        ...data,
+        studentName: studentName || 'Multiple Students',
+        resultStatus: resultStatus || 'Published',
+        note: 'Results are now available in the ERP dashboard. Students can view their results using their enrollment ID.',
+      },
+    });
+
+    if (studentEmail) {
+      await this.sendStudentEmail({
+        to: studentEmail,
+        subject: '📊 Your Examination Results - SEMI',
+        template: 'results-published-student',
+        data: {
+          ...data,
+          studentName: studentName || 'Student',
+          resultStatus: resultStatus || 'Published',
+        },
+      });
+    }
+  }
+
+  /**
+   * Send revaluation fee payment confirmation to institute and notification to academy
+   */
+  async notifyRevaluationPaymentSubmitted(data: EmailTemplateData): Promise<void> {
+    const { instituteName, instituteEmail, studentName, studentEmail, courseName, semesterNumber, subjects, totalFee, paymentId } = data;
+
+    await this.sendInstituteEmail({
+      to: instituteEmail,
+      subject: '💰 Revaluation Payment Received - SEMI',
+      template: 'revaluation-payment-institute',
+      data: {
+        ...data,
+        studentName: studentName || 'N/A',
+        subjectsList: subjects?.map((s, i) => `${i + 1}. ${s}`).join('\n') || 'N/A',
+        totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
+        paymentId: paymentId || 'N/A',
+        nextSteps: 'Your revaluation request is now under review by the Academic Board.',
+      },
+    });
+
+    await this.sendAcademyEmail({
+      subject: '🔄 New Revaluation Request Submitted',
+      template: 'revaluation-payment-academy',
+      data: {
+        ...data,
+        studentName: studentName || 'N/A',
+        studentEmail: studentEmail || 'N/A',
+        courseName: courseName || 'N/A',
+        semesterNumber: semesterNumber || 'N/A',
+        subjectsList: subjects?.join(', ') || 'N/A',
+        totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
+        paymentId: paymentId || 'N/A',
+        actionRequired: 'Please review and process the revaluation request.',
+      },
+    });
+  }
+
+  /**
+   * Send revaluation result update notification to institute (and student if email known)
+   */
+  async notifyRevaluationResultUpdated(data: EmailTemplateData): Promise<void> {
+    const { instituteName, instituteEmail, studentName, studentEmail, courseName, semesterNumber, revaluationResults } = data;
+
+    const changes = revaluationResults || [];
+    const totalChange = changes.reduce((sum, r) => sum + (r.marksChange || 0), 0);
+    const changeEmoji = totalChange > 0 ? '📈' : totalChange < 0 ? '📉' : '➡️';
+
+    await this.sendInstituteEmail({
+      to: instituteEmail,
+      subject: `${changeEmoji} Revaluation Results Updated - SEMI`,
+      template: 'revaluation-result-updated-institute',
+      data: {
+        ...data,
+        studentName: studentName || 'N/A',
+        totalChange: totalChange > 0 ? `+${totalChange}` : totalChange.toString(),
+        changeEmoji,
+        changesSummary: changes.map(r =>
+          `${r.subjectName}: ${r.originalMarks}% → ${r.revisedTotalMarks}% (${(r.marksChange || 0) > 0 ? '+' : ''}${r.marksChange || 0}%)`
+        ).join('\n'),
+        nextSteps: "Updated marks are now reflected in the student's result. You can download the revised marksheet.",
+      },
+    });
+
+    if (studentEmail) {
+      await this.sendStudentEmail({
+        to: studentEmail,
+        subject: `${changeEmoji} Revaluation Results Updated - SEMI`,
+        template: 'revaluation-result-updated-student',
+        data: {
+          ...data,
+          studentName: studentName || 'Student',
+          changesSummary: changes.map(r =>
+            `${r.subjectName}: ${r.originalMarks}% → ${r.revisedTotalMarks}% (${(r.marksChange || 0) > 0 ? '+' : ''}${r.marksChange || 0}%)`
+          ).join('\n'),
+          totalChange: totalChange > 0 ? `+${totalChange}` : totalChange.toString(),
+          changeEmoji,
+        },
+      });
+    }
+  }
+
+  /**
+   * Generic send to institute email with HTML template
+   */
+  private async sendInstituteEmail(params: { to: string; subject: string; template: string; data: any }): Promise<void> {
+    const { to, subject, template, data } = params;
+    const html = this.buildTemplateEmail(template, data);
+    const text = this.buildPlainTextEmail(template, data);
+
+    try {
+      await sendEmail({ email: to, subject, message: text, html });
+      logger.info(`Email sent to institute: ${to} | Subject: ${subject}`);
+    } catch (error: any) {
+      logger.error(`Failed to send institute email to ${to}: ${error?.message || error}`);
+    }
+  }
+
+  /**
+   * Generic send to academy email
+   */
+  private async sendAcademyEmail(params: { subject: string; template: string; data: any }): Promise<void> {
+    const { subject, template, data } = params;
+    const html = this.buildTemplateEmail(template, data);
+    const text = this.buildPlainTextEmail(template, data);
+
+    try {
+      await sendEmail({ email: this.ACADEMY_EMAIL, subject, message: text, html });
+      logger.info(`Email sent to academy: ${this.ACADEMY_EMAIL} | Subject: ${subject}`);
+    } catch (error: any) {
+      logger.error(`Failed to send academy email: ${error?.message || error}`);
+    }
+  }
+
+  /**
+   * Generic send to student email
+   */
+  private async sendStudentEmail(params: { to: string; subject: string; template: string; data: any }): Promise<void> {
+    const { to, subject, template, data } = params;
+    const html = this.buildTemplateEmail(template, data);
+    const text = this.buildPlainTextEmail(template, data);
+
+    try {
+      await sendEmail({ email: to, subject, message: text, html });
+      logger.info(`Email sent to student: ${to} | Subject: ${subject}`);
+    } catch (error: any) {
+      logger.error(`Failed to send student email to ${to}: ${error?.message || error}`);
+    }
+  }
+
+  /**
+   * Build HTML template for emails
+   */
+  private buildTemplateEmail(template: string, data: any): string {
+    let title = 'SEMI Notification';
+    let greeting = 'Dear Institute,';
+    let body = '';
+    const footer = 'SEMI Academic Board';
+
+    switch (template) {
+      case 'exam-application-submitted-institute':
+        title = 'Exam Application Submitted';
+        greeting = `Dear ${data.instituteName},`;
+        body = `
+          <p>Your exam application has been successfully submitted to the Academic Board.</p>
+          <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #0369a1;">Application Summary:</p>
+            <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
+            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Students:</strong> ${data.studentsCount || data.students?.length || 'N/A'}</p>
+            <p><strong>Subjects:</strong> ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}</p>
+            <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
+            <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
+          </div>
+          <p>Your application is now pending review by the Academic Board.</p>
+          <p style="color: #6b7280; font-size: 14px;">You will receive a notification once your application is reviewed.</p>
+        `;
+        break;
+
+      case 'exam-application-submitted-academy':
+        title = '📋 New Exam Application';
+        greeting = 'Dear Academic Board,';
+        body = `
+          <p>A new exam application has been submitted by <strong>${data.instituteName}</strong>.</p>
+          <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #0369a1;">Application Details:</p>
+            <p><strong>Institute:</strong> ${data.instituteName}</p>
+            <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
+            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Students:</strong> ${data.studentsCount || 'N/A'}</p>
+            <p><strong>Subjects:</strong> ${data.subjects || 'N/A'}</p>
+            <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
+            <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
+          </div>
+          <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; padding: 12px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #92400e;">Action Required: ${data.actionRequired || 'Please review this application.'}</p>
+          </div>
+          <p>Please log in to the Academy Portal to review and take action.</p>
+        `;
+        break;
+
+      case 'exam-application-approved-institute':
+        title = '✅ Exam Application Approved';
+        greeting = `Dear ${data.instituteName},`;
+        body = `
+          <p>We are pleased to inform you that your exam application has been <strong style="color: #16a34a;">APPROVED</strong> by the Academic Board.</p>
+          <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #166534;">Application Details:</p>
+            <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
+            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Scheduled Date:</strong> ${data.examDate || 'TBD'}</p>
+            <p><strong>Remarks:</strong> ${data.remarks || 'No additional remarks.'}</p>
+          </div>
+          <p><strong>Next Steps:</strong> ${data.nextSteps || 'Please await schedule publication from the Academic Board.'}</p>
+          <p style="color: #6b7280; font-size: 14px;">You will receive another notification when the exam schedule is published.</p>
+        `;
+        break;
+
+      case 'exam-schedule-published-institute':
+        title = '📅 Exam Schedule Published';
+        greeting = `Dear ${data.instituteName},`;
+        body = `
+          <p>The Academic Board has published the exam schedule for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}).</p>
+          <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #166534;">Exam Schedule:</p>
+            <p><strong>Venue:</strong> ${data.venue || 'TBD'}</p>
+            <p><strong>Center:</strong> ${data.center || 'TBD'}</p>
+            <p><strong>Date:</strong> ${data.date || 'TBD'}</p>
+            <p><strong>Reporting Time:</strong> ${data.reportingTime || 'TBD'}</p>
+            <p><strong>Subjects:</strong></p>
+            <pre style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 14px;">${data.subjectsList || 'N/A'}</pre>
+          </div>
+          <p><strong>Next Steps:</strong> ${data.nextSteps || 'Please log in to your dashboard to generate hall tickets for eligible students.'}</p>
+        `;
+        break;
+
+      case 'results-published-institute':
+        title = '📊 Results Published';
+        greeting = `Dear ${data.instituteName},`;
+        body = `
+          <p>Results have been published for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}).</p>
+          <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p><strong>Student:</strong> ${data.studentName || 'Multiple Students'}</p>
+            <p><strong>Status:</strong> <span style="color: ${data.resultStatus === 'PASS' ? '#16a34a' : '#dc2626'};">${data.resultStatus || 'Published'}</span></p>
+          </div>
+          <p><strong>Note:</strong> ${data.note || 'Results are now available in the ERP dashboard.'}</p>
+        `;
+        break;
+
+      case 'revaluation-payment-institute':
+        title = '💰 Revaluation Payment Received';
+        greeting = `Dear ${data.instituteName},`;
+        body = `
+          <p>Revaluation payment has been received for <strong>${data.studentName}</strong>.</p>
+          <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #0369a1;">Payment Details:</p>
+            <p><strong>Student:</strong> ${data.studentName || 'N/A'}</p>
+            <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
+            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Subjects:</strong> ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}</p>
+            <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
+            <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
+          </div>
+          <p><strong>Next Steps:</strong> ${data.nextSteps || 'Your revaluation request is now under review.'}</p>
+        `;
+        break;
+
+      case 'revaluation-payment-academy':
+        title = '🔄 New Revaluation Request';
+        greeting = 'Dear Academic Board,';
+        body = `
+          <p>A new revaluation request has been submitted by <strong>${data.instituteName}</strong>.</p>
+          <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #0369a1;">Request Details:</p>
+            <p><strong>Institute:</strong> ${data.instituteName}</p>
+            <p><strong>Student:</strong> ${data.studentName || 'N/A'}</p>
+            <p><strong>Email:</strong> ${data.studentEmail || 'N/A'}</p>
+            <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
+            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Subjects:</strong> ${data.subjectsList || 'N/A'}</p>
+            <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
+            <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
+          </div>
+          <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; padding: 12px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #92400e;">Action Required: ${data.actionRequired || 'Please review and process this revaluation request.'}</p>
+          </div>
+          <p>Please log in to the Academy Portal to review and take action.</p>
+        `;
+        break;
+
+      case 'revaluation-result-updated-institute':
+        title = `${data.changeEmoji || '📋'} Revaluation Results Updated`;
+        greeting = `Dear ${data.instituteName},`;
+        body = `
+          <p>Revaluation results have been processed for <strong>${data.studentName}</strong>.</p>
+          <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #0369a1;">Changes:</p>
+            <pre style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 14px;">${data.changesSummary || 'N/A'}</pre>
+            <p><strong>Overall Change:</strong> <span style="color: ${Number(data.totalChange) > 0 ? '#16a34a' : Number(data.totalChange) < 0 ? '#dc2626' : '#f59e0b'};">${data.totalChange > 0 ? '+' : ''}${data.totalChange}%</span></p>
+          </div>
+          <p><strong>Next Steps:</strong> ${data.nextSteps || "Updated marks are now reflected in the student's result."}</p>
+        `;
+        break;
+
+      case 'results-published-student':
+        title = '📊 Your Examination Results';
+        greeting = `Dear ${data.studentName || 'Student'},`;
+        body = `
+          <p>Your results for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}) are now available.</p>
+          <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #166534;">Status: ${data.resultStatus || 'Published'}</p>
+          </div>
+          <p>Please log in to the results portal using your enrollment ID to view your detailed marksheet.</p>
+        `;
+        break;
+
+      case 'revaluation-result-updated-student':
+        title = `${data.changeEmoji || '📋'} Revaluation Results Updated`;
+        greeting = `Dear ${data.studentName || 'Student'},`;
+        body = `
+          <p>Your revaluation request for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}) has been processed.</p>
+          <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
+            <p style="font-weight: 600; color: #0369a1;">Changes:</p>
+            <pre style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 14px; white-space: pre-wrap;">${data.changesSummary || 'N/A'}</pre>
+            <p><strong>Overall Change:</strong> <span style="color: ${Number(data.totalChange) > 0 ? '#16a34a' : Number(data.totalChange) < 0 ? '#dc2626' : '#f59e0b'};">${data.totalChange > 0 ? '+' : ''}${data.totalChange}%</span></p>
+          </div>
+          <p>Please log in to view your updated results.</p>
+        `;
+        break;
+
+      default:
+        body = `<p>${JSON.stringify(data, null, 2)}</p>`;
+    }
+
+    return this.buildHtmlEmail({ title, greeting, body, footer });
+  }
+
+  /**
+   * Build plain text email
+   */
+  private buildPlainTextEmail(template: string, data: any): string {
+    let text = `SEMI Notification\n\n${JSON.stringify(data, null, 2)}`;
+    switch (template) {
+      case 'exam-application-submitted-institute':
+        text = `
+Exam Application Submitted
+
+Dear ${data.instituteName},
+
+Your exam application has been successfully submitted to the Academic Board.
+
+Application Summary:
+- Course: ${data.courseName || 'N/A'}
+- Semester: ${data.semesterNumber || 'N/A'}
+- Students: ${data.studentsCount || 'N/A'}
+- Subjects: ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}
+- Total Fee: ${data.totalFee || 'N/A'}
+- Payment ID: ${data.paymentId || 'N/A'}
+
+Your application is now pending review by the Academic Board.
+
+Regards,
+SEMI Academic Board
+        `;
+        break;
+
+      case 'exam-schedule-published-institute':
+        text = `
+Exam Schedule Published
+
+Dear ${data.instituteName},
+
+The Academic Board has published the exam schedule for ${data.courseName} (Semester ${data.semesterNumber}).
+
+Exam Schedule:
+- Venue: ${data.venue || 'TBD'}
+- Center: ${data.center || 'TBD'}
+- Date: ${data.date || 'TBD'}
+- Reporting Time: ${data.reportingTime || 'TBD'}
+- Subjects:
+${data.subjectsList || data.subjects?.map((s: string, i: number) => `  ${i + 1}. ${s}`).join('\n') || 'N/A'}
+
+Next Steps: ${data.nextSteps || 'Please log in to your dashboard to generate hall tickets for eligible students.'}
+
+Regards,
+SEMI Academic Board
+        `;
+        break;
+
+      default:
+        break;
+    }
+
+    return text;
+  }
+
+  /**
+   * Build HTML email wrapper
+   */
+  private buildHtmlEmail(params: { title: string; greeting: string; body: string; footer: string }): string {
+    const { title, greeting, body, footer } = params;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .email-wrapper {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      padding: 40px 32px;
+    }
+    .header {
+      text-align: center;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+    .badge {
+      display: inline-block;
+      background: #eff6ff;
+      color: #2563eb;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      margin-top: 8px;
+    }
+    .content {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #334155;
+    }
+    .content p {
+      margin: 12px 0;
+    }
+    .footer {
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 14px;
+      color: #94a3b8;
+    }
+    .footer a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 600px) {
+      .email-wrapper {
+        padding: 24px 16px;
+      }
+      .header h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="email-wrapper">
+      <div class="header">
+        <h1>${title}</h1>
+        <span class="badge">SEMI - Society for Emergency Medicine India</span>
+      </div>
+      <div class="content">
+        <p><strong>${greeting}</strong></p>
+        ${body}
+        <p style="margin-top: 24px;">Regards,<br><strong>${footer}</strong></p>
+      </div>
+      <div class="footer">
+        <p>
+          <a href="https://semi.org">SEMI Official Portal</a> &bull;
+          <a href="mailto:${this.SUPPORT_EMAIL}">Contact Support</a>
+        </p>
+        <p style="font-size: 12px; color: #cbd5e1;">
+          Society for Emergency Medicine India (SEMI) &bull; Regd. No. 3602/2000
+        </p>
+        <p style="font-size: 12px; color: #cbd5e1;">
+          This is an automated notification. Please do not reply to this email.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+}
+
+export default new NotificationService();
+
+```
+
 ### `backend/src/services/pdfGeneratorService.ts`
 
 ```typescript
@@ -17392,6 +19159,7 @@ export default new ResultService();
 import { RevaluationRequest } from '../models/revaluationRequestModel';
 import { RevaluationResult } from '../models/revaluationResultModel';
 import { Result } from '../models/resultModel';
+import { Student } from '../models/studentModel';
 import { emitEvent } from '../config/socket';
 import { calculateGrade } from '../utils/helpers';
 
@@ -17590,6 +19358,51 @@ class RevaluationService {
     });
 
     await result.save();
+
+    // Sync updated revaluation marks back to Student model
+    try {
+      const studentDoc = await Student.findById(result.student);
+      if (studentDoc) {
+        let semRecord = studentDoc.semesters.find((s: any) => s.semesterNumber === result.semester);
+        if (!semRecord) {
+          studentDoc.semesters.push({
+            semesterNumber: result.semester,
+            attendancePercentage: 80,
+            thesisApproved: false,
+            eligibilityStatus: 'Approved',
+            marks: []
+          });
+          semRecord = studentDoc.semesters[studentDoc.semesters.length - 1];
+        }
+
+        if (!semRecord.marks) {
+          semRecord.marks = [];
+        }
+
+        const semMarks = semRecord.marks;
+        result.subjects.forEach((resSubj: any) => {
+          const mIdx = semMarks.findIndex((m: any) => m.subjectCode === resSubj.subjectCode);
+          if (mIdx !== -1) {
+            semMarks[mIdx].marksObtained = resSubj.totalMarks;
+            semMarks[mIdx].grade = resSubj.grade;
+            semMarks[mIdx].totalMarks = 100;
+          } else {
+            semMarks.push({
+              subjectCode: resSubj.subjectCode,
+              subjectName: resSubj.subjectName,
+              marksObtained: resSubj.totalMarks,
+              totalMarks: 100,
+              isAbsent: resSubj.grade === 'ABSENT',
+              grade: resSubj.grade
+            });
+          }
+        });
+
+        await studentDoc.save();
+      }
+    } catch (err) {
+      console.error('Error syncing revaluation marks to student model:', err);
+    }
 
     // Emit event for real-time updates
     emitEvent('RESULT_UPDATED', {
@@ -18876,15 +20689,16 @@ const AcademyLoginPage        = lazy(() => import('./pages/academy/login/index')
 const AcademyLayout           = lazy(() => import('./pages/academy/AcademyLayout'));
 const AcademyDashboardPage    = lazy(() => import('./pages/academy/dashboard/index'));
 const AcademyApplicationsPage = lazy(() => import('./pages/academy/applications/index'));
+const AcademyCoursesPage       = lazy(() => import('./pages/academy/courses/index'));
 const AcademyStudentsPage     = lazy(() => import('./pages/academy/students/index'));
 const AcademyEligibilityPage  = lazy(() => import('./pages/academy/eligibility/index'));
 const AcademyVerificationPage = lazy(() => import('./pages/academy/verification/index'));
 const AcademyMarksUpdatingPage = lazy(() => import('./pages/academy/marks/index'));
-const AcademyStudentMarksPage = lazy(() => import('./pages/academy/student-marks/index'));
 const AcademyPublishResultsPage = lazy(() => import('./pages/academy/publish-results/index'));
 const AcademyPublishDetailsPage = lazy(() => import('./pages/academy/publish-details/index'));
 const AcademyRevaluationPage = lazy(() => import('./pages/academy/revaluation/index'));
 const AcademyRemittancePage = lazy(() => import('./pages/academy/remittance/index'));
+const AcademyFeeConfigPage = lazy(() => import('./pages/academy/fee-config/index'));
 
 // ─── Email Verification Page ─────────────────────────────────────────────────
 // Standalone page for email verification links
@@ -19008,15 +20822,16 @@ function App() {
         <Route path="/academy" element={<L><AcademyLayout /></L>}>
           <Route path="dashboard"    element={<L><AcademyDashboardPage /></L>} />
           <Route path="applications" element={<L><AcademyApplicationsPage /></L>} />
+          <Route path="courses"      element={<L><AcademyCoursesPage /></L>} />
           <Route path="students"     element={<L><AcademyStudentsPage /></L>} />
           <Route path="eligibility"  element={<L><AcademyEligibilityPage /></L>} />
           <Route path="verification" element={<L><AcademyVerificationPage /></L>} />
           <Route path="marks" element={<L><AcademyMarksUpdatingPage /></L>} />
-          <Route path="student-marks"    element={<L><AcademyStudentMarksPage /></L>} /> 
           <Route path="publish-results"  element={<L><AcademyPublishResultsPage /></L>} />
           <Route path="publish-details"  element={<L><AcademyPublishDetailsPage /></L>} />
           <Route path="revaluation"      element={<L><AcademyRevaluationPage /></L>} />
           <Route path="remittance"       element={<L><AcademyRemittancePage /></L>} />
+          <Route path="fee-config"       element={<L><AcademyFeeConfigPage /></L>} />
         </Route>
 
         {/* Catch-all */}
@@ -19256,6 +21071,174 @@ const Loader = () => {
 
 export default Loader;
 
+
+```
+
+### `client/src/Components/Pagination.jsx`
+
+```jsx
+import React from 'react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+
+/**
+ * Reusable Pagination Component
+ * Supports page selection, range indicators, smart ellipsis, and items-per-page selection.
+ */
+export default function Pagination({
+  currentPage = 1,
+  totalPages = 1,
+  onPageChange,
+  totalItems = 0,
+  itemsPerPage = 10,
+  onItemsPerPageChange,
+  pageSizeOptions = [5, 10, 20, 50]
+}) {
+  if (totalPages <= 1 && totalItems <= itemsPerPage && !onItemsPerPageChange) {
+    return null; // No pagination needed if 1 page or less and no page size selector
+  }
+
+  const safeCurrentPage = Math.max(1, Math.min(currentPage, Math.max(1, totalPages)));
+
+  // Compute item index ranges
+  const startItem = totalItems > 0 ? (safeCurrentPage - 1) * itemsPerPage + 1 : 0;
+  const endItem = totalItems > 0 ? Math.min(safeCurrentPage * itemsPerPage, totalItems) : 0;
+
+  // Generate page numbers with smart ellipsis logic
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let start = Math.max(2, safeCurrentPage - 1);
+      let end = Math.min(totalPages - 1, safeCurrentPage + 1);
+
+      if (safeCurrentPage <= 3) {
+        end = 4;
+      } else if (safeCurrentPage >= totalPages - 2) {
+        start = totalPages - 3;
+      }
+
+      if (start > 2) pages.push('ellipsis-1');
+
+      for (let i = start; i <= end; i++) pages.push(i);
+
+      if (end < totalPages - 1) pages.push('ellipsis-2');
+
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+
+  const pages = getPageNumbers();
+
+  return (
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 py-4 px-2 select-none">
+      {/* Left: Info & Items Per Page */}
+      <div className="flex items-center gap-4 text-xs text-slate-500 font-bold">
+        {totalItems > 0 ? (
+          <span>
+            Showing <span className="font-black text-slate-800">{startItem}</span> to{' '}
+            <span className="font-black text-slate-800">{endItem}</span> of{' '}
+            <span className="font-black text-slate-800">{totalItems}</span> entries
+          </span>
+        ) : (
+          <span>Page <span className="font-black text-slate-800">{safeCurrentPage}</span> of <span className="font-black text-slate-800">{Math.max(1, totalPages)}</span></span>
+        )}
+
+        {onItemsPerPageChange && (
+          <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-4">
+            <span className="text-[11px] text-slate-400 uppercase font-black tracking-wider">Per page:</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+              className="bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              {pageSizeOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Right: Controls */}
+      <div className="flex items-center gap-1">
+        {/* First Page */}
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={safeCurrentPage === 1}
+          title="First Page"
+          className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer"
+        >
+          <ChevronsLeft className="w-4 h-4" />
+        </button>
+
+        {/* Previous Page */}
+        <button
+          onClick={() => onPageChange(safeCurrentPage - 1)}
+          disabled={safeCurrentPage === 1}
+          title="Previous Page"
+          className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {/* Page Buttons */}
+        <div className="flex items-center gap-1 px-1">
+          {pages.map((p, idx) => {
+            if (typeof p === 'string') {
+              return (
+                <span key={idx} className="px-2 py-1 text-xs text-slate-400 font-bold select-none">
+                  ...
+                </span>
+              );
+            }
+            const isActive = p === safeCurrentPage;
+            return (
+              <button
+                key={p}
+                onClick={() => onPageChange(p)}
+                className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                }`}
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Next Page */}
+        <button
+          onClick={() => onPageChange(safeCurrentPage + 1)}
+          disabled={safeCurrentPage >= totalPages}
+          title="Next Page"
+          className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+
+        {/* Last Page */}
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={safeCurrentPage >= totalPages}
+          title="Last Page"
+          className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed transition-all cursor-pointer"
+        >
+          <ChevronsRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 ```
 
@@ -19582,11 +21565,11 @@ import apiClient from './apiClient.js';
  */
 export const academicService = {
   // ─── COURSE CRUD ─────────────────────────────────────────────────────────────
-  createCourse: (courseData) => apiClient.post('/academic/courses', courseData),
-  getCourses: () => apiClient.get('/academic/courses'),
-  getCourseById: (courseId) => apiClient.get(`/academic/courses/${courseId}`),
-  updateCourse: (courseId, courseData) => apiClient.put(`/academic/courses/${courseId}`, courseData),
-  deleteCourse: (courseId) => apiClient.delete(`/academic/courses/${courseId}`),
+  createCourse: (courseData, config = {}) => apiClient.post('/academic/courses', courseData, config),
+  getCourses: (config = {}) => apiClient.get('/academic/courses', config),
+  getCourseById: (courseId, config = {}) => apiClient.get(`/academic/courses/${courseId}`, config),
+  updateCourse: (courseId, courseData, config = {}) => apiClient.put(`/academic/courses/${courseId}`, courseData, config),
+  deleteCourse: (courseId, config = {}) => apiClient.delete(`/academic/courses/${courseId}`, config),
 
   // ─── BATCH CRUD ──────────────────────────────────────────────────────────────
   createBatch: (batchData) => apiClient.post('/academic/batches', batchData),
@@ -19718,6 +21701,18 @@ export const academicService = {
 
   getStudentById: (studentId) => apiClient.get(`/academic/students/${studentId}`),
 
+  verifyStudentEnrollment: (studentId, data) =>
+    apiClient.patch(`/academic/students/${studentId}/verify-enrollment`, data),
+
+  uploadCourseCertificates: (studentId, formData) => {
+    let payload = formData;
+    const headers = {};
+    if (formData instanceof FormData) {
+      headers['Content-Type'] = undefined;
+    }
+    return apiClient.post(`/academic/students/${studentId}/course-certificates`, payload, { headers });
+  },
+
   // ─── RAZORPAY PAYMENT ────────────────────────────────────────────────────────
   createRazorpayOrder: (data) => apiClient.post('/academic/payment/create-order', data),
   verifyRazorpayPayment: (data) => apiClient.post('/academic/payment/verify', data),
@@ -19740,6 +21735,13 @@ export const academicService = {
   getPayableRemittance: () => apiClient.get('/academic/remittance/payable'),
   getRemittances: () => apiClient.get('/academic/remittance'),
   submitRemittance: (data) => apiClient.post('/academic/remittance', data),
+
+  // ─── EXAM FEE CONFIGURATION (Academy / Board) ──────────────────────────────
+  getFeeConfiguration: (courseId, semesterNumber) =>
+    apiClient.get(`/academic/fee-configuration/${courseId}/${semesterNumber}`),
+
+  updateFeeConfiguration: (data) =>
+    apiClient.put('/academic/fee-configuration', data),
 };
 
 export default academicService;
@@ -20175,6 +22177,13 @@ export const examService = {
   getHallTicketById: (id, hid) => apiClient.get(`/exams/${id}/hall-tickets/${hid}`),
 
   downloadHallTicket: (id, hid) => apiClient.get(`/exams/${id}/hall-tickets/${hid}/download`),
+
+  // ─── Exam Fee Applicability & Configuration ─────────────────────────────────
+  checkExamFeeApplicability: (studentId, semesterNumber) =>
+    apiClient.get(`/exams/fee-check/${studentId}/${semesterNumber}`),
+
+  getFeeConfiguration: (courseId, semesterNumber) =>
+    apiClient.get(`/exams/fee-configuration/${courseId}/${semesterNumber}`),
 };
 
 export default examService;
@@ -21075,7 +23084,6 @@ import AcademyInspectorModal from './components/AcademyInspectorModal';
 import AcademyRejectionModal from './components/AcademyRejectionModal';
 import AcademyStudentModal from './components/AcademyStudentModal';
 import AcademyMarksUpdating from './components/AcademyMarksUpdating';
-import AcademyStudentMarks from './components/AcademyStudentMarks';
 import AcademyPublishResults from './components/AcademyPublishResults';
 import AcademyPublishDetails from './components/AcademyPublishDetails';
 import AcademyRevaluation from './components/AcademyRevaluation';
@@ -21150,7 +23158,10 @@ export default function AcademyLayout() {
             id: app._id,
             _id: app._id,
             orgName: app.orgName,
-            email: app.emailAddress || app.user?.email || 'admin@saraswathi.edu.in',
+            collegeName: app.orgName,
+            deanName: app.headName || app.hodName || app.authorizedRepName || 'Dr. Unspecified',
+            headName: app.headName || 'Dr. Unspecified',
+            email: app.emailAddress || app.user?.email || 'N/A',
             submittedAt: app.createdAt
               ? new Date(app.createdAt).toLocaleDateString()
               : 'N/A',
@@ -21159,6 +23170,7 @@ export default function AcademyLayout() {
             experience: app.physicianExperience,
             emFacultyCount: app.emFacultyCount,
             teachingSpace: app.teachingSpace,
+            approvedSeats: app.approvedSeats || app.seatsRequested || 5,
             paymentComplete: app.paymentStatus === 'Completed',
             paymentDetails:
               app.paymentStatus === 'Completed'
@@ -21218,41 +23230,66 @@ export default function AcademyLayout() {
       const studentsData = extractData(studentsRes) || [];
       
       if (Array.isArray(studentsData)) {
-        const formatted = studentsData.map(s => ({
-          id: s._id,
-          _id: s._id,
-          enrollmentNo: s.enrollmentId,
-          fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-          email: s.email,
-          mobile: s.contactNumber,
-          course: s.course?.name || 'General Medicine',
-          courseId: s.course?._id || s.course,
-          batch: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-          batchId: s.batch?._id || s.batch,
-          status: s.remittedToAcademy ? 'Completed' : 'Active',
-          institute: s.institute?.orgName || 'N/A',
-          // Pass the full semesters array so AcademyVerification can iterate per-semester eligibility
-          semesters: (s.semesters || []).map(sem => ({
-            semesterNumber: sem.semesterNumber,
-            attendancePercentage: sem.attendancePercentage ?? 0,
-            thesisApproved: sem.thesisApproved ?? false,
-            thesisDocumentUrl: sem.thesisDocumentUrl || '',
-            eligibilityStatus: sem.eligibilityStatus || 'Pending',
-          })),
-          // Eligibility calculation matching backend logic
-          eligibilityStatus: s.remittedToAcademy && s.attendancePercentage >= 75 && s.thesisApproved
-            ? 'Approved'
-            : s.remittedToAcademy
-            ? 'Pending'
-            : 'Rejected',
-          rejectionReason: !s.remittedToAcademy
-            ? 'Academy fee remittance is pending.'
-            : s.attendancePercentage < 75
-            ? 'Attendance is below 75% threshold.'
-            : 'Thesis approval is pending.',
-          attendancePercentage: s.attendancePercentage || 0,
-          thesisApproved: s.thesisApproved || false,
-          remittedToAcademy: s.remittedToAcademy || false,
+        const formatted = studentsData.map(s => {
+          const sSemesters = s.semesters || [];
+          const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+
+          const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
+            ? s.attendancePercentage
+            : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+          const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
+          const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+          const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
+
+          const hasNbls = !!s.documents?.nblsCertificateUrl;
+          const hasNcls = !!s.documents?.nclsCertificateUrl;
+          const hasNtls = !!s.documents?.ntlsCertificateUrl;
+          const hasNuls = !!s.documents?.nulsCertificateUrl;
+          const isCourseCertsOk = hasNbls || hasNcls || hasNtls || hasNuls;
+
+          let eligibility = 'Pending';
+          let reason = '';
+          if (!isRemitted) {
+            eligibility = 'Rejected';
+            reason = 'Academy fee remittance is pending.';
+          } else if (attendancePct < 75) {
+            eligibility = 'Rejected';
+            reason = `Attendance (${attendancePct}%) is below mandatory 75% threshold.`;
+          } else if (!isThesisApproved && !isThesisUploaded) {
+            eligibility = 'Rejected';
+            reason = 'Thesis document submission is pending.';
+          } else if (!isThesisApproved && isThesisUploaded) {
+            eligibility = 'Pending';
+            reason = 'Thesis uploaded and awaiting board approval.';
+          } else if (!isCourseCertsOk) {
+            eligibility = 'Pending';
+            reason = 'Mandatory Course completion certificate (NBLS, NCLS, NTLS, or NULS) pending upload.';
+          } else {
+            eligibility = 'Approved';
+            reason = 'All credentials, attendance, thesis, and course completion certificate criteria fulfilled.';
+          }
+
+          return {
+            id: s._id,
+            _id: s._id,
+            enrollmentNo: s.enrollmentId,
+            fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+            email: s.email,
+            mobile: s.contactNumber,
+            course: s.course?.name || 'General Medicine',
+            courseId: s.course?._id || s.course,
+            batch: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
+            batchId: s.batch?._id || s.batch,
+            status: isRemitted ? 'Completed' : 'Active',
+            institute: s.institute?.orgName || 'N/A',
+            semesters: sSemesters,
+            eligibilityStatus: eligibility,
+            rejectionReason: reason,
+            attendancePercentage: attendancePct,
+            thesisApproved: isThesisApproved,
+            thesisUploaded: isThesisUploaded,
+            remittedToAcademy: isRemitted,
           documents: s.documents || {},
           dateOfBirth: s.dateOfBirth ? (new Date(s.dateOfBirth).toISOString().split('T')[0]) : null,
           dobFormatted: s.dateOfBirth ? (new Date(s.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : 'N/A',
@@ -21267,7 +23304,16 @@ export default function AcademyLayout() {
           utrNumber: s.utrNumber,
           homeAddress: s.homeAddress,
           contactNumber: s.contactNumber,
-        }));
+          verificationStatus: s.verificationStatus || 'Pending Verification',
+          verificationRemarks: s.verificationRemarks || '',
+          verifiedAt: s.verifiedAt,
+          verifiedBy: s.verifiedBy,
+          correctionRequestedAt: s.correctionRequestedAt,
+          correctionResubmittedAt: s.correctionResubmittedAt,
+          instituteDetails: s.institute,
+          rawStudent: s,
+        };
+      });
         setStudents(formatted);
       }
     } catch (err) {
@@ -21475,13 +23521,17 @@ export default function AcademyLayout() {
     }
   }, [students, fetchBoardData]);
 
-  const handleReviewApplication = useCallback(async (id, newStatus, reason = null) => {
+  const handleReviewApplication = useCallback(async (id, newStatus, reason = null, approvedSeats = 5) => {
     try {
       const backendStatus = newStatus === 'approved' ? 'Approved' : 'Rejected';
-      await instituteService.reviewInstitute(id, { status: backendStatus, remarks: reason });
+      await instituteService.reviewInstitute(id, { 
+        status: backendStatus, 
+        remarks: reason,
+        approvedSeats: Number(approvedSeats) || 5
+      });
       await fetchBoardData();
       setSelectedApp(prev =>
-        prev?.id === id ? { ...prev, status: newStatus, rejectionReason: reason } : prev
+        prev?.id === id ? { ...prev, status: newStatus, rejectionReason: reason, approvedSeats: Number(approvedSeats) || 5 } : prev
       );
     } catch (err) {
       setErrorMsg(err.parsedMessage || err.message || 'Failed to submit application review.');
@@ -21489,18 +23539,19 @@ export default function AcademyLayout() {
     }
   }, [fetchBoardData]);
 
-  const handleApprove = useCallback(() => {
+  const handleApprove = useCallback((customApprovedSeats) => {
     if (!selectedApp) return;
+    const seatsToApprove = customApprovedSeats !== undefined ? customApprovedSeats : (selectedApp.form?.seatsRequested || 5);
     setConfirmConfig({
-      title: 'Approve Application',
-      message: `Approve ${selectedApp.orgName}? This will activate their ERP dashboard.`,
+      title: 'Approve Application & Set Batch Quota',
+      message: `Approve ${selectedApp.orgName} with a batch intake quota limit of ${seatsToApprove} students per batch? This will activate their ERP dashboard.`,
       type: 'success',
-      confirmText: 'Yes, Approve',
+      confirmText: 'Yes, Approve with Limit',
       onConfirm: async () => {
         setConfirmConfig(null);
         try {
-          await handleReviewApplication(selectedApp.id, 'approved');
-          setSuccessMsg(`🎉 ${selectedApp.orgName} approved and activated.`);
+          await handleReviewApplication(selectedApp.id, 'approved', null, seatsToApprove);
+          setSuccessMsg(`🎉 ${selectedApp.orgName} approved and activated with ${seatsToApprove} batch seats limit.`);
         } catch { /* ignore */ }
       }
     });
@@ -21615,7 +23666,6 @@ export default function AcademyLayout() {
     examApplications,
     setExamApplications,
     AcademyMarksUpdating,
-    AcademyStudentMarks,
     AcademyPublishResults,
     AcademyPublishDetails,
     AcademyRevaluation,
@@ -21745,7 +23795,6 @@ import AcademyVerification from './components/AcademyVerification';
 import AcademyStudentModal from './components/AcademyStudentModal';
 import AcademyRemittance from './components/AcademyRemittance';
 import AcademyMarksUpdating from './components/AcademyMarksUpdating';
-import AcademyStudentMarks from './components/AcademyStudentMarks';
 import AcademyPublishResults from './components/AcademyPublishResults';
 import AcademyPublishingDetails from './components/AcademyPublishingDetails';
 import AcademyRevaluation from './components/AcademyRevaluation';
@@ -21763,7 +23812,6 @@ const DASHBOARD_PATHS = [
   '/academy/eligibility',
   '/academy/verification',
   '/academy/marks',
-  '/academy/student-marks',
   '/academy/publish-results',
   '/academy/publish-details',
   '/academy/revaluation',
@@ -21777,7 +23825,6 @@ const getTabFromPath = (pathname) => {
   if (pathname === '/academy/eligibility') return 'eligibility';
   if (pathname === '/academy/verification') return 'verification';
   if (pathname === '/academy/marks') return 'marks';
-  if (pathname === '/academy/student-marks') return 'student-marks';
   if (pathname === '/academy/publish-results') return 'publish-results';
   if (pathname === '/academy/publish-details') return 'publish-details';
   if (pathname === '/academy/revaluation') return 'revaluation';
@@ -21824,7 +23871,6 @@ const AcademyPortal = () => {
       eligibility: '/academy/eligibility',
       verification: '/academy/verification',
       marks: '/academy/marks',
-      'student-marks': '/academy/student-marks',
       'publish-results': '/academy/publish-results',
       'publish-details': '/academy/publish-details',
       revaluation: '/academy/revaluation',
@@ -21869,7 +23915,10 @@ const AcademyPortal = () => {
             id: app._id,
             _id: app._id,
             orgName: app.orgName,
-            email: app.emailAddress || (app.user?.email || 'admin@saraswathi.edu.in'),
+            collegeName: app.orgName,
+            deanName: app.headName || app.hodName || app.authorizedRepName || 'Dr. Unspecified',
+            headName: app.headName || 'Dr. Unspecified',
+            email: app.emailAddress || app.user?.email || 'N/A',
             submittedAt: app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'N/A',
             status: statusMapped,
             bedCount: app.bedCount,
@@ -21902,41 +23951,74 @@ const AcademyPortal = () => {
       const studentsRes = await academicService.listStudents();
       const studentsData = extractData(studentsRes) || [];
       if (Array.isArray(studentsData)) {
-        const formatted = studentsData.map(s => ({
-          id: s._id,
-          _id: s._id,
-          enrollmentNo: s.enrollmentId,
-          fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-          email: s.email,
-          mobile: s.contactNumber,
-          courseId: s.course?._id || s.course,
-          batchId: s.batch?._id || s.batch,
-          instituteId: s.institute?._id || s.institute,
-          course: s.course?.name || 'General Medicine',
-          batch: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-          status: s.remittedToAcademy ? 'Completed' : 'Active',
-          institute: s.institute?.orgName || 'N/A',
-          eligibilityStatus: s.remittedToAcademy && s.attendancePercentage >= 75 && s.thesisApproved ? 'Approved' : (s.remittedToAcademy ? 'Pending' : 'Rejected'),
-          rejectionReason: !s.remittedToAcademy ? 'Academy fee remittance is pending.' : (s.attendancePercentage < 75 ? 'Attendance is below 75% threshold.' : 'Thesis approval is pending.'),
-          attendancePercentage: s.attendancePercentage || 0,
-          thesisApproved: s.thesisApproved || false,
-          remittedToAcademy: s.remittedToAcademy || false,
-          documents: s.documents || {},
-          dateOfBirth: s.dateOfBirth ? (new Date(s.dateOfBirth).toISOString().split('T')[0]) : null,
-          dobFormatted: s.dateOfBirth ? (new Date(s.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : 'N/A',
-          qualification: s.qualification,
-          mbbsQualification: s.mbbsQualification,
-          yearOfPassing: s.yearOfPassing,
-          universityName: s.universityName,
-          medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
-          isForeignGraduate: s.isForeignGraduate || false,
-          fmgeClearanceStatus: s.fmgeClearanceStatus || 'Not Applicable',
-          courseDirector: s.courseDirector,
-          utrNumber: s.utrNumber,
-          homeAddress: s.homeAddress,
-          contactNumber: s.contactNumber,
-          semesters: s.semesters || []
-        }));
+        const formatted = studentsData.map(s => {
+          const sSemesters = s.semesters || [];
+          const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+
+          const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
+            ? s.attendancePercentage
+            : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+          const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
+          const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+          const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
+
+          let eligibility = 'Pending';
+          let reason = '';
+          if (!isRemitted) {
+            eligibility = 'Rejected';
+            reason = 'Academy fee remittance is pending.';
+          } else if (attendancePct < 75) {
+            eligibility = 'Rejected';
+            reason = `Attendance (${attendancePct}%) is below mandatory 75% threshold.`;
+          } else if (!isThesisApproved && !isThesisUploaded) {
+            eligibility = 'Rejected';
+            reason = 'Thesis document submission is pending.';
+          } else if (!isThesisApproved && isThesisUploaded) {
+            eligibility = 'Pending';
+            reason = 'Thesis uploaded and awaiting board approval.';
+          } else {
+            eligibility = 'Approved';
+            reason = 'All credentials, attendance, and thesis criteria fulfilled.';
+          }
+
+          return {
+            id: s._id,
+            _id: s._id,
+            enrollmentNo: s.enrollmentId,
+            fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+            email: s.email,
+            mobile: s.contactNumber,
+            courseId: s.course?._id || s.course,
+            batchId: s.batch?._id || s.batch,
+            instituteId: s.institute?._id || s.institute,
+            course: s.course?.name || 'General Medicine',
+            batch: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
+            status: isRemitted ? 'Completed' : 'Active',
+            institute: s.institute?.orgName || 'N/A',
+            eligibilityStatus: eligibility,
+            rejectionReason: reason,
+            attendancePercentage: attendancePct,
+            thesisApproved: isThesisApproved,
+            thesisUploaded: isThesisUploaded,
+            remittedToAcademy: isRemitted,
+            documents: s.documents || {},
+            dateOfBirth: s.dateOfBirth ? (new Date(s.dateOfBirth).toISOString().split('T')[0]) : null,
+            dobFormatted: s.dateOfBirth ? (new Date(s.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : 'N/A',
+            qualification: s.qualification,
+            mbbsQualification: s.mbbsQualification,
+            yearOfPassing: s.yearOfPassing,
+            universityName: s.universityName,
+            medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
+            isForeignGraduate: s.isForeignGraduate || false,
+            fmgeClearanceStatus: s.fmgeClearanceStatus || 'Not Applicable',
+            courseDirector: s.courseDirector,
+            utrNumber: s.utrNumber,
+            homeAddress: s.homeAddress,
+            contactNumber: s.contactNumber,
+            semesters: sSemesters
+          };
+        });
         setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
@@ -22297,10 +24379,6 @@ const AcademyPortal = () => {
                   <AcademyMarksUpdating />
                 )}
 
-                {activeTab === 'student-marks' && (
-                  <AcademyStudentMarks />
-                )}
-
                 {activeTab === 'publish-results' && (
                   <AcademyPublishResults />
                 )}
@@ -22421,9 +24499,10 @@ export default function AcademyApplicationsPage() {
 ### `client/src/pages/academy/components/AcademyApplications.jsx`
 
 ```jsx
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, RefreshCw, Eye, Compass } from 'lucide-react';
 import Toast from '../../../Components/Toast';
+import Pagination from '../../../Components/Pagination';
 
 const AcademyApplications = ({ 
   filteredApplications = [], 
@@ -22436,8 +24515,21 @@ const AcademyApplications = ({
   setSelectedApp
 }) => {
   const [toast, setToast] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const safeFiltered = Array.isArray(filteredApplications) ? filteredApplications : [];
   const safeAll = Array.isArray(allApplications) ? allApplications : [];
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const totalPages = Math.ceil(safeFiltered.length / itemsPerPage);
+  const paginatedApps = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return safeFiltered.slice(start, start + itemsPerPage);
+  }, [safeFiltered, currentPage, itemsPerPage]);
 
   return (
     <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm text-left space-y-6 animate-in fade-in duration-300">
@@ -22472,84 +24564,100 @@ const AcademyApplications = ({
               className="px-4 py-2.5 bg-slate-50 border border-gray-200 hover:border-gray-300 hover:bg-white rounded-xl text-xs font-extrabold text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 cursor-pointer transition-all"
             >
               <option value="All">All Statuses</option>
-              <option value="pending_review">Pending</option>
+              <option value="pending_review">Submitted (Under Review)</option>
+              <option value="inspection_triggered">Inspection Scheduled</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>
 
-          {/* Refresh */}
-          <button 
-            onClick={async () => {
-              await fetchBoardData();
-              setToast({ message: "🔄 Governing registry successfully synchronised with database.", type: 'success' });
-            }}
-            className="p-2.5 bg-slate-50 border border-gray-200 hover:bg-white hover:border-gray-300 rounded-xl text-gray-500 hover:text-slate-800 transition-all cursor-pointer shadow-sm active:scale-95"
-            title="Refresh Queue"
+          {/* Refresh button */}
+          <button
+            onClick={fetchBoardData}
+            className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-gray-200 rounded-xl text-gray-600 transition-all active:scale-95 cursor-pointer"
+            title="Refresh registry"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Applications Table */}
+      {/* Table */}
       <div className="overflow-hidden border border-gray-150 rounded-2xl shadow-inner bg-slate-50/30">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-gray-200">
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest w-12 text-center">#</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Institute Name</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Email Contact</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Compliance Status</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Submitted Date</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">College / Institute</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Designated Dean</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Submission Date</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center w-28">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-150/60 text-xs font-bold text-slate-700 bg-white">
-              {safeFiltered.length > 0 ? (
-                safeFiltered.map((app, idx) => (
-                  <tr key={app.id} className="hover:bg-slate-50/60 transition-colors group">
-                    <td className="px-6 py-4 text-center text-[10px] text-gray-400 font-extrabold">
-                      {String(idx + 1).padStart(2, '0')}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-extrabold text-slate-900 block group-hover:text-blue-600 transition-colors leading-relaxed">
-                        {app.orgName}
-                      </span>
-                      {app.id === 'app-101' && (
-                        <span className="inline-flex mt-1 text-[8px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-200/50 px-2 py-0.5 rounded-md">
-                          Live Session
+              {paginatedApps.length > 0 ? (
+                paginatedApps.map((app, idx) => {
+                  const collegeName = app.orgName || app.collegeName || app.form?.orgName || 'N/A';
+                  const deanName = app.deanName || app.headName || app.form?.headName || app.form?.hodName || 'Dr. Unspecified';
+                  const submissionDate = app.submittedAt || app.submittedDate || (app.createdAt ? new Date(app.createdAt).toLocaleDateString() : (app.form?.createdAt ? new Date(app.form.createdAt).toLocaleDateString() : 'N/A'));
+                  
+                  const isApproved = app.status === 'Approved' || app.status === 'approved' || app.status === 'active_erp';
+                  const isRejected = app.status === 'Rejected' || app.status === 'rejected';
+                  const isInspection = app.status === 'InspectionTriggered' || app.status === 'inspection_triggered' || app.form?.inspectionTriggered;
+                  
+                  let badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+                  let dotClass = 'bg-blue-500';
+                  let statusLabel = 'Submitted';
+                  
+                  if (isApproved) {
+                    badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                    dotClass = 'bg-emerald-500';
+                    statusLabel = 'Approved';
+                  } else if (isRejected) {
+                    badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+                    dotClass = 'bg-rose-500';
+                    statusLabel = 'Rejected';
+                  } else if (isInspection) {
+                    badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+                    dotClass = 'bg-amber-500';
+                    statusLabel = 'Inspection Scheduled';
+                  }
+
+                  return (
+                    <tr key={app.id || app._id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4 text-center text-[10px] text-gray-400 font-extrabold">
+                        {String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0')}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors block">{collegeName}</span>
+                        <span className="text-[10px] font-bold text-gray-400 font-mono">{app.email || 'N/A'}</span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-800 font-extrabold">{deanName}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`}></span>
+                          {statusLabel}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 font-mono text-[11px]">{app.email}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-[9px] uppercase tracking-wider font-black border ${
-                        app.status === 'pending_review' 
-                          ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm shadow-amber-100/30' 
-                          : app.status === 'approved' 
-                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm shadow-emerald-100/30' 
-                            : 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm shadow-rose-100/30'
-                      }`}>
-                        {app.status === 'pending_review' ? 'Pending Review' : app.status === 'approved' ? 'Approved' : 'Rejected'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-400 font-extrabold">{app.submittedAt}</td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {/* Inspect / Eye */}
-                        <button
-                          onClick={() => setSelectedApp(app)}
-                          className="p-2 hover:bg-blue-50 border border-transparent hover:border-blue-200 rounded-xl text-blue-600 transition-all active:scale-90"
-                          title="Inspect Documents & Compliance"
-                        >
-                          <Eye className="w-4.5 h-4.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-4 text-gray-500 font-bold">
+                        {submissionDate}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => setSelectedApp(app)}
+                            className="p-2 hover:bg-blue-50 border border-transparent hover:border-blue-200 rounded-xl text-blue-600 transition-all active:scale-90"
+                            title="Inspect Documents & Compliance"
+                          >
+                            <Eye className="w-4.5 h-4.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan="6" className="px-6 py-16 text-center text-gray-400 font-medium">
@@ -22562,6 +24670,15 @@ const AcademyApplications = ({
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={safeFiltered.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
       {toast && (
         <Toast 
@@ -22575,6 +24692,1078 @@ const AcademyApplications = ({
 };
 
 export default AcademyApplications;
+
+```
+
+### `client/src/pages/academy/components/AcademyCoursesManagement.jsx`
+
+```jsx
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { 
+  Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle, Loader2, Plus, 
+  CheckCircle2, Layers, Award, Sparkles, GraduationCap 
+} from 'lucide-react';
+import academicService from '../../../api/academic';
+import Toast from '../../../Components/Toast';
+import ConfirmModal from '../../../Components/ConfirmModal';
+import Pagination from '../../../Components/Pagination';
+
+// Helper to calculate required semester count based on course duration and durationType
+const getSemesterCount = (duration, durationType) => {
+  const durVal = parseInt(duration, 10) || 1;
+  if (durationType === 'Years') return Math.max(1, durVal * 2);
+  if (durationType === 'Months') return Math.max(1, Math.ceil(durVal / 6));
+  return 1;
+};
+
+// Helper to sync semesters array length while preserving existing data
+const syncSemesters = (existingSemesters = [], targetCount) => {
+  const count = Math.max(1, targetCount || 1);
+  const result = [];
+  for (let i = 1; i <= count; i++) {
+    const existing = (existingSemesters || []).find(s => s.semesterNumber === i);
+    if (existing) {
+      result.push({
+        semesterNumber: i,
+        semesterName: existing.semesterName || `Semester ${i}`,
+        subjects: existing.subjects && existing.subjects.length > 0 
+          ? existing.subjects.map(s => typeof s === 'string' ? { code: '', name: s } : { code: s.code || '', name: s.name || '' })
+          : [{ code: '', name: '' }],
+        practicalExams: existing.practicalExams && existing.practicalExams.length > 0 
+          ? existing.practicalExams.map(p => typeof p === 'string' ? { code: '', name: p } : { code: p.code || '', name: p.name || '' })
+          : [{ code: '', name: '' }],
+      });
+    } else {
+      result.push({
+        semesterNumber: i,
+        semesterName: `Semester ${i}`,
+        subjects: [{ code: '', name: '' }],
+        practicalExams: [{ code: '', name: '' }],
+      });
+    }
+  }
+  return result;
+};
+
+export default function AcademyCoursesManagement() {
+  const [courses, setCourses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [courseSearch, setCourseSearch] = useState('');
+  const [activeCreateSemTab, setActiveCreateSemTab] = useState(1);
+  const [isCreateLoading, setIsCreateLoading] = useState(false);
+
+  const [courseForm, setCourseForm] = useState({
+    name: '',
+    courseCode: '',
+    courseType: 'Fellowship',
+    programCategory: 'Emergency Medicine',
+    courseDuration: '2',
+    durationType: 'Years',
+    semesters: [
+      { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: 'EM-101', name: 'Basic Emergency Care' }], practicalExams: [{ code: 'PRAC-101', name: 'Airway Management OSCE' }] },
+      { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: 'EM-201', name: 'Advanced Trauma Care' }], practicalExams: [{ code: 'PRAC-201', name: 'Trauma Resuscitation OSCE' }] },
+      { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: 'EM-301', name: 'Cardiovascular Emergencies' }], practicalExams: [{ code: 'PRAC-301', name: 'ACLS Practical Station' }] },
+      { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: 'EM-401', name: 'Critical Care & Toxicology' }], practicalExams: [{ code: 'PRAC-401', name: 'Final Clinical OSCE' }] }
+    ],
+    status: 'Active'
+  });
+
+  // Modal states
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [activeEditSemTab, setActiveEditSemTab] = useState(1);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    courseCode: '',
+    courseType: 'Fellowship',
+    programCategory: 'Emergency Medicine',
+    courseDuration: '2',
+    durationType: 'Years',
+    semesters: [],
+    status: 'Active'
+  });
+  const [isEditLoading, setIsEditLoading] = useState(false);
+  const [viewingCourse, setViewingCourse] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  // Auto-sync semesters array when creation form duration changes
+  useEffect(() => {
+    const targetCount = getSemesterCount(courseForm.courseDuration, courseForm.durationType);
+    const updatedSemesters = syncSemesters(courseForm.semesters, targetCount);
+    if (JSON.stringify(updatedSemesters) !== JSON.stringify(courseForm.semesters)) {
+      setCourseForm(prev => ({ ...prev, semesters: updatedSemesters }));
+    }
+  }, [courseForm.courseDuration, courseForm.durationType]);
+
+  // Auto-sync edit modal semesters when duration changes
+  useEffect(() => {
+    if (!editingCourse) return;
+    const targetCount = getSemesterCount(editForm.courseDuration, editForm.durationType);
+    const updatedSemesters = syncSemesters(editForm.semesters, targetCount);
+    if (JSON.stringify(updatedSemesters) !== JSON.stringify(editForm.semesters)) {
+      setEditForm(prev => ({ ...prev, semesters: updatedSemesters }));
+    }
+  }, [editForm.courseDuration, editForm.durationType, editingCourse]);
+
+  // Fetch all courses
+  const fetchCourses = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await academicService.getCourses();
+      const data = res.data?.data || res.data || [];
+      if (Array.isArray(data)) {
+        setCourses(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch courses:', err);
+      setToast({ message: 'Failed to load courses catalogue.', type: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
+
+  // Filtered courses
+  const filteredCourses = useMemo(() => {
+    return courses.filter(c => {
+      const q = courseSearch.toLowerCase();
+      return (
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.courseCode && c.courseCode.toLowerCase().includes(q)) ||
+        (c.courseType && c.courseType.toLowerCase().includes(q)) ||
+        (c.programCategory && c.programCategory.toLowerCase().includes(q))
+      );
+    });
+  }, [courses, courseSearch]);
+
+  const paginatedCourses = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredCourses.slice(start, start + itemsPerPage);
+  }, [filteredCourses, currentPage]);
+
+  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage) || 1;
+
+  // ─── Semester Subject & Practical Management Helpers ──────────────────────
+  const handleSemesterSubjectChange = (isEdit, semNum, subjectIdx, field, val) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const semList = (prev.semesters || []).map(s => {
+        if (s.semesterNumber !== semNum) return s;
+        const newSubs = [...(s.subjects || [])];
+        newSubs[subjectIdx] = { ...newSubs[subjectIdx], [field]: val };
+        return { ...s, subjects: newSubs };
+      });
+      return { ...prev, semesters: semList };
+    });
+  };
+
+  const addSemesterSubject = (isEdit, semNum) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const semList = (prev.semesters || []).map(s => {
+        if (s.semesterNumber !== semNum) return s;
+        return { ...s, subjects: [...(s.subjects || []), { code: '', name: '' }] };
+      });
+      return { ...prev, semesters: semList };
+    });
+  };
+
+  const removeSemesterSubject = (isEdit, semNum, subjectIdx) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const semList = (prev.semesters || []).map(s => {
+        if (s.semesterNumber !== semNum) return s;
+        const newSubs = s.subjects.filter((_, idx) => idx !== subjectIdx);
+        return { ...s, subjects: newSubs.length > 0 ? newSubs : [{ code: '', name: '' }] };
+      });
+      return { ...prev, semesters: semList };
+    });
+  };
+
+  const handleSemesterPracticalChange = (isEdit, semNum, pracIdx, field, val) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const semList = (prev.semesters || []).map(s => {
+        if (s.semesterNumber !== semNum) return s;
+        const newPracs = [...(s.practicalExams || [])];
+        newPracs[pracIdx] = { ...newPracs[pracIdx], [field]: val };
+        return { ...s, practicalExams: newPracs };
+      });
+      return { ...prev, semesters: semList };
+    });
+  };
+
+  const addSemesterPractical = (isEdit, semNum) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const semList = (prev.semesters || []).map(s => {
+        if (s.semesterNumber !== semNum) return s;
+        return { ...s, practicalExams: [...(s.practicalExams || []), { code: '', name: '' }] };
+      });
+      return { ...prev, semesters: semList };
+    });
+  };
+
+  const removeSemesterPractical = (isEdit, semNum, pracIdx) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const semList = (prev.semesters || []).map(s => {
+        if (s.semesterNumber !== semNum) return s;
+        const newPracs = s.practicalExams.filter((_, idx) => idx !== pracIdx);
+        return { ...s, practicalExams: newPracs.length > 0 ? newPracs : [{ code: '', name: '' }] };
+      });
+      return { ...prev, semesters: semList };
+    });
+  };
+
+  // ─── Creation handler ──────────────────────────────────────────────────────
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    if (!courseForm.name?.trim()) {
+      setToast({ message: 'Course Name is required.', type: 'warning' });
+      return;
+    }
+
+    // Clean semesters
+    const cleanedSemesters = (courseForm.semesters || []).map(sem => ({
+      semesterNumber: sem.semesterNumber,
+      semesterName: sem.semesterName || `Semester ${sem.semesterNumber}`,
+      subjects: (sem.subjects || []).filter(s => s.name && s.name.trim().length > 0),
+      practicalExams: (sem.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
+    }));
+
+    setIsCreateLoading(true);
+    try {
+      const token = localStorage.getItem('semi_board_token') || 
+                    localStorage.getItem('semi_access_token') || 
+                    localStorage.getItem('semi_token') ||
+                    localStorage.getItem('token');
+      
+      const payload = {
+        name: courseForm.name.trim(),
+        courseCode: (courseForm.courseCode || '').trim().toUpperCase(),
+        courseType: courseForm.courseType,
+        programCategory: courseForm.programCategory,
+        courseDuration: courseForm.courseDuration,
+        durationType: courseForm.durationType,
+        semesters: cleanedSemesters,
+        status: 'Active'
+      };
+
+      console.log('Publishing course with token:', token ? 'Token exists' : 'NO TOKEN FOUND', payload);
+
+      await academicService.createCourse(payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      setToast({ message: `Course "${courseForm.name}" created successfully in centralized catalog!`, type: 'success' });
+      
+      // Reset form
+      setCourseForm({
+        name: '',
+        courseCode: '',
+        courseType: 'Fellowship',
+        programCategory: 'Emergency Medicine',
+        courseDuration: '2',
+        durationType: 'Years',
+        semesters: syncSemesters([], 4),
+        status: 'Active'
+      });
+
+      await fetchCourses();
+    } catch (err) {
+      console.error('Course creation error:', err);
+      const errMsg = err.parsedMessage || err.response?.data?.message || err.message || 'Failed to create course.';
+      setToast({ 
+        message: errMsg, 
+        type: 'error' 
+      });
+    } finally {
+      setIsCreateLoading(false);
+    }
+  };
+
+  // ─── Edit Modal ────────────────────────────────────────────────────────────
+  const openEditModal = (c) => {
+    setEditingCourse(c);
+    setActiveEditSemTab(1);
+    setEditForm({
+      name: c.name || '',
+      courseCode: c.courseCode || '',
+      courseType: c.courseType || 'Fellowship',
+      programCategory: c.programCategory || 'Emergency Medicine',
+      courseDuration: c.courseDuration || '2',
+      durationType: c.durationType || 'Years',
+      semesters: c.semesters && c.semesters.length > 0 ? c.semesters : syncSemesters([], getSemesterCount(c.courseDuration, c.durationType)),
+      status: c.status || 'Active'
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editForm.name?.trim()) {
+      setToast({ message: 'Course Name is required.', type: 'warning' });
+      return;
+    }
+
+    const cleanedSemesters = (editForm.semesters || []).map(sem => ({
+      semesterNumber: sem.semesterNumber,
+      semesterName: sem.semesterName || `Semester ${sem.semesterNumber}`,
+      subjects: (sem.subjects || []).filter(s => s.name && s.name.trim().length > 0),
+      practicalExams: (sem.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
+    }));
+
+    setIsEditLoading(true);
+    try {
+      const token = localStorage.getItem('semi_board_token') || 
+                    localStorage.getItem('semi_access_token') || 
+                    localStorage.getItem('semi_token');
+
+      await academicService.updateCourse(editingCourse._id, {
+        name: editForm.name.trim(),
+        courseCode: (editForm.courseCode || '').trim().toUpperCase(),
+        courseType: editForm.courseType,
+        programCategory: editForm.programCategory,
+        courseDuration: editForm.courseDuration,
+        durationType: editForm.durationType,
+        semesters: cleanedSemesters,
+        status: editForm.status
+      }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      setToast({ message: `Course "${editForm.name}" updated successfully!`, type: 'success' });
+      setEditingCourse(null);
+      await fetchCourses();
+    } catch (err) {
+      console.error('Course update error:', err);
+      setToast({ 
+        message: err.parsedMessage || err.response?.data?.message || 'Failed to update course.', 
+        type: 'error' 
+      });
+    } finally {
+      setIsEditLoading(false);
+    }
+  };
+
+  // ─── Toggle Course Status (Active/Inactive) ────────────────────────────────
+  const toggleCourseStatus = async (course) => {
+    const newStatus = course.status === 'Active' ? 'Inactive' : 'Active';
+    const token = localStorage.getItem('semi_board_token') || 
+                  localStorage.getItem('semi_access_token') || 
+                  localStorage.getItem('semi_token');
+    try {
+      await academicService.updateCourse(course._id, { status: newStatus }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      setToast({ message: `Course "${course.name}" marked as ${newStatus}.`, type: 'success' });
+      await fetchCourses();
+    } catch (err) {
+      console.error('Toggle status error:', err);
+      setToast({ message: 'Failed to update course status.', type: 'error' });
+    }
+  };
+
+  // ─── Delete Course ─────────────────────────────────────────────────────────
+  const handleDeleteCourse = (course) => {
+    setConfirmConfig({
+      title: `Delete Course: ${course.name}`,
+      message: `Are you sure you want to permanently delete "${course.name}"? If students or batches exist across colleges, deactivating the course is recommended instead.`,
+      type: 'danger',
+      confirmText: 'Delete Course',
+      onConfirm: async () => {
+        setConfirmConfig(null);
+        const token = localStorage.getItem('semi_board_token') || 
+                      localStorage.getItem('semi_access_token') || 
+                      localStorage.getItem('semi_token');
+        try {
+          await academicService.deleteCourse(course._id, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          });
+          setToast({ message: 'Course deleted successfully.', type: 'success' });
+          await fetchCourses();
+        } catch (err) {
+          console.error('Delete course error:', err);
+          setToast({ 
+            message: err.parsedMessage || err.response?.data?.message || 'Failed to delete course.', 
+            type: 'error' 
+          });
+        }
+      }
+    });
+  };
+
+  // ─── Render Semester Editor Component ───────────────────────────────────────
+  const renderSemesterEditor = (formState, activeTab, setActiveTab, isEdit) => {
+    const sems = formState.semesters || [];
+    const activeSem = sems.find(s => s.semesterNumber === activeTab) || sems[0] || { semesterNumber: 1, subjects: [], practicalExams: [] };
+
+    return (
+      <div className="space-y-4 pt-4 border-t border-slate-200">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <h4 className="text-xs font-black uppercase tracking-wider text-indigo-600 flex items-center gap-2">
+              <Layers className="w-4 h-4" /> Semester Breakdown & Curriculum ({sems.length} Semesters)
+            </h4>
+            <p className="text-[11px] text-slate-500">Define theory subjects and practical OSCE modules for each semester</p>
+          </div>
+        </div>
+
+        {/* Semester Tab Buttons */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {sems.map((sem) => {
+            const num = sem.semesterNumber;
+            const subCount = (sem.subjects || []).filter(s => s.name?.trim()).length;
+            const pracCount = (sem.practicalExams || []).filter(p => p.name?.trim()).length;
+            const isTabActive = activeTab === num;
+
+            return (
+              <button
+                key={num}
+                type="button"
+                onClick={() => setActiveTab(num)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+                  isTabActive
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                <span>Semester {num}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${
+                  isTabActive ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {subCount} Sub / {pracCount} Prac
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Semester Editor Card */}
+        {activeSem && (
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-6">
+            
+            {/* 1. Subjects Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                    Theory Subjects for Semester {activeSem.semesterNumber}
+                  </span>
+                  <p className="text-[10px] text-slate-500">Add subject codes and official SEMI subject titles</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => addSemesterSubject(isEdit, activeSem.semesterNumber)}
+                  className="text-[11px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Subject
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {(activeSem.subjects || []).map((sub, sIdx) => (
+                  <div key={sIdx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="sm:col-span-3">
+                      <input
+                        type="text"
+                        placeholder="Subject Code (e.g. EM-101)"
+                        value={sub.code || ''}
+                        onChange={(e) => handleSemesterSubjectChange(isEdit, activeSem.semesterNumber, sIdx, 'code', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div className="sm:col-span-8">
+                      <input
+                        type="text"
+                        placeholder="Subject Name (e.g. Resuscitation & Shock Management)"
+                        value={sub.name || ''}
+                        onChange={(e) => handleSemesterSubjectChange(isEdit, activeSem.semesterNumber, sIdx, 'name', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
+                      />
+                    </div>
+                    <div className="sm:col-span-1 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => removeSemesterSubject(isEdit, activeSem.semesterNumber, sIdx)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Remove Subject"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. Practical Exams Section */}
+            <div className="space-y-3 pt-4 border-t border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                    Practical & OSCE Stations for Semester {activeSem.semesterNumber}
+                  </span>
+                  <p className="text-[10px] text-slate-500">Add practical examination modules, stations and codes</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => addSemesterPractical(isEdit, activeSem.semesterNumber)}
+                  className="text-[11px] bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Practical Exam
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {(activeSem.practicalExams || []).map((prac, pIdx) => (
+                  <div key={pIdx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="sm:col-span-3">
+                      <input
+                        type="text"
+                        placeholder="Practical Code (e.g. PRAC-101)"
+                        value={prac.code || ''}
+                        onChange={(e) => handleSemesterPracticalChange(isEdit, activeSem.semesterNumber, pIdx, 'code', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-purple-500 text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div className="sm:col-span-8">
+                      <input
+                        type="text"
+                        placeholder="Practical Station Name (e.g. Clinical OSCE Station: Airway & Vascular Access)"
+                        value={prac.name || ''}
+                        onChange={(e) => handleSemesterPracticalChange(isEdit, activeSem.semesterNumber, pIdx, 'name', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-purple-500 text-xs font-semibold"
+                      />
+                    </div>
+                    <div className="sm:col-span-1 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => removeSemesterPractical(isEdit, activeSem.semesterNumber, pIdx)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Remove Practical Exam"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-200 text-left">
+      
+      {/* ─── PAGE TITLE & HEADER ────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-3xl text-white shadow-xl">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="bg-indigo-500/20 text-indigo-300 text-[10px] uppercase tracking-widest font-black px-2.5 py-0.5 rounded-md border border-indigo-500/30">
+              Centralized Academic Registry
+            </span>
+          </div>
+          <h2 className="text-2xl font-black tracking-tight">Course & Subject Management</h2>
+          <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+            Standardized academic courses, curricula, and subjects governed centrally by SEMI Academic Board. Institutes inherit this structure automatically.
+          </p>
+        </div>
+        <div className="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 flex items-center gap-3">
+          <GraduationCap className="w-6 h-6 text-indigo-400" />
+          <div className="text-right">
+            <span className="text-[10px] text-slate-300 block font-bold uppercase tracking-wider">Total Standardized Courses</span>
+            <span className="text-lg font-black text-white">{courses.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── COURSE CREATION FORM ─────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+        <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
+          <div>
+            <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">
+              Create New Standardized Course
+            </h3>
+            <p className="text-xs text-slate-500">Define course code, category, duration, semester subjects & practical exams</p>
+          </div>
+          <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full border border-indigo-100">
+            Admin Controlled
+          </span>
+        </div>
+
+        <form onSubmit={handleCreateSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Course Name *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Fellowship in Emergency Medicine"
+                value={courseForm.name}
+                onChange={(e) => setCourseForm({ ...courseForm, name: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Course Code *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. FEM / DEM / MEM"
+                value={courseForm.courseCode}
+                onChange={(e) => setCourseForm({ ...courseForm, courseCode: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-mono font-bold"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Used for automated batch naming (e.g. FEM-2026-A)</p>
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Course Type *</label>
+              <select
+                value={courseForm.courseType}
+                onChange={(e) => setCourseForm({ ...courseForm, courseType: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-bold"
+              >
+                <option value="Fellowship">Fellowship</option>
+                <option value="Postgraduate">Postgraduate</option>
+                <option value="Diploma">Diploma</option>
+                <option value="Undergraduate">Undergraduate</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Program Category *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Emergency Medicine"
+                value={courseForm.programCategory}
+                onChange={(e) => setCourseForm({ ...courseForm, programCategory: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Course Duration *</label>
+              <input
+                type="number"
+                min="1"
+                required
+                placeholder="e.g. 2"
+                value={courseForm.courseDuration}
+                onChange={(e) => setCourseForm({ ...courseForm, courseDuration: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Duration Type *</label>
+              <select
+                value={courseForm.durationType}
+                onChange={(e) => setCourseForm({ ...courseForm, durationType: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-bold"
+              >
+                <option value="Years">Years</option>
+                <option value="Months">Months</option>
+                <option value="Weeks">Weeks</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Dynamic Semester, Subject & Practical Exams Editor */}
+          {renderSemesterEditor(courseForm, activeCreateSemTab, setActiveCreateSemTab, false)}
+
+          <div className="flex justify-end pt-4">
+            <button
+              type="submit"
+              disabled={isCreateLoading}
+              className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl transition-all shadow-md shadow-indigo-600/20 text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isCreateLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating Course...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Save & Publish Course
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* ─── ALL STANDARDIZED COURSES LIST ─────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">
+              Standardized Courses Catalog
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">{courses.length} Standardized Academic Programs Registered</p>
+          </div>
+          <div className="relative max-w-xs w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search course name or code..."
+              value={courseSearch}
+              onChange={(e) => {
+                setCourseSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-semibold"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto border border-slate-200 rounded-2xl bg-white">
+          <table className="w-full text-left border-collapse text-xs font-semibold text-slate-600">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px]">
+                <th className="px-5 py-4 font-bold">#</th>
+                <th className="px-5 py-4 font-bold">Code</th>
+                <th className="px-5 py-4 font-bold">Course Title</th>
+                <th className="px-5 py-4 font-bold">Program Type</th>
+                <th className="px-5 py-4 font-bold">Duration</th>
+                <th className="px-5 py-4 font-bold">Semesters</th>
+                <th className="px-5 py-4 font-bold">Active Batches</th>
+                <th className="px-5 py-4 font-bold">Status</th>
+                <th className="px-5 py-4 font-bold text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-800">
+              {paginatedCourses.length > 0 ? (
+                paginatedCourses.map((c, idx) => {
+                  const globalIdx = (currentPage - 1) * itemsPerPage + idx;
+                  const isActive = c.status === 'Active';
+                  const semCount = c.semesters?.length || getSemesterCount(c.courseDuration, c.durationType);
+                  const batchCount = c.batchesCount || 0;
+
+                  return (
+                    <tr key={c._id || idx} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-5 py-4 text-slate-400 font-mono">{(globalIdx + 1).toString().padStart(2, '0')}</td>
+                      <td className="px-5 py-4 font-mono font-bold text-indigo-600">
+                        <span className="bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                          {c.courseCode || 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 font-black text-slate-900">{c.name}</td>
+                      <td className="px-5 py-4 text-slate-600">
+                        <span className="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase text-slate-700">
+                          {c.courseType || 'Fellowship'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">{c.courseDuration} {c.durationType}</td>
+                      <td className="px-5 py-4">
+                        <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
+                          {semCount} Semesters
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="bg-purple-50 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-purple-100">
+                          {batchCount} Batches
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() => toggleCourseStatus(c)}
+                          className={`inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                            isActive 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' 
+                              : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-600' : 'bg-slate-400'}`}></span>
+                          {isActive ? 'Active' : 'Inactive'}
+                        </button>
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <div className="flex justify-center items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setViewingCourse(c)}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                            title="View Course Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(c)}
+                            className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                            title="Edit Course & Subjects"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCourse(c)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            title="Delete Course"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="9" className="px-6 py-12 text-center text-slate-400 font-medium">
+                    <BookOpen className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                    No standardized courses found matching query.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredCourses.length}
+          itemsPerPage={itemsPerPage}
+        />
+      </div>
+
+      {/* ─── EDIT COURSE MODAL ────────────────────────────────────────────── */}
+      {editingCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col my-auto text-left">
+            <div className="bg-indigo-900 px-6 py-4 text-white flex justify-between items-center">
+              <div>
+                <h3 className="font-extrabold text-base">Edit Standardized Course</h3>
+                <p className="text-[10px] text-indigo-200">Updating academic structure for {editingCourse.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingCourse(null)}
+                className="p-1.5 hover:bg-indigo-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Course Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Course Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.courseCode}
+                    onChange={(e) => setEditForm({ ...editForm, courseCode: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono font-bold focus:outline-none focus:bg-white focus:border-indigo-500 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Course Type</label>
+                  <select
+                    value={editForm.courseType}
+                    onChange={(e) => setEditForm({ ...editForm, courseType: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-bold"
+                  >
+                    <option value="Fellowship">Fellowship</option>
+                    <option value="Postgraduate">Postgraduate</option>
+                    <option value="Diploma">Diploma</option>
+                    <option value="Undergraduate">Undergraduate</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Program Category</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.programCategory}
+                    onChange={(e) => setEditForm({ ...editForm, programCategory: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Duration</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editForm.courseDuration}
+                    onChange={(e) => setEditForm({ ...editForm, courseDuration: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-bold"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              {renderSemesterEditor(editForm, activeEditSemTab, setActiveEditSemTab, true)}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingCourse(null)}
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isEditLoading}
+                  className="px-7 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase flex items-center gap-2 shadow-md shadow-indigo-600/20"
+                >
+                  {isEditLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Update Course
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── VIEW COURSE MODAL ────────────────────────────────────────────── */}
+      {viewingCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col my-auto text-left">
+            <div className="bg-slate-900 px-6 py-4 text-white flex justify-between items-center">
+              <div>
+                <span className="text-[10px] font-mono text-indigo-400 font-bold block">{viewingCourse.courseCode}</span>
+                <h3 className="font-extrabold text-base">{viewingCourse.name}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingCourse(null)}
+                className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 overflow-y-auto flex-1 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Program Type</span>
+                  <span className="font-bold text-slate-800">{viewingCourse.courseType}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Category</span>
+                  <span className="font-bold text-slate-800">{viewingCourse.programCategory}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Duration</span>
+                  <span className="font-bold text-slate-800">{viewingCourse.courseDuration} {viewingCourse.durationType}</span>
+                </div>
+              </div>
+
+              {/* Semesters list */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Semester-wise Curriculum</h4>
+                {(viewingCourse.semesters || []).map((sem) => (
+                  <div key={sem.semesterNumber} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                      <span className="font-black text-indigo-700 text-xs uppercase">
+                        Semester {sem.semesterNumber}: {sem.semesterName || `Semester ${sem.semesterNumber}`}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Theory Subjects:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(sem.subjects || []).map((s, sIdx) => (
+                          <span key={sIdx} className="bg-indigo-50 text-indigo-800 border border-indigo-100 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
+                            {s.code && <strong className="font-mono mr-1 text-indigo-600">[{s.code}]</strong>}
+                            {s.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Practical Exams:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(sem.practicalExams || []).map((p, pIdx) => (
+                          <span key={pIdx} className="bg-purple-50 text-purple-800 border border-purple-100 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
+                            {p.code && <strong className="font-mono mr-1 text-purple-600">[{p.code}]</strong>}
+                            {p.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setViewingCourse(null)}
+                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs uppercase"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast and confirm */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {confirmConfig && (
+        <ConfirmModal
+          isOpen={true}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          type={confirmConfig.type}
+          confirmText={confirmConfig.confirmText}
+          onConfirm={confirmConfig.onConfirm}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
+    </div>
+  );
+}
 
 ```
 
@@ -22995,10 +26184,11 @@ export default AcademyEditModal;
 ### `client/src/pages/academy/components/AcademyEligibility.jsx`
 
 ```jsx
-import { useState, useMemo } from 'react';
-import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Calendar, UserCheck, X, Send, MapPin } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, ClipboardList, CheckCircle2, XCircle, Clock, Calendar, UserCheck, X, Send, MapPin, Building2, User, Eye, FileText, ChevronRight } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import examService from '../../../api/exams';
+import Pagination from '../../../Components/Pagination';
 
 const AcademyEligibility = ({ 
   examApplications = [], 
@@ -23041,6 +26231,19 @@ const AcademyEligibility = ({
     });
   }, [examApplications, searchQuery, statusFilter]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredList.slice(start, start + itemsPerPage);
+  }, [filteredList, currentPage, itemsPerPage]);
+
   // Open Review Dialog
   const handleOpenReview = (app) => {
     setReviewingApp(app);
@@ -23055,7 +26258,7 @@ const AcademyEligibility = ({
     if (!reviewingApp) return;
 
     if (reviewStatus === 'Approved' && !scheduledDate) {
-      setErrorMsg("A scheduled exam date is required to approve the application.");
+      setErrorMsg('Please select a scheduled exam date to approve the application.');
       return;
     }
 
@@ -23098,14 +26301,37 @@ const AcademyEligibility = ({
        setPubSubjectSchedules(courseSubjects.map(subject => ({ subject, date: '', time: '' })));
     }
 
+    // Auto-fetch practical exam names from course / semester if available
+    const semNum = app.semesterNumber || 1;
+    const targetSem = app.course?.semesters?.find(s => s.semesterNumber === semNum) || app.course?.semesters?.[0];
+    
+    let autoPracticalName = '';
+    let autoSubjectsList = [];
+
+    if (targetSem && targetSem.practicalExams && targetSem.practicalExams.length > 0) {
+      const pracNames = targetSem.practicalExams
+        .map(p => typeof p === 'string' ? p : (p.code ? `[${p.code}] ${p.name}` : p.name))
+        .filter(Boolean);
+      autoPracticalName = pracNames.join(', ');
+      autoSubjectsList = pracNames;
+    } else if (app.course?.practicalExams && app.course.practicalExams.length > 0) {
+      const pracNames = app.course.practicalExams
+        .map(p => typeof p === 'string' ? p : (p.code ? `[${p.code}] ${p.name}` : p.name))
+        .filter(Boolean);
+      autoPracticalName = pracNames.join(', ');
+      autoSubjectsList = pracNames;
+    } else if (app.course?.practicalExamName) {
+      autoPracticalName = app.course.practicalExamName;
+    }
+
     // Pre-fill practical exam details if already published
     const existingPractical = app.practicalExam || {};
     setPubPracticalExam({
-      name: existingPractical.name || '',
+      name: existingPractical.name || autoPracticalName || 'Practical Examination',
       venue: existingPractical.venue || '',
       date: existingPractical.date ? new Date(existingPractical.date).toISOString().split('T')[0] : '',
       time: existingPractical.time || '',
-      subjects: existingPractical.subjects || []
+      subjects: existingPractical.subjects?.length ? existingPractical.subjects : autoSubjectsList
     });
   };
 
@@ -23234,8 +26460,8 @@ const AcademyEligibility = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-150/60 text-xs font-bold text-slate-700 bg-white">
-              {filteredList.length > 0 ? (
-                filteredList.map((app, idx) => {
+              {paginatedList.length > 0 ? (
+                paginatedList.map((app, idx) => {
                   const status = app.status || 'Pending';
                   const dateText = app.scheduledDate 
                     ? new Date(app.scheduledDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
@@ -23244,7 +26470,7 @@ const AcademyEligibility = ({
                   return (
                     <tr key={app._id || app.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-4 text-center text-[10px] text-gray-400 font-extrabold">
-                        {String(idx + 1).padStart(2, '0')}
+                        {String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0')}
                       </td>
                       <td className="px-6 py-4 font-extrabold text-slate-900">{app.institute?.orgName || 'N/A'}</td>
                       <td className="px-6 py-4 text-slate-500 font-semibold">{app.course?.name || 'MBBS'}</td>
@@ -23314,6 +26540,15 @@ const AcademyEligibility = ({
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredList.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
 
       {/* REVIEW DIALOG MODAL */}
@@ -23420,22 +26655,22 @@ const AcademyEligibility = ({
                 </div>
               </div>
 
-              {/* Scheduled Date Field - ONLY shown and required if Approved */}
+              {/* Scheduled Date Input (Mandatory when approving) */}
               {reviewStatus === 'Approved' && (
-                <div className="space-y-1.5 animate-in slide-in-from-top-3 duration-200">
-                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Scheduled Examination Date *</label>
+                <div>
+                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+                    <span>Scheduled Exam Date <span className="text-rose-500 font-bold">*</span></span>
+                    <span className="text-[9px] text-slate-400 font-medium">Required for approval</span>
+                  </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="date"
                       required
                       value={scheduledDate}
-                      min={new Date().toISOString().split('T')[0]} // Block historical dates
                       onChange={(e) => setScheduledDate(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 focus:outline-none transition-all"
                     />
                   </div>
-                  <span className="text-[9px] font-semibold text-slate-400">Select the official schedule date to publish to the Institute portal.</span>
                 </div>
               )}
 
@@ -23600,22 +26835,6 @@ const AcademyEligibility = ({
                 </div>
               )}
 
-              {/* Exam Date (optional update) */}
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Exam Date (Optional Update)</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="date"
-                    value={pubDate}
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setPubDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                  />
-                </div>
-                <p className="text-[9px] text-slate-400 font-semibold mt-1">Leave blank to keep current scheduled date</p>
-              </div>
-
               {/* Practical Exam Details (Optional) */}
               <div className="pt-2 border-t border-slate-200/60 space-y-3">
                 <div className="flex items-center justify-between">
@@ -23632,7 +26851,7 @@ const AcademyEligibility = ({
                       type="text"
                       value={pubPracticalExam.name}
                       onChange={(e) => setPubPracticalExam({ ...pubPracticalExam, name: e.target.value })}
-                      placeholder="e.g. Clinical OSCE"
+                      placeholder="Auto-fetched based on semester practicals"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
                     />
                   </div>
@@ -23712,6 +26931,271 @@ const AcademyEligibility = ({
 
 export default AcademyEligibility;
 
+```
+
+### `client/src/pages/academy/components/AcademyFeeConfiguration.jsx`
+
+```jsx
+import { useState, useEffect } from 'react';
+import { Settings, Save, RefreshCw, BadgeCheck, BadgeX } from 'lucide-react';
+import academicService from '../../../api/academic';
+import Toast from '../../../Components/Toast';
+
+const AcademyFeeConfiguration = () => {
+  const [courses, setCourses] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState(1);
+  const [config, setConfig] = useState({
+    firstAttemptFee: 0,
+    reappearingFee: 0,
+    feeApplicableForFirstAttempt: false,
+  });
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await academicService.getCourses();
+        const data = res?.data?.data || res?.data || [];
+        if (Array.isArray(data)) setCourses(data);
+      } catch (err) {
+        setToast({ message: err?.parsedMessage || err?.message || 'Failed to load courses', type: 'error' });
+      }
+    };
+    fetchCourses();
+  }, []);
+
+  const fetchConfiguration = async (courseId, semester) => {
+    if (!courseId) return;
+    setLoading(true);
+    try {
+      const res = await academicService.getFeeConfiguration(courseId, semester);
+      const data = res?.data?.data || res?.data || res;
+      if (data) {
+        setConfig({
+          firstAttemptFee: Number(data.firstAttemptFee) || 0,
+          reappearingFee: Number(data.reappearingFee) || 0,
+          feeApplicableForFirstAttempt: Boolean(data.feeApplicableForFirstAttempt),
+        });
+      }
+    } catch (err) {
+      setToast({ message: err?.parsedMessage || err?.message || 'Failed to load configuration', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCourseId && selectedSemester) {
+      fetchConfiguration(selectedCourseId, selectedSemester);
+    }
+  }, [selectedCourseId, selectedSemester]);
+
+  const handleCourseChange = (courseId) => {
+    setSelectedCourseId(courseId);
+    setSelectedSemester(1);
+  };
+
+  const firstAttemptCharged = config.feeApplicableForFirstAttempt && config.firstAttemptFee > 0;
+
+  const handleSave = async () => {
+    if (!selectedCourseId) {
+      setToast({ message: 'Please select a course', type: 'warning' });
+      return;
+    }
+    setLoading(true);
+    try {
+      await academicService.updateFeeConfiguration({
+        courseId: selectedCourseId,
+        semesterNumber: selectedSemester,
+        ...config,
+      });
+      setToast({ message: 'Exam fee configuration saved successfully!', type: 'success' });
+    } catch (err) {
+      setToast({ message: err?.parsedMessage || err?.message || 'Failed to save configuration', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl space-y-6 animate-in fade-in duration-300 font-sans">
+      <div className="flex items-center gap-3.5">
+        <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+          <Settings className="w-6 h-6" />
+        </div>
+        <div>
+          <h2 className="text-xl font-black text-gray-800 tracking-tight">Exam Fee Configuration</h2>
+          <p className="text-xs text-gray-400 font-semibold mt-1">
+            Set, waive, or charge examination fees for first-time and reappearing students
+          </p>
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-gray-500 mb-1.5">Course *</label>
+            <select
+              value={selectedCourseId}
+              onChange={(e) => handleCourseChange(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            >
+              <option value="">Select Course</option>
+              {courses.map((course) => (
+                <option key={course._id} value={course._id}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-gray-500 mb-1.5">Semester</label>
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(parseInt(e.target.value))}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            >
+              {[1, 2, 3, 4, 5, 6].map((sem) => (
+                <option key={sem} value={sem}>
+                  Semester {sem}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-200">
+          {/* First Attempt */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-[10px] uppercase font-black tracking-wider text-gray-500">
+                First Attempt Fee (₹)
+              </label>
+              {config.firstAttemptFee > 0 ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[9px] uppercase font-black">
+                  <BadgeCheck className="w-3 h-3" /> Charged
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] uppercase font-black">
+                  <BadgeX className="w-3 h-3" /> Waived
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+              <input
+                type="number"
+                min="0"
+                value={config.firstAttemptFee}
+                onChange={(e) => setConfig({ ...config, firstAttemptFee: parseInt(e.target.value) || 0 })}
+                className="w-full pl-7 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-blue-500 transition-all"
+              />
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={config.feeApplicableForFirstAttempt}
+                onChange={(e) => setConfig({ ...config, feeApplicableForFirstAttempt: e.target.checked })}
+                className="w-4 h-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-[11px] font-bold text-blue-900">
+                Charge first-attempt students (instead of waiving)
+              </span>
+            </label>
+            <p className="text-[10px] text-gray-400">
+              Set fee to <span className="font-bold">0</span> (or untick above) to waive exam fees for first-time candidates.
+            </p>
+          </div>
+
+          {/* Reappearing */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-[10px] uppercase font-black tracking-wider text-gray-500">
+                Reappearing Fee (₹)
+              </label>
+              {config.reappearingFee > 0 ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[9px] uppercase font-black">
+                  <BadgeCheck className="w-3 h-3" /> Charged
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] uppercase font-black">
+                  <BadgeX className="w-3 h-3" /> Waived
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+              <input
+                type="number"
+                min="0"
+                value={config.reappearingFee}
+                onChange={(e) => setConfig({ ...config, reappearingFee: parseInt(e.target.value) || 0 })}
+                className="w-full pl-7 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-blue-500 transition-all"
+              />
+            </div>
+            <p className="text-[10px] text-gray-400">
+              Set fee to <span className="font-bold">0</span> to waive exam fees for reappearing candidates.
+            </p>
+          </div>
+        </div>
+
+        {/* Live summary */}
+        <div className="bg-indigo-50/40 border border-indigo-100 rounded-2xl p-4 space-y-2">
+          <span className="block text-[9px] uppercase font-black tracking-wider text-indigo-400">Live Status</span>
+          <ul className="text-xs font-bold text-slate-700 space-y-1">
+            <li className="flex items-center gap-2">
+              {firstAttemptCharged ? (
+                <BadgeCheck className="w-4 h-4 text-blue-600" />
+              ) : (
+                <BadgeX className="w-4 h-4 text-emerald-600" />
+              )}
+              First-time candidates: {firstAttemptCharged ? `₹${config.firstAttemptFee.toLocaleString()} payable` : 'No fee (Free)'}
+            </li>
+            <li className="flex items-center gap-2">
+              {config.reappearingFee > 0 ? (
+                <BadgeCheck className="w-4 h-4 text-amber-600" />
+              ) : (
+                <BadgeX className="w-4 h-4 text-emerald-600" />
+              )}
+              Reappearing candidates: {config.reappearingFee > 0 ? `₹${config.reappearingFee.toLocaleString()} payable` : 'No fee (Free)'}
+            </li>
+          </ul>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={loading || !selectedCourseId}
+          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
+        >
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Working...
+            </span>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              Save Configuration
+            </>
+          )}
+        </button>
+      </div>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default AcademyFeeConfiguration;
 ```
 
 ### `client/src/pages/academy/components/AcademyHeader.jsx`
@@ -23815,6 +27299,16 @@ const AcademyInspectorModal = ({
     return () => clearTimeout(t);
     // The modal remounts per application, so this transient state is safe.
   }, [isVerifyingPayment]);
+
+  const [approvedQuota, setApprovedQuota] = useState(() => {
+    return parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5;
+  });
+
+  useEffect(() => {
+    if (selectedApp) {
+      setApprovedQuota(parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5);
+    }
+  }, [selectedApp]);
 
   const isPaymentComplete = !!selectedApp?.paymentComplete;
   const paymentAmount = selectedApp?.paymentDetails?.amount
@@ -24025,10 +27519,14 @@ const AcademyInspectorModal = ({
                     <GraduationCap className="w-3.5 h-3.5" /> Academic Specifications
                   </h4>
                 </div>
-                <div className="p-4 grid grid-cols-3 gap-x-4 gap-y-2.5 text-xs">
+                <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 text-xs">
                   <div>
                     <span className="text-slate-400 font-medium block">Seats Requested</span>
                     <span className="text-slate-800 font-bold">{selectedApp.form?.seatsRequested || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium block">Approved Batch Limit</span>
+                    <span className="text-indigo-600 font-black">{selectedApp.approvedSeats || selectedApp.form?.approvedSeats || approvedQuota} Seats</span>
                   </div>
                   <div>
                     <span className="text-slate-400 font-medium block">Commencement</span>
@@ -24124,11 +27622,28 @@ const AcademyInspectorModal = ({
         </div>
 
         {/* ─── FOOTER ────────────────────────────────────────────────────────── */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-shrink-0">
-          <div className="text-[10px] text-slate-400 font-medium">
-            {isPaymentComplete ? '✅ All checks passed' : '⏳ Payment verification required'}
-          </div>
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 flex-shrink-0">
           <div className="flex items-center gap-3">
+            {selectedApp.status === 'pending_review' && isPaymentComplete ? (
+              <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl">
+                <span className="text-[10px] font-black uppercase text-indigo-700 tracking-wider">Set Batch Quota Limit:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={approvedQuota}
+                  onChange={(e) => setApprovedQuota(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="w-16 px-2 py-1 bg-white border border-indigo-300 rounded-lg text-xs font-black text-indigo-900 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <span className="text-[10px] font-bold text-indigo-500">Seats/Batch</span>
+              </div>
+            ) : (
+              <div className="text-[10px] text-slate-400 font-medium">
+                {isPaymentComplete ? '✅ Inspection Fee Paid' : '⏳ Payment verification required'}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-3">
             {selectedApp.status === 'pending_review' && (
               <>
                 <button
@@ -24138,17 +27653,17 @@ const AcademyInspectorModal = ({
                   Reject
                 </button>
                 <button
-                  onClick={handleApprove}
+                  onClick={() => handleApprove(approvedQuota)}
                   disabled={!isPaymentComplete}
                   className={`px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
                     isPaymentComplete
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 cursor-pointer'
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}
                   title={!isPaymentComplete ? 'Payment must be completed before approval' : ''}
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  Approve
+                  Approve ({approvedQuota} Seats Limit)
                 </button>
               </>
             )}
@@ -24321,6 +27836,7 @@ import {
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import marksService from '../../../api/marks';
+import Pagination from '../../../Components/Pagination';
 
 const AcademyMarksUpdating = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
@@ -24338,6 +27854,8 @@ const AcademyMarksUpdating = () => {
   const [availableSemesters] = useState([1, 2, 3, 4, 5, 6]);
   const [editingCell, setEditingCell] = useState(null); // { subjectCode, field }
   const [editValue, setEditValue] = useState('');
+  const [studentListPage, setStudentListPage] = useState(1);
+  const studentsPerPage = 10;
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const fetchStudents = useCallback(async () => {
@@ -24431,6 +27949,16 @@ const AcademyMarksUpdating = () => {
       return matchSearch && matchBatch && matchCourse && matchInstitute;
     });
   }, [students, searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
+
+  useEffect(() => {
+    setStudentListPage(1);
+  }, [searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
+
+  const totalStudentPages = Math.ceil(filteredStudents.length / studentsPerPage);
+  const paginatedStudents = useMemo(
+    () => filteredStudents.slice((studentListPage - 1) * studentsPerPage, studentListPage * studentsPerPage),
+    [filteredStudents, studentListPage, studentsPerPage]
+  );
 
   // ─── Student Selection ─────────────────────────────────────────────────────
   const handleSelectStudent = useCallback(async (student) => {
@@ -24797,7 +28325,7 @@ const AcademyMarksUpdating = () => {
                   <p className="text-sm text-slate-500 font-medium">No students found.</p>
                 </div>
               ) : (
-                filteredStudents.map((student) => {
+                paginatedStudents.map((student) => {
                   const isSelected = selectedStudent?._id === student._id;
                   const hasMarks = student.marks && student.marks.length > 0;
                   const allEntered = student.marks?.every((m) => m.isAbsent === true || m.marksObtained !== null);
@@ -24850,6 +28378,13 @@ const AcademyMarksUpdating = () => {
                 })
               )}
             </div>
+            <Pagination
+              currentPage={studentListPage}
+              totalPages={totalStudentPages}
+              onPageChange={setStudentListPage}
+              totalItems={filteredStudents.length}
+              itemsPerPage={studentsPerPage}
+            />
           </div>
         </div>
 
@@ -26223,6 +29758,7 @@ import {
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
+import Pagination from '../../../Components/Pagination';
 
 const AcademyPublishingDetails = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
@@ -26237,6 +29773,8 @@ const AcademyPublishingDetails = () => {
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [activeTab, setActiveTab] = useState('published'); // 'published' | 'scheduled' | 'all'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const [publications, setPublications] = useState([]);
@@ -26256,24 +29794,37 @@ const AcademyPublishingDetails = () => {
         const raw = res.data?.data?.results || res.data?.results || res.data?.data || res.data || [];
         const data = Array.isArray(raw) ? raw : [];
         
-        // Map to expected publication structure in UI
-        const mappedData = data.map(r => ({
-          id: r._id || r.id || Math.random(),
-          exam: r.exam?.name || r.examName || 'CCT-EM Fellowship Exam',
-          batch: r.student?.batch?.name || r.batchName || 'Batch 2026',
-          institute: r.student?.institute?.orgName || r.instituteName || 'Accredited Hospital',
-          course: r.student?.course?.name || r.courseName || 'CCT-EM Fellowship',
-          date: r.publishedDate ? new Date(r.publishedDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          time: r.publishedDate ? new Date(r.publishedDate).toLocaleTimeString() : '10:00:00 AM',
-          ampm: '',
-          status: r.isPublished || r.published ? 'Published' : 'Scheduled',
-          autoPublish: false,
-          studentsCount: 1,
-          publishedBy: 'SEMI Board Controller',
-          publishedAt: r.publishedDate || new Date().toISOString(),
-          notificationSent: true,
-          results: []
-        }));
+        const mappedData = data.map(r => {
+          const studentObj = r.student || {};
+          const courseObj = studentObj.course || {};
+          const batchObj = studentObj.batch || {};
+          const instObj = studentObj.institute || {};
+
+          const examTitle = r.exam?.name || r.examName || courseObj.name || courseObj.courseName || 'Emergency Medicine Examination';
+          const batchTitle = batchObj.name || (batchObj.year ? `Batch ${batchObj.year}` : (r.batchName || 'Batch 2026'));
+          const instTitle = instObj.orgName || r.instituteName || 'SEMI Institute';
+          const courseTitle = courseObj.name || courseObj.courseName || r.courseName || 'Emergency Medicine';
+
+          const pubDateObj = r.publishedDate ? new Date(r.publishedDate) : (r.createdAt ? new Date(r.createdAt) : new Date());
+
+          return {
+            id: r._id || r.id || Math.random(),
+            exam: examTitle,
+            batch: batchTitle,
+            institute: instTitle,
+            course: courseTitle,
+            date: pubDateObj.toISOString().split('T')[0],
+            time: pubDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            ampm: '',
+            status: r.isPublished || r.published ? 'Published' : 'Scheduled',
+            autoPublish: false,
+            studentsCount: 1,
+            publishedBy: 'SEMI Board Controller',
+            publishedAt: pubDateObj.toISOString(),
+            notificationSent: true,
+            results: r.subjects || []
+          };
+        });
         setPublications(mappedData);
       } catch (err) {
         console.warn('Publications fetch fallback:', err);
@@ -26333,6 +29884,16 @@ const AcademyPublishingDetails = () => {
       return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
     });
   }, [filteredPublications, sortConfig]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedBatch, selectedInstitute, selectedExam, activeTab]);
+
+  const totalPages = Math.ceil(sortedPublications.length / itemsPerPage);
+  const paginatedPublications = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedPublications.slice(start, start + itemsPerPage);
+  }, [sortedPublications, currentPage, itemsPerPage]);
 
   const stats = useMemo(() => {
     const total = publications.length;
@@ -26675,10 +30236,10 @@ const AcademyPublishingDetails = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 bg-white">
-              {sortedPublications.map((pub, idx) => {
+              {paginatedPublications.map((pub, idx) => {
                 const statusBadge = getStatusBadge(pub.status);
                 const autoBadge = getAutoPublishBadge(pub.autoPublish);
-                const serialNo = String(idx + 1).padStart(2, '0');
+                const serialNo = String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0');
 
                 return (
                   <tr key={pub.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -26773,6 +30334,16 @@ const AcademyPublishingDetails = () => {
           </table>
         </div>
 
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={sortedPublications.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
+      </div>
+
         {/* ─── Footer ────────────────────────────────────────────────────────── */}
         <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-[10px] text-slate-400 font-semibold">
           <span>Showing {sortedPublications.length} of {publications.length} publications</span>
@@ -26791,7 +30362,6 @@ const AcademyPublishingDetails = () => {
             </span>
           </div>
         </div>
-      </div>
 
       {/* ─── Publication Detail Modal ───────────────────────────────────────── */}
       {isModalOpen && selectedPublication && (
@@ -27094,6 +30664,7 @@ import academicService from '../../../api/academic';
 import instituteService from '../../../api/institutes';
 import revaluationService from '../../../api/revaluation';
 import examService from '../../../api/exams';
+import Pagination from '../../../Components/Pagination';
 
 const CATEGORY_CONFIG = {
   ALL: { label: 'All Payments', color: 'bg-slate-100 text-slate-800 border-slate-200', icon: SlidersHorizontal },
@@ -27341,6 +30912,19 @@ const AcademyRemittance = () => {
     });
   }, [allTransactions, selectedCategory, selectedInstitute, dateRange, searchTerm]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedInstitute, dateRange]);
+
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredTransactions.slice(start, start + itemsPerPage);
+  }, [filteredTransactions, currentPage, itemsPerPage]);
+
   // Aggregate Metrics
   const metrics = useMemo(() => {
     const totalCollected = filteredTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
@@ -27566,7 +31150,7 @@ const AcademyRemittance = () => {
                   </td>
                 </tr>
               ) : filteredTransactions.length > 0 ? (
-                filteredTransactions.map((tx) => {
+                paginatedTransactions.map((tx) => {
                   const cfg = CATEGORY_CONFIG[tx.category] || CATEGORY_CONFIG.ALL;
                   const Icon = cfg.icon;
 
@@ -27650,6 +31234,15 @@ const AcademyRemittance = () => {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredTransactions.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
 
       {/* ── Transaction Receipt Detail Modal ────────────────────────────────── */}
@@ -27763,6 +31356,7 @@ import {
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import revaluationService from '../../../api/revaluation';
+import Pagination from '../../../Components/Pagination';
 
 const STATUS_OPTIONS = [
   { value: 'All', label: 'All Status' },
@@ -27899,6 +31493,10 @@ const AcademyRevaluation = () => {
 
     return filtered;
   }, [requests, statusFilter, instituteFilter, semesterFilter, academicYearFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, instituteFilter, semesterFilter, academicYearFilter]);
 
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
   const paginatedRequests = useMemo(() => {
@@ -29200,7 +32798,13 @@ const AcademyRevaluation = () => {
           ) : (
             <>
               {renderRequestsTable()}
-              {totalPages > 1 && renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredRequests.length}
+                itemsPerPage={itemsPerPage}
+              />
             </>
           )}
         </div>
@@ -29247,7 +32851,8 @@ import {
   Globe,           // For Publish Results
   RefreshCw,       // For Publishing Details
   Award,           // For Revaluation
-  CreditCard       // For Remittance Audit
+  CreditCard,      // For Remittance Audit
+  Settings         // For Exam Fee Configuration
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -29261,6 +32866,7 @@ const NAV_GROUPS = [
     groupTitle: 'Colleges & Students',
     items: [
       { id: 'applications', path: '/academy/applications', label: 'College Applications', Icon: Building2 },
+      { id: 'courses', path: '/academy/courses', label: 'Courses & Subjects', Icon: BarChart3 },
       { id: 'students', path: '/academy/students', label: 'All Students Roster', Icon: Users },
     ]
   },
@@ -29270,13 +32876,13 @@ const NAV_GROUPS = [
       { id: 'verification', path: '/academy/verification', label: 'Student Verification', Icon: UserCheck },
       { id: 'eligibility', path: '/academy/eligibility', label: 'Exam Approvals', Icon: ClipboardList },
       { id: 'remittance', path: '/academy/remittance', label: 'Fee Payment Audit', Icon: CreditCard },
+      { id: 'fee-config', path: '/academy/fee-config', label: 'Exam Fee Settings', Icon: Settings },
     ]
   },
   {
     groupTitle: 'Marks & Evaluation',
     items: [
       { id: 'marks', path: '/academy/marks', label: 'Enter Student Marks', Icon: FileSpreadsheet },
-      { id: 'student-marks', path: '/academy/student-marks', label: 'Student Marksheets', Icon: BarChart3 },
     ]
   },
   {
@@ -30181,7 +33787,7 @@ export default AcademyStudentMarks;
 ### `client/src/pages/academy/components/AcademyStudentModal.jsx`
 
 ```jsx
-import { User, Award, FileText, CheckCircle, XCircle, ExternalLink, BookOpen, UserCheck, ShieldAlert } from 'lucide-react';
+import { User, Award, FileText, CheckCircle, XCircle, ExternalLink, BookOpen, UserCheck, ShieldAlert, Layers } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 
 const AcademyStudentModal = ({ student, isOpen, onClose }) => {
@@ -30196,6 +33802,20 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
   };
 
   const docs = student.documents || {};
+  const sSemesters = student.semesters || [];
+  const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+  
+  // Calculate attendance: root property OR latest semester OR average
+  const attendancePct = (student.attendancePercentage !== undefined && student.attendancePercentage !== null && student.attendancePercentage > 0)
+    ? student.attendancePercentage
+    : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+  // Remittance status: student.remittedToAcademy OR razorpayPaymentId
+  const isRemitted = Boolean(student.remittedToAcademy || student.razorpayPaymentId);
+
+  // Thesis status: approved if student.thesisApproved or any sem thesisApproved. Uploaded if any thesisDocumentUrl exists.
+  const isThesisApproved = Boolean(student.thesisApproved || sSemesters.some(s => s.thesisApproved));
+  const isThesisUploaded = Boolean(student.thesisUploaded || sSemesters.some(s => s.thesisDocumentUrl));
 
   return (
     <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -30281,23 +33901,23 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                   </div>
                 </div>
                 <div>
-  <span className="text-[10px] text-slate-400 font-medium block">FMGE Clearance</span>
-  <span className={`inline-flex px-2 py-0.5 rounded text-[8px] uppercase tracking-wider font-black ${
-    student.fmgeClearanceStatus === 'Cleared' ? 'bg-emerald-100 text-emerald-800' : 
-    student.fmgeClearanceStatus === 'Failed' ? 'bg-rose-100 text-rose-800' : 
-    'bg-slate-200 text-slate-700'
-  }`}>
-    {student.fmgeClearanceStatus || 'Not Applicable'}
-  </span>
-</div>
+                  <span className="text-[10px] text-slate-400 font-medium block">FMGE Clearance</span>
+                  <span className={`inline-flex px-2 py-0.5 rounded text-[8px] uppercase tracking-wider font-black ${
+                    student.fmgeClearanceStatus === 'Cleared' ? 'bg-emerald-100 text-emerald-800' : 
+                    student.fmgeClearanceStatus === 'Failed' ? 'bg-rose-100 text-rose-800' : 
+                    'bg-slate-200 text-slate-700'
+                  }`}>
+                    {student.fmgeClearanceStatus || 'Not Applicable'}
+                  </span>
+                </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-medium block">Course Director</span>
                   <span className="text-slate-700">{student.courseDirector || 'N/A'}</span>
                 </div>
-              <div>
-  <span className="text-[10px] text-slate-400 font-medium block">Home Address</span>
-  <span className="text-slate-600 font-medium leading-relaxed block">{student.homeAddress || student.address || 'N/A'}</span>
-</div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-medium block">Home Address</span>
+                  <span className="text-slate-600 font-medium leading-relaxed block">{student.homeAddress || student.address || 'N/A'}</span>
+                </div>
               </div>
             </div>
 
@@ -30350,27 +33970,29 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <span className="text-[10px] text-slate-400 font-medium block">Remittance status</span>
-                <span className={`inline-flex items-center gap-1 mt-1 text-[9px] uppercase tracking-wider ${student.remittedToAcademy ? 'text-emerald-700' : 'text-rose-700'}`}>
-                  {student.remittedToAcademy ? (
-                    <><CheckCircle className="w-3.5 h-3.5" /> Paid</>
+                <span className={`inline-flex items-center gap-1 mt-1 text-[9px] uppercase tracking-wider ${isRemitted ? 'text-emerald-700 font-extrabold' : 'text-rose-700 font-extrabold'}`}>
+                  {isRemitted ? (
+                    <><CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Paid</>
                   ) : (
-                    <><XCircle className="w-3.5 h-3.5" /> Pending</>
+                    <><XCircle className="w-3.5 h-3.5 text-rose-600" /> Pending</>
                   )}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-medium block">Attendance Tracker</span>
-                <span className={`text-xs ${student.attendancePercentage >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {student.attendancePercentage}% (Min 75%)
+                <span className={`text-xs ${attendancePct >= 75 ? 'text-emerald-600 font-extrabold' : 'text-rose-600 font-extrabold'}`}>
+                  {attendancePct}% (Min 75%)
                 </span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-medium block">Thesis Status</span>
-                <span className={`inline-flex items-center gap-1 mt-1 text-[9px] uppercase tracking-wider ${student.thesisApproved ? 'text-emerald-700' : 'text-rose-700'}`}>
-                  {student.thesisApproved ? (
-                    <><CheckCircle className="w-3.5 h-3.5" /> Approved</>
+                <span className={`inline-flex items-center gap-1 mt-1 text-[9px] uppercase tracking-wider ${isThesisApproved ? 'text-emerald-700 font-extrabold' : (isThesisUploaded ? 'text-amber-700 font-extrabold' : 'text-rose-700 font-extrabold')}`}>
+                  {isThesisApproved ? (
+                    <><CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Approved</>
+                  ) : isThesisUploaded ? (
+                    <><FileText className="w-3.5 h-3.5 text-amber-600" /> Submitted (Pending Approval)</>
                   ) : (
-                    <><XCircle className="w-3.5 h-3.5" /> Pending</>
+                    <><XCircle className="w-3.5 h-3.5 text-rose-600" /> Pending</>
                   )}
                 </span>
               </div>
@@ -30383,6 +34005,95 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                   {student.rejectionReason}
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Semester-Wise Detailed Breakdown (Fee, Attendance & Thesis) */}
+          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-4">
+            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5 border-b border-slate-200/60 pb-2">
+              <Layers className="w-3.5 h-3.5 text-blue-600" /> Semester-Wise Breakdown (Fee, Attendance & Thesis)
+            </h4>
+
+            {sSemesters.length > 0 ? (
+              <div className="space-y-3">
+                {sSemesters.map((sem) => {
+                  const semAtt = sem.attendancePercentage ?? 0;
+                  const semAttValid = semAtt >= 75;
+                  const semThesisDoc = sem.thesisDocumentUrl;
+                  const semThesisApproved = sem.thesisApproved;
+                  const semRemitted = isRemitted || sem.feeRemitted;
+
+                  return (
+                    <div key={sem.semesterNumber} className="bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-sm space-y-3 text-xs">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <span className="font-extrabold text-blue-700 text-xs uppercase tracking-wider">
+                          Semester {sem.semesterNumber}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                          semAttValid && (semThesisApproved || semThesisDoc) ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {sem.eligibilityStatus || (semAttValid && semThesisApproved ? 'Approved' : 'Pending Review')}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* 1. Exam & Board Fee Remittance */}
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150 space-y-1">
+                          <span className="text-[9px] uppercase font-bold text-slate-400 block">Exam & Board Fee</span>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold ${semRemitted ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {semRemitted ? (
+                              <><CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Paid / Remitted</>
+                            ) : (
+                              <><XCircle className="w-3.5 h-3.5 text-rose-600" /> Remittance Pending</>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* 2. Semester Attendance */}
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150 space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[9px] uppercase font-bold text-slate-400">Attendance</span>
+                            <span className={`text-[10px] font-extrabold ${semAttValid ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {semAtt}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all ${semAttValid ? 'bg-emerald-500' : semAtt >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                              style={{ width: `${Math.min(100, Math.max(0, semAtt))}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-[8px] text-slate-400 block">Min 75% required</span>
+                        </div>
+
+                        {/* 3. Thesis Document & Status */}
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150 space-y-1">
+                          <span className="text-[9px] uppercase font-bold text-slate-400 block">Thesis Document</span>
+                          {semThesisDoc ? (
+                            <div className="space-y-1">
+                              <a
+                                href={getDocUrl(semThesisDoc)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-bold underline truncate max-w-full"
+                              >
+                                <FileText className="w-3 h-3 shrink-0" /> View Thesis PDF
+                              </a>
+                              <span className={`block text-[9px] font-extrabold uppercase ${semThesisApproved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {semThesisApproved ? '✓ Approved' : '⏳ Pending Review'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic block">Not Uploaded</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 italic">No semester breakdown records initialized for this candidate.</p>
             )}
           </div>
 
@@ -30465,6 +34176,54 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                 </a>
               )}
 
+              {docs.nblsCertificateUrl && (
+                <a
+                  href={getDocUrl(docs.nblsCertificateUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-emerald-50/60 border border-emerald-200 hover:border-emerald-300 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-emerald-800 text-[11px] block truncate">🩺 NBLS Certificate (Basic Life Support)</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-800 transition-colors" />
+                </a>
+              )}
+
+              {docs.nclsCertificateUrl && (
+                <a
+                  href={getDocUrl(docs.nclsCertificateUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-emerald-50/60 border border-emerald-200 hover:border-emerald-300 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-emerald-800 text-[11px] block truncate">❤️ NCLS Certificate (Comprehensive Life Support)</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-800 transition-colors" />
+                </a>
+              )}
+
+              {docs.ntlsCertificateUrl && (
+                <a
+                  href={getDocUrl(docs.ntlsCertificateUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-emerald-50/60 border border-emerald-200 hover:border-emerald-300 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-emerald-800 text-[11px] block truncate">🩹 NTLS Certificate (Trauma Life Support)</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-800 transition-colors" />
+                </a>
+              )}
+
+              {docs.nulsCertificateUrl && (
+                <a
+                  href={getDocUrl(docs.nulsCertificateUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-emerald-50/60 border border-emerald-200 hover:border-emerald-300 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-emerald-800 text-[11px] block truncate">📡 NULS Certificate (Ultrasound Life Support)</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600 group-hover:text-emerald-800 transition-colors" />
+                </a>
+              )}
+
             </div>
           </div>
 
@@ -30489,11 +34248,1057 @@ export default AcademyStudentModal;
 
 ```
 
+### `client/src/pages/academy/components/AcademyStudentVerification.jsx`
+
+```jsx
+import React, { useState, useMemo } from 'react';
+import { 
+  CheckCircle2, 
+  XCircle, 
+  FileText, 
+  ChevronRight, 
+  UserCheck, 
+  Inbox, 
+  Clock, 
+  AlertCircle,
+  Download,
+  ShieldCheck,
+  User,
+  Calendar,
+  Award,
+  Filter,
+  Eye,
+  ChevronDown,
+  Search,
+  Users,
+  AlertTriangle,
+  Building2,
+  Phone,
+  Mail,
+  MapPin,
+  FileCheck2,
+  Stethoscope,
+  GraduationCap,
+  ExternalLink,
+  RotateCcw,
+  Sparkles,
+  Check,
+  X
+} from 'lucide-react';
+import Toast from '../../../Components/Toast';
+import ConfirmModal from '../../../Components/ConfirmModal';
+import academicService from '../../../api/academic';
+import { getUploadUrl } from '../../../api/apiClient';
+
+export default function AcademyStudentVerification({ 
+  students = [], 
+  fetchBoardData = () => {},
+  setErrorMsg = () => {},
+  setSuccessMsg = () => {} 
+}) {
+  const [activeTab, setActiveTab] = useState('pending');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterInstitute, setFilterInstitute] = useState('');
+  const [filterCourse, setFilterCourse] = useState('');
+  const [filterBatch, setFilterBatch] = useState('');
+  
+  // Active student being inspected in modal/drawer
+  const [inspectingStudent, setInspectingStudent] = useState(null);
+  
+  // Action states
+  const [actionType, setActionType] = useState(null); // 'Approved' | 'Correction Required' | 'Rejected'
+  const [actionRemarks, setActionRemarks] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+
+  // Extract unique filter dropdown values
+  const institutes = useMemo(() => {
+    return [...new Set(students.map(s => s.institute).filter(Boolean))].sort();
+  }, [students]);
+
+  const courses = useMemo(() => {
+    return [...new Set(students.map(s => s.course).filter(Boolean))].sort();
+  }, [students]);
+
+  const batches = useMemo(() => {
+    return [...new Set(students.map(s => s.batch).filter(Boolean))].sort();
+  }, [students]);
+
+  // Normalize verification status
+  const normalizedStudents = useMemo(() => {
+    return students.map(s => {
+      let status = s.verificationStatus || 'Pending Verification';
+      if (status === 'Pending') status = 'Pending Verification';
+      return {
+        ...s,
+        verificationStatus: status,
+      };
+    });
+  }, [students]);
+
+  // Filter logic
+  const filteredStudents = useMemo(() => {
+    return normalizedStudents.filter(student => {
+      // Tab filter
+      if (activeTab === 'pending' && student.verificationStatus !== 'Pending Verification') {
+        return false;
+      }
+      if (activeTab === 'approved' && student.verificationStatus !== 'Approved') {
+        return false;
+      }
+      if (activeTab === 'correction' && student.verificationStatus !== 'Correction Required') {
+        return false;
+      }
+      if (activeTab === 'rejected' && student.verificationStatus !== 'Rejected') {
+        return false;
+      }
+
+      // Dropdown filters
+      if (filterInstitute && student.institute !== filterInstitute) return false;
+      if (filterCourse && student.course !== filterCourse) return false;
+      if (filterBatch && student.batch !== filterBatch) return false;
+
+      // Text search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const fullName = (student.fullName || `${student.firstName || ''} ${student.lastName || ''}`).toLowerCase();
+        const enrollNo = (student.enrollmentNo || student.enrollmentId || '').toLowerCase();
+        const email = (student.email || '').toLowerCase();
+        const phone = (student.contactNumber || student.mobile || '').toLowerCase();
+        const regNo = (student.medicalCouncilRegistrationNumber || '').toLowerCase();
+        const inst = (student.institute || '').toLowerCase();
+        const crs = (student.course || '').toLowerCase();
+
+        return (
+          fullName.includes(q) ||
+          enrollNo.includes(q) ||
+          email.includes(q) ||
+          phone.includes(q) ||
+          regNo.includes(q) ||
+          inst.includes(q) ||
+          crs.includes(q)
+        );
+      }
+
+      return true;
+    });
+  }, [normalizedStudents, activeTab, filterInstitute, filterCourse, filterBatch, searchQuery]);
+
+  // Statistics counters
+  const stats = useMemo(() => {
+    const total = normalizedStudents.length;
+    const pending = normalizedStudents.filter(s => s.verificationStatus === 'Pending Verification').length;
+    const approved = normalizedStudents.filter(s => s.verificationStatus === 'Approved').length;
+    const correction = normalizedStudents.filter(s => s.verificationStatus === 'Correction Required').length;
+    const rejected = normalizedStudents.filter(s => s.verificationStatus === 'Rejected').length;
+    return { total, pending, approved, correction, rejected };
+  }, [normalizedStudents]);
+
+  // Handle Verification Action Submission
+  const handlePerformAction = async (statusToSet) => {
+    if (!inspectingStudent) return;
+    
+    if ((statusToSet === 'Correction Required' || statusToSet === 'Rejected') && !actionRemarks.trim()) {
+      setToast({
+        type: 'error',
+        message: `Please provide specific remarks or reasons for ${statusToSet === 'Correction Required' ? 'correction' : 'rejection'}.`
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const studentId = inspectingStudent._id || inspectingStudent.id;
+      await academicService.verifyStudentEnrollment(studentId, {
+        status: statusToSet,
+        remarks: actionRemarks.trim()
+      });
+
+      setToast({
+        type: 'success',
+        message: `Student enrollment successfully marked as ${statusToSet}!`
+      });
+
+      // Reset action forms and modal
+      setActionType(null);
+      setActionRemarks('');
+      setInspectingStudent(null);
+      
+      // Refresh board data
+      if (fetchBoardData) {
+        await fetchBoardData();
+      }
+    } catch (err) {
+      console.error('Error verifying student enrollment:', err);
+      setToast({
+        type: 'error',
+        message: err.parsedMessage || err.message || 'Failed to update student verification status.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'Approved':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            Approved
+          </span>
+        );
+      case 'Correction Required':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+            <RotateCcw className="w-3.5 h-3.5 text-purple-600" />
+            Correction Required
+          </span>
+        );
+      case 'Rejected':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+            <XCircle className="w-3.5 h-3.5 text-red-600" />
+            Rejected
+          </span>
+        );
+      case 'Pending Verification':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+            <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+            Pending Verification
+          </span>
+        );
+    }
+  };
+
+  return (
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 font-sans text-slate-800">
+      {/* Toast Notification */}
+      {toast && (
+        <Toast 
+          type={toast.type} 
+          message={toast.message} 
+          onClose={() => setToast(null)} 
+        />
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmConfig && (
+        <ConfirmModal 
+          isOpen={true}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          confirmText={confirmConfig.confirmText || 'Confirm'}
+          confirmType={confirmConfig.confirmType || 'primary'}
+          onConfirm={() => {
+            const cb = confirmConfig.onConfirm;
+            setConfirmConfig(null);
+            if (cb) cb();
+          }}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
+
+      {/* ─── Header & Title ────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-primary-600 mb-1">
+            <UserCheck className="w-4 h-4" />
+            <span>Academic Department Governance</span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+            Student Verification & Approval
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Audit student personal info, medical council credentials, eligibility certificates, and approve enrollments.
+          </p>
+        </div>
+
+        <button
+          onClick={() => fetchBoardData && fetchBoardData()}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all shadow-sm self-start md:self-auto"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Refresh Records</span>
+        </button>
+      </div>
+
+      {/* ─── Top KPI Cards ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Total */}
+        <div 
+          onClick={() => setActiveTab('all')}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 ${
+            activeTab === 'all' 
+              ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10 -translate-y-0.5' 
+              : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-bold uppercase tracking-wider ${activeTab === 'all' ? 'text-slate-400' : 'text-slate-500'}`}>
+              Total Enrolled
+            </span>
+            <Users className={`w-4 h-4 ${activeTab === 'all' ? 'text-slate-300' : 'text-slate-400'}`} />
+          </div>
+          <div className="text-2xl font-black mt-2 tracking-tight">
+            {stats.total}
+          </div>
+          <span className={`text-[11px] font-semibold mt-0.5 block ${activeTab === 'all' ? 'text-slate-400' : 'text-slate-400'}`}>
+            All registered candidates
+          </span>
+        </div>
+
+        {/* Pending */}
+        <div 
+          onClick={() => setActiveTab('pending')}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 ${
+            activeTab === 'pending' 
+              ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20 -translate-y-0.5' 
+              : 'bg-amber-50/60 border-amber-200/80 hover:border-amber-300 shadow-sm text-slate-800'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-bold uppercase tracking-wider ${activeTab === 'pending' ? 'text-amber-100' : 'text-amber-700'}`}>
+              Pending Review
+            </span>
+            <Clock className={`w-4 h-4 ${activeTab === 'pending' ? 'text-amber-100' : 'text-amber-600'} animate-pulse`} />
+          </div>
+          <div className="text-2xl font-black mt-2 tracking-tight">
+            {stats.pending}
+          </div>
+          <span className={`text-[11px] font-semibold mt-0.5 block ${activeTab === 'pending' ? 'text-amber-100' : 'text-amber-600'}`}>
+            Awaiting verification
+          </span>
+        </div>
+
+        {/* Approved */}
+        <div 
+          onClick={() => setActiveTab('approved')}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 ${
+            activeTab === 'approved' 
+              ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20 -translate-y-0.5' 
+              : 'bg-emerald-50/60 border-emerald-200/80 hover:border-emerald-300 shadow-sm text-slate-800'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-bold uppercase tracking-wider ${activeTab === 'approved' ? 'text-emerald-100' : 'text-emerald-700'}`}>
+              Approved Active
+            </span>
+            <ShieldCheck className={`w-4 h-4 ${activeTab === 'approved' ? 'text-emerald-100' : 'text-emerald-600'}`} />
+          </div>
+          <div className="text-2xl font-black mt-2 tracking-tight">
+            {stats.approved}
+          </div>
+          <span className={`text-[11px] font-semibold mt-0.5 block ${activeTab === 'approved' ? 'text-emerald-100' : 'text-emerald-600'}`}>
+            Active in academic workflow
+          </span>
+        </div>
+
+        {/* Correction Required */}
+        <div 
+          onClick={() => setActiveTab('correction')}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 ${
+            activeTab === 'correction' 
+              ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/20 -translate-y-0.5' 
+              : 'bg-purple-50/60 border-purple-200/80 hover:border-purple-300 shadow-sm text-slate-800'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-bold uppercase tracking-wider ${activeTab === 'correction' ? 'text-purple-100' : 'text-purple-700'}`}>
+              Corrections
+            </span>
+            <RotateCcw className={`w-4 h-4 ${activeTab === 'correction' ? 'text-purple-100' : 'text-purple-600'}`} />
+          </div>
+          <div className="text-2xl font-black mt-2 tracking-tight">
+            {stats.correction}
+          </div>
+          <span className={`text-[11px] font-semibold mt-0.5 block ${activeTab === 'correction' ? 'text-purple-100' : 'text-purple-600'}`}>
+            Flagged for update
+          </span>
+        </div>
+
+        {/* Rejected */}
+        <div 
+          onClick={() => setActiveTab('rejected')}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 ${
+            activeTab === 'rejected' 
+              ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-600/20 -translate-y-0.5' 
+              : 'bg-red-50/60 border-red-200/80 hover:border-red-300 shadow-sm text-slate-800'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-bold uppercase tracking-wider ${activeTab === 'rejected' ? 'text-red-100' : 'text-red-700'}`}>
+              Rejected
+            </span>
+            <XCircle className={`w-4 h-4 ${activeTab === 'rejected' ? 'text-red-100' : 'text-red-600'}`} />
+          </div>
+          <div className="text-2xl font-black mt-2 tracking-tight">
+            {stats.rejected}
+          </div>
+          <span className={`text-[11px] font-semibold mt-0.5 block ${activeTab === 'rejected' ? 'text-red-100' : 'text-red-600'}`}>
+            Disapproved enrollments
+          </span>
+        </div>
+      </div>
+
+      {/* ─── Search & Filters Bar ────────────────────────────────────────── */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 border-b border-slate-100">
+          {[
+            { id: 'pending', label: 'Pending Verification', count: stats.pending, icon: Clock, color: 'text-amber-600 bg-amber-50' },
+            { id: 'approved', label: 'Approved Students', count: stats.approved, icon: ShieldCheck, color: 'text-emerald-600 bg-emerald-50' },
+            { id: 'correction', label: 'Correction Required', count: stats.correction, icon: RotateCcw, color: 'text-purple-600 bg-purple-50' },
+            { id: 'rejected', label: 'Rejected', count: stats.rejected, icon: XCircle, color: 'text-red-600 bg-red-50' },
+            { id: 'all', label: 'All Students', count: stats.total, icon: Users, color: 'text-slate-600 bg-slate-100' },
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-primary-600 text-white shadow-md shadow-primary-600/20'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : ''}`} />
+                <span>{tab.label}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  isActive ? 'bg-primary-700/80 text-white' : tab.color
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Filter Controls Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+          {/* Search Box */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search candidate name, reg no, email..."
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Institute Filter */}
+          <div>
+            <select
+              value={filterInstitute}
+              onChange={(e) => setFilterInstitute(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50 font-medium text-slate-700"
+            >
+              <option value="">All Institutes / Colleges</option>
+              {institutes.map(inst => (
+                <option key={inst} value={inst}>{inst}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Course Filter */}
+          <div>
+            <select
+              value={filterCourse}
+              onChange={(e) => setFilterCourse(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50 font-medium text-slate-700"
+            >
+              <option value="">All Courses</option>
+              {courses.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Batch Filter */}
+          <div>
+            <select
+              value={filterBatch}
+              onChange={(e) => setFilterBatch(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50 font-medium text-slate-700"
+            >
+              <option value="">All Batches</option>
+              {batches.map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Student Records Table / List ─────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {filteredStudents.length === 0 ? (
+          <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+              <Inbox className="w-7 h-7" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800">No Student Records Found</h3>
+            <p className="text-xs text-slate-500 max-w-sm">
+              {searchQuery || filterInstitute || filterCourse || filterBatch
+                ? 'No student matches your current filter criteria. Try clearing some filters.'
+                : `There are currently no students under "${activeTab}" status.`}
+            </p>
+            {(searchQuery || filterInstitute || filterCourse || filterBatch) && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilterInstitute('');
+                  setFilterCourse('');
+                  setFilterBatch('');
+                }}
+                className="mt-2 text-xs text-primary-600 font-bold hover:underline"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-black uppercase text-slate-500 tracking-wider">
+                  <th className="py-4 px-5">Student / Candidate</th>
+                  <th className="py-4 px-4">Medical Registration</th>
+                  <th className="py-4 px-4">Institute & Course</th>
+                  <th className="py-4 px-4">Documents</th>
+                  <th className="py-4 px-4">Verification Status</th>
+                  <th className="py-4 px-5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {filteredStudents.map((student) => {
+                  const hasPhoto = student.documents?.passportPhotoUrl;
+                  const photoSrc = hasPhoto ? getUploadUrl(student.documents.passportPhotoUrl) : null;
+                  const docCount = Object.values(student.documents || {}).filter(Boolean).length;
+
+                  return (
+                    <tr 
+                      key={student.id || student._id}
+                      className="hover:bg-slate-50/80 transition-colors group"
+                    >
+                      {/* Student Candidate Info */}
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center font-bold text-slate-600 text-xs">
+                            {photoSrc ? (
+                              <img src={photoSrc} alt="Passport" className="w-full h-full object-cover" />
+                            ) : (
+                              <span>{(student.firstName?.[0] || 'S') + (student.lastName?.[0] || '')}</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-slate-900 group-hover:text-primary-600 transition-colors">
+                              {student.fullName || `${student.firstName || ''} ${student.lastName || ''}`}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono mt-0.5">
+                              <span>{student.enrollmentNo || student.enrollmentId}</span>
+                              <span>•</span>
+                              <span>{student.email}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Medical Registration & Degree */}
+                      <td className="py-4 px-4">
+                        <div>
+                          <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <Stethoscope className="w-3.5 h-3.5 text-primary-500 flex-shrink-0" />
+                            <span>{student.medicalCouncilRegistrationNumber || 'N/A'}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
+                            <GraduationCap className="w-3 h-3 text-slate-400" />
+                            <span>{student.qualification || student.mbbsQualification || 'MBBS'} ({student.yearOfPassing || 'N/A'})</span>
+                          </div>
+                          {student.isForeignGraduate && (
+                            <span className="inline-block mt-1 text-[9px] font-black uppercase text-amber-700 bg-amber-100/70 px-1.5 py-0.5 rounded border border-amber-200">
+                              Foreign Grad • FMGE: {student.fmgeClearanceStatus || 'N/A'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Institute & Course */}
+                      <td className="py-4 px-4">
+                        <div>
+                          <div className="font-bold text-slate-800 flex items-center gap-1.5 truncate max-w-xs">
+                            <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{student.institute || 'Unassigned Institute'}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            {student.course} • <span className="font-semibold text-slate-600">{student.batch}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Documents Badge */}
+                      <td className="py-4 px-4">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-[11px]">
+                          <FileCheck2 className="w-3.5 h-3.5 text-primary-600" />
+                          <span>{docCount} Uploads</span>
+                        </div>
+                      </td>
+
+                      {/* Verification Status */}
+                      <td className="py-4 px-4">
+                        <div>
+                          {getStatusBadge(student.verificationStatus)}
+                          {student.verificationRemarks && (
+                            <p className="text-[10px] text-slate-500 mt-1 max-w-xs truncate italic">
+                              "{student.verificationRemarks}"
+                            </p>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Action Button */}
+                      <td className="py-4 px-5 text-right">
+                        <button
+                          onClick={() => {
+                            setInspectingStudent(student);
+                            setActionType(null);
+                            setActionRemarks(student.verificationRemarks || '');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-primary-50 hover:bg-primary-600 text-primary-700 hover:text-white font-bold text-xs rounded-xl transition-all shadow-sm border border-primary-200/60"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Inspect Dossier</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════════
+          STUDENT VERIFICATION DOSSIER MODAL / INSPECTOR
+          ════════════════════════════════════════════════════════════════════════ */}
+      {inspectingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div 
+            className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden my-auto animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-primary-950 to-slate-900 text-white flex items-center justify-between border-b border-primary-800">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {inspectingStudent.documents?.passportPhotoUrl ? (
+                    <img 
+                      src={getUploadUrl(inspectingStudent.documents.passportPhotoUrl)} 
+                      alt="Student" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-6 h-6 text-white/80" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-black tracking-tight text-white">
+                      {inspectingStudent.fullName || `${inspectingStudent.firstName || ''} ${inspectingStudent.lastName || ''}`}
+                    </h2>
+                    {getStatusBadge(inspectingStudent.verificationStatus)}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-primary-200 mt-0.5">
+                    <span>Enrollment ID: <strong className="text-white font-mono">{inspectingStudent.enrollmentNo || inspectingStudent.enrollmentId}</strong></span>
+                    <span>•</span>
+                    <span>{inspectingStudent.institute}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setInspectingStudent(null)}
+                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body - Scrollable */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-grow divide-y divide-slate-100">
+              {/* Previous Remarks Alert if exists */}
+              {inspectingStudent.verificationRemarks && (
+                <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
+                  inspectingStudent.verificationStatus === 'Correction Required'
+                    ? 'bg-purple-50 border-purple-200 text-purple-900'
+                    : inspectingStudent.verificationStatus === 'Rejected'
+                    ? 'bg-red-50 border-red-200 text-red-900'
+                    : 'bg-slate-50 border-slate-200 text-slate-800'
+                }`}>
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-black block uppercase tracking-wider text-[10px]">
+                      Verification Remarks / Audit Notes:
+                    </strong>
+                    <p className="mt-1 leading-relaxed">{inspectingStudent.verificationRemarks}</p>
+                    {inspectingStudent.verifiedAt && (
+                      <span className="text-[10px] opacity-75 mt-1 block">
+                        Updated on {new Date(inspectingStudent.verifiedAt).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Section 1: Candidate Personal Details ──────────────────────── */}
+              <div className="pt-2">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary-600" />
+                  <span>1. Student Personal & Contact Details</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Full Name</span>
+                    <span className="font-extrabold text-slate-800">{inspectingStudent.fullName}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Email Address</span>
+                    <span className="font-semibold text-slate-800">{inspectingStudent.email}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Contact Number</span>
+                    <span className="font-semibold text-slate-800">{inspectingStudent.contactNumber || inspectingStudent.mobile || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Date of Birth</span>
+                    <span className="font-semibold text-slate-800">{inspectingStudent.dobFormatted || inspectingStudent.dateOfBirth || 'N/A'}</span>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Home Address</span>
+                    <span className="font-medium text-slate-800">{inspectingStudent.homeAddress || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Section 2: Medical Qualifications & Registration ────────────── */}
+              <div className="pt-6">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4 text-primary-600" />
+                  <span>2. Medical Registration & Qualifications</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Medical Council Reg. Number</span>
+                    <span className="font-black text-primary-700 bg-primary-100/50 px-2 py-0.5 rounded border border-primary-200 inline-block mt-0.5">
+                      {inspectingStudent.medicalCouncilRegistrationNumber || 'N/A'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">MBBS / Primary Qualification</span>
+                    <span className="font-extrabold text-slate-800">{inspectingStudent.qualification || inspectingStudent.mbbsQualification || 'MBBS'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Year of Passing</span>
+                    <span className="font-bold text-slate-800">{inspectingStudent.yearOfPassing || 'N/A'}</span>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">University / Medical College Name</span>
+                    <span className="font-semibold text-slate-800">{inspectingStudent.universityName || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Foreign Medical Graduate</span>
+                    <span className="font-bold text-slate-800">
+                      {inspectingStudent.isForeignGraduate ? 'Yes' : 'No'}
+                      {inspectingStudent.isForeignGraduate && ` (FMGE: ${inspectingStudent.fmgeClearanceStatus || 'N/A'})`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Section 3: Course & Institute Information ───────────────────── */}
+              <div className="pt-6">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-primary-600" />
+                  <span>3. Course, Batch & Institute Details</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Enrolled Course</span>
+                    <span className="font-black text-slate-800">{inspectingStudent.course}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Batch</span>
+                    <span className="font-bold text-slate-800">{inspectingStudent.batch}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Course Director</span>
+                    <span className="font-semibold text-slate-800">{inspectingStudent.courseDirector || 'Dr. Assigned Director'}</span>
+                  </div>
+                  <div className="md:col-span-3">
+                    <span className="text-slate-400 font-bold block text-[10px] uppercase">Sponsoring Institute</span>
+                    <span className="font-extrabold text-slate-900">{inspectingStudent.institute}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Section 4: Document Verification Dossier ─────────────────────── */}
+              <div className="pt-6">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary-600" />
+                  <span>4. Uploaded Enrollment Documents & Proofs</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[
+                    { key: 'passportPhotoUrl', label: 'Passport Size Photo', isImage: true },
+                    { key: 'mbbsCertificateUrl', label: 'MBBS Degree Certificate' },
+                    { key: 'medicalCouncilRegistrationCertificateUrl', label: 'Medical Council Registration' },
+                    { key: 'semiMembershipFormUrl', label: 'SEMI Membership Form' },
+                    { key: 'studentSignatureUrl', label: 'Candidate Signature', isImage: true },
+                    { key: 'hodSignatureUrl', label: 'HOD Approval Signature', isImage: true },
+                    ...(inspectingStudent.isForeignGraduate ? [{ key: 'fmgeResultCopyUrl', label: 'FMGE Clearance Result' }] : []),
+                    // Course Completion Certificates (Pre-Examination Requirement)
+                    { key: 'nblsCertificateUrl', label: 'NBLS Certificate (Basic Life Support)' },
+                    { key: 'nclsCertificateUrl', label: 'NCLS Certificate (Comprehensive Life Support)' },
+                    { key: 'ntlsCertificateUrl', label: 'NTLS Certificate (Trauma Life Support)' },
+                    { key: 'nulsCertificateUrl', label: 'NULS Certificate (Ultrasound Life Support)' },
+                  ].map(docItem => {
+                    const url = inspectingStudent.documents?.[docItem.key];
+                    const fullUrl = url ? getUploadUrl(url) : null;
+
+                    return (
+                      <div 
+                        key={docItem.key}
+                        className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-primary-400 transition-all flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-bold text-slate-800">{docItem.label}</span>
+                            {fullUrl ? (
+                              <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">
+                                ✓
+                              </span>
+                            ) : (
+                              <span className="w-5 h-5 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-[10px] font-bold">
+                                ✗
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400">
+                            {fullUrl ? 'Uploaded & available' : 'Not attached'}
+                          </span>
+                        </div>
+
+                        {fullUrl && (
+                          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2">
+                            <a
+                              href={fullUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 bg-slate-100 hover:bg-primary-50 text-slate-700 hover:text-primary-700 text-[11px] font-bold rounded-lg transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>View</span>
+                            </a>
+                            <a
+                              href={fullUrl}
+                              download
+                              className="inline-flex items-center justify-center p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+                              title="Download document"
+                            >
+                              <Download className="w-3 h-3" />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── Section 5: Verification Decision Panel ───────────────────────── */}
+              <div className="pt-6">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-primary-600" />
+                  <span>5. Academic Department Verification Decision</span>
+                </h3>
+
+                {actionType ? (
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+                        Confirm Decision: <span className={
+                          actionType === 'Approved' ? 'text-emerald-600' :
+                          actionType === 'Correction Required' ? 'text-purple-600' : 'text-red-600'
+                        }>{actionType}</span>
+                      </span>
+                      <button
+                        onClick={() => setActionType(null)}
+                        className="text-xs text-slate-400 hover:text-slate-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+
+                    {(actionType === 'Correction Required' || actionType === 'Rejected') && (
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Remarks / Reason for {actionType} <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={actionRemarks}
+                          onChange={(e) => setActionRemarks(e.target.value)}
+                          placeholder={
+                            actionType === 'Correction Required'
+                              ? 'e.g., MBBS degree certificate is blurry, please re-upload clear scanned copy.'
+                              : 'e.g., Medical council registration number mismatch with official registry.'
+                          }
+                          className="w-full p-3 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+                        />
+
+                        {/* Quick Presets for Correction */}
+                        {actionType === 'Correction Required' && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            <span className="text-[10px] text-slate-400 font-bold self-center">Quick tags:</span>
+                            {[
+                              'MBBS Certificate illegible',
+                              'Medical Council Reg. certificate missing',
+                              'SEMI form signature incomplete',
+                              'FMGE result copy required'
+                            ].map(preset => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => setActionRemarks(prev => prev ? `${prev}, ${preset}` : preset)}
+                                className="text-[10px] bg-slate-200/80 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded-md transition-colors"
+                              >
+                                + {preset}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {actionType === 'Approved' && (
+                      <p className="text-xs text-emerald-800 bg-emerald-50 p-3 rounded-xl border border-emerald-200">
+                        Approving this student will mark them as verified and activate them across the examination, attendance, marks entry, and marksheet generation workflows.
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setActionType(null)}
+                        className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => handlePerformAction(actionType)}
+                        className={`px-5 py-2 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center gap-2 ${
+                          actionType === 'Approved' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25' :
+                          actionType === 'Correction Required' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/25' :
+                          'bg-red-600 hover:bg-red-700 shadow-red-600/25'
+                        }`}
+                      >
+                        {isSubmitting ? (
+                          <span>Updating...</span>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4" />
+                            <span>Confirm {actionType}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Approve Button */}
+                    <button
+                      onClick={() => {
+                        setActionType('Approved');
+                        setActionRemarks(inspectingStudent.verificationRemarks || '');
+                      }}
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all -translate-y-0.5 active:translate-y-0"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Approve Enrollment</span>
+                    </button>
+
+                    {/* Request Correction Button */}
+                    <button
+                      onClick={() => {
+                        setActionType('Correction Required');
+                        setActionRemarks(inspectingStudent.verificationRemarks || '');
+                      }}
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold text-xs rounded-xl shadow-sm transition-all"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span>Request Correction</span>
+                    </button>
+
+                    {/* Reject Button */}
+                    <button
+                      onClick={() => {
+                        setActionType('Rejected');
+                        setActionRemarks(inspectingStudent.verificationRemarks || '');
+                      }}
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs rounded-xl shadow-sm transition-all"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      <span>Reject Enrollment</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <span>Candidate ID: <strong className="font-mono text-slate-700">{inspectingStudent._id}</strong></span>
+              <button
+                onClick={() => setInspectingStudent(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-all"
+              >
+                Close Dossier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+```
+
 ### `client/src/pages/academy/components/AcademyStudents.jsx`
 
 ```jsx
 import React from 'react';
 import { Search, Compass, Eye } from 'lucide-react';
+import Pagination from '../../../Components/Pagination';
 
 const AcademyStudents = ({ 
   filteredStudents = [], 
@@ -30502,6 +35307,8 @@ const AcademyStudents = ({
   handleView
 }) => {
   const [instituteFilter, setInstituteFilter] = React.useState('');
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage, setItemsPerPage] = React.useState(10);
 
   const safeStudents = Array.isArray(filteredStudents) ? filteredStudents : [];
 
@@ -30514,6 +35321,16 @@ const AcademyStudents = ({
     if (!instituteFilter) return safeStudents;
     return safeStudents.filter(s => (s?.institute || s?.assignedInstitute || s?.instituteName) === instituteFilter);
   }, [safeStudents, instituteFilter]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [studentSearchQuery, instituteFilter]);
+
+  const totalPages = Math.ceil(displayedStudents.length / itemsPerPage);
+  const paginatedStudents = React.useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return displayedStudents.slice(start, start + itemsPerPage);
+  }, [displayedStudents, currentPage, itemsPerPage]);
 
   return (
     <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm text-left space-y-6 animate-in fade-in duration-300">
@@ -30565,11 +35382,11 @@ const AcademyStudents = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-150/60 text-xs font-bold text-slate-700 bg-white">
-              {displayedStudents.length > 0 ? (
-                displayedStudents.map((s, idx) => (
-                  <tr key={s.enrollmentNo} className="hover:bg-slate-50/50 transition-colors group">
+              {paginatedStudents.length > 0 ? (
+                paginatedStudents.map((s, idx) => (
+                  <tr key={s.enrollmentNo || idx} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-4 text-center text-[10px] text-gray-400 font-extrabold">
-                      {String(idx + 1).padStart(2, '0')}
+                      {String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0')}
                     </td>
                     <td className="px-6 py-4 font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">{s.batch || 'Batch 2024-A'}</td>
                     <td className="px-6 py-4 font-mono font-black text-slate-600">{s.enrollmentNo}</td>
@@ -30602,6 +35419,15 @@ const AcademyStudents = ({
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={displayedStudents.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
       </div>
     </div>
   );
@@ -31504,6 +36330,23 @@ export default AcademyVerification;
 
 ```
 
+### `client/src/pages/academy/courses/index.jsx`
+
+```jsx
+import AcademyCoursesManagement from '../components/AcademyCoursesManagement';
+
+/**
+ * Academy Courses & Subjects Management Page (/academy/courses)
+ * Allows Admin & Academic Board members to centralize course creation,
+ * configure curriculum and subjects, toggle active status, and maintain
+ * the global course catalog.
+ */
+export default function AcademyCoursesPage() {
+  return <AcademyCoursesManagement />;
+}
+
+```
+
 ### `client/src/pages/academy/dashboard/index.jsx`
 
 ```jsx
@@ -31528,7 +36371,6 @@ export default function AcademyDashboardPage() {
       eligibility: '/academy/eligibility',
       verification: '/academy/verification',
       marks: '/academy/marks',
-      'student-marks': '/academy/student-marks',
       'publish-results': '/academy/publish-results',
       'publish-details': '/academy/publish-details',
       revaluation: '/academy/revaluation',
@@ -31570,6 +36412,16 @@ export default function AcademyEligibilityPage() {
   );
 }
 
+```
+
+### `client/src/pages/academy/fee-config/index.jsx`
+
+```jsx
+import AcademyFeeConfiguration from '../components/AcademyFeeConfiguration';
+
+export default function AcademyFeeConfigPage() {
+  return <AcademyFeeConfiguration />;
+}
 ```
 
 ### `client/src/pages/academy/login/index.jsx`
@@ -31736,14 +36588,10 @@ export default function AcademyRevaluationPage() {
 ### `client/src/pages/academy/student-marks/index.jsx`
 
 ```jsx
-import AcademyStudentMarks from '../components/AcademyStudentMarks';
+import { Navigate } from 'react-router-dom';
 
-/**
- * Academy Student Marks Page  (/academy/student-marks)
- * Displays all students with their marks and allows viewing detailed subject marks.
- */
 export default function AcademyStudentMarksPage() {
-  return <AcademyStudentMarks />;
+  return <Navigate to="/academy/dashboard" replace />;
 }
 ```
 
@@ -31781,30 +36629,30 @@ export default function AcademyStudentsPage() {
 
 ```jsx
 import { useOutletContext } from 'react-router-dom';
-import AcademyVerification from '../components/AcademyVerification';
+import AcademyStudentVerification from '../components/AcademyStudentVerification';
 
 /**
- * Academy Eligibility Verification Page  (/academy/verification)
- * Allows board members to approve or reject student exam eligibility.
+ * Academy Student Enrollment Verification Page (/academy/verification)
+ * Allows Academic Department to audit and approve, reject, or request correction for student enrollments.
  */
 export default function AcademyVerificationPage() {
   const {
-    students,
-    selectedStudentId, setSelectedStudentId,
-    handleVerifyStudentEligibility,
+    students = [],
     fetchBoardData,
-  } = useOutletContext();
+    setErrorMsg,
+    setSuccessMsg,
+  } = useOutletContext() || {};
 
   return (
-    <AcademyVerification
+    <AcademyStudentVerification
       students={students}
-      selectedStudentId={selectedStudentId}
-      setSelectedStudentId={setSelectedStudentId}
-      onVerifyStudent={handleVerifyStudentEligibility}
       fetchBoardData={fetchBoardData}
+      setErrorMsg={setErrorMsg}
+      setSuccessMsg={setSuccessMsg}
     />
   );
 }
+
 
 ```
 
@@ -31947,8 +36795,11 @@ const InstitutePortal = () => {
       setCurrentStepState('active_erp');
       return;
     }
-    navigate(route);
-  }, [navigate]);
+    setCurrentStepState(step);
+    if (location.pathname !== route) {
+      navigate(route, { replace: true });
+    }
+  }, [navigate, location.pathname]);
 
   const [user, setUser] = useState(null);
   
@@ -32083,14 +36934,17 @@ const InstitutePortal = () => {
   const [courses, setCourses] = useState([]);
   const [courseForm, setCourseForm] = useState({
     courseName: '',
-    courseCode: '',
-    courseType: '',
-    programCategory: '',
-    courseDuration: '',
-    durationType: '',
-    subjects: [],
-    practicalExamName: '',
-    examinationFee: '',
+    courseType: 'Postgraduate',
+    programCategory: 'Emergency Medicine',
+    courseDuration: '2',
+    durationType: 'Years',
+    semesters: [
+      { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+      { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+      { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+      { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] }
+    ],
+    examinationFee: '15000',
   });
 
   const [batches, setBatches] = useState([]);
@@ -32167,6 +37021,7 @@ const InstitutePortal = () => {
           subjects: c.subjects || [],
           practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
           practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
+          semesters: c.semesters || [],
           totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
           courseFee: c.courseFee || '0',
           registrationFee: c.registrationFee || '0',
@@ -32430,6 +37285,7 @@ const InstitutePortal = () => {
                 subjects: c.subjects || [],
                 practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
                 practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
+                semesters: c.semesters || [],
                 totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
                 courseFee: c.courseFee || '0',
                 registrationFee: c.registrationFee || '0',
@@ -32464,38 +37320,52 @@ const InstitutePortal = () => {
           academicService.listStudents().then(res => {
             const data = extractData(res) || [];
             if (Array.isArray(data)) {
-              const formatted = data.map(s => ({
-                id: s._id,
-                _id: s._id,
-                fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-                email: s.email,
-                phone: s.contactNumber,
-                qualification: s.qualification,
-                graduationYear: s.yearOfPassing?.toString() || '',
-                enrollmentNo: s.enrollmentId,
-                admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-                status: s.remittedToAcademy ? 'Completed' : 'Active',
-                remittedToAcademy: s.remittedToAcademy || false,
-                attendancePercentage: s.attendancePercentage || 0,
-                thesisApproved: s.thesisApproved || false,
-                courseId: s.course?._id || s.course,
-                batchId: s.batch?._id || s.batch,
-                courseName: s.course?.name || 'General Medicine',
-                batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-                homeAddress: s.homeAddress,
-                contactNumber: s.contactNumber,
-                courseDirector: s.courseDirector,
-                razorpayOrderId: s.razorpayOrderId,
-                razorpayPaymentId: s.razorpayPaymentId,
-                razorpaySignature: s.razorpaySignature,
-                medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
-                universityName: s.universityName,
-                mbbsQualification: s.mbbsQualification,
-                fmgeClearanceStatus: s.fmgeClearanceStatus,
-                isForeignGraduate: s.isForeignGraduate,
-                documents: s.documents || {},
-                semesters: s.semesters || [],
-              }));
+              const formatted = data.map(s => {
+                const sSemesters = s.semesters || [];
+                const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+
+                const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
+                  ? s.attendancePercentage
+                  : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+
+                const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
+                const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+                const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
+
+                return {
+                  id: s._id,
+                  _id: s._id,
+                  fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+                  email: s.email,
+                  phone: s.contactNumber,
+                  qualification: s.qualification,
+                  graduationYear: s.yearOfPassing?.toString() || '',
+                  enrollmentNo: s.enrollmentId,
+                  admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+                  status: isRemitted ? 'Completed' : 'Active',
+                  remittedToAcademy: isRemitted,
+                  attendancePercentage: attendancePct,
+                  thesisApproved: isThesisApproved,
+                  thesisUploaded: isThesisUploaded,
+                  semesters: sSemesters,
+                  courseId: s.course?._id || s.course,
+                  batchId: s.batch?._id || s.batch,
+                  courseName: s.course?.name || 'General Medicine',
+                  batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
+                  homeAddress: s.homeAddress,
+                  contactNumber: s.contactNumber,
+                  courseDirector: s.courseDirector,
+                  razorpayOrderId: s.razorpayOrderId,
+                  razorpayPaymentId: s.razorpayPaymentId,
+                  razorpaySignature: s.razorpaySignature,
+                  medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
+                  universityName: s.universityName,
+                  mbbsQualification: s.mbbsQualification,
+                  fmgeClearanceStatus: s.fmgeClearanceStatus,
+                  isForeignGraduate: s.isForeignGraduate,
+                  documents: s.documents || {},
+                };
+              });
               setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
             }
           }).catch(() => {});
@@ -32658,7 +37528,7 @@ const InstitutePortal = () => {
     }
 
     setCurrentStepState(targetStep);
-  }, [location.pathname]);
+  }, [location.pathname, applicationRecord, user, navigate]);
 
   const activeStudentCount = useMemo(() => {
     return students.filter(s => s.status === 'Active').length;
@@ -32936,7 +37806,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       }
 
       const parsedUser = {
-        instituteName: data.user?.instituteName || data.user?.name || 'Saraswathi Medical College',
+        instituteName: data.user?.instituteName || data.user?.name || appForm?.orgName || 'Institute Portal',
         email: data.user?.email || loginForm.email,
         emailVerified: data.user?.emailVerified ?? true,
         role: data.user?.role || 'institute',
@@ -33479,15 +38349,12 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     setErrorBanner(null);
     setSuccessBanner(null);
 
-    if (!courseForm.courseName?.trim() || !courseForm.courseCode?.trim()) {
-      setErrorBanner('Please fill out all mandatory course fields.');
+    if (!courseForm.courseName?.trim()) {
+      setErrorBanner('Please enter a valid Course Name.');
       return;
     }
-    if (!courseForm.subjects || courseForm.subjects.length === 0 || courseForm.subjects.some(s => !s.trim())) {
-      setErrorBanner('Please add at least one valid subject.');
-      return;
-    }
-    const feeVal = parseFloat(courseForm.examinationFee.replace(/,/g, ''));
+
+    const feeVal = parseFloat(String(courseForm.examinationFee).replace(/,/g, ''));
     if (!courseForm.examinationFee || isNaN(feeVal) || feeVal < 0) {
       setErrorBanner('Please enter a valid non-negative numeric examination fee.');
       return;
@@ -33503,24 +38370,29 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
 
-    if (courses.some(c => c.courseCode?.toLowerCase() === courseForm.courseCode.toLowerCase())) {
-      setErrorBanner('A course with this code already exists.');
+    // Ensure at least one subject exists across semesters
+    const hasSubjects = (courseForm.semesters || []).some(s => s.subjects && s.subjects.some(sub => sub.name?.trim()));
+    if (!hasSubjects) {
+      setErrorBanner('Please add at least one subject with a valid name in your semesters.');
       return;
     }
+
+    const cleanedSemesters = (courseForm.semesters || []).map(s => ({
+      ...s,
+      subjects: (s.subjects || []).filter(sub => sub && sub.name && sub.name.trim() !== ''),
+      practicalExams: (s.practicalExams || []).filter(prac => prac && prac.name && prac.name.trim() !== ''),
+    }));
 
     try {
       await academicService.createCourse({
         name: courseForm.courseName,
-        courseCode: courseForm.courseCode,
-        courseType: courseForm.courseType,
-        programCategory: courseForm.programCategory,
-        courseDuration: courseForm.courseDuration,
-        durationType: courseForm.durationType,
-        subjects: courseForm.subjects,
-        practicalExamName: courseForm.practicalExamName || 'Clinical OSCE & Practical Station Exam',
-        practicalExams: courseForm.practicalExams || [],
+        courseType: courseForm.courseType || 'Postgraduate',
+        programCategory: courseForm.programCategory || 'Emergency Medicine',
+        courseDuration: courseForm.courseDuration || '2',
+        durationType: courseForm.durationType || 'Years',
+        semesters: cleanedSemesters,
         examinationFee: courseForm.examinationFee,
-        description: `${courseForm.courseType} - ${courseForm.programCategory}`
+        description: `${courseForm.courseType || 'Postgraduate'} - ${courseForm.programCategory || 'Emergency Medicine'}`
       });
 
       await fetchERPData();
@@ -33528,15 +38400,17 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
 
       setCourseForm({
         courseName: '',
-        courseCode: '',
-        courseType: '',
-        programCategory: '',
-        courseDuration: '',
-        durationType: '',
-        subjects: [],
-        practicalExamName: '',
-        practicalExams: [],
-        examinationFee: ''
+        courseType: 'Postgraduate',
+        programCategory: 'Emergency Medicine',
+        courseDuration: '2',
+        durationType: 'Years',
+        semesters: [
+          { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+          { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+          { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
+          { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] }
+        ],
+        examinationFee: '15000'
       });
     } catch (err) {
       console.error('Backend course creation failed:', err);
@@ -33548,13 +38422,8 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
     e.preventDefault();
     setErrorBanner(null);
     setSuccessBanner(null);
-    if (!newBatch.name?.trim() || !newBatch.startDate) {
-      setErrorBanner('Please fill out the batch name and commencement date.');
-      return;
-    }
-    const seats = parseInt(newBatch.seats, 10);
-    if (isNaN(seats) || seats <= 0) {
-      setErrorBanner('Number of available seats must be greater than zero.');
+    if (!newBatch.startDate) {
+      setErrorBanner('Please select a commencement date for the batch.');
       return;
     }
     if (!newBatch.courseId) {
@@ -33562,31 +38431,28 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
     
-    if (batches.some(b => b.name?.toLowerCase() === newBatch.name.toLowerCase() && b.course?._id === newBatch.courseId)) {
-      setErrorBanner('A batch with this name already exists for the selected course.');
-      return;
-    }
-    
     try {
       const courseIdVal = newBatch.courseId;
       const yearVal = new Date(newBatch.startDate).getFullYear() || 2026;
+      const seatsVal = newBatch.seats ? parseInt(newBatch.seats, 10) : undefined;
       
-      await academicService.createBatch({
+      const res = await academicService.createBatch({
         courseId: courseIdVal,
         year: yearVal,
-        name: newBatch.name,
+        name: newBatch.name ? newBatch.name.trim() : undefined,
         startDate: newBatch.startDate,
-        seats: seats
+        seats: seatsVal
       });
 
+      const createdBatchData = res.data?.data || res.data || {};
       await fetchERPData();
       setNewBatch({ name: '', startDate: '', seats: '', courseId: '' });
-      setSuccessBanner(`🎉 Batch "${newBatch.name}" created successfully!`);
+      setSuccessBanner(`🎉 Batch "${createdBatchData.name || 'New Batch'}" created successfully with official SEMI naming!`);
     } catch (err) {
       console.error('Backend batch creation failed:', err);
       setErrorBanner(err.parsedMessage || err.response?.data?.message || err.message || 'Failed to create batch.');
     }
-  }, [newBatch, batches, fetchERPData]);
+  }, [newBatch, fetchERPData]);
 
   const handleEnrollmentSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -33954,16 +38820,13 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         );
       case 'courses':
         return (
-         <InstituteERPCourses 
-      courses={courses}
-      setCourses={setCourses}  // ← ADD THIS
-      courseForm={courseForm}
-      setCourseForm={setCourseForm}
-      courseSearch={courseSearch}
-      setCourseSearch={setCourseSearch}
-      handleCreateCourse={handleCreateCourse}
-      deleteCourse={deleteCourse}  // This can be removed or kept as fallback
-    />
+          <InstituteERPCourses 
+            courses={courses}
+            courseSearch={courseSearch}
+            setCourseSearch={setCourseSearch}
+            setActiveTab={setActiveTab}
+            setNewBatch={setNewBatch}
+          />
         );
       case 'batches':
         return (
@@ -34220,6 +39083,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
               setActiveTab={setActiveTab} 
               handleLogout={handleLogout} 
               user={user}
+              appForm={appForm}
               setErrorBanner={setErrorBanner}
               setSuccessBanner={setSuccessBanner}
             />
@@ -34762,12 +39626,6 @@ const InstituteERPBatches = ({
       return;
     }
     
-    const seats = parseInt(editForm.seats, 10);
-    if (isNaN(seats) || seats <= 0) {
-      alert('Number of available seats must be greater than zero.');
-      return;
-    }
-
     setSubmitting(true);
     try {
       if (handleUpdateBatch) {
@@ -34775,7 +39633,7 @@ const InstituteERPBatches = ({
         await handleUpdateBatch(batchId, {
           name: editForm.name,
           startDate: editForm.startDate,
-          seats: Number(editForm.seats)
+          seats: editForm.seats ? Number(editForm.seats) : undefined
         });
       }
       cancelEdit();
@@ -34796,11 +39654,18 @@ const InstituteERPBatches = ({
 
 
 
+  const selectedCourseObj = courses.find(c => (c.id || c._id) === newBatch.courseId);
+  const courseCodePrefix = selectedCourseObj ? (selectedCourseObj.courseCode || selectedCourseObj.courseName || selectedCourseObj.name || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase() : 'SEMI';
+  const batchYear = newBatch.startDate ? new Date(newBatch.startDate).getFullYear() : 2026;
+  const existingCountForCourse = batches.filter(b => (b.course?._id || b.course) === newBatch.courseId && b.year === batchYear).length;
+  const autoGeneratedLetter = String.fromCharCode(65 + (existingCountForCourse % 26));
+  const previewBatchName = selectedCourseObj ? `${courseCodePrefix}-${batchYear}-Batch ${autoGeneratedLetter}` : 'Select course & date';
+
   return (
     <div className="space-y-8 animate-in fade-in duration-200 text-left">
       <div>
         <h2 className="text-2xl font-black text-gray-900">Batches</h2>
-        <p className="text-xs text-gray-500 mt-1">Configure academic semesters and session blocks</p>
+        <p className="text-xs text-gray-500 mt-1">Configure academic session batches under standardized SEMI courses</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -34808,9 +39673,16 @@ const InstituteERPBatches = ({
         {/* 1. CREATION / EDIT PANEL */}
         <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm space-y-6 h-fit">
           <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-            <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">
-              {editingBatch ? 'Edit Batch' : 'Create Batch'}
-            </h3>
+            <div>
+              <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">
+                {editingBatch ? 'Edit Batch' : 'Create Batch'}
+              </h3>
+              {!editingBatch && (
+                <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider block mt-0.5">
+                  Automated Naming Convention
+                </span>
+              )}
+            </div>
             {editingBatch && (
               <button 
                 type="button" 
@@ -34837,31 +39709,13 @@ const InstituteERPBatches = ({
                 }}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold disabled:opacity-75 disabled:cursor-not-allowed"
               >
-                <option value="">-- Choose Course --</option>
+                <option value="">-- Choose Standardized Course --</option>
                 {courses.map(course => (
                   <option key={course.id || course._id} value={course.id || course._id}>
-                    {course.courseName || course.name} ({course.courseCode || ''})
+                    {course.courseName || course.name} ({course.courseCode || 'SEMI'})
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Batch Name *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Batch 2026-C"
-                value={editingBatch ? editForm.name : newBatch.name}
-                onChange={(e) => {
-                  if (editingBatch) {
-                    setEditForm({ ...editForm, name: e.target.value });
-                  } else {
-                    setNewBatch({ ...newBatch, name: e.target.value });
-                  }
-                }}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-              />
             </div>
 
             <div>
@@ -34884,31 +39738,33 @@ const InstituteERPBatches = ({
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500">
-                  Intake Capacity (Seats) *
+                  Official Batch Name
                 </label>
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                  Board Authorized
+                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  Auto Generated
                 </span>
               </div>
-              <input
-                type="number"
-                min="1"
-                required
-                placeholder="Intake limit (Fixed by Board)"
-                value={editingBatch ? editForm.seats : newBatch.seats}
-                onChange={(e) => {
-                  if (editingBatch) {
-                    setEditForm({ ...editForm, seats: e.target.value });
-                  } else {
-                    setNewBatch({ ...newBatch, seats: e.target.value });
-                  }
-                }}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-              />
+              {editingBatch ? (
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. DEM-2026-Batch A"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 font-mono font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs"
+                />
+              ) : (
+                <div className="w-full px-4 py-3 bg-blue-50/50 border border-blue-200 rounded-xl text-blue-900 font-mono font-black text-xs flex items-center justify-between">
+                  <span>{previewBatchName}</span>
+                  <span className="text-[9px] uppercase font-bold text-blue-500 bg-white px-2 py-0.5 rounded border border-blue-100">Standardized</span>
+                </div>
+              )}
               <p className="text-[10px] text-gray-400 mt-1 italic">
-                Seat quotas are fixed during institute onboarding approval by the Academic Board.
+                Batches automatically follow the SEMI official naming rule: [CourseCode]-[Year]-Batch [Letter].
               </p>
             </div>
+
+
 
             <button
               type="submit"
@@ -34925,7 +39781,7 @@ const InstituteERPBatches = ({
                   {editingBatch ? 'Saving Changes...' : 'Creating Batch...'}
                 </>
               ) : (
-                editingBatch ? 'Save Changes' : 'Create Batch'
+                editingBatch ? 'Save Changes' : 'Create Standardized Batch'
               )}
             </button>
           </form>
@@ -35044,54 +39900,43 @@ export default InstituteERPBatches;
 
 ```jsx
 import { useState, useMemo, useCallback } from 'react';
-import { Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle, Loader2 } from 'lucide-react';
-import academicService from '../../../api/academic';
-import Toast from '../../../Components/Toast';
-import ConfirmModal from '../../../Components/ConfirmModal';
+import { Search, Eye, BookOpen, X, ShieldCheck, Layers, Calendar, CheckCircle2, Award, GraduationCap } from 'lucide-react';
+import Pagination from '../../../Components/Pagination';
+
+// Helper to calculate required semester count based on course duration and durationType
+const getSemesterCount = (duration, durationType) => {
+  const durVal = parseInt(duration, 10) || 1;
+  if (durationType === 'Years') return Math.max(1, durVal * 2);
+  if (durationType === 'Months') return Math.max(1, Math.ceil(durVal / 6));
+  return 1;
+};
 
 const InstituteERPCourses = ({ 
-  courses, 
-  setCourses,  // Required: function to update courses in parent
-  courseForm, 
-  setCourseForm, 
-  courseSearch, 
-  setCourseSearch, 
-  handleCreateCourse
+  courses = [], 
+  courseSearch = '', 
+  setCourseSearch = () => {},
+  setActiveTab = () => {},
+  setNewBatch = () => {}
 }) => {
-  // ─── State for Edit Modal ──────────────────────────────────────────────────
-  const [editingCourse, setEditingCourse] = useState(null);
-  const [editForm, setEditForm] = useState({
-    courseName: '',
-    courseCode: '',
-    courseType: 'Postgraduate',
-    programCategory: 'Emergency Medicine',
-    courseDuration: '2',
-    durationType: 'Years',
-    subjects: [],
-    examinationFee: '',
-    status: 'Active'
-  });
-  const [isEditLoading, setIsEditLoading] = useState(false);
-  const [isCreateLoading, setIsCreateLoading] = useState(false);
-  const [editError, setEditError] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
-
-  // ─── View Modal State ──────────────────────────────────────────────────────
   const [viewingCourse, setViewingCourse] = useState(null);
-
-  // ─── Pop-up and Alert State ───────────────────────────────────────────────
-  const [toast, setToast] = useState(null);
-  const [confirmConfig, setConfirmConfig] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const filteredCoursesList = useMemo(() => {
-    return courses.filter(c => 
-      c.courseName?.toLowerCase().includes(courseSearch?.toLowerCase() || '') || 
-      c.courseCode?.toLowerCase().includes(courseSearch?.toLowerCase() || '')
-    );
+    const q = (courseSearch || '').toLowerCase();
+    return (courses || []).filter(c => {
+      const name = c.courseName || c.name || '';
+      const code = c.courseCode || '';
+      const type = c.courseType || '';
+      const category = c.programCategory || '';
+      return (
+        name.toLowerCase().includes(q) ||
+        code.toLowerCase().includes(q) ||
+        type.toLowerCase().includes(q) ||
+        category.toLowerCase().includes(q)
+      );
+    });
   }, [courses, courseSearch]);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
 
   const totalPages = Math.ceil(filteredCoursesList.length / itemsPerPage) || 1;
   const paginatedCourses = useMemo(() => {
@@ -35099,438 +39944,63 @@ const InstituteERPCourses = ({
     return filteredCoursesList.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredCoursesList, currentPage]);
 
-  // ─── Edit Handlers ──────────────────────────────────────────────────────────
-  const openEditModal = useCallback((course) => {
-    setEditingCourse(course);
-    setEditForm({
-      courseName: course.courseName || '',
-      courseCode: course.courseCode || '',
-      courseType: course.courseType || 'Postgraduate',
-      programCategory: course.programCategory || 'Emergency Medicine',
-      courseDuration: course.courseDuration || '2',
-      durationType: course.durationType || 'Years',
-      subjects: course.subjects || [],
-      examinationFee: course.examinationFee || '',
-      status: course.status || 'Active'
-    });
-    setEditError(null);
-  }, []);
-
-  const closeEditModal = useCallback(() => {
-    setEditingCourse(null);
-    setEditError(null);
-  }, []);
-
-  const handleEditSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    setEditError(null);
-    setIsEditLoading(true);
-
-    try {
-      // Validate required fields
-      if (!editForm.courseName || !editForm.courseCode) {
-        setEditError('Course Name and Course Code are required.');
-        setIsEditLoading(false);
-        return;
-      }
-      if (!editForm.subjects || editForm.subjects.length === 0 || editForm.subjects.some(s => !s.trim())) {
-        setEditError('Please add at least one valid subject.');
-        setIsEditLoading(false);
-        return;
-      }
-      const feeVal = parseFloat(editForm.examinationFee.replace(/,/g, ''));
-      if (!editForm.examinationFee || isNaN(feeVal) || feeVal < 0) {
-        setEditError('Please enter a valid non-negative numeric examination fee.');
-        setIsEditLoading(false);
-        return;
-      }
-      const durationVal = parseFloat(editForm.courseDuration);
-      if (!editForm.courseDuration || isNaN(durationVal) || durationVal <= 0) {
-        setEditError('Please enter a valid positive numeric course duration.');
-        setIsEditLoading(false);
-        return;
-      }
-
-      // Prepare update data
-      const updateData = {
-        name: editForm.courseName,
-        courseCode: editForm.courseCode,
-        courseType: editForm.courseType,
-        programCategory: editForm.programCategory,
-        courseDuration: editForm.courseDuration,
-        durationType: editForm.durationType,
-        subjects: editForm.subjects,
-        examinationFee: editForm.examinationFee,
-        status: editForm.status
-      };
-
-      // Call API to update course
-      const response = await academicService.updateCourse(editingCourse._id || editingCourse.id, updateData);
-      const updatedCourse = response.data?.data || response.data;
-
-      // Update local state
-      const updatedCourses = courses.map(c => {
-        if (c.id === editingCourse.id || c._id === editingCourse._id) {
-          return {
-            ...c,
-            ...updatedCourse,
-            id: c.id || c._id,
-            _id: c._id || c.id,
-            courseName: updatedCourse.name || editForm.courseName,
-            courseCode: updatedCourse.courseCode || editForm.courseCode,
-            courseType: updatedCourse.courseType || editForm.courseType,
-            programCategory: updatedCourse.programCategory || editForm.programCategory,
-            courseDuration: updatedCourse.courseDuration || editForm.courseDuration,
-            durationType: updatedCourse.durationType || editForm.durationType,
-            subjects: updatedCourse.subjects || editForm.subjects,
-            totalSubjects: (updatedCourse.subjects || editForm.subjects)?.length || 0,
-            examinationFee: updatedCourse.examinationFee || editForm.examinationFee,
-            status: updatedCourse.status || editForm.status
-          };
-        }
-        return c;
-      });
-
-      setCourses(updatedCourses);
-      closeEditModal();
-      
-      setToast({ message: `Course "${editForm.courseName}" updated successfully!`, type: 'success' });
-      
-    } catch (err) {
-      console.error('Update course error:', err);
-      const errorMsg = err.parsedMessage || err.message || 'Failed to update course. Please try again.';
-      setEditError(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
-    } finally {
-      setIsEditLoading(false);
+  const handleSelectCourseForBatch = (course) => {
+    if (setNewBatch) {
+      setNewBatch(prev => ({
+        ...prev,
+        courseId: course.id || course._id
+      }));
     }
-  }, [editForm, editingCourse, courses, setCourses, closeEditModal]);
-
-  const handleCreateSubmit = useCallback(async (e) => {
-    if (isCreateLoading) return;
-    setIsCreateLoading(true);
-    try {
-      await handleCreateCourse(e);
-    } finally {
-      setIsCreateLoading(false);
+    if (setActiveTab) {
+      setActiveTab('batches');
     }
-  }, [handleCreateCourse, isCreateLoading]);
-
-  // ─── Delete Handler ──────────────────────────────────────────────────────────
-  const handleDeleteCourse = useCallback((course) => {
-    setConfirmConfig({
-      title: 'Delete Course',
-      message: `Are you sure you want to delete the course "${course.courseName}"?\nThis action cannot be undone. All batches and students associated with this course will need to be transferred first.`,
-      type: 'danger',
-      confirmText: 'Delete Course',
-      onConfirm: async () => {
-        setConfirmConfig(null);
-        setDeleteConfirm(course.id || course._id);
-
-        try {
-          const courseId = course._id || course.id;
-          await academicService.deleteCourse(courseId);
-
-          const updatedCourses = courses.filter(c => c.id !== courseId && c._id !== courseId);
-          setCourses(updatedCourses);
-          
-          setToast({ message: `Course "${course.courseName}" deleted successfully!`, type: 'success' });
-          
-        } catch (err) {
-          console.error('Delete course error:', err);
-          const errorMsg = err.parsedMessage || err.message || 'Failed to delete course.';
-          
-          if (err.response?.status === 400 && errorMsg.includes('students')) {
-            setToast({ message: `${errorMsg}. Please transfer or de-enroll all students from this course first.`, type: 'warning' });
-          } else if (err.response?.status === 400 && errorMsg.includes('batches')) {
-            setToast({ message: `${errorMsg}. Please delete all batches associated with this course first.`, type: 'warning' });
-          } else {
-            setToast({ message: errorMsg, type: 'error' });
-          }
-        } finally {
-          setDeleteConfirm(null);
-        }
-      }
-    });
-  }, [courses, setCourses]);
-
-  // ─── View Course Handler ──────────────────────────────────────────────────
-  const openViewModal = useCallback((course) => {
-    setViewingCourse(course);
-  }, []);
-
-  const closeViewModal = useCallback(() => {
-    setViewingCourse(null);
-  }, []);
-
-  const toggleCourseStatus = useCallback((course) => {
-    const newStatus = course.status === 'Active' ? 'Inactive' : 'Active';
-    
-    setConfirmConfig({
-      title: `${newStatus === 'Active' ? 'Activate' : 'Deactivate'} Course`,
-      message: `Are you sure you want to ${newStatus === 'Active' ? 'activate' : 'deactivate'} course "${course.courseName}"?`,
-      type: 'warning',
-      confirmText: `Yes, ${newStatus === 'Active' ? 'Activate' : 'Deactivate'}`,
-      onConfirm: async () => {
-        setConfirmConfig(null);
-        try {
-          const courseId = course._id || course.id;
-          await academicService.updateCourse(courseId, { status: newStatus });
-
-          const updatedCourses = courses.map(c => {
-            if (c.id === courseId || c._id === courseId) {
-              return { ...c, status: newStatus };
-            }
-            return c;
-          });
-          setCourses(updatedCourses);
-          
-          setToast({ message: `Course status updated to "${newStatus}"!`, type: 'success' });
-        } catch (err) {
-          console.error('Toggle status error:', err);
-          setToast({ message: 'Failed to update course status. Please try again.', type: 'error' });
-        }
-      }
-    });
-  }, [courses, setCourses]);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200 text-left">
-      {/* ─── HEADER ───────────────────────────────────────────────────────────── */}
-      <div>
-        <h2 className="text-2xl font-black text-gray-900">Courses</h2>
-        <p className="text-xs text-gray-500 mt-1">Manage all registered courses under your institution</p>
+      
+      {/* ─── BANNER / HEADER ─────────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-6 sm:p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[10px] font-black uppercase tracking-widest">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Centralized Academic Structure
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight">Standardized Course Catalog</h2>
+          <p className="text-xs sm:text-sm text-blue-200/90 leading-relaxed">
+            All courses and semester-wise curricula are officially defined and standardized by the Society for Emergency Medicine, India (SEMI). You can browse the curriculum and initiate student batches for any approved course.
+          </p>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-md px-5 py-3.5 rounded-2xl border border-white/10 flex items-center gap-4 flex-shrink-0">
+          <GraduationCap className="w-8 h-8 text-blue-300" />
+          <div className="text-right">
+            <span className="text-[10px] text-blue-200 font-bold uppercase tracking-wider block">Available Courses</span>
+            <span className="text-xl font-black text-white">{courses.length}</span>
+          </div>
+        </div>
       </div>
 
-      {/* ─── CREATE COURSE FORM ─────────────────────────────────────────────── */}
-      <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 shadow-sm">
-        <h3 className="text-base font-black text-gray-900 uppercase tracking-wider mb-6 border-b border-gray-100 pb-3">Course Creation Form</h3>
-        
-        <form onSubmit={handleCreateSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Course Name *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. MD - Emergency Medicine"
-                value={courseForm.courseName}
-                onChange={(e) => setCourseForm({...courseForm, courseName: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Course Code *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. MD-EM-01"
-                value={courseForm.courseCode}
-                onChange={(e) => setCourseForm({...courseForm, courseCode: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Course Type *</label>
-              <select
-                value={courseForm.courseType}
-                onChange={(e) => setCourseForm({...courseForm, courseType: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold"
-              >
-                <option value="" disabled>Select course type</option>
-                <option value="Undergraduate">Undergraduate</option>
-                <option value="Postgraduate">Postgraduate</option>
-                <option value="Diploma">Diploma</option>
-                <option value="Fellowship">Fellowship</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Program Category *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Emergency Medicine"
-                value={courseForm.programCategory}
-                onChange={(e) => setCourseForm({...courseForm, programCategory: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Course Duration *</label>
-              <input
-                type="number"
-                min="0"
-                required
-                placeholder="e.g. 3"
-                value={courseForm.courseDuration}
-                onChange={(e) => setCourseForm({...courseForm, courseDuration: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Duration Type *</label>
-              <select
-                value={courseForm.durationType}
-                onChange={(e) => setCourseForm({...courseForm, durationType: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold"
-              >
-                <option value="" disabled>Select duration type</option>
-                <option value="Years">Years</option>
-                <option value="Months">Months</option>
-                <option value="Weeks">Weeks</option>
-              </select>
-            </div>
-
-          </div>
-
-          {/* Dynamic Practical Exams Creator */}
-          <div className="space-y-4 pt-2 border-t border-gray-100">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500">Practical Examinations</label>
-              <button 
-                type="button" 
-                onClick={() => setCourseForm({...courseForm, practicalExams: [...(courseForm.practicalExams || []), '']})}
-                className="text-[10px] bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold hover:bg-purple-100 transition-colors uppercase tracking-wider flex items-center gap-1"
-              >
-                + Add Practical Exam
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(courseForm.practicalExams || []).map((prac, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder={`Practical Exam ${idx + 1} Name`}
-                    value={prac}
-                    onChange={(e) => {
-                      const newPracs = [...(courseForm.practicalExams || [])];
-                      newPracs[idx] = e.target.value;
-                      setCourseForm({...courseForm, practicalExams: newPracs, practicalExamName: newPracs[0] || courseForm.practicalExamName});
-                    }}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-purple-500 transition-all text-xs font-semibold"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newPracs = [...(courseForm.practicalExams || [])];
-                      newPracs.splice(idx, 1);
-                      setCourseForm({...courseForm, practicalExams: newPracs});
-                    }}
-                    className="p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-xl transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            {(!courseForm.practicalExams || courseForm.practicalExams.length === 0) && (
-              <p className="text-[11px] text-gray-400 italic">No practical exams added yet. Click "+ Add Practical Exam" to define custom practical exam modules.</p>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500">Subjects *</label>
-              <button 
-                type="button" 
-                onClick={() => setCourseForm({...courseForm, subjects: [...courseForm.subjects, '']})}
-                className="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100 transition-colors uppercase tracking-wider"
-              >
-                + Add Subject
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {courseForm.subjects.map((subj, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    required
-                    placeholder={`Subject ${idx + 1}`}
-                    value={subj}
-                    onChange={(e) => {
-                      const newSubjects = [...courseForm.subjects];
-                      newSubjects[idx] = e.target.value;
-                      setCourseForm({...courseForm, subjects: newSubjects});
-                    }}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newSubjects = [...courseForm.subjects];
-                      newSubjects.splice(idx, 1);
-                      setCourseForm({...courseForm, subjects: newSubjects});
-                    }}
-                    className="p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-xl transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            {courseForm.subjects.length === 0 && (
-              <p className="text-[11px] text-gray-400 italic">No subjects added. Click "+ Add Subject" to begin.</p>
-            )}
-          </div>
-
-          <div className="space-y-4 pt-4 border-t border-gray-100">
-            <h4 className="text-xs font-black uppercase tracking-widest text-blue-600">Fee Configuration</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div>
-                <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-2">Examination Fee *</label>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={courseForm.examinationFee}
-                  onChange={(e) => setCourseForm({...courseForm, examinationFee: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-center pt-4">
-            <button
-              type="submit"
-              disabled={isCreateLoading}
-              className="px-10 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-all shadow-md shadow-blue-500/10 text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
-            >
-              {isCreateLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating Course...
-                </>
-              ) : (
-                'Create Course'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* ─── COURSES LIST ────────────────────────────────────────────────────── */}
+      {/* ─── COURSES LIST & CATALOG ────────────────────────────────────────── */}
       <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-100 pb-5">
           <div>
-            <h3 className="text-base font-black text-gray-900 uppercase tracking-wider">All Courses</h3>
-            <p className="text-[11px] text-gray-400 mt-0.5">{courses.length} Courses Registered</p>
+            <h3 className="text-base font-black text-gray-900 uppercase tracking-wider">
+              Academic Courses Catalog
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">Browse available programs and semester subject breakdowns</p>
           </div>
           <div className="relative max-w-xs w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search Courses..."
+              placeholder="Search course title or code..."
               value={courseSearch}
               onChange={(e) => {
                 setCourseSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
             />
           </div>
         </div>
@@ -35538,13 +40008,13 @@ const InstituteERPCourses = ({
         <div className="overflow-x-auto border border-gray-150 rounded-2xl bg-white">
           <table className="w-full text-left border-collapse text-xs font-semibold text-gray-600">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase tracking-wider">
+              <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[10px]">
                 <th className="px-6 py-4 font-bold">#</th>
-                <th className="px-6 py-4 font-bold">Course Name</th>
                 <th className="px-6 py-4 font-bold">Code</th>
+                <th className="px-6 py-4 font-bold">Course Title</th>
+                <th className="px-6 py-4 font-bold">Program Type</th>
                 <th className="px-6 py-4 font-bold">Duration</th>
-                <th className="px-6 py-4 font-bold">Students</th>
-                <th className="px-6 py-4 font-bold">Batches</th>
+                <th className="px-6 py-4 font-bold">Semesters</th>
                 <th className="px-6 py-4 font-bold">Status</th>
                 <th className="px-6 py-4 font-bold text-center">Actions</th>
               </tr>
@@ -35553,75 +40023,65 @@ const InstituteERPCourses = ({
               {paginatedCourses.length > 0 ? (
                 paginatedCourses.map((course, idx) => {
                   const globalIdx = (currentPage - 1) * itemsPerPage + idx;
-                  const studentCount = course.studentsCount || 0;
-                  const batchCount = course.batchesCount || 0;
-                  const isActive = course.status === 'Active';
+                  const name = course.courseName || course.name || 'N/A';
+                  const code = course.courseCode || 'N/A';
+                  const type = course.courseType || 'Fellowship';
+                  const duration = `${course.courseDuration || '2'} ${course.durationType || 'Years'}`;
+                  const semCount = (course.semesters && course.semesters.length > 0)
+                    ? course.semesters.length
+                    : getSemesterCount(course.courseDuration, course.durationType);
+                  const isActive = (course.status || 'Active') === 'Active';
 
                   return (
-                    <tr key={course.id || course._id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr key={course.id || course._id || idx} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4 text-gray-400 font-mono">{(globalIdx + 1).toString().padStart(2, '0')}</td>
-                      <td className="px-6 py-4 font-black text-gray-900">{course.courseName}</td>
-                      <td className="px-6 py-4">
-                        <span className="bg-gray-100 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200/50 font-mono">
-                          {course.courseCode}
+                      <td className="px-6 py-4 font-mono font-bold text-blue-600">
+                        <span className="bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                          {code}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-500">{course.courseDuration} {course.durationType}</td>
-                      <td className="px-6 py-4">
-                        <span className={`font-bold ${studentCount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
-                          {studentCount}
+                      <td className="px-6 py-4 font-black text-gray-900">{name}</td>
+                      <td className="px-6 py-4 text-gray-600">
+                        <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase text-gray-700">
+                          {type}
                         </span>
                       </td>
+                      <td className="px-6 py-4 text-gray-500">{duration}</td>
                       <td className="px-6 py-4">
                         <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
-                          {batchCount} Batches
+                          {semCount} Semesters
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => toggleCourseStatus(course)}
-                          className={`inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full transition-all ${
-                            isActive 
-                              ? 'bg-green-50 text-green-700 border border-green-100 hover:bg-green-100' 
-                              : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
-                          }`}
-                        >
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full ${
+                          isActive 
+                            ? 'bg-green-50 text-green-700 border border-green-100' 
+                            : 'bg-gray-100 text-gray-500 border border-gray-200'
+                        }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-600' : 'bg-gray-400'}`}></span>
                           {isActive ? 'Active' : 'Inactive'}
-                        </button>
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className="flex justify-center gap-1">
+                        <div className="flex justify-center items-center gap-2">
                           <button 
                             type="button" 
-                            onClick={() => openViewModal(course)}
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" 
-                            title="View details"
+                            onClick={() => setViewingCourse(course)}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-xs font-bold" 
+                            title="View Curriculum"
                           >
                             <Eye className="w-4 h-4" />
+                            <span>Curriculum</span>
                           </button>
-                          
-                          <button 
-                            type="button" 
-                            onClick={() => openEditModal(course)}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" 
-                            title="Edit course"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          
+
                           <button
                             type="button"
-                            onClick={() => handleDeleteCourse(course)}
-                            disabled={deleteConfirm === (course.id || course._id)}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Delete course"
+                            onClick={() => handleSelectCourseForBatch(course)}
+                            className="px-3 py-1 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200 hover:border-blue-600 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                            title="Create Batch for this course"
                           >
-                            {deleteConfirm === (course.id || course._id) ? (
-                              <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin inline-block"></span>
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>Create Batch</span>
                           </button>
                         </div>
                       </td>
@@ -35632,355 +40092,120 @@ const InstituteERPCourses = ({
                 <tr>
                   <td colSpan="8" className="px-6 py-12 text-center text-gray-400 font-medium">
                     <BookOpen className="w-10 h-10 mx-auto text-gray-300 mb-3" />
-                    No courses matching search criteria.
-                    <p className="text-xs text-gray-400 mt-1">Try adjusting your search or create a new course.</p>
+                    No standardized courses matching search criteria.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredCoursesList.length)} of {filteredCoursesList.length} Courses
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Prev
-              </button>
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
-                {currentPage} / {totalPages}
-              </div>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredCoursesList.length}
+          itemsPerPage={itemsPerPage}
+        />
       </div>
 
-      {/* ─── EDIT COURSE MODAL ────────────────────────────────────────────────── */}
-      {editingCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col my-auto">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 px-6 py-4 text-white flex-shrink-0 flex justify-between items-center">
-              <div>
-                <h3 className="font-extrabold text-base">Edit Course</h3>
-                <p className="text-[10px] text-blue-200 font-medium">Update course details for {editingCourse.courseName}</p>
-              </div>
-              <button
-                type="button"
-                onClick={closeEditModal}
-                className="p-1.5 hover:bg-blue-600/50 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Edit Form */}
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 text-left">
-              {editError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-xs text-red-800 font-semibold">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <div className="leading-relaxed">{editError}</div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-1.5">Course Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.courseName}
-                    onChange={(e) => setEditForm({...editForm, courseName: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-1.5">Course Code *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.courseCode}
-                    onChange={(e) => setEditForm({...editForm, courseCode: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-1.5">Course Type</label>
-                  <select
-                    value={editForm.courseType}
-                    onChange={(e) => setEditForm({...editForm, courseType: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold"
-                  >
-                    <option value="" disabled>Select course type</option>
-                    <option value="Undergraduate">Undergraduate</option>
-                    <option value="Postgraduate">Postgraduate</option>
-                    <option value="Diploma">Diploma</option>
-                    <option value="Fellowship">Fellowship</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-1.5">Program Category</label>
-                  <input
-                    type="text"
-                    value={editForm.programCategory}
-                    onChange={(e) => setEditForm({...editForm, programCategory: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-1.5">Course Duration</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editForm.courseDuration}
-                    onChange={(e) => setEditForm({...editForm, courseDuration: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-1.5">Duration Type</label>
-                  <select
-                    value={editForm.durationType}
-                    onChange={(e) => setEditForm({...editForm, durationType: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold"
-                  >
-                    <option value="" disabled>Select duration type</option>
-                    <option value="Years">Years</option>
-                    <option value="Months">Months</option>
-                    <option value="Weeks">Weeks</option>
-                  </select>
-                </div>
-
-                <div className="col-span-full space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500">Subjects</label>
-                    <button 
-                      type="button" 
-                      onClick={() => setEditForm({...editForm, subjects: [...(editForm.subjects || []), '']})}
-                      className="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100 transition-colors uppercase tracking-wider"
-                    >
-                      + Add Subject
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {(editForm.subjects || []).map((subj, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          required
-                          placeholder={`Subject ${idx + 1}`}
-                          value={subj}
-                          onChange={(e) => {
-                            const newSubjects = [...editForm.subjects];
-                            newSubjects[idx] = e.target.value;
-                            setEditForm({...editForm, subjects: newSubjects});
-                          }}
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newSubjects = [...editForm.subjects];
-                            newSubjects.splice(idx, 1);
-                            setEditForm({...editForm, subjects: newSubjects});
-                          }}
-                          className="p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-xl transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs uppercase font-extrabold tracking-wider text-gray-500 mb-1.5">Status</label>
-                  <select
-                    value={editForm.status}
-                    onChange={(e) => setEditForm({...editForm, status: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-bold"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Pending">Pending</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Fee Configuration Section */}
-              <div className="space-y-4 pt-4 border-t border-gray-100">
-                <h4 className="text-xs font-black uppercase tracking-widest text-blue-600">Fee Configuration</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-[10px] uppercase font-extrabold tracking-wider text-gray-500 mb-1">Examination Fee</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={editForm.examinationFee}
-                      onChange={(e) => setEditForm({...editForm, examinationFee: e.target.value})}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex justify-end gap-3 border-t border-gray-100 pt-4 mt-4">
-                <button
-                  type="button"
-                  onClick={closeEditModal}
-                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs uppercase transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isEditLoading}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isEditLoading ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Save Changes
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── VIEW COURSE MODAL ────────────────────────────────────────────────── */}
+      {/* ─── VIEW CURRICULUM MODAL ────────────────────────────────────────── */}
       {viewingCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col my-auto">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-indigo-900 px-6 py-4 text-white flex-shrink-0 flex justify-between items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col my-auto text-left">
+            <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 px-6 py-4 text-white flex justify-between items-center flex-shrink-0">
               <div>
-                <h3 className="font-extrabold text-base">Course Details</h3>
-                <p className="text-[10px] text-indigo-200 font-medium">Course information overview</p>
+                <span className="text-[10px] font-mono text-blue-200 font-bold block">{viewingCourse.courseCode || 'SEMI-COURSE'}</span>
+                <h3 className="font-extrabold text-base">{viewingCourse.courseName || viewingCourse.name}</h3>
               </div>
               <button
                 type="button"
-                onClick={closeViewModal}
-                className="p-1.5 hover:bg-indigo-600/50 rounded-lg transition-colors"
+                onClick={() => setViewingCourse(null)}
+                className="p-1.5 hover:bg-blue-600/50 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs overflow-y-auto flex-1 text-left">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="p-6 space-y-6 overflow-y-auto flex-1 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200">
                 <div>
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Course Name</span>
-                  <span className="text-gray-900 font-bold block mt-0.5">{viewingCourse.courseName}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Course Code</span>
-                  <span className="font-mono font-bold text-blue-600 block mt-0.5">{viewingCourse.courseCode}</span>
+                  <span className="text-[10px] uppercase font-bold text-gray-400 block">Course Type</span>
+                  <span className="font-bold text-gray-800">{viewingCourse.courseType || 'Fellowship'}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Course Type</span>
-                  <span className="text-gray-700 font-semibold block mt-0.5">{viewingCourse.courseType}</span>
+                  <span className="text-[10px] uppercase font-bold text-gray-400 block">Program Category</span>
+                  <span className="font-bold text-gray-800">{viewingCourse.programCategory || 'Emergency Medicine'}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Program Category</span>
-                  <span className="text-gray-700 font-semibold block mt-0.5">{viewingCourse.programCategory}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Duration</span>
-                  <span className="text-gray-700 font-semibold block mt-0.5">{viewingCourse.courseDuration} {viewingCourse.durationType}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Total Subjects</span>
-                  <span className="text-gray-700 font-semibold block mt-0.5">{viewingCourse.totalSubjects}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Students Enrolled</span>
-                  <span className="text-blue-600 font-bold block mt-0.5">{viewingCourse.studentsCount || 0}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Batches</span>
-                  <span className="text-blue-600 font-bold block mt-0.5">{viewingCourse.batchesCount || 0}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="block text-[10px] uppercase font-black text-gray-400">Status</span>
-                  <span className={`inline-flex items-center gap-1.5 mt-1 px-3 py-1 rounded-full text-[10px] font-bold ${
-                    viewingCourse.status === 'Active' 
-                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                      : viewingCourse.status === 'Inactive'
-                      ? 'bg-gray-100 text-gray-500 border border-gray-200'
-                      : 'bg-amber-50 text-amber-700 border border-amber-200'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      viewingCourse.status === 'Active' ? 'bg-green-600' : 
-                      viewingCourse.status === 'Inactive' ? 'bg-gray-400' : 'bg-amber-500'
-                    }`}></span>
-                    {viewingCourse.status || 'Active'}
-                  </span>
-                </div>
-
-                {/* Subjects List */}
-                <div className="col-span-2 border-t border-gray-100 pt-4 mt-2">
-                  <span className="block text-[10px] uppercase font-black text-gray-400 mb-2">Subjects List</span>
-                  {viewingCourse.subjects && viewingCourse.subjects.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {viewingCourse.subjects.map((sub, i) => (
-                        <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100/50">
-                          {sub}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-xs italic">No subjects registered.</span>
-                  )}
+                  <span className="text-[10px] uppercase font-bold text-gray-400 block">Duration</span>
+                  <span className="font-bold text-gray-800">{viewingCourse.courseDuration} {viewingCourse.durationType}</span>
                 </div>
               </div>
 
-              {/* Fee Summary */}
-              <div className="border-t border-gray-100 pt-4 mt-2">
-                <h4 className="text-[10px] uppercase font-black text-gray-400 mb-3">Fee Structure</h4>
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div>
-                    <span className="block text-[9px] uppercase text-gray-400">Examination Fee</span>
-                    <span className="text-gray-900 font-bold text-sm">{viewingCourse.examinationFee}</span>
-                  </div>
-                </div>
+              {/* Semester breakdown */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black uppercase text-gray-700 tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-blue-600" />
+                  Standardized Semester Modules & Subjects
+                </h4>
+
+                {viewingCourse.semesters && viewingCourse.semesters.length > 0 ? (
+                  viewingCourse.semesters.map((sem) => (
+                    <div key={sem.semesterNumber} className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                      <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                        <span className="font-black text-blue-700 text-xs uppercase">
+                          Semester {sem.semesterNumber}: {sem.semesterName || `Semester ${sem.semesterNumber}`}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1.5">Theory Subjects:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {(sem.subjects || []).map((s, sIdx) => (
+                            <span key={sIdx} className="bg-blue-50 text-blue-800 border border-blue-100 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
+                              {s.code && <strong className="font-mono mr-1 text-blue-600">[{s.code}]</strong>}
+                              {s.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1.5">Practical & OSCE Stations:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {(sem.practicalExams || []).map((p, pIdx) => (
+                            <span key={pIdx} className="bg-purple-50 text-purple-800 border border-purple-100 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
+                              {p.code && <strong className="font-mono mr-1 text-purple-600">[{p.code}]</strong>}
+                              {p.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400 italic">No semester-wise subjects defined for this course.</p>
+                )}
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
               <button
                 type="button"
-                onClick={closeViewModal}
-                className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl text-xs uppercase transition-colors"
+                onClick={() => {
+                  handleSelectCourseForBatch(viewingCourse);
+                  setViewingCourse(null);
+                }}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase flex items-center gap-1.5 shadow-sm"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Select This Course & Create Batch
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewingCourse(null)}
+                className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-xl text-xs uppercase cursor-pointer"
               >
                 Close
               </button>
@@ -35989,25 +40214,6 @@ const InstituteERPCourses = ({
         </div>
       )}
 
-      {/* Toasts and confirmation modals */}
-      {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
-        />
-      )}
-      {confirmConfig && (
-        <ConfirmModal
-          isOpen={true}
-          title={confirmConfig.title}
-          message={confirmConfig.message}
-          type={confirmConfig.type}
-          confirmText={confirmConfig.confirmText}
-          onConfirm={confirmConfig.onConfirm}
-          onCancel={() => setConfirmConfig(null)}
-        />
-      )}
     </div>
   );
 };
@@ -37051,10 +41257,10 @@ const InstituteERPEnrollment = ({
                   <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Accredited Institute of Enrollment *</label>
                   <select
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none cursor-not-allowed"
-                    value={user?.instituteName || appForm.orgName || 'Saraswathi Inst.'}
+                    value={user?.instituteName || appForm?.orgName || 'Institute Portal'}
                     disabled
                   >
-                    <option>{user?.instituteName || appForm.orgName || 'Saraswathi Inst.'}</option>
+                    <option>{user?.instituteName || appForm?.orgName || 'Institute Portal'}</option>
                   </select>
                 </div>
 
@@ -37356,10 +41562,11 @@ export default InstituteERPEnrollment;
 
 ```jsx
 import { useState, useEffect, useMemo } from 'react';
-import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check, DollarSign } from 'lucide-react';
 import examService from '../../../api/exams';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
+import Pagination from '../../../Components/Pagination';
 
 const STEPS = [
   { num: 1, label: 'Select Course', icon: BookOpen },
@@ -37383,6 +41590,10 @@ const InstituteERPExams = ({
   const [feeRecords, setFeeRecords] = useState([]);
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [feeConfig, setFeeConfig] = useState(null);
+  const [reappearanceMap, setReappearanceMap] = useState({});
+  const [feeLoading, setFeeLoading] = useState(false);
 
   useEffect(() => {
     const fetchFeeRecords = async () => {
@@ -37418,6 +41629,51 @@ const InstituteERPExams = ({
     );
   }, [students, selectedCourseId]);
 
+  const filteredStudentIdsKey = filteredStudents
+    .map((s) => s.id || s._id)
+    .sort()
+    .join(',');
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchFeeConfig = async () => {
+      if (!selectedCourseId || !selectedSemester || filteredStudents.length === 0) {
+        setFeeConfig(null);
+        setReappearanceMap({});
+        return;
+      }
+      setFeeLoading(true);
+      try {
+        const [configRes] = await Promise.all([
+          examService.getFeeConfiguration(selectedCourseId, selectedSemester),
+        ]);
+        const config = configRes?.data?.data || configRes?.data || configRes;
+        if (!cancelled) setFeeConfig(config);
+
+        const map = {};
+        await Promise.all(
+          filteredStudents.map(async (s) => {
+            const sid = s.id || s._id;
+            try {
+              const res = await examService.checkExamFeeApplicability(sid, selectedSemester);
+              const data = res?.data?.data || res?.data || res;
+              if (data) map[sid] = data;
+            } catch (err) {
+              map[sid] = { isReappearing: false, attemptCount: 1, examFeeApplicable: false };
+            }
+          })
+        );
+        if (!cancelled) setReappearanceMap(map);
+      } catch (err) {
+        console.error('Failed to fetch fee status', err);
+      } finally {
+        if (!cancelled) setFeeLoading(false);
+      }
+    };
+    fetchFeeConfig();
+    return () => { cancelled = true; };
+  }, [selectedCourseId, selectedSemester, filteredStudentIdsKey]);
+
   const availableSemesters = useMemo(() => {
     const sems = new Set();
     filteredStudents.forEach(s => {
@@ -37445,27 +41701,56 @@ const InstituteERPExams = ({
         map[s.id || s._id] = { isEligible: false, reasonsText: `No record for Sem ${selectedSemester}` };
         return;
       }
+      const isVerified = s.verificationStatus === 'Approved';
       const isAttendanceOk = (sem.attendancePercentage || 0) >= 75;
       const isThesisOk = !!sem.thesisApproved;
+      const sid = s.id || s._id;
       const isExamFeePaid = feeRecords.some(r =>
-        (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id || r.student === s.id) &&
+        (r.student?._id === sid || r.student === sid || r.student?.id === sid || r.student === sid) &&
         r.paymentPurpose === 'Examination fee' && r.semesterNumber?.toString() === selectedSemester.toString()
       );
-      const isEligible = isAttendanceOk && isThesisOk && isExamFeePaid;
+      // Fees are waived for first-attempt students; only reappearing students
+      // with an applicable fee must have paid.
+      const isReappearing = reappearanceMap[sid]?.isReappearing;
+      const feeRequired = isReappearing || feeConfig?.feeApplicableForFirstAttempt;
+      const isExamFeeSatisfied = feeRequired ? isExamFeePaid : true;
+      const hasNbls = !!s.documents?.nblsCertificateUrl;
+      const hasNcls = !!s.documents?.nclsCertificateUrl;
+      const hasNtls = !!s.documents?.ntlsCertificateUrl;
+      const hasNuls = !!s.documents?.nulsCertificateUrl;
+      const certCount = [hasNbls, hasNcls, hasNtls, hasNuls].filter(Boolean).length;
+      const isCourseCertsOk = certCount >= 1;
+
+      const isEligible = isVerified && isAttendanceOk && isThesisOk && isExamFeeSatisfied && isCourseCertsOk;
       const reasons = [];
+      if (!isVerified) reasons.push(`Verification pending (${s.verificationStatus || 'Pending'})`);
       if (!isAttendanceOk) reasons.push(`Attendance low (${sem.attendancePercentage || 0}%)`);
       if (!isThesisOk) reasons.push("Thesis not uploaded");
-      if (!isExamFeePaid) reasons.push("Exam fee not paid");
-      map[s.id || s._id] = {
+      if (!isExamFeeSatisfied) reasons.push("Exam fee not paid");
+      if (!isCourseCertsOk) {
+        reasons.push("Missing Course Completion Certificate (at least one of NBLS, NCLS, NTLS, NULS required)");
+      }
+
+      map[sid] = {
         isEligible,
+        isVerified,
         isAttendanceOk,
         isThesisOk,
         isExamFeePaid,
+        isExamFeeSatisfied,
+        isReappearing: !!isReappearing,
+        feeRequired: !!feeRequired,
+        isCourseCertsOk,
+        certCount,
+        hasNbls,
+        hasNcls,
+        hasNtls,
+        hasNuls,
         reasonsText: reasons.join(", "),
       };
     });
     return map;
-  }, [filteredStudents, feeRecords, selectedSemester]);
+  }, [filteredStudents, feeRecords, selectedSemester, reappearanceMap, feeConfig]);
 
   const eligibleStudentIds = useMemo(() => {
     return filteredStudents
@@ -37664,6 +41949,8 @@ const InstituteERPExams = ({
               <th className="px-4 py-3 font-black text-center">Attendance</th>
               <th className="px-4 py-3 font-black text-center">Thesis</th>
               <th className="px-4 py-3 font-black text-center">Fee Paid</th>
+              <th className="px-4 py-3 font-black text-center">Certificates (NBLS/NCLS/NTLS/NULS)</th>
+              <th className="px-4 py-3 font-black text-center">Exam Fee</th>
               <th className="px-4 py-3 font-black text-center">Status</th>
             </tr>
           </thead>
@@ -37671,6 +41958,7 @@ const InstituteERPExams = ({
             {filteredStudents.map(s => {
               const e = studentEligibility[s.id || s._id];
               const sid = s.id || s._id;
+              const certsOk = e?.isCourseCertsOk;
               return (
                 <tr key={sid} className="hover:bg-slate-50/30 transition-colors">
                   <td className="px-4 py-3">
@@ -37696,6 +41984,52 @@ const InstituteERPExams = ({
                       e.isExamFeePaid
                         ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
                         : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {e ? (
+                      certsOk ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            {e.certCount}/4 Uploaded
+                          </span>
+                          <div className="flex gap-1 text-[8px] font-bold">
+                            <span className={e.hasNbls ? "text-emerald-700" : "text-slate-300"}>NBLS</span>
+                            <span className={e.hasNcls ? "text-emerald-700" : "text-slate-300"}>NCLS</span>
+                            <span className={e.hasNtls ? "text-emerald-700" : "text-slate-300"}>NTLS</span>
+                            <span className={e.hasNuls ? "text-emerald-700" : "text-slate-300"}>NULS</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-black" title="At least one course completion certificate is mandatory">
+                            <XCircle className="w-3 h-3 text-amber-600" />
+                            0/4 Missing
+                          </span>
+                          <span className="text-[8px] font-semibold text-rose-500">Min 1 Required</span>
+                        </div>
+                      )
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {feeLoading ? (
+                      <span className="w-4 h-4 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin inline-block align-middle" />
+                    ) : reappearanceMap[sid] ? (
+                      reappearanceMap[sid].isReappearing ? (
+                        <span className="inline-flex flex-col items-center gap-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[9px] uppercase font-black">
+                            <DollarSign className="w-3 h-3" />
+                            ₹{(feeConfig?.reappearingFee ?? 0).toLocaleString()} Payable
+                          </span>
+                          <span className="text-[8px] text-amber-600 font-bold">Attempt {reappearanceMap[sid].attemptCount}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] uppercase font-black">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Waived
+                        </span>
+                      )
                     ) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -37929,38 +42263,13 @@ const InstituteERPExams = ({
             </div>
           </div>
           {examApplications.length > 0 && (
-            <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-600 pt-4 border-t border-slate-50 mt-4">
-              <button
-                type="button"
-                disabled={activePage === 1}
-                onClick={() => setActivePage(prev => Math.max(prev - 1, 1))}
-                className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(num => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => setActivePage(num)}
-                  className={`w-8 h-8 rounded-lg border text-xs font-black transition-all cursor-pointer ${
-                    activePage === num
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/10'
-                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  {num}
-                </button>
-              ))}
-              <button
-                type="button"
-                disabled={activePage === totalPages}
-                onClick={() => setActivePage(prev => Math.min(prev + 1, totalPages))}
-                className="p-2 border border-slate-200 hover:bg-slate-50 disabled:opacity-45 disabled:pointer-events-none rounded-lg text-slate-400 transition-colors cursor-pointer"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <Pagination
+              currentPage={activePage}
+              totalPages={totalPages}
+              onPageChange={setActivePage}
+              totalItems={examApplications.length}
+              itemsPerPage={itemsPerPage}
+            />
           )}
         </div>
       </div>
@@ -38114,6 +42423,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Eye, CheckCircle2, ChevronLeft, ChevronRight, X, CreditCard, User, Loader2, FileText, ArrowRight, Check } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import { academicService } from '../../../api/academic';
+import examService from '../../../api/exams';
 import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
 import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
 
@@ -38146,6 +42456,9 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
 
   const [feeRecords, setFeeRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [feeCheck, setFeeCheck] = useState(null);
+  const [feeCheckLoading, setFeeCheckLoading] = useState(false);
 
   const [viewingTx, setViewingTx] = useState(null);
   const [toast, setToast] = useState(null);
@@ -38203,7 +42516,32 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
     setAmount('');
     setFeeType('Examination fee');
     setPaymentDate(new Date().toISOString().split('T')[0]);
+    setFeeCheck(null);
   };
+
+  // Resolve the applicable exam fee for the selected student + semester.
+  useEffect(() => {
+    if (!selectedStudentId || !selectedSemester) {
+      setFeeCheck(null);
+      return;
+    }
+    let cancelled = false;
+    setFeeCheckLoading(true);
+    examService
+      .checkExamFeeApplicability(selectedStudentId, parseInt(selectedSemester))
+      .then((res) => {
+        if (cancelled) return;
+        const data = res?.data?.data || res?.data || res;
+        setFeeCheck(data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setFeeCheck(null);
+      })
+      .finally(() => {
+        if (!cancelled) setFeeCheckLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedStudentId, selectedSemester]);
 
   const eligibleStudents = students;
   const selectedStudent = students.find(s => s._id === selectedStudentId || s.id === selectedStudentId);
@@ -38228,29 +42566,37 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   }, [selectedStudentId, feeRecords, feeType, selectedSemester]);
 
   useEffect(() => {
+    // Auto-fill the amount from the resolved exam fee configuration when a fee
+    // is applicable; otherwise leave blank (fee waived / not payable).
     setTimeout(() => {
-      if (selectedStudent && courses.length > 0) {
-        const studentCourseName = selectedStudent.course || selectedStudent.courseName;
-        const course = courses.find(c =>
-          c.name === studentCourseName ||
-          c.courseCode === studentCourseName ||
-          c._id === selectedStudent.courseId
-        );
-        if (course && course.examinationFee) {
-          setAmount(course.examinationFee.toString().replace(/,/g, ''));
-        } else {
-          setAmount('');
+      if (selectedStudent && selectedSemester) {
+        if (feeCheck?.examFeeApplicable && Number(feeCheck.examFeeAmount) > 0) {
+          setAmount(String(feeCheck.examFeeAmount).replace(/,/g, ''));
+          return;
         }
-      } else {
-        setAmount('');
       }
+      setAmount('');
     }, 0);
-  }, [selectedStudent, courses]);
+  }, [selectedStudent, selectedSemester, feeCheck]);
+
+  // Exam fee is only payable when the resolved configuration deems it
+  // applicable (reappearing with fee > 0, or first-attempt with opt-in).
+  const isExamFeePurpose = String(feeType).toLowerCase().includes('exam');
+  const examFeeApplicable = isExamFeePurpose
+    ? Boolean(feeCheck?.examFeeApplicable && Number(feeCheck.examFeeAmount) > 0)
+    : true;
+  const isReappearing = Boolean(feeCheck?.isReappearing);
+  const isFeeWaived = isExamFeePurpose && !examFeeApplicable;
 
   const canProceedFrom = (s) => {
     if (s === 1) return !!selectedStudentId;
-    if (s === 2) return !!selectedSemester;
+    if (s === 2) {
+      if (!selectedSemester) return false;
+      // Allow proceeding to confirm fee status, but block paying a waived fee.
+      return true;
+    }
     if (s === 3) {
+      if (isFeeWaived) return false;
       const parsedAmount = parseFloat(amount);
       return !isNaN(parsedAmount) && parsedAmount > 0 && !!paymentDate;
     }
@@ -38274,6 +42620,10 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
     }
     if (!selectedSemester) {
       setToast({ message: 'Please select a semester.', type: 'warning' });
+      return;
+    }
+    if (isFeeWaived) {
+      setToast({ message: 'No exam fee is applicable for this student & semester (fee is waived). Payment cannot be recorded.', type: 'warning' });
       return;
     }
     const parsedAmount = parseFloat(amount);
@@ -38487,6 +42837,25 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
           ))}
         </div>
       )}
+      {selectedSemester && (
+        <div className={`rounded-2xl p-4 border ${isFeeWaived ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'} mt-3`}>
+          {feeCheckLoading ? (
+            <p className="text-[11px] font-bold text-slate-500 flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking exam fee applicability...
+            </p>
+          ) : isFeeWaived ? (
+            <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              No exam fee applicable for {isReappearing ? 'this reappearing student' : 'this first-attempt student'} in Sem {selectedSemester} — fee is waived. Payment cannot be recorded.
+            </p>
+          ) : (
+            <p className="text-[11px] font-bold text-amber-700 flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Exam fee of {fmtCurrency(feeCheck?.examFeeAmount)} is applicable for this {isReappearing ? 'reappearing' : 'first-attempt'} student in Sem {selectedSemester}.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -38499,6 +42868,14 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         </h3>
         <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Configure payment amount</p>
       </div>
+      {isFeeWaived && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+          <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            No exam fee applicable for this {isReappearing ? 'reappearing' : 'first-attempt'} student & semester — the fee is waived. You cannot record a payment here.
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Fee Type</label>
@@ -38519,10 +42896,11 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
               type="number"
               required
               min="1"
-              placeholder="Enter amount..."
+              placeholder={isFeeWaived ? 'No fee applicable' : 'Enter amount...'}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+              disabled={isFeeWaived}
+              className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -38647,7 +43025,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
             <button
               type="button"
               onClick={handleSubmitPayment}
-              disabled={submitting}
+              disabled={submitting || isFeeWaived}
               className="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-md shadow-emerald-500/10 cursor-pointer"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
@@ -41316,8 +45694,6 @@ const InstituteERPMarksheet = ({
                           <tr className="border-b border-black bg-slate-100 text-left font-bold">
                             <th className="p-2 border-r border-black w-16 text-center">Code</th>
                             <th className="p-2 border-r border-black">Subject Title</th>
-                            <th className="p-2 border-r border-black w-20 text-center">Internal</th>
-                            <th className="p-2 border-r border-black w-20 text-center">External</th>
                             <th className="p-2 border-r border-black w-20 text-center">Total</th>
                             <th className="p-2 text-center w-16">Result</th>
                           </tr>
@@ -41327,8 +45703,6 @@ const InstituteERPMarksheet = ({
                             <tr key={sIdx} className="border-b border-black last:border-b-0">
                               <td className="p-2 border-r border-black font-mono text-center">{sub.code}</td>
                               <td className="p-2 border-r border-black font-medium">{sub.name}</td>
-                              <td className="p-2 border-r border-black text-center font-mono">{sub.internal}</td>
-                              <td className="p-2 border-r border-black text-center font-mono">{sub.external}</td>
                               <td className="p-2 border-r border-black text-center font-mono font-bold">{sub.total}</td>
                               <td className="p-2 text-center font-bold">
                                 <span className={sub.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}>
@@ -41340,7 +45714,7 @@ const InstituteERPMarksheet = ({
                         </tbody>
                         <tfoot>
                           <tr className="border-t-2 border-black bg-slate-50 font-bold">
-                            <td colSpan="4" className="p-2 text-right border-r border-black uppercase text-[11px]">
+                            <td colSpan="2" className="p-2 text-right border-r border-black uppercase text-[11px]">
                               Aggregate Total Marks
                             </td>
                             <td className="p-2 text-center border-r border-black font-mono">
@@ -41862,6 +46236,7 @@ import resultService from '../../../api/results';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
 import InstituteERPMarksheet from './InstituteERPMarksheet';
+import Pagination from '../../../Components/Pagination';
 
 const InstituteERPResults = ({ user }) => {
   // ─── State ──────────────────────────────────────────────────────────────────
@@ -42623,32 +46998,13 @@ const InstituteERPResults = ({ user }) => {
         </div>
 
         {/* ─── Pagination ────────────────────────────────────────────────────── */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <span className="text-[10px] text-slate-400 font-semibold">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredResults.length)} of {filteredResults.length}
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
-                {currentPage} / {totalPages}
-              </div>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredResults.length}
+          itemsPerPage={itemsPerPage}
+        />
       </div>
 
       {/* ─── Result Detail Modal ────────────────────────────────────────────── */}
@@ -42759,8 +47115,6 @@ const InstituteERPResults = ({ user }) => {
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Code</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Name</th>
-                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Internal</th>
-                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">External</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
                         </tr>
@@ -42778,8 +47132,6 @@ const InstituteERPResults = ({ user }) => {
                               </td>
                               <td className="px-3 py-2.5 font-mono font-bold text-slate-600">{subject.subjectCode || 'N/A'}</td>
                               <td className="px-3 py-2.5 font-bold text-slate-700">{subject.subjectName || 'N/A'}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-slate-700">{subject.internalMarks || 0}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-slate-700">{subject.externalMarks || 0}</td>
                               <td className="px-3 py-2.5 text-center font-bold text-slate-800">{total}</td>
                               <td className="px-3 py-2.5 text-center">
                                 <span className={`inline-flex px-2.5 py-0.5 rounded-lg text-[9px] font-bold border ${gradeBg} ${gradeColor}`}>
@@ -42792,7 +47144,7 @@ const InstituteERPResults = ({ user }) => {
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-50/70 border-t border-slate-200">
-                          <td colSpan="5" className="px-3 py-2.5 font-black text-xs text-slate-700 text-right">
+                          <td colSpan="3" className="px-3 py-2.5 font-black text-xs text-slate-700 text-right">
                             Overall Total
                           </td>
                           <td className="px-3 py-2.5 text-center font-black text-slate-800">{viewingResult.totalMarks || 0}</td>
@@ -42916,6 +47268,7 @@ import revaluationService from '../../../api/revaluation';
 import academicService from '../../../api/academic';
 import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
 import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
+import Pagination from '../../../Components/Pagination';
 
 const InstituteERPRevaluation = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
@@ -44253,32 +48606,13 @@ const InstituteERPRevaluation = () => {
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
-            <span className="text-[10px] text-slate-400 font-semibold">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredRequests.length)} of {filteredRequests.length}
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
-                {currentPage} / {totalPages}
-              </div>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredRequests.length}
+          itemsPerPage={itemsPerPage}
+        />
       </div>
 
       {/* ─── Request Detail Modal ───────────────────────────────────────────── */}
@@ -44531,6 +48865,7 @@ const InstituteERPSidebar = ({
   activeTab, 
   setActiveTab, 
   user, 
+  appForm,
   setErrorBanner, 
   setSuccessBanner,
 }) => {
@@ -44539,6 +48874,14 @@ const InstituteERPSidebar = ({
     setSuccessBanner(null);
     setActiveTab(tab);
   };
+
+  const storedUserStr = typeof window !== 'undefined' ? localStorage.getItem('semi_user') : null;
+  const storedUser = storedUserStr ? (() => { try { return JSON.parse(storedUserStr); } catch { return null; } })() : null;
+  const registeredEmail = typeof window !== 'undefined' ? localStorage.getItem('semi_registered_email') : null;
+
+  const displayEmail = user?.email || storedUser?.email || appForm?.emailAddress || registeredEmail || '';
+  const displayInstituteName = user?.instituteName || storedUser?.instituteName || appForm?.orgName || user?.name || 'Institute Portal';
+  const displayInitials = displayInstituteName ? displayInstituteName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'IP';
 
   return (
     <aside className="w-68 bg-primary-900 border-r border-primary-800 flex flex-col flex-shrink-0 text-primary-200 font-sans select-none relative overflow-hidden">
@@ -44549,7 +48892,7 @@ const InstituteERPSidebar = ({
       <div className="h-16 flex items-center px-6 border-b border-primary-800/80 bg-primary-950/40 gap-3 relative z-10">
         <div className="bg-gradient-to-tr from-primary-500 to-primary-400 p-1.5 rounded-xl shadow-md shadow-primary-500/20 flex items-center justify-center">
           <div className="w-7 h-7 rounded-lg bg-primary-900 flex items-center justify-center text-white font-extrabold text-sm">
-            SI
+            {displayInitials}
           </div>
         </div>
         <div className="flex flex-col text-left">
@@ -44563,12 +48906,12 @@ const InstituteERPSidebar = ({
         <span className="text-[8px] uppercase font-black text-primary-400 tracking-widest block text-left">College / Hospital</span>
         <div className="flex items-center gap-3 mt-2.5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-400 to-primary-600 text-white flex items-center justify-center font-black text-xs shadow-md border border-primary-400/20">
-            SI
+            {displayInitials}
           </div>
           <div className="flex flex-col text-left truncate">
-            <span className="text-xs font-bold text-primary-100 truncate">{user?.email || 'admin@saraswathi.edu.in'}</span>
-            <span className="inline-flex w-fit mt-1 text-[8px] font-black uppercase text-primary-200 bg-primary-500/20 px-2 py-0.5 rounded-md border border-primary-500/30 tracking-wider">
-              {user?.instituteName || 'Saraswathi Inst.'}
+            <span className="text-xs font-bold text-primary-100 truncate" title={displayEmail}>{displayEmail}</span>
+            <span className="inline-flex w-fit mt-1 text-[8px] font-black uppercase text-primary-200 bg-primary-500/20 px-2 py-0.5 rounded-md border border-primary-500/30 tracking-wider truncate" title={displayInstituteName}>
+              {displayInstituteName}
             </span>
           </div>
         </div>
@@ -45826,6 +50169,7 @@ import { useState, useMemo } from 'react';
 import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
 import InstituteStudentEditModal from './InstituteStudentEditModal';
+import Pagination from '../../../Components/Pagination';
 
 const InstituteERPStudents = ({
   students,
@@ -45866,12 +50210,19 @@ const InstituteERPStudents = ({
       const name = s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
       const email = s.email || '';
       const enroll = s.enrollmentNo || s.applicationId || s.enrollmentId || '';
+      const regNo = s.medicalCouncilRegistrationNumber || '';
       const matchesSearch = name.toLowerCase().includes(studentSearch.toLowerCase()) || 
                             enroll.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                            email.toLowerCase().includes(studentSearch.toLowerCase());
+                            email.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                            regNo.toLowerCase().includes(studentSearch.toLowerCase());
       
-      const currentStatus = s.status || 'Active';
-      const matchesStatus = studentFilter === 'All' || currentStatus === studentFilter;
+      const vStatus = s.verificationStatus || 'Pending Verification';
+      const matchesStatus = studentFilter === 'All' || 
+        (studentFilter === 'Approved' && vStatus === 'Approved') ||
+        (studentFilter === 'Pending' && vStatus === 'Pending Verification') ||
+        (studentFilter === 'Correction' && vStatus === 'Correction Required') ||
+        (studentFilter === 'Rejected' && vStatus === 'Rejected') ||
+        s.status === studentFilter;
       
       const bName = s.batchName || (typeof s.batch === 'string' ? s.batch : (s.batch?.name || (s.batch?.year ? `Batch ${s.batch.year}` : ''))) || '';
       const matchesBatch = selectedStudentFilterBatch === 'All' || bName === selectedStudentFilterBatch || String(s.batchId || s.batch?._id) === String(selectedStudentFilterBatch);
@@ -45882,6 +50233,11 @@ const InstituteERPStudents = ({
       return matchesSearch && matchesStatus && matchesBatch && matchesCourse;
     });
   }, [students, studentSearch, studentFilter, selectedStudentFilterBatch, selectedStudentFilterCourse]);
+
+  // Count candidates needing correction
+  const correctionCount = useMemo(() => {
+    return students.filter(s => s.verificationStatus === 'Correction Required').length;
+  }, [students]);
 
   // Reset page when filters change
   useMemo(() => {
@@ -45894,13 +50250,66 @@ const InstituteERPStudents = ({
     return filteredList.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredList, currentPage]);
 
+  const getVerificationBadge = (vStatus) => {
+    switch (vStatus) {
+      case 'Approved':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+            ✓ Approved
+          </span>
+        );
+      case 'Correction Required':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 animate-pulse">
+            ↻ Correction
+          </span>
+        );
+      case 'Rejected':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">
+            ✕ Rejected
+          </span>
+        );
+      case 'Pending Verification':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+            ⏳ Pending
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200 text-left font-sans">
+      {/* Correction Required Alert Banner */}
+      {correctionCount > 0 && (
+        <div className="bg-purple-50 border-2 border-purple-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-purple-900 shadow-sm animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wider">
+                Action Required: {correctionCount} Candidate Enrollment(s) Need Correction
+              </h4>
+              <p className="text-xs text-purple-700 mt-0.5">
+                The Academic Department requested corrections for document or candidate details. Click on the candidate's edit icon to view remarks and resubmit.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setStudentFilter('Correction')}
+            className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl transition-colors whitespace-nowrap shadow-sm"
+          >
+            View Flagged Students
+          </button>
+        </div>
+      )}
+
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-slate-800 tracking-tight">Total Students</h2>
-          <p className="text-xs text-slate-400 font-semibold mt-1">Institutional registry of enrolled fellows and application history</p>
+          <p className="text-xs text-slate-400 font-semibold mt-1">Institutional registry of enrolled fellows, verification status, and academic history</p>
         </div>
         <button
           onClick={() => {
@@ -45922,7 +50331,7 @@ const InstituteERPStudents = ({
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by name, ID, or email..."
+              placeholder="Search by name, ID, email, reg no..."
               value={studentSearch}
               onChange={(e) => setStudentSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-xs font-semibold"
@@ -45955,19 +50364,25 @@ const InstituteERPStudents = ({
             </div>
 
             <div className="flex items-center gap-1">
-              <span className="mr-1 text-[10px] uppercase font-black tracking-wider text-slate-400">Status:</span>
-              {['All', 'Active', 'Completed'].map((filter) => (
+              <span className="mr-1 text-[10px] uppercase font-black tracking-wider text-slate-400">Verification:</span>
+              {[
+                { id: 'All', label: 'All' },
+                { id: 'Pending', label: 'Pending' },
+                { id: 'Approved', label: 'Approved' },
+                { id: 'Correction', label: 'Correction' },
+                { id: 'Rejected', label: 'Rejected' },
+              ].map((filter) => (
                 <button
-                  key={filter}
+                  key={filter.id}
                   type="button"
-                  onClick={() => setStudentFilter(filter)}
-                  className={`px-3 py-1.5 rounded-lg border text-[10px] uppercase tracking-wider transition-all font-bold cursor-pointer ${
-                    studentFilter === filter 
+                  onClick={() => setStudentFilter(filter.id)}
+                  className={`px-2.5 py-1.5 rounded-lg border text-[10px] uppercase tracking-wider transition-all font-bold cursor-pointer ${
+                    studentFilter === filter.id 
                       ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
                       : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500'
                   }`}
                 >
-                  {filter}
+                  {filter.label}
                 </button>
               ))}
             </div>
@@ -45981,10 +50396,10 @@ const InstituteERPStudents = ({
               <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px]">
                 <th className="px-6 py-4 font-black w-16 text-center">#</th>
                 <th className="px-6 py-4 font-black">Batch</th>
-                <th className="px-6 py-4 font-black">Application ID</th>
-                <th className="px-6 py-4 font-black">Student name</th>
+                <th className="px-6 py-4 font-black">Enrollment ID</th>
+                <th className="px-6 py-4 font-black">Student Name</th>
                 <th className="px-6 py-4 font-black">Course</th>
-                <th className="px-6 py-4 font-black">Email</th>
+                <th className="px-6 py-4 font-black">Verification Status</th>
                 <th className="px-6 py-4 font-black text-center">Actions</th>
               </tr>
             </thead>
@@ -45995,8 +50410,8 @@ const InstituteERPStudents = ({
                 const appId = student.enrollmentNo || student.applicationId || student.enrollmentId || `SEMI00${student.id || idx}`;
                 const name = student.fullName || 'Dr. Arjun Kumar';
                 const course = student.courseName || student.course || 'General Medicine';
-                const email = student.email || 'arjun@gmail.com';
                 const studentId = student._id || student.id;
+                const vStatus = student.verificationStatus || 'Pending Verification';
 
                 return (
                   <tr key={studentId || idx} className="hover:bg-slate-50/30 transition-colors">
@@ -46004,10 +50419,20 @@ const InstituteERPStudents = ({
                     <td className="px-6 py-4 font-bold text-slate-700">{batch}</td>
                     <td className="px-6 py-4 font-mono font-bold text-blue-600 tracking-tight">{appId}</td>
                     <td className="px-6 py-4">
-                      <span className="font-extrabold text-slate-800">{name}</span>
+                      <span className="font-extrabold text-slate-800 block">{name}</span>
+                      <span className="text-[11px] text-slate-400 font-mono">{student.email}</span>
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-700">{course}</td>
-                    <td className="px-6 py-4 text-slate-500 font-medium">{email}</td>
+                    <td className="px-6 py-4">
+                      <div>
+                        {getVerificationBadge(vStatus)}
+                        {student.verificationRemarks && (
+                          <p className="text-[10px] text-slate-500 mt-1 truncate max-w-xs italic" title={student.verificationRemarks}>
+                            "{student.verificationRemarks}"
+                          </p>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
@@ -46021,8 +50446,12 @@ const InstituteERPStudents = ({
                         <button
                           type="button"
                           onClick={() => setSelectedStudentForEdit(student)}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer"
-                          title="Edit Profile"
+                          className={`p-2 rounded-xl transition-all cursor-pointer ${
+                            vStatus === 'Correction Required'
+                              ? 'text-purple-600 bg-purple-50 hover:bg-purple-100 font-bold'
+                              : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
+                          }`}
+                          title={vStatus === 'Correction Required' ? 'Correction Requested - Edit & Resubmit' : 'Edit Profile'}
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
@@ -46051,32 +50480,13 @@ const InstituteERPStudents = ({
         </div>
 
         {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
-            <span className="text-xs text-slate-500 font-medium">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredList.length)} of {filteredList.length} entries
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Prev
-              </button>
-              <div className="flex items-center px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-blue-600 shadow-sm">
-                {currentPage} / {totalPages}
-              </div>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredList.length}
+          itemsPerPage={itemsPerPage}
+        />
       </div>
 
       {/* VIEW DETAILS MODAL */}
@@ -46113,7 +50523,8 @@ const InstituteERPStudents = ({
                 <div>
                   <span className="text-2xl font-black text-slate-900 block leading-tight">{selectedStudentForView.fullName}</span>
                   <div className="flex flex-wrap gap-2.5 items-center mt-2">
-                    <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-sm">
+                    {getVerificationBadge(selectedStudentForView.verificationStatus || 'Pending Verification')}
+                    <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
                       {selectedStudentForView.status || 'Active'}
                     </span>
                     <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60 font-mono tracking-tight">
@@ -46122,6 +50533,25 @@ const InstituteERPStudents = ({
                   </div>
                 </div>
               </div>
+
+              {/* Verification Audit Alert if Remarks Present */}
+              {selectedStudentForView.verificationRemarks && (
+                <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
+                  selectedStudentForView.verificationStatus === 'Correction Required'
+                    ? 'bg-purple-50 border-purple-200 text-purple-900'
+                    : selectedStudentForView.verificationStatus === 'Rejected'
+                    ? 'bg-red-50 border-red-200 text-red-900'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                }`}>
+                  <span className="text-lg">📢</span>
+                  <div>
+                    <strong className="font-black block uppercase tracking-wider text-[10px]">
+                      Academic Department Verification Note:
+                    </strong>
+                    <p className="mt-1 font-medium">{selectedStudentForView.verificationRemarks}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Grid sections */}
               <div className="space-y-7">
@@ -46312,6 +50742,64 @@ const InstituteERPStudents = ({
                           <span className="truncate text-slate-700 group-hover:text-blue-700">PG Degree Certificate / HOD Confirmation</span>
                         </a>
                       )}
+                    </div>
+
+                    {/* Mandatory Pre-Exam Course Completion Certificates */}
+                    <div className="mt-5 pt-4 border-t border-slate-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs uppercase font-black tracking-widest text-slate-400">
+                          Course Completion Certificates (NBLS / NCLS / NTLS / NULS)
+                        </span>
+                        {(selectedStudentForView.documents?.nblsCertificateUrl ||
+                          selectedStudentForView.documents?.nclsCertificateUrl ||
+                          selectedStudentForView.documents?.ntlsCertificateUrl ||
+                          selectedStudentForView.documents?.nulsCertificateUrl) ? (
+                          <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                            ✓ Exam Eligible (Certificate Attached)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-black uppercase text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                            ⚠️ Min 1 Certificate Required for Exam
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-bold">
+                        {[
+                          { key: 'nblsCertificateUrl', label: 'NBLS (Basic Life Support)', icon: '🩺' },
+                          { key: 'nclsCertificateUrl', label: 'NCLS (Comprehensive Life Support)', icon: '❤️' },
+                          { key: 'ntlsCertificateUrl', label: 'NTLS (Trauma Life Support)', icon: '🩹' },
+                          { key: 'nulsCertificateUrl', label: 'NULS (Ultrasound Life Support)', icon: '📡' },
+                        ].map(cert => {
+                          const url = selectedStudentForView.documents?.[cert.key];
+                          return url ? (
+                            <a
+                              key={cert.key}
+                              href={getDocUrl(url)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-3 p-3 bg-emerald-50/60 hover:bg-emerald-100/60 border border-emerald-200/80 rounded-2xl transition-all group"
+                            >
+                              <span className="text-lg">{cert.icon}</span>
+                              <div className="min-w-0 flex-1">
+                                <span className="truncate block text-slate-800 group-hover:text-emerald-800 text-xs font-extrabold">{cert.label}</span>
+                                <span className="text-[10px] text-emerald-600 font-bold">Verified & Linked</span>
+                              </div>
+                            </a>
+                          ) : (
+                            <div
+                              key={cert.key}
+                              className="flex items-center gap-3 p-3 bg-slate-50 border border-dashed border-slate-200 rounded-2xl opacity-75"
+                            >
+                              <span className="text-lg">{cert.icon}</span>
+                              <div className="min-w-0 flex-1">
+                                <span className="truncate block text-slate-500 text-xs font-bold">{cert.label}</span>
+                                <span className="text-[10px] text-rose-500 font-bold">Missing - Upload Required</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -46524,7 +51012,7 @@ const InstituteSignup = ({ regForm, setRegForm, handleRegisterSubmit, setCurrent
             <input
               type="email"
               required
-              placeholder="e.g. admin@saraswathi.edu.in"
+              placeholder="e.g. contact@institute.edu"
               value={regForm.email}
               onChange={(e) => setRegForm({...regForm, email: e.target.value})}
               className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all font-medium text-sm"
@@ -46649,6 +51137,11 @@ const DOC_FIELDS = [
   { key: 'semiMembershipForm', urlKey: 'semiMembershipFormUrl', label: 'SEMI Membership Form (PDF/DOC)', icon: '🗳️', isImage: false },
   { key: 'studentSignature', urlKey: 'studentSignatureUrl', label: 'Student Signature (JPG/PNG)', icon: '✍️', isImage: true },
   { key: 'hodSignature', urlKey: 'hodSignatureUrl', label: 'PG Degree / HOD Confirmation (PDF)', icon: '🎓', isImage: false },
+  // Mandatory Pre-Examination Course Completion Certificates
+  { key: 'nblsCertificate', urlKey: 'nblsCertificateUrl', label: 'NBLS Certificate (National Basic Life Support)', icon: '🩺', isImage: false },
+  { key: 'nclsCertificate', urlKey: 'nclsCertificateUrl', label: 'NCLS Certificate (National Comprehensive Life Support)', icon: '❤️', isImage: false },
+  { key: 'ntlsCertificate', urlKey: 'ntlsCertificateUrl', label: 'NTLS Certificate (National Trauma Life Support)', icon: '🩹', isImage: false },
+  { key: 'nulsCertificate', urlKey: 'nulsCertificateUrl', label: 'NULS Certificate (National Ultrasound Life Support)', icon: '📡', isImage: false },
 ];
 
 const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses = [], batches = [] }) => {
@@ -46854,6 +51347,25 @@ const InstituteStudentEditModal = ({ student, isOpen, onClose, onSave, courses =
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
+          {/* Correction Required Banner */}
+          {student?.verificationStatus === 'Correction Required' && (
+            <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl text-xs text-purple-900 space-y-2">
+              <div className="flex items-center gap-2 font-black uppercase tracking-wider text-[11px] text-purple-800">
+                <span className="text-base">⚠️</span>
+                <span>Academic Department Correction Request</span>
+              </div>
+              {student?.verificationRemarks && (
+                <div className="bg-white/80 p-3 rounded-xl border border-purple-200/60">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Examiner / Reviewer Note:</span>
+                  <p className="font-semibold text-slate-800 leading-relaxed">{student.verificationRemarks}</p>
+                </div>
+              )}
+              <p className="text-[11px] text-purple-700">
+                Please update the relevant fields or upload updated/clearer documents below. Saving will automatically resubmit this candidate back to <strong>Pending Verification</strong> for Academic Department re-audit.
+              </p>
+            </div>
+          )}
+
           {error && (
             <div className="p-3.5 bg-rose-50 border-l-4 border-rose-500 rounded-r-xl text-xs font-bold text-rose-800 flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
@@ -48681,9 +53193,7 @@ const ResultsDisplay = ({ data, onBack }) => {
                         <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200">Sem</th>
                         <th className="py-3.5 px-4 text-center w-28 border-r border-slate-200">Sub-Code</th>
                         <th className="py-3.5 px-6 border-r border-slate-200">Subject Name</th>
-                        <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200" title="Internal Marks">Int</th>
-                        <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200" title="External Marks">Ext</th>
-                        <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200" title="Total Marks">Tot</th>
+                        <th className="py-3.5 px-4 text-center w-20 border-r border-slate-200" title="Total Marks">Marks</th>
                         <th className="py-3.5 px-4 text-center w-20 border-r border-slate-200">Grade</th>
                         <th className="py-3.5 px-4 text-center w-24">Status</th>
                       </tr>
@@ -48707,12 +53217,6 @@ const ResultsDisplay = ({ data, onBack }) => {
                             </td>
                             <td className="py-3.5 px-6 border-r border-slate-200 font-extrabold text-slate-900">
                               {subjectNameCapitalized}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200 font-semibold text-slate-600">
-                              {subject.internalMarks ?? '-'}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200 font-semibold text-slate-600">
-                              {subject.externalMarks ?? '-'}
                             </td>
                             <td className="py-3.5 px-4 text-center border-r border-slate-200 font-black text-slate-900">
                               {subject.totalMarks ?? '-'}

@@ -10,7 +10,7 @@ import { emitEvent } from '../config/socket';
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
 const updateMarksSchema = z.object({
-  semesterNumber: z.coerce.number().min(1, 'Semester number is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination number is required').max(2),
   subjects: z
     .array(
       z.object({
@@ -25,7 +25,7 @@ const updateMarksSchema = z.object({
 });
 
 const bulkUpdateMarksSchema = z.object({
-  semesterNumber: z.coerce.number().min(1),
+  examinationNumber: z.coerce.number().min(1).max(2),
   students: z
     .array(
       z.object({
@@ -99,9 +99,9 @@ const getSubjectsForCourse = async (courseId: any) => {
   }
 };
 
-const resolveMergedMarks = async (studentId: any, semesterNumber: number, existingMarks: any[]) => {
+const resolveMergedMarks = async (studentId: any, examinationNumber: number, existingMarks: any[]) => {
   try {
-    const resultDoc = await Result.findOne({ student: studentId, semester: semesterNumber });
+    const resultDoc = await Result.findOne({ student: studentId, examination: examinationNumber });
     if (!resultDoc || !resultDoc.subjects || resultDoc.subjects.length === 0) {
       return existingMarks;
     }
@@ -140,7 +140,7 @@ const resolveMergedMarks = async (studentId: any, semesterNumber: number, existi
 
 export const getStudentsWithMarks = async (req: Request, res: Response) => {
   try {
-    const { courseId, batchId, instituteId, search, semesterNumber } = req.query;
+    const { courseId, batchId, instituteId, search, examinationNumber } = req.query;
     const query: any = {};
 
     // Institute access control
@@ -172,14 +172,14 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
 
     const formattedStudents = await Promise.all(
       students.map(async (student) => {
-        const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
+        const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
 
-        const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
+        const examinationRecord = student.examinations.find((s) => s.examinationNumber === examNum);
 
-        const baseMarks = semesterRecord ? (semesterRecord.marks || []) : buildDefaultMarks(await getSubjectsForCourse(student.course));
-        const mergedMarks = await resolveMergedMarks(student._id, semNum, baseMarks);
+        const baseMarks = examinationRecord ? (examinationRecord.marks || []) : buildDefaultMarks(await getSubjectsForCourse(student.course));
+        const mergedMarks = await resolveMergedMarks(student._id, examNum, baseMarks);
 
-        if (semesterRecord) {
+        if (examinationRecord) {
           return {
             id: student._id,
             _id: student._id,
@@ -192,10 +192,10 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
             course: student.course,
             batch: student.batch,
             institute: student.institute,
-            semesterNumber: semNum,
-            attendancePercentage: semesterRecord.attendancePercentage || 0,
-            thesisApproved: semesterRecord.thesisApproved || false,
-            eligibilityStatus: semesterRecord.eligibilityStatus || 'Pending',
+            examinationNumber: examNum,
+            attendancePercentage: examinationRecord.attendancePercentage || 0,
+            thesisApproved: examinationRecord.thesisApproved || false,
+            eligibilityStatus: examinationRecord.eligibilityStatus || 'Pending',
             marks: mergedMarks,
             documents: student.documents || {},
             remittedToAcademy: student.remittedToAcademy || false,
@@ -214,7 +214,7 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
           course: student.course,
           batch: student.batch,
           institute: student.institute,
-          semesterNumber: semNum,
+          examinationNumber: examNum,
           attendancePercentage: 0,
           thesisApproved: false,
           eligibilityStatus: 'Pending',
@@ -241,7 +241,7 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
 export const getStudentMarks = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semesterNumber } = req.query;
+    const { examinationNumber } = req.query;
 
     const query: any = { _id: studentId };
 
@@ -261,16 +261,16 @@ export const getStudentMarks = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found' });
     }
 
-    const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
-    const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
+    const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
+    const examinationRecord = student.examinations.find((s) => s.examinationNumber === examNum);
 
-    let rawMarks = semesterRecord?.marks || [];
-    if (!semesterRecord) {
+    let rawMarks = examinationRecord?.marks || [];
+    if (!examinationRecord) {
       const courseSubjects = await getSubjectsForCourse(student.course);
       rawMarks = buildDefaultMarks(courseSubjects);
     }
 
-    const marks = await resolveMergedMarks(student._id, semNum, rawMarks);
+    const marks = await resolveMergedMarks(student._id, examNum, rawMarks);
 
     return sendSuccess({
       req,
@@ -288,10 +288,10 @@ export const getStudentMarks = async (req: Request, res: Response) => {
         course: student.course,
         batch: student.batch,
         institute: student.institute,
-        semesterNumber: semNum,
-        attendancePercentage: semesterRecord?.attendancePercentage || 0,
-        thesisApproved: semesterRecord?.thesisApproved || false,
-        eligibilityStatus: semesterRecord?.eligibilityStatus || 'Pending',
+        examinationNumber: examNum,
+        attendancePercentage: examinationRecord?.attendancePercentage || 0,
+        thesisApproved: examinationRecord?.thesisApproved || false,
+        eligibilityStatus: examinationRecord?.eligibilityStatus || 'Pending',
         marks,
         documents: student.documents || {},
         remittedToAcademy: student.remittedToAcademy || false,
@@ -324,23 +324,23 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found' });
     }
 
-    const semNum = validatedData.semesterNumber;
-    let semesterIndex = student.semesters.findIndex((s) => s.semesterNumber === semNum);
+    const examNum = validatedData.examinationNumber;
+    let examinationIndex = student.examinations.findIndex((s) => s.examinationNumber === examNum);
 
-    if (semesterIndex === -1) {
-      student.semesters.push({
-        semesterNumber: semNum,
+    if (examinationIndex === -1) {
+      student.examinations.push({
+        examinationNumber: examNum,
         attendancePercentage: 0,
         thesisApproved: false,
         eligibilityStatus: 'Pending',
         marks: [],
       });
-      semesterIndex = student.semesters.length - 1;
+      examinationIndex = student.examinations.length - 1;
     }
 
-    const semester = student.semesters[semesterIndex];
-    if (!semester.marks) {
-      semester.marks = [];
+    const examination = student.examinations[examinationIndex];
+    if (!examination.marks) {
+      examination.marks = [];
     }
 
     for (const subject of validatedData.subjects) {
@@ -355,19 +355,19 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
         updatedAt: new Date(),
       };
 
-      const existingIndex = semester.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
+      const existingIndex = examination.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
       if (existingIndex !== -1) {
-        semester.marks[existingIndex] = marksData;
+        examination.marks[existingIndex] = marksData;
       } else {
-        semester.marks.push(marksData);
+        examination.marks.push(marksData);
       }
     }
 
-    // Mark semesters array as modified so Mongoose persists nested updates
-    student.markModified('semesters');
+    // Mark examinations array as modified so Mongoose persists nested updates
+    student.markModified('examinations');
     await student.save({ validateModifiedOnly: true });
 
-    emitEvent('MARKS_UPDATED', { studentId: student._id, semesterNumber: semNum });
+    emitEvent('MARKS_UPDATED', { studentId: student._id, examinationNumber: examNum });
 
     return sendSuccess({
       req,
@@ -378,11 +378,11 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
         _id: student._id,
         enrollmentId: student.enrollmentId,
         fullName: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
-        semesterNumber: semNum,
-        marks: semester.marks,
-        attendancePercentage: semester.attendancePercentage || 0,
-        thesisApproved: semester.thesisApproved || false,
-        eligibilityStatus: semester.eligibilityStatus || 'Pending',
+        examinationNumber: examNum,
+        marks: examination.marks,
+        attendancePercentage: examination.attendancePercentage || 0,
+        thesisApproved: examination.thesisApproved || false,
+        eligibilityStatus: examination.eligibilityStatus || 'Pending',
       },
     });
   } catch (error: any) {
@@ -409,23 +409,23 @@ export const bulkUpdateMarks = async (req: Request, res: Response) => {
           continue;
         }
 
-        const semNum = validatedData.semesterNumber;
-        let semesterIndex = student.semesters.findIndex((s) => s.semesterNumber === semNum);
+        const examNum = validatedData.examinationNumber;
+        let examinationIndex = student.examinations.findIndex((s) => s.examinationNumber === examNum);
 
-        if (semesterIndex === -1) {
-          student.semesters.push({
-            semesterNumber: semNum,
+        if (examinationIndex === -1) {
+          student.examinations.push({
+            examinationNumber: examNum,
             attendancePercentage: 0,
             thesisApproved: false,
             eligibilityStatus: 'Pending',
             marks: [],
           });
-          semesterIndex = student.semesters.length - 1;
+          examinationIndex = student.examinations.length - 1;
         }
 
-        const semester = student.semesters[semesterIndex];
-        if (!semester.marks) {
-          semester.marks = [];
+        const examination = student.examinations[examinationIndex];
+        if (!examination.marks) {
+          examination.marks = [];
         }
 
         for (const subject of studentData.subjects) {
@@ -440,16 +440,16 @@ export const bulkUpdateMarks = async (req: Request, res: Response) => {
             updatedAt: new Date(),
           };
 
-          const existingIndex = semester.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
+          const existingIndex = examination.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
           if (existingIndex !== -1) {
-            semester.marks[existingIndex] = marksData;
+            examination.marks[existingIndex] = marksData;
           } else {
-            semester.marks.push(marksData);
+            examination.marks.push(marksData);
           }
         }
 
-        // Mark semesters array as modified so Mongoose persists nested updates
-        student.markModified('semesters');
+        // Mark examinations array as modified so Mongoose persists nested updates
+        student.markModified('examinations');
         await student.save({ validateModifiedOnly: true });
         results.push({
           studentId: studentData.studentId,
@@ -506,7 +506,7 @@ export const getCourseSubjects = async (req: Request, res: Response) => {
 // ─── Result Generation from Marks ────────────────────────────────────────────
 
 const generateResultsFromMarksSchema = z.object({
-  semesterNumber: z.coerce.number().min(1),
+  examinationNumber: z.coerce.number().min(1).max(2),
   batchId: z.string().min(1),
   courseId: z.string().min(1),
   academicYear: z.string().min(1),
@@ -544,22 +544,22 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
 
     for (const student of students) {
       try {
-        // Find the semester record
-        const semesterRecord = student.semesters.find(
-          (s: any) => s.semesterNumber === validatedData.semesterNumber
+        // Find the examination record
+        const examinationRecord = student.examinations.find(
+          (s: any) => s.examinationNumber === validatedData.examinationNumber
         );
 
-        if (!semesterRecord || !semesterRecord.marks || semesterRecord.marks.length === 0) {
+        if (!examinationRecord || !examinationRecord.marks || examinationRecord.marks.length === 0) {
           errors.push({
             studentId: student._id,
             name: `${student.firstName} ${student.lastName}`,
-            reason: 'No marks found for this semester',
+            reason: 'No marks found for this examination',
           });
           continue;
         }
 
         // Check if all subjects have marks or are marked absent
-        const allMarked = semesterRecord.marks.every(
+        const allMarked = examinationRecord.marks.every(
           (m: any) => m.isAbsent === true || m.marksObtained !== null
         );
 
@@ -573,7 +573,7 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
         }
 
         // Build result subjects
-        const subjects = semesterRecord.marks.map((m: any) => {
+        const subjects = examinationRecord.marks.map((m: any) => {
           const marksObtained = m.isAbsent ? 0 : (m.marksObtained || 0);
           const totalMarks = m.totalMarks || 100;
           const grade = m.isAbsent ? 'ABSENT' : calculateGrade(marksObtained, totalMarks);
@@ -621,7 +621,7 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
         const existingResult = await Result.findOne({
           student: student._id,
           academicYear: validatedData.academicYear,
-          semester: validatedData.semesterNumber,
+          examination: validatedData.examinationNumber,
         });
 
         if (existingResult) {
@@ -648,7 +648,7 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
           const newResult = await Result.create({
             student: student._id,
             academicYear: validatedData.academicYear,
-            semester: validatedData.semesterNumber,
+            examination: validatedData.examinationNumber,
             subjects: subjects as any,
             totalMarks,
             totalCredits,
@@ -700,7 +700,7 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
 // ─── Publish Results ──────────────────────────────────────────────────────────
 
 const publishResultsSchema = z.object({
-  semesterNumber: z.coerce.number().min(1),
+  examinationNumber: z.coerce.number().min(1).max(2),
   batchId: z.string().min(1),
   courseId: z.string().min(1),
   academicYear: z.string().min(1),
@@ -734,7 +734,7 @@ export const publishResults = async (req: Request, res: Response) => {
 
     const results = await Result.find({
       student: { $in: studentIds },
-      semester: validatedData.semesterNumber,
+      examination: validatedData.examinationNumber,
       academicYear: validatedData.academicYear,
     }).populate('student');
 
@@ -808,13 +808,13 @@ export const publishResults = async (req: Request, res: Response) => {
 
 export const getPublicationStatus = async (req: Request, res: Response) => {
   try {
-    const { batchId, courseId, semesterNumber } = req.query;
+    const { batchId, courseId, examinationNumber } = req.query;
 
     const query: any = {};
     if (batchId) query.batch = batchId;
     if (courseId) query.course = courseId;
 
-    const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
+    const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
 
     // Get all students with marks status
     const students = await Student.find(query)
@@ -823,10 +823,10 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
 
     const studentIds = students.map((s) => s._id);
 
-    // Which students already have a Result for this semester
+    // Which students already have a Result for this examination
     const existingResults = await Result.find({
       student: { $in: studentIds },
-      semester: semNum,
+      examination: examNum,
     }).select('student isPublished');
 
     const resultMap = new Map();
@@ -835,13 +835,13 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
     }
 
     const statusData = students.map((student) => {
-      const semesterRecord = student.semesters.find(
-        (s: any) => s.semesterNumber === semNum
+      const examinationRecord = student.examinations.find(
+        (s: any) => s.examinationNumber === examNum
       );
 
-      const hasMarks = semesterRecord?.marks && semesterRecord.marks.length > 0;
-      const allMarked = semesterRecord?.marks
-        ? semesterRecord.marks.every(
+      const hasMarks = examinationRecord?.marks && examinationRecord.marks.length > 0;
+      const allMarked = examinationRecord?.marks
+        ? examinationRecord.marks.every(
             (m: any) => m.isAbsent === true || m.marksObtained !== null
           )
         : false;

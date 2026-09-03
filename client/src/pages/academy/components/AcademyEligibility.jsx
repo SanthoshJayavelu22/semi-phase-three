@@ -36,7 +36,7 @@ const AcademyEligibility = ({
       const matchSearch = 
         (app.institute?.orgName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (app.course?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (app.semesterNumber ? `Semester ${app.semesterNumber}` : '').toLowerCase().includes(searchQuery.toLowerCase());
+        (app.examinationNumber ? `Examination ${app.examinationNumber}` : '').toLowerCase().includes(searchQuery.toLowerCase());
       
       const appStatus = app.status || 'Pending';
       const matchFilter = statusFilter === 'All' || appStatus === statusFilter;
@@ -115,15 +115,15 @@ const AcademyEligibility = ({
        setPubSubjectSchedules(courseSubjects.map(subject => ({ subject, date: '', time: '' })));
     }
 
-    // Auto-fetch practical exam names from course / semester if available
-    const semNum = app.semesterNumber || 1;
-    const targetSem = app.course?.semesters?.find(s => s.semesterNumber === semNum) || app.course?.semesters?.[0];
+    // Auto-fetch practical exam names from course / examination if available
+    const examNum = app.examinationNumber || 1;
+    const targetExam = app.course?.examinations?.find(s => s.examinationNumber === examNum) || app.course?.examinations?.[0];
     
     let autoPracticalName = '';
     let autoSubjectsList = [];
 
-    if (targetSem && targetSem.practicalExams && targetSem.practicalExams.length > 0) {
-      const pracNames = targetSem.practicalExams
+    if (targetExam && targetExam.practicalExams && targetExam.practicalExams.length > 0) {
+      const pracNames = targetExam.practicalExams
         .map(p => typeof p === 'string' ? p : (p.code ? `[${p.code}] ${p.name}` : p.name))
         .filter(Boolean);
       autoPracticalName = pracNames.join(', ');
@@ -266,7 +266,7 @@ const AcademyEligibility = ({
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest w-12 text-center">#</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Institute</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Course</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Semester</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Examination</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Students</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Exam Date</th>
@@ -288,7 +288,7 @@ const AcademyEligibility = ({
                       </td>
                       <td className="px-6 py-4 font-extrabold text-slate-900">{app.institute?.orgName || 'N/A'}</td>
                       <td className="px-6 py-4 text-slate-500 font-semibold">{app.course?.name || 'MBBS'}</td>
-                      <td className="px-6 py-4 font-extrabold text-slate-900">{app.semesterNumber ? `Semester ${app.semesterNumber}` : 'N/A'}</td>
+                      <td className="px-6 py-4 font-extrabold text-slate-900">{app.examinationNumber ? `Examination ${app.examinationNumber}` : 'N/A'}</td>
                       <td className="px-6 py-4 text-center font-extrabold text-slate-900">{app.students?.length || 0}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] uppercase tracking-wider font-black border ${
@@ -407,8 +407,8 @@ const AcademyEligibility = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2.5">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold block mt-0.5">{reviewingApp.semesterNumber ? `Semester ${reviewingApp.semesterNumber}` : 'N/A'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold block mt-0.5">{reviewingApp.examinationNumber ? `Examination ${reviewingApp.examinationNumber}` : 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrolled Candidates</span>
@@ -563,8 +563,8 @@ const AcademyEligibility = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">{publishingApp.semesterNumber ? `Semester ${publishingApp.semesterNumber}` : 'N/A'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">{publishingApp.examinationNumber ? `Examination ${publishingApp.examinationNumber}` : 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Students</span>
@@ -665,7 +665,7 @@ const AcademyEligibility = ({
                       type="text"
                       value={pubPracticalExam.name}
                       onChange={(e) => setPubPracticalExam({ ...pubPracticalExam, name: e.target.value })}
-                      placeholder="Auto-fetched based on semester practicals"
+                      placeholder="Auto-fetched based on examination practicals"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
                     />
                   </div>

@@ -175,6 +175,13 @@ export const academicService = {
   getPayableRemittance: () => apiClient.get('/academic/remittance/payable'),
   getRemittances: () => apiClient.get('/academic/remittance'),
   submitRemittance: (data) => apiClient.post('/academic/remittance', data),
+
+  // ─── EXAM FEE CONFIGURATION (Academy / Board) ──────────────────────────────
+  getFeeConfiguration: (courseId, examinationNumber) =>
+    apiClient.get(`/academic/fee-configuration/${courseId}/${examinationNumber}`),
+
+  updateFeeConfiguration: (data) =>
+    apiClient.put('/academic/fee-configuration', data),
 };
 
 export default academicService;

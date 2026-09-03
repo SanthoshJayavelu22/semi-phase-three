@@ -5,7 +5,7 @@ export const createRevaluationSchema = z.object({
   result: z.string().min(1, 'Result ID is required'),
   institute: z.string().min(1, 'Institute ID is required'),
   academicYear: z.string().min(1, 'Academic year is required'),
-  semester: z.coerce.number().int().min(1, 'Semester must be at least 1').max(8, 'Semester must be at most 8'),
+  examination: z.coerce.number().int().min(1, 'Examination must be at least 1').max(2, 'Examination must be at most 2'),
   subjects: z
     .array(
       z.object({

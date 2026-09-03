@@ -2,12 +2,12 @@ import { useState, useMemo, useCallback } from 'react';
 import { Search, Eye, BookOpen, X, ShieldCheck, Layers, Calendar, CheckCircle2, Award, GraduationCap } from 'lucide-react';
 import Pagination from '../../../Components/Pagination';
 
-// Helper to calculate required semester count based on course duration and durationType
-const getSemesterCount = (duration, durationType) => {
+// Helper to calculate required examination count based on course duration and durationType
+const getExaminationCount = (duration, durationType) => {
   const durVal = parseInt(duration, 10) || 1;
-  if (durationType === 'Years') return Math.max(1, durVal * 2);
-  if (durationType === 'Months') return Math.max(1, Math.ceil(durVal / 6));
-  return 1;
+  if (durationType === 'Years') return Math.min(2, Math.max(1, durVal * 2));
+  if (durationType === 'Months') return Math.min(2, Math.max(1, Math.ceil(durVal / 6)));
+  return Math.min(2, 1);
 };
 
 const InstituteERPCourses = ({ 
@@ -67,7 +67,7 @@ const InstituteERPCourses = ({
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">Standardized Course Catalog</h2>
           <p className="text-xs sm:text-sm text-blue-200/90 leading-relaxed">
-            All courses and semester-wise curricula are officially defined and standardized by the Society for Emergency Medicine, India (SEMI). You can browse the curriculum and initiate student batches for any approved course.
+              All courses and examination-wise curricula are officially defined and standardized by the Society for Emergency Medicine, India (SEMI). You can browse the curriculum and initiate student batches for any approved course.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ const InstituteERPCourses = ({
             <h3 className="text-base font-black text-gray-900 uppercase tracking-wider">
               Academic Courses Catalog
             </h3>
-            <p className="text-xs text-gray-400 mt-0.5">Browse available programs and semester subject breakdowns</p>
+            <p className="text-xs text-gray-400 mt-0.5">Browse available programs and examination subject breakdowns</p>
           </div>
           <div className="relative max-w-xs w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -113,7 +113,7 @@ const InstituteERPCourses = ({
                 <th className="px-6 py-4 font-bold">Course Title</th>
                 <th className="px-6 py-4 font-bold">Program Type</th>
                 <th className="px-6 py-4 font-bold">Duration</th>
-                <th className="px-6 py-4 font-bold">Semesters</th>
+                <th className="px-6 py-4 font-bold">Examinations</th>
                 <th className="px-6 py-4 font-bold">Status</th>
                 <th className="px-6 py-4 font-bold text-center">Actions</th>
               </tr>
@@ -126,9 +126,9 @@ const InstituteERPCourses = ({
                   const code = course.courseCode || 'N/A';
                   const type = course.courseType || 'Fellowship';
                   const duration = `${course.courseDuration || '2'} ${course.durationType || 'Years'}`;
-                  const semCount = (course.semesters && course.semesters.length > 0)
-                    ? course.semesters.length
-                    : getSemesterCount(course.courseDuration, course.durationType);
+                  const semCount = (course.examinations && course.examinations.length > 0)
+                    ? course.examinations.length
+                    : getExaminationCount(course.courseDuration, course.durationType);
                   const isActive = (course.status || 'Active') === 'Active';
 
                   return (
@@ -148,7 +148,7 @@ const InstituteERPCourses = ({
                       <td className="px-6 py-4 text-gray-500">{duration}</td>
                       <td className="px-6 py-4">
                         <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
-                          {semCount} Semesters
+                          {semCount} Examinations
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -242,19 +242,19 @@ const InstituteERPCourses = ({
                 </div>
               </div>
 
-              {/* Semester breakdown */}
+              {/* Examination breakdown */}
               <div className="space-y-4">
                 <h4 className="text-xs font-black uppercase text-gray-700 tracking-wider flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-blue-600" />
-                  Standardized Semester Modules & Subjects
+                  Standardized Examination Modules & Subjects
                 </h4>
 
-                {viewingCourse.semesters && viewingCourse.semesters.length > 0 ? (
-                  viewingCourse.semesters.map((sem) => (
-                    <div key={sem.semesterNumber} className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                {viewingCourse.examinations && viewingCourse.examinations.length > 0 ? (
+                  viewingCourse.examinations.map((sem) => (
+                    <div key={sem.examinationNumber} className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3 shadow-sm">
                       <div className="flex justify-between items-center border-b border-gray-100 pb-2">
                         <span className="font-black text-blue-700 text-xs uppercase">
-                          Semester {sem.semesterNumber}: {sem.semesterName || `Semester ${sem.semesterNumber}`}
+                          Examination {sem.examinationNumber}: {sem.examinationName || `Examination ${sem.examinationNumber}`}
                         </span>
                       </div>
 
@@ -281,10 +281,17 @@ const InstituteERPCourses = ({
                           ))}
                         </div>
                       </div>
+
+                      {sem.monthsRequired != null && (
+                        <div className="pt-1">
+                          <span className="text-[10px] uppercase font-bold text-gray-400">Months Required:</span>{' '}
+                          <span className="text-xs font-bold text-gray-700">{sem.monthsRequired}</span>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-400 italic">No semester-wise subjects defined for this course.</p>
+                  <p className="text-gray-400 italic">No examination-wise subjects defined for this course.</p>
                 )}
               </div>
             </div>

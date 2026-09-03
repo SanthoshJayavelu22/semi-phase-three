@@ -25,11 +25,14 @@ import {
   ChevronUp,
   Filter,
   CheckSquare,
+  Repeat,
+  GraduationCap,
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import revaluationService from '../../../api/revaluation';
 import academicService from '../../../api/academic';
+import examService from '../../../api/exams';
 import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
 import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
 import Pagination from '../../../Components/Pagination';
@@ -40,7 +43,7 @@ const InstituteERPRevaluation = () => {
   const [batches, setBatches] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
   const [eligibleStudents, setEligibleStudents] = useState([]);
   const [selectedSubjects, setSelectedSubjects] = useState({});
   const [requests, setRequests] = useState([]);
@@ -61,6 +64,13 @@ const InstituteERPRevaluation = () => {
   const [singleStudentMode, setSingleStudentMode] = useState(false);
   const [selectedSingleStudent, setSelectedSingleStudent] = useState(null);
   const itemsPerPage = 10;
+
+  // ─── Arrear / Reappearing Exam State ──────────────────────────────────────
+  const [arrearTab, setArrearTab] = useState('revaluation');
+  const [arrearStudents, setArrearStudents] = useState([]);
+  const [arrearSelectedStudents, setArrearSelectedStudents] = useState([]);
+  const [arrearLoading, setArrearLoading] = useState(false);
+  const [arrearSubmitting, setArrearSubmitting] = useState(false);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -122,7 +132,7 @@ const InstituteERPRevaluation = () => {
       const res = await revaluationService.getEligibleStudents({
         courseId: selectedCourse,
         batchId: selectedBatch,
-        semester: selectedSemester,
+        examination: selectedExamination,
       });
       const data = res.data?.data || res.data || [];
 
@@ -142,14 +152,14 @@ const InstituteERPRevaluation = () => {
       setToast({ message: err.parsedMessage || 'Failed to load eligible students', type: 'error' });
       setEligibleStudents([]);
     }
-  }, [selectedCourse, selectedBatch, selectedSemester]);
+  }, [selectedCourse, selectedBatch, selectedExamination]);
 
   const fetchSingleStudentEligibility = useCallback(async (studentId) => {
     const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
     if (!token) return;
     try {
       const res = await revaluationService.getSingleStudentEligibility(studentId, {
-        semester: selectedSemester,
+        examination: selectedExamination,
       });
       const data = res.data?.data || res.data;
       if (data) {
@@ -164,7 +174,7 @@ const InstituteERPRevaluation = () => {
       console.error('Error fetching student eligibility:', err);
       setToast({ message: err.parsedMessage || 'Failed to load student eligibility', type: 'error' });
     }
-  }, [selectedSemester]);
+  }, [selectedExamination]);
 
   // ─── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -178,10 +188,10 @@ const InstituteERPRevaluation = () => {
   }, [statusFilter, searchQuery, selectedCourse, selectedBatch, fetchRequests]);
 
   useEffect(() => {
-    if (!selectedCourse || !selectedBatch || !selectedSemester) return;
+    if (!selectedCourse || !selectedBatch || !selectedExamination) return;
     const timer = setTimeout(() => fetchEligibleStudents(), 0);
     return () => clearTimeout(timer);
-  }, [selectedCourse, selectedBatch, selectedSemester, fetchEligibleStudents]);
+  }, [selectedCourse, selectedBatch, selectedExamination, fetchEligibleStudents]);
 
   // ─── Payment Recovery ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -193,7 +203,7 @@ const InstituteERPRevaluation = () => {
         try {
           const res = await revaluationService.getPaymentStatus(
             pendingState.additionalData.studentId,
-            pendingState.additionalData.semester
+            pendingState.additionalData.examination
           );
           const data = res.data?.data || res.data;
           if (data && data.paymentStatus === 'Completed') {
@@ -316,7 +326,7 @@ const InstituteERPRevaluation = () => {
     try {
       const orderRes = await revaluationService.createRazorpayOrder({
         studentId: studentId,
-        semester: student.semester,
+        examination: student.examination,
         totalFee: totalFee,
         requestId: 'pending',
         subjects: selectedSubjectDetails,
@@ -333,11 +343,11 @@ const InstituteERPRevaluation = () => {
         currency: orderData.currency,
         keyId: orderData.keyId,
         name: 'SEMI Revaluation Fee',
-        description: `Revaluation - ${student.name} (Sem ${student.semester})`,
+        description: `Revaluation - ${student.name} (Exam ${student.examination})`,
         paymentType: 'revaluation',
         additionalData: {
           studentId: studentId,
-          semester: student.semester,
+          examination: student.examination,
           purpose: 'Revaluation fee',
         },
         prefill: {
@@ -363,7 +373,7 @@ const InstituteERPRevaluation = () => {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               studentId: studentId,
-              semester: student.semester,
+              examination: student.examination,
               subjects: subjectsData,
               academicYear: student.academicYear,
               instituteId: student.instituteId,
@@ -395,7 +405,7 @@ const InstituteERPRevaluation = () => {
           } catch (verifyErr) {
             console.error('Verification failed:', verifyErr);
             try {
-              const statusRes = await revaluationService.getPaymentStatus(studentId, student.semester);
+              const statusRes = await revaluationService.getPaymentStatus(studentId, student.examination);
               const statusData = statusRes.data?.data || statusRes.data;
               if (statusData && statusData.paymentStatus === 'Completed') {
                 clearPaymentState();
@@ -464,8 +474,8 @@ const InstituteERPRevaluation = () => {
     setSingleStudentMode(false);
   };
 
-  const handleSemesterChange = (e) => {
-    setSelectedSemester(e.target.value);
+  const handleExaminationChange = (e) => {
+    setSelectedExamination(e.target.value);
     setSelectedSubjects({});
     setEligibleStudents([]);
     setSelectedSingleStudent(null);
@@ -574,7 +584,7 @@ const InstituteERPRevaluation = () => {
               </div>
               <div>
                 <h3 className="text-lg font-black text-slate-800">{student.name}</h3>
-                <p className="text-xs text-slate-400 font-mono">{student.enrollmentId} • Sem {student.semester}</p>
+                <p className="text-xs text-slate-400 font-mono">{student.enrollmentId} • Exam {student.examination}</p>
               </div>
             </div>
             <div className="text-right">
@@ -606,7 +616,6 @@ const InstituteERPRevaluation = () => {
                 const isEligible = subject.isEligible !== false;
                 const isSelected = selectedCodes.has(subject.subjectCode);
                 const status = getSubjectStatusBadge(subject);
-                const marks = subject.originalMarks || 0;
 
                 return (
                   <div
@@ -645,11 +654,6 @@ const InstituteERPRevaluation = () => {
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-xs font-bold ${
-                        marks >= 40 ? 'text-emerald-600' : marks >= 35 ? 'text-amber-600' : 'text-rose-600'
-                      } ${!isEligible ? 'opacity-50' : ''}`}>
-                        {marks}%
-                      </span>
                       <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black border ${status.color}`}>
                         {status.icon}
                         {status.label}
@@ -743,7 +747,7 @@ const InstituteERPRevaluation = () => {
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-mono text-slate-400">{student.enrollmentId}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-300" />
-                        <span className="text-[10px] font-medium text-slate-500">Sem {student.semester}</span>
+                        <span className="text-[10px] font-medium text-slate-500">Exam {student.examination}</span>
                       </div>
                     </div>
                   </div>
@@ -878,7 +882,6 @@ const InstituteERPRevaluation = () => {
                     const isEligible = subject.isEligible !== false;
                     const isSelected = (selectedSubjects[student.studentId] || new Set()).has(subject.subjectCode);
                     const status = getSubjectStatusBadge(subject);
-                    const marks = subject.originalMarks || 0;
 
                     return (
                       <div
@@ -921,11 +924,6 @@ const InstituteERPRevaluation = () => {
                         </div>
 
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className={`text-xs font-bold ${
-                            marks >= 40 ? 'text-emerald-600' : marks >= 35 ? 'text-amber-600' : 'text-rose-600'
-                          } ${!isEligible ? 'opacity-50' : ''}`}>
-                            {marks}%
-                          </span>
                           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black border ${status.color}`}>
                             {status.icon}
                             {status.label}
@@ -976,6 +974,245 @@ const InstituteERPRevaluation = () => {
       })}
     </div>
   );
+
+  // ─── Arrear / Reappearing Exam Handlers ─────────────────────────────────────
+  const fetchArrearStudents = useCallback(async () => {
+    if (!selectedCourse || !selectedBatch || !selectedExamination) {
+      setArrearStudents([]);
+      return;
+    }
+    setArrearLoading(true);
+    try {
+      const res = await revaluationService.getReappearingStudents({
+        courseId: selectedCourse,
+        batchId: selectedBatch,
+        examination: selectedExamination,
+      });
+      const data = res.data?.data || res.data || [];
+      setArrearStudents(Array.isArray(data) ? data : []);
+      setArrearSelectedStudents([]);
+    } catch (err) {
+      console.error('Error fetching arrear students:', err);
+      setToast({ message: err.parsedMessage || err.message || 'Failed to load arrear students', type: 'error' });
+    } finally {
+      setArrearLoading(false);
+    }
+  }, [selectedCourse, selectedBatch, selectedExamination]);
+
+  useEffect(() => {
+    if (arrearTab === 'arrear') {
+      fetchArrearStudents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrearTab, fetchArrearStudents]);
+
+  const handleArrearExamSubmit = async () => {
+    if (arrearSelectedStudents.length === 0) {
+      setToast({ message: 'Please select at least one student for the arrear exam.', type: 'warning' });
+      return;
+    }
+    const unpaidStudents = arrearStudents.filter(s => arrearSelectedStudents.includes(s.studentId) && !s.hasPayment);
+    if (unpaidStudents.length > 0) {
+      setToast({
+        message: `${unpaidStudents.length} selected student(s) have not paid the exam fee. Please collect the exam fee first.`,
+        type: 'warning',
+      });
+      return;
+    }
+
+    setArrearSubmitting(true);
+    try {
+      const subjectCodes = selectedCourseSubjectsForArrear(arrearStudents).slice(0, 20);
+      const payload = {
+        courseId: selectedCourse,
+        examinationNumber: parseInt(selectedExamination),
+        batchId: selectedBatch,
+        studentIds: JSON.stringify(arrearSelectedStudents),
+        subjects: subjectCodes.length > 0 ? JSON.stringify(subjectCodes) : JSON.stringify(['General']),
+      };
+
+      await examService.applyForExam(payload);
+
+      setToast({
+        message: `Arrear exam application submitted for ${arrearSelectedStudents.length} student(s)!`,
+        type: 'success',
+      });
+      await fetchArrearStudents();
+      setArrearSelectedStudents([]);
+      setArrearTab('revaluation');
+    } catch (err) {
+      console.error('Arrear exam submission failed:', err);
+      setToast({ message: err.parsedMessage || err.message || 'Failed to submit arrear exam application.', type: 'error' });
+    } finally {
+      setArrearSubmitting(false);
+    }
+  };
+
+  const selectedCourseSubjectsForArrear = (studentsList) => {
+    const seen = new Set();
+    const subjects = [];
+    (studentsList || []).forEach(s => {
+      (s.failedSubjects || []).forEach(sub => {
+        const key = sub.subjectCode || sub.subjectName;
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          subjects.push(sub.subjectCode || sub.subjectName);
+        }
+      });
+    });
+    return subjects;
+  };
+
+  const renderArrearExamSection = () => {
+    const subjectCodes = selectedCourseSubjectsForArrear(arrearStudents);
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-amber-600 to-orange-600 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/20">
+          <div className="flex items-center gap-3">
+            <Repeat className="w-6 h-6 shrink-0" />
+            <div>
+              <h3 className="text-lg font-black tracking-tight">Arrear / Reappearing Exam Applications</h3>
+              <p className="text-xs text-amber-100 font-medium">
+                Students who failed or got supplementary in previous exams need to apply for an arrear exam.
+                Exam fees are recorded separately; only students who have paid can be applied.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between border-b border-slate-100 pb-4 mb-4 gap-3">
+            <div>
+              <h4 className="text-sm font-black text-slate-800">Reappearing Students</h4>
+              <p className="text-[10px] text-slate-400">{arrearStudents.length} students eligible for arrear exam</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {arrearStudents.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setArrearSelectedStudents(prev =>
+                      prev.length === arrearStudents.length
+                        ? []
+                        : arrearStudents.map(s => s.studentId)
+                    );
+                  }}
+                  className="px-3 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                >
+                  {arrearSelectedStudents.length === arrearStudents.length ? 'Deselect All' : 'Select All'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={fetchArrearStudents}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                title="Refresh"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {arrearLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+            </div>
+          ) : arrearStudents.length === 0 ? (
+            <div className="py-12 text-center text-slate-400">
+              <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-300 mb-3" />
+              <p className="text-sm font-bold text-slate-500">No students need arrear exams</p>
+              <p className="text-xs text-slate-400 mt-1">All students have passed this examination.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+              {arrearStudents.map((student) => {
+                const isSelected = arrearSelectedStudents.includes(student.studentId);
+                const failedSubjects = student.failedSubjects || [];
+                return (
+                  <div
+                    key={student.studentId}
+                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-amber-500 bg-amber-50/60 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                    }`}
+                    onClick={() => {
+                      setArrearSelectedStudents(prev =>
+                        prev.includes(student.studentId)
+                          ? prev.filter(id => id !== student.studentId)
+                          : [...prev, student.studentId]
+                      );
+                    }}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
+                          isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300 bg-white'
+                        }`}>
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                        <div>
+                          <span className="text-sm font-black text-slate-800">{student.name}</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs font-mono text-slate-400">{student.enrollmentId}</span>
+                            <span className="text-xs text-slate-300">•</span>
+                            <span className="text-xs text-amber-600 font-bold">
+                              {failedSubjects.length} subject{failedSubjects.length > 1 ? 's' : ''} to reappear
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {failedSubjects.slice(0, 2).map((sub, idx) => (
+                          <span key={idx} className="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200 font-bold">
+                            {sub.subjectName || sub.subjectCode}
+                            {sub.originalGrade ? ` (${sub.originalGrade})` : ''}
+                          </span>
+                        ))}
+                        {failedSubjects.length > 2 && (
+                          <span className="text-[10px] text-slate-400 font-bold">+{failedSubjects.length - 2}</span>
+                        )}
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                          student.hasPayment
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-100 text-amber-700 border border-amber-200'
+                        }`}>
+                          {student.hasPayment ? 'Fee Paid' : 'Fee Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {arrearStudents.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
+                <span>{arrearSelectedStudents.length} student{arrearSelectedStudents.length !== 1 ? 's' : ''} selected</span>
+                {subjectCodes.length > 0 && (
+                  <span className="text-slate-400">{subjectCodes.length} subject(s) for arrear</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleArrearExamSubmit}
+                disabled={arrearSubmitting || arrearSelectedStudents.length === 0}
+                className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-amber-500/20 cursor-pointer"
+              >
+                {arrearSubmitting ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                ) : (
+                  <><GraduationCap className="w-4 h-4" /> Apply for Arrear Exam</>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // ─── Main Render ───────────────────────────────────────────────────────────
   if (loading) {
@@ -1032,6 +1269,34 @@ const InstituteERPRevaluation = () => {
         </div>
       </div>
 
+      {/* ─── Section Tab Switcher ──────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-fit">
+        <button
+          type="button"
+          onClick={() => setArrearTab('revaluation')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            arrearTab === 'revaluation'
+              ? 'bg-white text-blue-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Award className="w-4 h-4 inline mr-1.5" />
+          Revaluation
+        </button>
+        <button
+          type="button"
+          onClick={() => setArrearTab('arrear')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            arrearTab === 'arrear'
+              ? 'bg-white text-amber-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Repeat className="w-4 h-4 inline mr-1.5" />
+          Arrear / Reappearing Exam
+        </button>
+      </div>
+
       {/* ─── Toast ───────────────────────────────────────────────────────────── */}
       {toast && (
         <Toast
@@ -1072,6 +1337,10 @@ const InstituteERPRevaluation = () => {
       )}
 
       {/* ─── Main Content ───────────────────────────────────────────────────── */}
+      {arrearTab === 'arrear' ? (
+        renderArrearExamSection()
+      ) : (
+        <>
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -1145,17 +1414,17 @@ const InstituteERPRevaluation = () => {
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                  Semester <span className="text-rose-500">*</span>
+                  Examination <span className="text-rose-500">*</span>
                 </label>
                 <select
-                  value={selectedSemester}
-                  onChange={handleSemesterChange}
+                  value={selectedExamination}
+                  onChange={handleExaminationChange}
                   disabled={!selectedBatch}
                   className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer disabled:opacity-50 shadow-sm hover:border-slate-300"
                 >
-                  <option value="">Select Semester</option>
+                  <option value="">Select Examination</option>
                   {[1, 2, 3, 4, 5, 6].map((sem) => (
-                    <option key={sem} value={sem}>Semester {sem}</option>
+                    <option key={sem} value={sem}>Examination {sem}</option>
                   ))}
                 </select>
               </div>
@@ -1187,7 +1456,7 @@ const InstituteERPRevaluation = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-black tracking-tight">{eligibleStudents.length} Students</h3>
-                    <p className="text-xs text-blue-200 font-medium">with published results for this semester</p>
+                    <p className="text-xs text-blue-200 font-medium">with published results for this examination</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
@@ -1210,14 +1479,14 @@ const InstituteERPRevaluation = () => {
 
             {renderStudentCards()}
           </>
-        ) : selectedCourse && selectedBatch && selectedSemester ? (
+        ) : selectedCourse && selectedBatch && selectedExamination ? (
           <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 border-2 border-amber-200 rounded-2xl p-12 text-center">
             <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-amber-200">
               <AlertCircle className="w-10 h-10 text-amber-500" />
             </div>
             <h3 className="text-lg font-black text-amber-800">No Students Found</h3>
             <p className="text-sm text-amber-600 mt-2 max-w-md mx-auto">
-              No students with published results found for the selected batch and semester.
+              No students with published results found for the selected batch and examination.
               Students must have published results to apply for revaluation.
             </p>
           </div>
@@ -1228,7 +1497,7 @@ const InstituteERPRevaluation = () => {
             </div>
             <h3 className="text-lg font-black text-slate-600">Select Filters</h3>
             <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
-              Choose a course, batch, and semester above to view students with published results.
+              Choose a course, batch, and examination above to view students with published results.
             </p>
           </div>
         )}
@@ -1287,7 +1556,7 @@ const InstituteERPRevaluation = () => {
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Request ID</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Examination</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Subjects</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Fee</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
@@ -1326,7 +1595,7 @@ const InstituteERPRevaluation = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-center font-bold text-slate-700">
-                      Sem {request.semester || 'N/A'}
+                      Exam {request.examination || 'N/A'}
                     </td>
                     <td className="px-4 py-3.5 text-center font-bold text-slate-700">
                       {request.subjects?.length || 0}
@@ -1378,6 +1647,8 @@ const InstituteERPRevaluation = () => {
           itemsPerPage={itemsPerPage}
         />
       </div>
+        </>
+      )}
 
       {/* ─── Request Detail Modal ───────────────────────────────────────────── */}
       {isModalOpen && viewingRequest && (
@@ -1421,8 +1692,8 @@ const InstituteERPRevaluation = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">Semester {viewingRequest.semester || 'N/A'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">Examination {viewingRequest.examination || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Year</span>
@@ -1484,21 +1755,17 @@ const InstituteERPRevaluation = () => {
                           <span className="text-[10px] text-slate-400 font-mono">{subject.subjectCode}</span>
                         </div>
                         <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <span className="text-[10px] text-slate-400 block">Original Marks</span>
-                            <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                          <div className="text-center">
+                            <span className="text-[10px] text-slate-400 block">Original</span>
+                            <span className={`text-sm font-black ${(subject.originalMarks || 0) >= 50 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                              {(subject.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                            </span>
                           </div>
                           {subject.evaluated && (
-                            <div className="text-right">
-                              <span className="text-[10px] text-slate-400 block">Revised Marks</span>
-                              <span className={`text-sm font-black ${
-                                (subject.revisedMarks || 0) > subject.originalMarks
-                                  ? 'text-emerald-600'
-                                  : (subject.revisedMarks || 0) < subject.originalMarks
-                                    ? 'text-rose-600'
-                                    : 'text-amber-600'
-                              }`}>
-                                {subject.revisedMarks}%
+                            <div className="text-center">
+                              <span className="text-[10px] text-slate-400 block">Revised</span>
+                              <span className={`text-sm font-black ${(subject.revisedMarks || subject.revisedTotalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {(subject.revisedMarks || subject.revisedTotalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
                               </span>
                             </div>
                           )}
@@ -1543,22 +1810,22 @@ const InstituteERPRevaluation = () => {
                           </span>
                         </div>
                         <div className="flex items-center gap-4">
-                          <div className="text-right">
+                          <div className="text-center">
                             <span className="text-[10px] text-slate-400 block">Original</span>
-                            <span className="text-sm font-black text-slate-600">{result.originalMarks}%</span>
+                            <span className={`text-sm font-black ${(result.originalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {(result.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                            </span>
                           </div>
-                          <div className="text-right">
+                          <div className="text-center">
                             <span className="text-[10px] text-slate-400 block">Revised</span>
-                            <span className={`text-sm font-black ${result.marksChange > 0 ? 'text-emerald-600' : result.marksChange < 0 ? 'text-rose-600' : 'text-amber-600'}`}>
-                              {result.revisedTotalMarks}%
+                            <span className={`text-sm font-black ${(result.revisedTotalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {(result.revisedTotalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
                             </span>
                           </div>
                           <div className={`text-xs font-black px-2 py-1 rounded-lg ${
-                            result.marksChange > 0 ? 'bg-emerald-100 text-emerald-700' :
-                            result.marksChange < 0 ? 'bg-rose-100 text-rose-700' :
-                            'bg-amber-100 text-amber-700'
+                            (result.revisedTotalMarks || 0) >= 50 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                           }`}>
-                            {result.marksChange > 0 ? '+' : ''}{result.marksChange}%
+                            {(result.revisedTotalMarks || 0) >= 50 ? 'Cleared' : 'Failed'}
                           </div>
                         </div>
                       </div>

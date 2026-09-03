@@ -45,26 +45,14 @@ const ResultsDisplay = ({ data, onBack }) => {
     ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     : 'N/A';
 
-  const getGradeStyle = (grade) => {
-    switch (grade) {
-      case 'O':
-      case 'A+':
-      case 'A':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'B+':
-      case 'B':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'C':
-      case 'D':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'RA':
-      case 'F':
-      case 'ABSENT':
-      case 'WH':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
-      default:
-        return 'bg-slate-50 text-slate-700 border-slate-200';
-    }
+  const resultStatus = (result?.resultStatus || '').toUpperCase();
+  const isPass = resultStatus === 'PASS';
+
+  const getStatusLabel = () => {
+    if (resultStatus === 'PASS') return 'Pass';
+    if (resultStatus === 'SUPPLEMENTARY') return 'Supplementary';
+    if (resultStatus === 'REVALUATION_PENDING') return 'Revaluation Pending';
+    return 'Fail';
   };
 
   return (
@@ -131,7 +119,7 @@ const ResultsDisplay = ({ data, onBack }) => {
               {student.institute?.orgName || 'Dr MGR Institute'}
             </h2>
             <p className="text-sm font-bold text-blue-700 uppercase tracking-wide">
-              {getOrdinal(result.semester)} Semester Exam Results {result.academicYear || 2026}
+              {getOrdinal(result.examination)} Examination Exam Results {result.academicYear || 2026}
             </p>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-200/60 mt-1">
               <Award className="w-3.5 h-3.5" />
@@ -174,126 +162,91 @@ const ResultsDisplay = ({ data, onBack }) => {
               <AlertCircle className="w-12 h-12 text-amber-500 mx-auto stroke-1.5" />
               <h3 className="text-lg font-black text-amber-900">Results Not Yet Published</h3>
               <p className="text-xs text-amber-800 max-w-md mx-auto leading-relaxed">
-                Your examination result for this semester is currently under evaluation by the governing board and will be published {result.publishedDate ? `on ${new Date(result.publishedDate).toLocaleDateString()}` : 'shortly'}.
+                Your examination result for this examination is currently under evaluation by the governing board and will be published {result.publishedDate ? `on ${new Date(result.publishedDate).toLocaleDateString()}` : 'shortly'}.
               </p>
             </div>
           ) : (
             <div className="space-y-6">
-              
-              {/* Subject Marks Table */}
-              <div className="overflow-hidden border border-slate-200 rounded-2xl shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-wider">
-                        <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200">Sem</th>
-                        <th className="py-3.5 px-4 text-center w-28 border-r border-slate-200">Sub-Code</th>
-                        <th className="py-3.5 px-6 border-r border-slate-200">Subject Name</th>
-                        <th className="py-3.5 px-4 text-center w-20 border-r border-slate-200" title="Total Marks">Marks</th>
-                        <th className="py-3.5 px-4 text-center w-20 border-r border-slate-200">Grade</th>
-                        <th className="py-3.5 px-4 text-center w-24">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-150 bg-white font-bold text-slate-800">
-                      {result.subjects.map((subject, index) => {
-                        const isPass = subject.grade !== 'F' && subject.grade !== 'RA' && subject.grade !== 'ABSENT' && subject.grade !== 'WH';
-                        const subjectNameCapitalized = subject.subjectName 
-                          ? subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1) 
-                          : 'N/A';
 
-                        return (
-                          <tr key={index} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200 text-slate-500 font-mono">
-                              {result.semester}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200">
-                              <span className="font-mono text-[10px] font-black uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                                {subject.subjectCode}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-6 border-r border-slate-200 font-extrabold text-slate-900">
-                              {subjectNameCapitalized}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200 font-black text-slate-900">
-                              {subject.totalMarks ?? '-'}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200">
-                              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black border ${getGradeStyle(subject.grade)}`}>
-                                {subject.grade}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-center">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                isPass 
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
-                              }`}>
-                                {isPass ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-rose-600" />}
-                                {isPass ? 'Pass' : 'Fail'}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+              {/* Overall Result Status */}
+              <div className={`rounded-3xl border-2 p-8 text-center shadow-sm ${
+                isPass ? 'border-emerald-200 bg-emerald-50/60' : 'border-rose-200 bg-rose-50/60'
+              }`}>
+                <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full border-4 mb-4 ${
+                  isPass ? 'border-emerald-300 bg-emerald-100' : 'border-rose-300 bg-rose-100'
+                }`}>
+                  {isPass ? (
+                    <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                  ) : (
+                    <XCircle className="w-10 h-10 text-rose-600" />
+                  )}
                 </div>
+                <h4 className={`text-2xl sm:text-3xl font-black uppercase tracking-widest ${
+                  isPass ? 'text-emerald-700' : 'text-rose-700'
+                }`}>
+                  {getStatusLabel()}
+                </h4>
+                <p className={`text-xs font-bold mt-2 ${
+                  isPass ? 'text-emerald-600/80' : 'text-rose-600/80'
+                }`}>
+                  {isPass
+                    ? `Congratulations! You have successfully cleared the ${getOrdinal(result.examination)} examination.`
+                    : `The candidate did not clear the ${getOrdinal(result.examination)} examination and is required to reappear.`}
+                </p>
               </div>
 
-              {/* Legend Box */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1.5 font-medium text-slate-600">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-[10px]">RA</span>
-                  <span>- Re-Appear (Subject failed / backlog)</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-[10px]">WH</span>
-                  <span>- Withheld due to non-payment of examination fees or non-submission of progress norms</span>
-                </div>
-              </div>
-
-              {/* Grading Scale Matrix */}
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">National Grading Scale Matrix</h4>
+              {/* Subject-wise Pass/Fail */}
+              {(result.subjects || []).length > 0 && (
                 <div className="overflow-hidden border border-slate-200 rounded-2xl shadow-sm">
-                  <table className="w-full text-center border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                        <th className="py-2.5 px-3 border-r border-slate-200">Marks Range</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">90-100</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">80-89</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">70-79</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">60-69</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">55-59</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">50-54</th>
-                        <th className="py-2.5 px-3">0-49</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-150 font-bold text-slate-800 bg-white">
-                      <tr>
-                        <td className="py-2.5 px-3 border-r border-slate-200 bg-slate-50 text-slate-600 font-black">Grade</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-emerald-700">O</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-emerald-700">A+</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-emerald-700">A</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-blue-700">B+</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-blue-700">B</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-amber-700">C</td>
-                        <td className="py-2.5 px-3 text-rose-700">RA</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2.5 px-3 border-r border-slate-200 bg-slate-50 text-slate-600 font-black">Grade Point</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">10</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">9</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">8</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">7</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">6</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">5</td>
-                        <td className="py-2.5 px-3">0</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-wider">
+                          <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200">Exam</th>
+                          <th className="py-3.5 px-4 text-center w-28 border-r border-slate-200">Sub-Code</th>
+                          <th className="py-3.5 px-6 border-r border-slate-200">Subject Name</th>
+                          <th className="py-3.5 px-4 text-center w-24">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-150 bg-white font-bold text-slate-800">
+                        {result.subjects.map((subject, index) => {
+                          const subGrade = (subject.grade || '').toUpperCase();
+                          const subPass = subGrade !== 'F' && subGrade !== 'RA' && subGrade !== 'ABSENT' && subGrade !== 'WH';
+                          const subjectNameCapitalized = subject.subjectName
+                            ? subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1)
+                            : 'N/A';
+
+                          return (
+                            <tr key={index} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200 text-slate-500 font-mono">
+                                {result.examination}
+                              </td>
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200">
+                                <span className="font-mono text-[10px] font-black uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+                                  {subject.subjectCode}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-6 border-r border-slate-200 font-extrabold text-slate-900">
+                                {subjectNameCapitalized}
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                  subPass
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                }`}>
+                                  {subPass ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-rose-600" />}
+                                  {subPass ? 'Pass' : 'Fail'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
 
             </div>
           )}

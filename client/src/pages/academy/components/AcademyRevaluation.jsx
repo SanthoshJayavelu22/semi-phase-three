@@ -64,7 +64,7 @@ const AcademyRevaluation = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [instituteFilter, setInstituteFilter] = useState('All');
-  const [semesterFilter, setSemesterFilter] = useState('All');
+  const [examinationFilter, setExaminationFilter] = useState('All');
   const [academicYearFilter, setAcademicYearFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [toast, setToast] = useState(null);
@@ -98,7 +98,7 @@ const AcademyRevaluation = () => {
       const params = { limit: 10000 };
       if (statusFilter !== 'All') params.status = statusFilter;
       if (instituteFilter !== 'All') params.institute = instituteFilter;
-      if (semesterFilter !== 'All') params.semester = parseInt(semesterFilter);
+      if (examinationFilter !== 'All') params.examination = parseInt(examinationFilter);
       if (academicYearFilter !== 'All') params.academicYear = academicYearFilter;
       if (searchQuery) params.search = searchQuery;
 
@@ -112,7 +112,7 @@ const AcademyRevaluation = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, instituteFilter, semesterFilter, academicYearFilter, searchQuery]);
+  }, [statusFilter, instituteFilter, examinationFilter, academicYearFilter, searchQuery]);
 
   const fetchData = useCallback(async () => {
     await Promise.all([fetchSummary(), fetchRequests()]);
@@ -139,10 +139,10 @@ const AcademyRevaluation = () => {
     return [...set].sort().reverse();
   }, [requests]);
 
-  const semesters = useMemo(() => {
+  const examinations = useMemo(() => {
     const set = new Set();
     requests.forEach((r) => {
-      if (r.semester) set.add(r.semester);
+      if (r.examination) set.add(r.examination);
     });
     return [...set].sort((a, b) => a - b);
   }, [requests]);
@@ -158,8 +158,8 @@ const AcademyRevaluation = () => {
       filtered = filtered.filter((r) => String(r.institute?._id || r.institute) === String(instituteFilter));
     }
 
-    if (semesterFilter !== 'All') {
-      filtered = filtered.filter((r) => String(r.semester) === String(semesterFilter));
+    if (examinationFilter !== 'All') {
+      filtered = filtered.filter((r) => String(r.examination) === String(examinationFilter));
     }
 
     if (academicYearFilter !== 'All') {
@@ -167,11 +167,11 @@ const AcademyRevaluation = () => {
     }
 
     return filtered;
-  }, [requests, statusFilter, instituteFilter, semesterFilter, academicYearFilter]);
+  }, [requests, statusFilter, instituteFilter, examinationFilter, academicYearFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, instituteFilter, semesterFilter, academicYearFilter]);
+  }, [searchQuery, statusFilter, instituteFilter, examinationFilter, academicYearFilter]);
 
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
   const paginatedRequests = useMemo(() => {
@@ -194,25 +194,12 @@ const AcademyRevaluation = () => {
     return new Date(date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  const getGrade = (marks, total = 100) => {
-    if (marks === null || marks === undefined || marks === '') return '';
-    const percentage = (marks / total) * 100;
-    if (percentage >= 90) return 'O';
-    if (percentage >= 80) return 'A+';
-    if (percentage >= 70) return 'A';
-    if (percentage >= 60) return 'B+';
-    if (percentage >= 50) return 'B';
-    if (percentage >= 40) return 'C';
-    if (percentage >= 35) return 'D';
-    return 'F';
-  };
-
   const getResultBadge = (finalResult) => {
     if (finalResult === 'CHANGED') {
-      return { label: 'Marks Changed', color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: <TrendingUp className="w-3.5 h-3.5" /> };
+      return { label: 'Result Changed', color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: <TrendingUp className="w-3.5 h-3.5" /> };
     }
     if (finalResult === 'UNCHANGED') {
-      return { label: 'No Change', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: <Minus className="w-3.5 h-3.5" /> };
+      return { label: 'Result Unchanged', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: <Minus className="w-3.5 h-3.5" /> };
     }
     return { label: 'Pending', color: 'text-slate-400 bg-slate-50 border-slate-200', icon: <Clock className="w-3.5 h-3.5" /> };
   };
@@ -303,8 +290,8 @@ const AcademyRevaluation = () => {
       { label: 'Under Review', value: summary?.underReview || 0, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100', icon: <Eye className="w-5 h-5 text-blue-500" /> },
       { label: 'In Progress', value: summary?.inProgress || 0, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100', icon: <Activity className="w-5 h-5 text-purple-500" /> },
       { label: 'Completed', value: summary?.completed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" /> },
-      { label: 'Marks Changed', value: summary?.changed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: <TrendingUp className="w-5 h-5 text-emerald-500" /> },
-      { label: 'No Change', value: summary?.unchanged || 0, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100', icon: <Minus className="w-5 h-5 text-amber-500" /> },
+      { label: 'Result Changed', value: summary?.changed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: <TrendingUp className="w-5 h-5 text-emerald-500" /> },
+      { label: 'Result Unchanged', value: summary?.unchanged || 0, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100', icon: <Minus className="w-5 h-5 text-amber-500" /> },
       { label: 'Subjects', value: summary?.subjectsCount || 0, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100', icon: <BookOpen className="w-5 h-5 text-indigo-500" /> },
     ];
 
@@ -412,16 +399,16 @@ const AcademyRevaluation = () => {
         </select>
 
         <select
-          value={semesterFilter}
+          value={examinationFilter}
           onChange={(e) => {
-            setSemesterFilter(e.target.value);
+            setExaminationFilter(e.target.value);
             setCurrentPage(1);
           }}
           className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
         >
-          <option value="All">All Semesters</option>
-          {semesters.map((sem) => (
-            <option key={sem} value={sem}>Semester {sem}</option>
+          <option value="All">All Examinations</option>
+          {examinations.map((sem) => (
+            <option key={sem} value={sem}>Examination {sem}</option>
           ))}
         </select>
 
@@ -451,7 +438,7 @@ const AcademyRevaluation = () => {
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Request / Student</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Institute</th>
-            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Examination</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Subjects</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Fee</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
@@ -503,7 +490,7 @@ const AcademyRevaluation = () => {
                   </span>
                 </td>
                 <td className="px-4 py-3.5 text-center font-bold text-slate-700 text-[11px]">
-                  Sem {request.semester || 'N/A'}
+                  Exam {request.examination || 'N/A'}
                 </td>
                 <td className="px-4 py-3.5 text-center font-bold text-slate-700 text-[11px]">
                   {total > 0 && evaluated > 0 ? (
@@ -652,7 +639,7 @@ const AcademyRevaluation = () => {
             request,
             subjectCode: firstSubject?.subjectCode || '',
             subjectName: firstSubject?.subjectName || '',
-            revisedTotalMarks: '',
+            revisedStatus: '',
             evaluatorComments: '',
             isFinal: true,
           });
@@ -862,13 +849,14 @@ const AcademyRevaluation = () => {
       request,
       subjectCode,
       subjectName,
-      revisedTotalMarks,
+      revisedStatus,
       evaluatorComments,
       isFinal
     } = actionModal;
 
     const selectedSubject = request.subjects?.find(s => s.subjectCode === subjectCode);
-    const computedGrade = revisedTotalMarks === '' ? '' : getGrade(Number(revisedTotalMarks));
+    const revisedTotalMarks = revisedStatus === 'PASS' ? 100 : revisedStatus === 'FAIL' ? 50 : '';
+    const computedGrade = revisedStatus === 'PASS' ? 'A' : revisedStatus === 'FAIL' ? 'F' : '';
 
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
@@ -929,48 +917,54 @@ const AcademyRevaluation = () => {
                 <option value="">Select a subject...</option>
                 {request.subjects?.map((subject) => (
                   <option key={subject.subjectCode} value={subject.subjectCode}>
-                    {subject.subjectName} ({subject.originalMarks}%)
+                    {subject.subjectName}
                   </option>
                 ))}
               </select>
               {selectedSubject && (
                 <div className="mt-2 flex items-center gap-3 text-[10px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-                  <span className="font-medium">Original Marks:</span>
-                  <span className="font-bold text-slate-700">{selectedSubject.originalMarks}%</span>
-                  <span className="text-slate-300">|</span>
-                  <span className="font-medium">Grade:</span>
-                  <span className="font-bold text-slate-700">{selectedSubject.originalGrade || 'N/A'}</span>
+                  <span className="font-medium">Original Result:</span>
+                  <span className={`font-bold ${(selectedSubject.originalMarks || 0) >= 50 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                    {(selectedSubject.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* Revised Marks */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
-                  Revised Marks <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={revisedTotalMarks}
-                  onChange={(e) => setActionModal((prev) => ({ ...prev, revisedTotalMarks: e.target.value }))}
-                  placeholder="0-100"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all"
-                />
+            {/* Revised Result */}
+            <div>
+              <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
+                Revised Result <span className="text-rose-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setActionModal((prev) => ({ ...prev, revisedStatus: 'PASS' }))}
+                  className={`px-4 py-3 rounded-xl border-2 text-center text-base font-black transition-all cursor-pointer ${
+                    revisedStatus === 'PASS'
+                      ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
+                      : 'bg-white border-slate-200 text-slate-400 hover:border-emerald-300'
+                  }`}
+                >
+                  PASS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActionModal((prev) => ({ ...prev, revisedStatus: 'FAIL' }))}
+                  className={`px-4 py-3 rounded-xl border-2 text-center text-base font-black transition-all cursor-pointer ${
+                    revisedStatus === 'FAIL'
+                      ? 'bg-rose-50 border-rose-400 text-rose-700'
+                      : 'bg-white border-slate-200 text-slate-400 hover:border-rose-300'
+                  }`}
+                >
+                  FAIL
+                </button>
               </div>
-              <div>
-                <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
-                  Revised Grade <span className="text-rose-500">*</span>
-                </label>
-                <div className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg font-black transition-all ${computedGrade ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-dashed border-slate-300 text-slate-400'}`}>
-                  {computedGrade || 'Auto'}
-                </div>
+              {revisedStatus && (
                 <p className="text-[9px] text-slate-400 font-medium mt-1.5">
-                  Auto-calculated from revised marks
+                  New result recording: {revisedStatus}
                 </p>
-              </div>
+              )}
             </div>
 
             {/* Comments */}
@@ -998,7 +992,7 @@ const AcademyRevaluation = () => {
               <div>
                 <span className="text-xs font-bold text-slate-700 block">Mark as Final & Republish</span>
                 <span className="text-[9px] text-slate-400 font-medium">
-                  This will update the student's original result with the revised marks
+                  This will update the student's original result with the revised result
                 </span>
               </div>
             </label>
@@ -1024,7 +1018,7 @@ const AcademyRevaluation = () => {
                 if (evaluatorComments.trim()) payload.evaluatorComments = evaluatorComments.trim();
                 handleMarksSubmit(request._id, payload);
               }}
-              disabled={submitting || !subjectCode || !revisedTotalMarks || !computedGrade}
+              disabled={submitting || !subjectCode || !revisedStatus}
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-500/20"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -1105,8 +1099,8 @@ const AcademyRevaluation = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[9px] text-slate-400 block">Semester</span>
-                      <span className="text-sm font-black text-slate-800">Sem {request.semester || 'N/A'}</span>
+                      <span className="text-[9px] text-slate-400 block">Examination</span>
+                      <span className="text-sm font-black text-slate-800">Exam {request.examination || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -1190,9 +1184,11 @@ const AcademyRevaluation = () => {
                               <span className="font-bold text-slate-800 block text-xs">{subject.subjectName}</span>
                               <span className="text-[9px] text-slate-400 font-mono">{subject.subjectCode}</span>
                             </div>
-                            <div className="text-right">
+                            <div className="text-center">
                               <span className="text-[10px] text-slate-400 block">Original</span>
-                              <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                              <span className={`text-sm font-black ${(subject.originalMarks || 0) >= 50 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                {(subject.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                              </span>
                               {hasResult && (
                                 <span className="block text-[8px] text-emerald-600 font-bold">✓ Reviewed</span>
                               )}
@@ -1224,22 +1220,22 @@ const AcademyRevaluation = () => {
                               </span>
                             </div>
                             <div className="flex items-center gap-4">
-                              <div className="text-right">
+                              <div className="text-center">
                                 <span className="text-[9px] text-slate-400 block">Original</span>
-                                <span className="text-xs font-black text-slate-600">{result.originalMarks}%</span>
+                                <span className={`text-xs font-black ${(result.originalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {(result.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                                </span>
                               </div>
-                              <div className="text-right">
+                              <div className="text-center">
                                 <span className="text-[9px] text-slate-400 block">Revised</span>
-                                <span className={`text-xs font-black ${result.marksChange > 0 ? 'text-emerald-600' : result.marksChange < 0 ? 'text-rose-600' : 'text-amber-600'}`}>
-                                  {result.revisedTotalMarks}%
+                                <span className={`text-xs font-black ${(result.revisedTotalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {(result.revisedTotalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
                                 </span>
                               </div>
                               <div className={`text-[10px] font-black px-2 py-1 rounded-lg ${
-                                result.marksChange > 0 ? 'bg-emerald-100 text-emerald-700' :
-                                result.marksChange < 0 ? 'bg-rose-100 text-rose-700' :
-                                'bg-amber-100 text-amber-700'
+                                (result.revisedTotalMarks || 0) >= 50 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                               }`}>
-                                {result.marksChange > 0 ? '+' : ''}{result.marksChange}%
+                                {(result.revisedTotalMarks || 0) >= 50 ? 'Cleared' : 'Failed'}
                               </div>
                               {!isApproved && isActionable && (
                                 <button
@@ -1266,17 +1262,21 @@ const AcademyRevaluation = () => {
                     </h5>
                     <div className="grid grid-cols-3 gap-3 mb-3">
                       <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
-                        <span className="text-[8px] uppercase font-black text-slate-400 block">Total Marks</span>
-                        <span className="text-base font-black text-slate-800">{request.result.totalMarks || 0}</span>
-                      </div>
-                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
-                        <span className="text-[8px] uppercase font-black text-slate-400 block">Percentage</span>
-                        <span className="text-base font-black text-slate-800">{request.result.percentage || 0}%</span>
-                      </div>
-                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
-                        <span className="text-[8px] uppercase font-black text-slate-400 block">Status</span>
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Overall Result</span>
                         <span className={`text-base font-black ${request.result.resultStatus === 'PASS' ? 'text-emerald-700' : request.result.resultStatus === 'SUPPLEMENTARY' ? 'text-amber-700' : 'text-rose-700'}`}>
                           {request.result.resultStatus || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Subjects Passed</span>
+                        <span className="text-base font-black text-emerald-700">
+                          {(request.result.subjects || []).filter((s) => s.grade !== 'ABSENT' && s.grade && s.grade !== 'F').length} / {(request.result.subjects || []).length}
+                        </span>
+                      </div>
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Revaluation</span>
+                        <span className="text-base font-black text-blue-700">
+                          {(request.result.subjects || []).filter((s) => s.isRevaluationCompleted || s.isRevaluationApplied).length}
                         </span>
                       </div>
                     </div>
@@ -1286,28 +1286,26 @@ const AcademyRevaluation = () => {
                           <thead>
                             <tr className="bg-slate-50/70 border-b border-slate-100">
                               <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject</th>
-                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
-                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
                               <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Reval</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50 bg-white">
                             {request.result.subjects.map((subject, idx) => {
                               const hasReval = subject.isRevaluationCompleted || subject.isRevaluationApplied;
+                              const grade = (subject.grade || '').toUpperCase();
+                              const passed = !['F', 'ABSENT', 'RA'].includes(grade);
                               return (
                                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                   <td className="px-3 py-2 font-bold text-slate-700">
                                     {subject.subjectName}
                                     <span className="text-[9px] text-slate-400 font-mono ml-1">{subject.subjectCode}</span>
                                   </td>
-                                  <td className="px-3 py-2 text-center font-bold text-slate-800">{subject.totalMarks || 0}</td>
                                   <td className="px-3 py-2 text-center">
                                     <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-bold border ${
-                                      (subject.totalMarks || 0) >= 70 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                                      (subject.totalMarks || 0) >= 50 ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                                      'bg-rose-50 border-rose-200 text-rose-700'
+                                      passed ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
                                     }`}>
-                                      {subject.grade || getGrade(subject.totalMarks)}
+                                      {subject.grade === 'ABSENT' ? 'ABSENT' : (passed ? 'PASS' : 'FAIL')}
                                     </span>
                                   </td>
                                   <td className="px-3 py-2 text-center">

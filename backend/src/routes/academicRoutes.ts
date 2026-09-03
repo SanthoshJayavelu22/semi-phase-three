@@ -33,6 +33,9 @@ import {
   verifyRazorpayPayment,
   getAcademicPaymentStatus,
   verifyAcademicPayment,
+  getExamFeeConfigurationByCourse,
+  updateExamFeeConfiguration,
+  getReappearingStudents,
 } from '../controllers/academicController';
 
 const router = express.Router();
@@ -46,6 +49,15 @@ router.post('/payment/verify', protect, authorize('institute'), verifyRazorpayPa
 // Payment status & recovery endpoints
 router.get('/payment/status/:studentId', protect, authorize('institute'), getAcademicPaymentStatus);
 router.get('/payment/verify-order/:orderId', protect, authorize('institute'), verifyAcademicPayment);
+
+// ==========================================
+// EXAM FEE CONFIGURATION (Academy / Board)
+// ==========================================
+router.get('/fee-configuration/:courseId/:examinationNumber', protect, authorize('admin', 'board', 'super_admin', 'institute'), getExamFeeConfigurationByCourse);
+router.put('/fee-configuration', protect, authorize('admin', 'board', 'super_admin'), updateExamFeeConfiguration);
+
+// Reappearing (arreaar) students for a course/batch/examination
+router.get('/students/reappearing', protect, authorize('institute', 'admin', 'board', 'super_admin'), getReappearingStudents);
 
 router.get('/courses', protect, getCourses);
 router.get('/courses/:courseId', protect, getCourseById);

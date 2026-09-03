@@ -43,7 +43,7 @@ const InstituteERPHallTicket = ({
   // Exam Details state - populated from selected exam application
   const [examDetails, setExamDetails] = useState({
     examType: '',
-    semesterLabel: '',
+    examinationLabel: '',
     headerTitle: '',
     organizationTitle: "Society for Emergency Medicine India (SEMI)",
     theoryCentre: '',
@@ -102,8 +102,8 @@ const InstituteERPHallTicket = ({
         }
 
         const courseName = app.course?.name || 'CCT-EM Fellowship';
-        const semesterNum = app.semesterNumber || 1;
-        const semesterLabel = `Semester ${semesterNum}`;
+        const examinationNum = app.examinationNumber || 1;
+        const examinationLabel = `Examination ${examinationNum}`;
 
         // Build subjects with dates from subjectSchedules
         const subjectSchedulesMap = {};
@@ -134,7 +134,7 @@ const InstituteERPHallTicket = ({
         setExamDetails(prev => ({
           ...prev,
           examType: courseName,
-          semesterLabel: semesterLabel,
+          examinationLabel: examinationLabel,
           headerTitle: `${courseName} Examination Hall Ticket - ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`,
           theoryCentre: app.examVenue || '',
           theoryAddress: app.examCenter || '',
@@ -166,7 +166,7 @@ const InstituteERPHallTicket = ({
           setSelectedBatchId(app.batch._id);
         }
 
-        setSuccessMsg(`✅ Loaded exam application: ${courseName} - ${semesterLabel} (${appStudents.length} students)`);
+        setSuccessMsg(`✅ Loaded exam application: ${courseName} - ${examinationLabel} (${appStudents.length} students)`);
       } catch (err) {
         console.error('Failed to fetch exam application details:', err);
         setErrorMsg(err.parsedMessage || err.message || 'Failed to load exam details. Please try again.');
@@ -546,7 +546,7 @@ const InstituteERPHallTicket = ({
       .filter(app => app.status === 'Approved' || app.status === 'SchedulePublished')
       .map(app => ({
         id: app._id,
-        label: `${app.course?.name || app.courseName || 'Course'} - Semester ${app.semesterNumber} (${app.students?.length || 0} students) ${app.examVenue ? '✅ Scheduled' : ''}`
+        label: `${app.course?.name || app.courseName || 'Course'} - Examination ${app.examinationNumber} (${app.students?.length || 0} students) ${app.examVenue ? '✅ Scheduled' : ''}`
       }));
   }, [examApplications]);
 

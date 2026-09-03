@@ -162,15 +162,15 @@ export default function AcademyLayout() {
       
       if (Array.isArray(studentsData)) {
         const formatted = studentsData.map(s => {
-          const sSemesters = s.semesters || [];
-          const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+          const sExaminations = s.examinations || [];
+          const latestExam = sExaminations.length > 0 ? sExaminations[sExaminations.length - 1] : null;
 
           const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
             ? s.attendancePercentage
-            : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+            : (latestExam && latestExam.attendancePercentage !== undefined ? latestExam.attendancePercentage : 0);
 
-          const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
-          const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+          const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(exam => exam.thesisApproved));
+          const isThesisUploaded = Boolean(sExaminations.some(exam => exam.thesisDocumentUrl));
           const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
 
           const hasNbls = !!s.documents?.nblsCertificateUrl;
@@ -214,7 +214,7 @@ export default function AcademyLayout() {
             batchId: s.batch?._id || s.batch,
             status: isRemitted ? 'Completed' : 'Active',
             institute: s.institute?.orgName || 'N/A',
-            semesters: sSemesters,
+            examinations: sExaminations,
             eligibilityStatus: eligibility,
             rejectionReason: reason,
             attendancePercentage: attendancePct,
@@ -430,22 +430,21 @@ export default function AcademyLayout() {
     setIsStudentModalOpen(true);
   }, []);
 
-  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus, reason = '') => {
+  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, examinationNumber, eligibilityStatus, reason = '') => {
     try {
       const student = students.find(s => s.enrollmentNo === enrollmentNo);
       if (student && (student._id || student.id)) {
         const targetId = student._id || student.id;
 
-        // Pass semesterNumber (required by backend) and set eligibilityStatus directly
         const payload = {
-          semesterNumber: parseInt(semesterNumber),
+          examinationNumber: parseInt(examinationNumber),
           eligibilityStatus,
         };
         if (reason) payload.rejectionNotes = reason;
 
         await academicService.updateAcademicMetrics(targetId, payload);
         await fetchBoardData();
-        setSuccessMsg(`Eligibility status for ${enrollmentNo} (Sem ${semesterNumber}) updated to ${eligibilityStatus}.`);
+        setSuccessMsg(`Eligibility status for ${enrollmentNo} (Exam ${examinationNumber}) updated to ${eligibilityStatus}.`);
       }
     } catch (err) {
       setErrorMsg(err.parsedMessage || err.message || 'Failed to update student eligibility.');

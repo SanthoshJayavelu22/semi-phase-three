@@ -1,20 +1,29 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface ISemesterSubject {
+export interface IExaminationSubject {
   code?: string;
   name: string;
 }
 
-export interface ISemesterPractical {
+export interface IExaminationPractical {
   code?: string;
   name: string;
 }
 
-export interface ISemesterCourse {
-  semesterNumber: number;
-  semesterName?: string;
-  subjects?: ISemesterSubject[];
-  practicalExams?: ISemesterPractical[];
+export interface IExaminationCourse {
+  examinationNumber: 1 | 2;
+  examinationName?: string;
+  monthsRequired?: number;
+  subjects?: IExaminationSubject[];
+  practicalExams?: IExaminationPractical[];
+}
+
+export interface IExamFeeConfig {
+  firstAttemptFee: number;
+  reappearingFee: number;
+  feeApplicableForFirstAttempt: boolean;
+  updatedBy?: mongoose.Types.ObjectId;
+  updatedAt?: Date;
 }
 
 export interface ICourse extends Document {
@@ -28,8 +37,14 @@ export interface ICourse extends Document {
   subjects?: string[];
   practicalExamName?: string;
   practicalExams?: string[];
-  semesters?: ISemesterCourse[];
+  examinations?: IExaminationCourse[];
   status?: 'Active' | 'Inactive' | 'Pending';
+  examFeeConfig?: {
+    [examKey: string]: IExamFeeConfig;
+  };
+  examinationFee?: number;
+  reappearingExaminationFee?: number;
+  feeApplicableForFirstAttempt?: boolean;
 }
 
 const courseSchema: Schema = new Schema(
@@ -79,11 +94,12 @@ const courseSchema: Schema = new Schema(
       type: [String],
       default: [],
     },
-    semesters: {
+    examinations: {
       type: [
         {
-          semesterNumber: { type: Number, required: true },
-          semesterName: { type: String, default: '' },
+          examinationNumber: { type: Number, required: true, enum: [1, 2] },
+          examinationName: { type: String, default: '' },
+          monthsRequired: { type: Number, default: 0 },
           subjects: [
             {
               code: { type: String, default: '' },
@@ -104,6 +120,32 @@ const courseSchema: Schema = new Schema(
       type: String,
       enum: ['Active', 'Inactive', 'Pending'],
       default: 'Active',
+    },
+    examinationFee: {
+      type: Number,
+      default: 0,
+    },
+    reappearingExaminationFee: {
+      type: Number,
+      default: 0,
+    },
+    feeApplicableForFirstAttempt: {
+      type: Boolean,
+      default: false,
+    },
+    examFeeConfig: {
+      type: Map,
+      of: new Schema(
+        {
+          firstAttemptFee: { type: Number, default: 0 },
+          reappearingFee: { type: Number, default: 0 },
+          feeApplicableForFirstAttempt: { type: Boolean, default: false },
+          updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+          updatedAt: { type: Date, default: Date.now },
+        },
+        { _id: false }
+      ),
+      default: {},
     },
   },
   {

@@ -58,14 +58,14 @@ const AcademyVerification = ({
   const allStudentRecords = useMemo(() => {
     const records = [];
     students.forEach(s => {
-      if (s.semesters && Array.isArray(s.semesters)) {
-        s.semesters.forEach(sem => {
+      if (s.examinations && Array.isArray(s.examinations)) {
+        s.examinations.forEach(sem => {
           const hasData = (sem.attendancePercentage !== undefined && sem.attendancePercentage > 0) || !!sem.thesisDocumentUrl;
           const status = sem.eligibilityStatus || 'Pending';
           if (hasData || status !== 'Pending') {
             records.push({
               ...s,
-              semesterNumber: sem.semesterNumber,
+              examinationNumber: sem.examinationNumber,
               attendancePercentage: sem.attendancePercentage || 0,
               thesisApproved: sem.thesisApproved || false,
               thesisDocumentUrl: sem.thesisDocumentUrl || '',
@@ -128,14 +128,14 @@ const AcademyVerification = ({
 
   const activeRecord = useMemo(() => {
     if (!activeId) return currentRecords[0] || null;
-    return currentRecords.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId) || currentRecords[0] || null;
+    return currentRecords.find(s => `${s.enrollmentNo}_${s.examinationNumber}` === activeId) || currentRecords[0] || null;
   }, [currentRecords, activeId]);
 
   React.useEffect(() => {
     if (currentRecords.length > 0) {
       const first = currentRecords[0];
-      const newId = `${first.enrollmentNo}_${first.semesterNumber}`;
-      if (!activeId || !currentRecords.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId)) {
+      const newId = `${first.enrollmentNo}_${first.examinationNumber}`;
+      if (!activeId || !currentRecords.find(s => `${s.enrollmentNo}_${s.examinationNumber}` === activeId)) {
         setActiveId(newId);
       }
     } else {
@@ -148,7 +148,7 @@ const AcademyVerification = ({
     setIsThesisLoading(true);
     try {
       await academicService.updateAcademicMetrics(student._id || student.id, {
-        semesterNumber: student.semesterNumber,
+        examinationNumber: student.examinationNumber,
         thesisApproved: newStatus
       });
       setToast({ 
@@ -182,12 +182,12 @@ const AcademyVerification = ({
 
     setConfirmConfig({
       title: 'Certify Eligibility',
-      message: `Are you sure you want to certify ${student.fullName} (Semester ${student.semesterNumber}) as eligible for the final board examination?`,
+      message: `Are you sure you want to certify ${student.fullName} (Examination ${student.examinationNumber}) as eligible for the final board examination?`,
       type: 'success',
       confirmText: 'Yes, Certify',
       onConfirm: () => {
         setConfirmConfig(null);
-        onVerifyStudent(student.enrollmentNo, student.semesterNumber, 'Approved');
+        onVerifyStudent(student.enrollmentNo, student.examinationNumber, 'Approved');
         setShowRejectionForm(false);
         setRejectionNotes('');
       }
@@ -201,7 +201,7 @@ const AcademyVerification = ({
       setToast({ message: 'Please enter auditor rejection notes before submitting.', type: 'warning' });
       return;
     }
-    onVerifyStudent(activeRecord.enrollmentNo, activeRecord.semesterNumber, 'Rejected', rejectionNotes);
+    onVerifyStudent(activeRecord.enrollmentNo, activeRecord.examinationNumber, 'Rejected', rejectionNotes);
     setRejectionNotes('');
     setShowRejectionForm(false);
   };
@@ -386,16 +386,16 @@ const AcademyVerification = ({
             
             {currentRecords.length > 0 ? (
               currentRecords.map(s => {
-                const isActive = activeRecord?.enrollmentNo === s.enrollmentNo && activeRecord?.semesterNumber === s.semesterNumber;
+                const isActive = activeRecord?.enrollmentNo === s.enrollmentNo && activeRecord?.examinationNumber === s.examinationNumber;
                 const status = getStatusBadge(s.eligibilityStatus, s);
                 const criteria = getCriteriaStatus(s);
                 const isReady = criteria.attendance && criteria.thesis && s.eligibilityStatus === 'Pending';
                 
                 return (
                   <button
-                    key={`${s.enrollmentNo}_${s.semesterNumber}`}
+                    key={`${s.enrollmentNo}_${s.examinationNumber}`}
                     onClick={() => {
-                      setActiveId(`${s.enrollmentNo}_${s.semesterNumber}`);
+                      setActiveId(`${s.enrollmentNo}_${s.examinationNumber}`);
                       setShowRejectionForm(false);
                       setRejectionNotes('');
                     }}
@@ -411,7 +411,7 @@ const AcademyVerification = ({
                           {s.fullName}
                         </span>
                         <span className="text-[9px] text-slate-400 font-semibold block">
-                          {s.enrollmentNo} • Sem {s.semesterNumber}
+                          {s.enrollmentNo} • Exam {s.examinationNumber}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -465,7 +465,7 @@ const AcademyVerification = ({
                       <div>
                         <h3 className="text-lg font-black text-slate-900">{activeRecord.fullName}</h3>
                         <span className="text-[10px] text-slate-400 font-semibold">
-                          {activeRecord.enrollmentNo} • {activeRecord.course} • Sem {activeRecord.semesterNumber}
+                          {activeRecord.enrollmentNo} • {activeRecord.course} • Exam {activeRecord.examinationNumber}
                         </span>
                       </div>
                     </div>
@@ -749,7 +749,7 @@ const AcademyVerification = ({
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Student Profile</h3>
                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {viewingStudent.fullName} · Sem {viewingStudent.semesterNumber}
+                    {viewingStudent.fullName} · Exam {viewingStudent.examinationNumber}
                   </p>
                 </div>
               </div>
@@ -790,8 +790,8 @@ const AcademyVerification = ({
                     <span className="text-slate-800 font-bold">{viewingStudent.institute}</span>
                   </div>
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">Semester {viewingStudent.semesterNumber}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">Examination {viewingStudent.examinationNumber}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">

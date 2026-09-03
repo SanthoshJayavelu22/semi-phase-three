@@ -45,8 +45,8 @@ export interface IStudent extends Document {
   verifiedAt?: Date;
   correctionRequestedAt?: Date;
   correctionResubmittedAt?: Date;
-  semesters: {
-    semesterNumber: number;
+  examinations: {
+    examinationNumber: number;
     attendancePercentage: number;
     thesisDocumentUrl?: string;
     thesisApproved: boolean;
@@ -61,6 +61,12 @@ export interface IStudent extends Document {
       updatedBy?: mongoose.Types.ObjectId;
       updatedAt?: Date;
     }[];
+  }[];
+  examAttempts?: {
+    examinationNumber: number;
+    attemptCount: number;
+    lastResultStatus?: string;
+    lastExamDate?: Date;
   }[];
 }
 
@@ -197,9 +203,9 @@ const studentSchema: Schema = new Schema(
     correctionResubmittedAt: {
       type: Date,
     },
-    semesters: [
+    examinations: [
       {
-        semesterNumber: { type: Number, required: true },
+        examinationNumber: { type: Number, required: true, enum: [1, 2] },
         attendancePercentage: { type: Number, required: true, default: 0, min: 0, max: 100 },
         thesisDocumentUrl: { type: String },
         thesisApproved: { type: Boolean, required: true, default: false },
@@ -222,6 +228,14 @@ const studentSchema: Schema = new Schema(
         ],
       }
     ],
+    examAttempts: [
+      {
+        examinationNumber: { type: Number, required: true, enum: [1, 2] },
+        attemptCount: { type: Number, default: 0 },
+        lastResultStatus: { type: String },
+        lastExamDate: { type: Date },
+      },
+    ],
   },
   {
     timestamps: true,
@@ -236,7 +250,7 @@ studentSchema.index({ institute: 1, batch: 1 });
 studentSchema.index({ isEligible: 1 });
 studentSchema.index({ email: 1 });
 studentSchema.index({ verificationStatus: 1 });
-studentSchema.index({ 'semesters.eligibilityStatus': 1 });
+studentSchema.index({ 'examinations.eligibilityStatus': 1 });
 
 
 export const Student = mongoose.model<IStudent>('Student', studentSchema);

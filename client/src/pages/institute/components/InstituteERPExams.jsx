@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check, DollarSign } from 'lucide-react';
 import examService from '../../../api/exams';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
@@ -19,7 +19,7 @@ const InstituteERPExams = ({
 }) => {
   const [step, setStep] = useState(1);
   const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
 
   const [viewingApp, setViewingApp] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -27,6 +27,10 @@ const InstituteERPExams = ({
   const [feeRecords, setFeeRecords] = useState([]);
   const [toast, setToast] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [feeConfig, setFeeConfig] = useState(null);
+  const [reappearanceMap, setReappearanceMap] = useState({});
+  const [feeLoading, setFeeLoading] = useState(false);
 
   useEffect(() => {
     const fetchFeeRecords = async () => {
@@ -43,7 +47,7 @@ const InstituteERPExams = ({
       }
     };
     fetchFeeRecords();
-  }, [selectedSemester, selectedCourseId]);
+  }, [selectedExamination, selectedCourseId]);
 
   const [activePage, setActivePage] = useState(1);
   const itemsPerPage = 5;
@@ -62,40 +66,91 @@ const InstituteERPExams = ({
     );
   }, [students, selectedCourseId]);
 
-  const availableSemesters = useMemo(() => {
+  const filteredStudentIdsKey = filteredStudents
+    .map((s) => s.id || s._id)
+    .sort()
+    .join(',');
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchFeeConfig = async () => {
+      if (!selectedCourseId || !selectedExamination || filteredStudents.length === 0) {
+        setFeeConfig(null);
+        setReappearanceMap({});
+        return;
+      }
+      setFeeLoading(true);
+      try {
+        const [configRes] = await Promise.all([
+          examService.getFeeConfiguration(selectedCourseId, selectedExamination),
+        ]);
+        const config = configRes?.data?.data || configRes?.data || configRes;
+        if (!cancelled) setFeeConfig(config);
+
+        const map = {};
+        await Promise.all(
+          filteredStudents.map(async (s) => {
+            const sid = s.id || s._id;
+            try {
+              const res = await examService.checkExamFeeApplicability(sid, selectedExamination);
+              const data = res?.data?.data || res?.data || res;
+              if (data) map[sid] = data;
+            } catch (err) {
+              map[sid] = { isReappearing: false, attemptCount: 1, examFeeApplicable: false };
+            }
+          })
+        );
+        if (!cancelled) setReappearanceMap(map);
+      } catch (err) {
+        console.error('Failed to fetch fee status', err);
+      } finally {
+        if (!cancelled) setFeeLoading(false);
+      }
+    };
+    fetchFeeConfig();
+    return () => { cancelled = true; };
+  }, [selectedCourseId, selectedExamination, filteredStudentIdsKey]);
+
+  const availableExaminations = useMemo(() => {
     const sems = new Set();
     filteredStudents.forEach(s => {
-      if (s.semesters) {
-        s.semesters.forEach(sem => sems.add(sem.semesterNumber));
+      if (s.examinations) {
+        s.examinations.forEach(sem => sems.add(sem.examinationNumber));
       }
     });
     return Array.from(sems).sort((a, b) => a - b);
   }, [filteredStudents]);
 
   useEffect(() => {
-    if (availableSemesters.length > 0 && !selectedSemester) {
-      setSelectedSemester(availableSemesters[0].toString());
-    } else if (availableSemesters.length === 0) {
-      setSelectedSemester('');
+    if (availableExaminations.length > 0 && !selectedExamination) {
+      setSelectedExamination(availableExaminations[0].toString());
+    } else if (availableExaminations.length === 0) {
+      setSelectedExamination('');
     }
-  }, [availableSemesters, selectedSemester]);
+  }, [availableExaminations, selectedExamination]);
 
   const studentEligibility = useMemo(() => {
     const map = {};
-    if (!selectedSemester) return map;
+    if (!selectedExamination) return map;
     filteredStudents.forEach(s => {
-      const sem = s.semesters?.find(sm => sm.semesterNumber.toString() === selectedSemester.toString());
+      const sem = s.examinations?.find(sm => sm.examinationNumber.toString() === selectedExamination.toString());
       if (!sem) {
-        map[s.id || s._id] = { isEligible: false, reasonsText: `No record for Sem ${selectedSemester}` };
+        map[s.id || s._id] = { isEligible: false, reasonsText: `No record for Exam ${selectedExamination}` };
         return;
       }
       const isVerified = s.verificationStatus === 'Approved';
       const isAttendanceOk = (sem.attendancePercentage || 0) >= 75;
       const isThesisOk = !!sem.thesisApproved;
+      const sid = s.id || s._id;
       const isExamFeePaid = feeRecords.some(r =>
-        (r.student?._id === s._id || r.student === s._id || r.student?.id === s.id || r.student === s.id) &&
-        r.paymentPurpose === 'Examination fee' && r.semesterNumber?.toString() === selectedSemester.toString()
+        (r.student?._id === sid || r.student === sid || r.student?.id === sid || r.student === sid) &&
+        r.paymentPurpose === 'Examination fee' && r.examinationNumber?.toString() === selectedExamination.toString()
       );
+      // Fees are waived for first-attempt students; only reappearing students
+      // with an applicable fee must have paid.
+      const isReappearing = reappearanceMap[sid]?.isReappearing;
+      const feeRequired = isReappearing || feeConfig?.feeApplicableForFirstAttempt;
+      const isExamFeeSatisfied = feeRequired ? isExamFeePaid : true;
       const hasNbls = !!s.documents?.nblsCertificateUrl;
       const hasNcls = !!s.documents?.nclsCertificateUrl;
       const hasNtls = !!s.documents?.ntlsCertificateUrl;
@@ -103,22 +158,25 @@ const InstituteERPExams = ({
       const certCount = [hasNbls, hasNcls, hasNtls, hasNuls].filter(Boolean).length;
       const isCourseCertsOk = certCount >= 1;
 
-      const isEligible = isVerified && isAttendanceOk && isThesisOk && isExamFeePaid && isCourseCertsOk;
+      const isEligible = isVerified && isAttendanceOk && isThesisOk && isExamFeeSatisfied && isCourseCertsOk;
       const reasons = [];
       if (!isVerified) reasons.push(`Verification pending (${s.verificationStatus || 'Pending'})`);
       if (!isAttendanceOk) reasons.push(`Attendance low (${sem.attendancePercentage || 0}%)`);
       if (!isThesisOk) reasons.push("Thesis not uploaded");
-      if (!isExamFeePaid) reasons.push("Exam fee not paid");
+      if (!isExamFeeSatisfied) reasons.push("Exam fee not paid");
       if (!isCourseCertsOk) {
         reasons.push("Missing Course Completion Certificate (at least one of NBLS, NCLS, NTLS, NULS required)");
       }
 
-      map[s.id || s._id] = {
+      map[sid] = {
         isEligible,
         isVerified,
         isAttendanceOk,
         isThesisOk,
         isExamFeePaid,
+        isExamFeeSatisfied,
+        isReappearing: !!isReappearing,
+        feeRequired: !!feeRequired,
         isCourseCertsOk,
         certCount,
         hasNbls,
@@ -129,7 +187,7 @@ const InstituteERPExams = ({
       };
     });
     return map;
-  }, [filteredStudents, feeRecords, selectedSemester]);
+  }, [filteredStudents, feeRecords, selectedExamination, reappearanceMap, feeConfig]);
 
   const eligibleStudentIds = useMemo(() => {
     return filteredStudents
@@ -138,7 +196,7 @@ const InstituteERPExams = ({
   }, [filteredStudents, studentEligibility]);
 
   const canProceedFrom = (s) => {
-    if (s === 1) return !!selectedCourseId && !!selectedSemester;
+    if (s === 1) return !!selectedCourseId && !!selectedExamination;
     if (s === 2) return eligibleStudentIds.length > 0;
     return true;
   };
@@ -146,7 +204,7 @@ const InstituteERPExams = ({
   const handleNext = () => {
     if (!canProceedFrom(step)) {
       if (step === 1) {
-        setToast({ message: 'Please select a course and semester.', type: 'warning' });
+        setToast({ message: 'Please select a course and examination.', type: 'warning' });
       } else if (step === 2) {
         setToast({ message: 'No eligible students found. Cannot proceed to submit.', type: 'warning' });
       }
@@ -170,7 +228,7 @@ const InstituteERPExams = ({
       const courseSubjects = selectedCourse?.subjects || ['All'];
       const payload = {
         courseId: selectedCourseId,
-        semesterNumber: parseInt(selectedSemester),
+        examinationNumber: parseInt(selectedExamination),
         studentIds: eligibleStudentIds,
         subjects: courseSubjects,
         batchId: filteredStudents[0]?.batchId || filteredStudents[0]?.batch?._id || filteredStudents[0]?.batch,
@@ -182,7 +240,7 @@ const InstituteERPExams = ({
       setSuccessMsg('Exam Application submitted successfully to the Academic Board!');
       setStep(1);
       setSelectedCourseId('');
-      setSelectedSemester('');
+      setSelectedExamination('');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
@@ -255,16 +313,16 @@ const InstituteERPExams = ({
       <div>
         <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-blue-500" />
-          Select Course & Semester
+          Select Course & Examination
         </h3>
-        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Choose the course and semester to prepare exam applications</p>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Choose the course and examination to prepare exam applications</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course *</label>
           <select
             value={selectedCourseId}
-            onChange={(e) => { setSelectedCourseId(e.target.value); setSelectedSemester(''); }}
+            onChange={(e) => { setSelectedCourseId(e.target.value); setSelectedExamination(''); }}
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
           >
             {courses.map(c => <option key={c.id || c._id} value={c.id || c._id}>{c.courseName || c.name}</option>)}
@@ -272,21 +330,21 @@ const InstituteERPExams = ({
           </select>
         </div>
         <div>
-          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Semester *</label>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Examination *</label>
           <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(e.target.value)}
+            value={selectedExamination}
+            onChange={(e) => setSelectedExamination(e.target.value)}
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
             required
           >
-            <option value="">Select Semester</option>
-            {availableSemesters.map(sem => (
-              <option key={sem} value={sem}>Semester {sem}</option>
+            <option value="">Select Examination</option>
+            {availableExaminations.map(sem => (
+              <option key={sem} value={sem}>Examination {sem}</option>
             ))}
           </select>
         </div>
       </div>
-      {selectedCourseId && selectedSemester && (
+      {selectedCourseId && selectedExamination && (
         <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 flex items-center gap-3">
           <GraduationCap className="w-8 h-8 text-blue-400" />
           <div>
@@ -294,7 +352,7 @@ const InstituteERPExams = ({
               {courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected Course'}
             </p>
             <p className="text-[10px] font-bold text-slate-400">
-              Semester {selectedSemester} · {filteredStudents.length} student(s) enrolled
+              Examination {selectedExamination} · {filteredStudents.length} student(s) enrolled
             </p>
           </div>
         </div>
@@ -311,12 +369,12 @@ const InstituteERPExams = ({
         </h3>
         <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Verify each student's eligibility criteria</p>
       </div>
-      {selectedCourseId && selectedSemester && (
+      {selectedCourseId && selectedExamination && (
         <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 mb-2">
           <p className="text-xs font-bold text-slate-600">
             Course: <span className="text-slate-800">{courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected'}</span>
             <span className="text-slate-300 mx-2">|</span>
-            Semester: <span className="text-slate-800">{selectedSemester}</span>
+            Examination: <span className="text-slate-800">{selectedExamination}</span>
           </p>
         </div>
       )}
@@ -329,6 +387,7 @@ const InstituteERPExams = ({
               <th className="px-4 py-3 font-black text-center">Thesis</th>
               <th className="px-4 py-3 font-black text-center">Fee Paid</th>
               <th className="px-4 py-3 font-black text-center">Certificates (NBLS/NCLS/NTLS/NULS)</th>
+              <th className="px-4 py-3 font-black text-center">Exam Fee</th>
               <th className="px-4 py-3 font-black text-center">Status</th>
             </tr>
           </thead>
@@ -391,6 +450,26 @@ const InstituteERPExams = ({
                     ) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-center">
+                    {feeLoading ? (
+                      <span className="w-4 h-4 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin inline-block align-middle" />
+                    ) : reappearanceMap[sid] ? (
+                      reappearanceMap[sid].isReappearing ? (
+                        <span className="inline-flex flex-col items-center gap-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[9px] uppercase font-black">
+                            <DollarSign className="w-3 h-3" />
+                            ₹{(feeConfig?.reappearingFee ?? 0).toLocaleString()} Payable
+                          </span>
+                          <span className="text-[8px] text-amber-600 font-bold">Attempt {reappearanceMap[sid].attemptCount}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] uppercase font-black">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Waived
+                        </span>
+                      )
+                    ) : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
                     {e ? (
                       e.isEligible ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] uppercase font-black">
@@ -413,7 +492,7 @@ const InstituteERPExams = ({
             {filteredStudents.length === 0 && (
               <tr>
                 <td colSpan="5" className="px-6 py-12 text-center text-slate-400 font-medium">
-                  No students found for this course and semester.
+                  No students found for this course and examination.
                 </td>
               </tr>
             )}
@@ -450,8 +529,8 @@ const InstituteERPExams = ({
             <span className="text-sm font-extrabold text-slate-800">{selectedCourse?.courseName || 'Selected Course'}</span>
           </div>
           <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4">
-            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Semester</span>
-            <span className="text-sm font-extrabold text-slate-800">Semester {selectedSemester}</span>
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Examination</span>
+            <span className="text-sm font-extrabold text-slate-800">Examination {selectedExamination}</span>
           </div>
           <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-4">
             <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Eligible Students</span>
@@ -580,7 +659,7 @@ const InstituteERPExams = ({
                         <td className="px-4 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
                         <td className="px-4 py-4">
                           <span className="font-bold text-slate-700 block">{app.course?.name || 'Course'}</span>
-                          <span className="text-[10px] text-slate-400">Sem {app.semesterNumber}</span>
+                          <span className="text-[10px] text-slate-400">Exam {app.examinationNumber}</span>
                         </td>
                         <td className="px-4 py-4 text-center font-bold text-slate-700">{app.students?.length || 0}</td>
                         <td className="px-4 py-4 text-center">
@@ -683,8 +762,8 @@ const InstituteERPExams = ({
                 <div className="flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-slate-400" />
                   <div>
-                    <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">{viewingApp.semesterNumber}</span>
+                    <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">{viewingApp.examinationNumber}</span>
                   </div>
                 </div>
               </div>

@@ -59,7 +59,7 @@ const ResultsLogin = ({ onSearch, isLoading, error }) => {
                 EXAMINATION RESULTS
               </h2>
               <p className="text-xs text-slate-500 font-semibold mt-1">
-                Enter your Student ID and Registered Date of Birth to view your official semester scorecard
+                Enter your Student ID and Registered Date of Birth to view your official examination scorecard
               </p>
             </div>
           </div>

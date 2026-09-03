@@ -758,7 +758,6 @@ const AcademyPublishingDetails = () => {
                         <tr className="bg-slate-50/70 border-b border-slate-100">
                           <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
                           <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider">Student Name</th>
-                          <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Marks</th>
                           <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
                         </tr>
                       </thead>
@@ -769,7 +768,6 @@ const AcademyPublishingDetails = () => {
                               {String(idx + 1).padStart(2, '0')}
                             </td>
                             <td className="px-3 py-2 font-bold text-slate-700">{result.name}</td>
-                            <td className="px-3 py-2 text-center font-bold text-slate-800">{result.marks}%</td>
                             <td className="px-3 py-2 text-center">
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${
                                 result.status === 'Passed' 

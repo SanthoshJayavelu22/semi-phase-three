@@ -196,7 +196,7 @@ const AcademyRemittance = () => {
             timestamp: rev.createdAt ? new Date(rev.createdAt).getTime() : 0,
             status: 'Verified',
             payerName: rev.student ? `${rev.student.firstName} ${rev.student.lastName}` : 'Fellow Candidate',
-            details: { subjectsCount: rev.subjects?.length || 1, semester: rev.semester }
+            details: { subjectsCount: rev.subjects?.length || 1, examination: rev.examination }
           });
         }
       });
@@ -222,7 +222,7 @@ const AcademyRemittance = () => {
             timestamp: exam.createdAt ? new Date(exam.createdAt).getTime() : 0,
             status: 'Verified',
             payerName: exam.student ? `${exam.student.firstName} ${exam.student.lastName}` : 'Examinee',
-            details: { examType: exam.examType || 'Semester Exam' }
+            details: { examType: exam.examType || 'Examination' }
           });
         }
       });

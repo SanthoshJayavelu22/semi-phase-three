@@ -96,7 +96,7 @@ class ResultService {
     }
 
     if (filters.academicYear) query.academicYear = filters.academicYear;
-    if (filters.semester) query.semester = parseInt(filters.semester);
+    if (filters.examination) query.examination = parseInt(filters.examination);
     if (filters.resultStatus) query.resultStatus = filters.resultStatus;
 
     if (filters.fromDate || filters.toDate) {
@@ -123,7 +123,7 @@ class ResultService {
   async getResultStatistics(filters: any) {
     const query: any = { isPublished: true };
     if (filters.academicYear) query.academicYear = filters.academicYear;
-    if (filters.semester) query.semester = parseInt(filters.semester);
+    if (filters.examination) query.examination = parseInt(filters.examination);
 
     const results = await Result.find(query);
 
@@ -174,7 +174,7 @@ class ResultService {
         const existingResult = await Result.findOne({
           student: resultData.student,
           academicYear: resultData.academicYear,
-          semester: resultData.semester,
+          examination: resultData.examination,
         });
 
         if (existingResult) continue;

@@ -8,7 +8,7 @@ export interface EmailTemplateData {
   studentName?: string;
   studentEmail?: string;
   courseName?: string;
-  semesterNumber?: number;
+  examinationNumber?: number;
   examVenue?: string;
   examCenter?: string;
   examDate?: Date | string;
@@ -38,7 +38,7 @@ class NotificationService {
    * Send exam application confirmation to institute and notification to academy
    */
   async notifyExamApplicationSubmitted(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, courseName, semesterNumber, subjects, totalFee, paymentId, studentsCount } = data;
+    const { instituteName, instituteEmail, courseName, examinationNumber, subjects, totalFee, paymentId, studentsCount } = data;
 
     // 1. Institute confirmation
     await this.sendInstituteEmail({
@@ -62,7 +62,7 @@ class NotificationService {
         ...data,
         instituteName,
         courseName,
-        semesterNumber,
+        examinationNumber,
         subjects: subjects?.join(', ') || 'N/A',
         totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
         paymentId: paymentId || 'N/A',
@@ -76,7 +76,7 @@ class NotificationService {
    * Send exam application approval notification to institute
    */
   async notifyExamApplicationApproved(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, courseName, semesterNumber, examDate, remarks } = data;
+    const { instituteName, instituteEmail, courseName, examinationNumber, examDate, remarks } = data;
 
     await this.sendInstituteEmail({
       to: instituteEmail,
@@ -100,7 +100,7 @@ class NotificationService {
    * Send exam schedule published notification to institute
    */
   async notifyExamSchedulePublished(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, courseName, semesterNumber, examVenue, examCenter, examDate, reportingTime, subjects } = data;
+    const { instituteName, instituteEmail, courseName, examinationNumber, examVenue, examCenter, examDate, reportingTime, subjects } = data;
 
     await this.sendInstituteEmail({
       to: instituteEmail,
@@ -127,7 +127,7 @@ class NotificationService {
    * Send exam result published notification to institute (and student if email known)
    */
   async notifyResultsPublished(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, studentName, studentEmail, courseName, semesterNumber, resultStatus } = data;
+    const { instituteName, instituteEmail, studentName, studentEmail, courseName, examinationNumber, resultStatus } = data;
 
     await this.sendInstituteEmail({
       to: instituteEmail,
@@ -159,7 +159,7 @@ class NotificationService {
    * Send revaluation fee payment confirmation to institute and notification to academy
    */
   async notifyRevaluationPaymentSubmitted(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, studentName, studentEmail, courseName, semesterNumber, subjects, totalFee, paymentId } = data;
+    const { instituteName, instituteEmail, studentName, studentEmail, courseName, examinationNumber, subjects, totalFee, paymentId } = data;
 
     await this.sendInstituteEmail({
       to: instituteEmail,
@@ -183,7 +183,7 @@ class NotificationService {
         studentName: studentName || 'N/A',
         studentEmail: studentEmail || 'N/A',
         courseName: courseName || 'N/A',
-        semesterNumber: semesterNumber || 'N/A',
+        examinationNumber: examinationNumber || 'N/A',
         subjectsList: subjects?.join(', ') || 'N/A',
         totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
         paymentId: paymentId || 'N/A',
@@ -196,7 +196,7 @@ class NotificationService {
    * Send revaluation result update notification to institute (and student if email known)
    */
   async notifyRevaluationResultUpdated(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, studentName, studentEmail, courseName, semesterNumber, revaluationResults } = data;
+    const { instituteName, instituteEmail, studentName, studentEmail, courseName, examinationNumber, revaluationResults } = data;
 
     const changes = revaluationResults || [];
     const totalChange = changes.reduce((sum, r) => sum + (r.marksChange || 0), 0);
@@ -302,7 +302,7 @@ class NotificationService {
           <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #0369a1;">Application Summary:</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Students:</strong> ${data.studentsCount || data.students?.length || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
@@ -322,7 +322,7 @@ class NotificationService {
             <p style="font-weight: 600; color: #0369a1;">Application Details:</p>
             <p><strong>Institute:</strong> ${data.instituteName}</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Students:</strong> ${data.studentsCount || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjects || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
@@ -343,7 +343,7 @@ class NotificationService {
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #166534;">Application Details:</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Scheduled Date:</strong> ${data.examDate || 'TBD'}</p>
             <p><strong>Remarks:</strong> ${data.remarks || 'No additional remarks.'}</p>
           </div>
@@ -356,7 +356,7 @@ class NotificationService {
         title = '📅 Exam Schedule Published';
         greeting = `Dear ${data.instituteName},`;
         body = `
-          <p>The Academic Board has published the exam schedule for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}).</p>
+          <p>The Academic Board has published the exam schedule for <strong>${data.courseName}</strong> (Examination ${data.examinationNumber}).</p>
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #166534;">Exam Schedule:</p>
             <p><strong>Venue:</strong> ${data.venue || 'TBD'}</p>
@@ -374,7 +374,7 @@ class NotificationService {
         title = '📊 Results Published';
         greeting = `Dear ${data.instituteName},`;
         body = `
-          <p>Results have been published for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}).</p>
+          <p>Results have been published for <strong>${data.courseName}</strong> (Examination ${data.examinationNumber}).</p>
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p><strong>Student:</strong> ${data.studentName || 'Multiple Students'}</p>
             <p><strong>Status:</strong> <span style="color: ${data.resultStatus === 'PASS' ? '#16a34a' : '#dc2626'};">${data.resultStatus || 'Published'}</span></p>
@@ -392,7 +392,7 @@ class NotificationService {
             <p style="font-weight: 600; color: #0369a1;">Payment Details:</p>
             <p><strong>Student:</strong> ${data.studentName || 'N/A'}</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
             <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
@@ -412,7 +412,7 @@ class NotificationService {
             <p><strong>Student:</strong> ${data.studentName || 'N/A'}</p>
             <p><strong>Email:</strong> ${data.studentEmail || 'N/A'}</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjectsList || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
             <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
@@ -442,7 +442,7 @@ class NotificationService {
         title = '📊 Your Examination Results';
         greeting = `Dear ${data.studentName || 'Student'},`;
         body = `
-          <p>Your results for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}) are now available.</p>
+          <p>Your results for <strong>${data.courseName}</strong> (Examination ${data.examinationNumber}) are now available.</p>
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #166534;">Status: ${data.resultStatus || 'Published'}</p>
           </div>
@@ -454,7 +454,7 @@ class NotificationService {
         title = `${data.changeEmoji || '📋'} Revaluation Results Updated`;
         greeting = `Dear ${data.studentName || 'Student'},`;
         body = `
-          <p>Your revaluation request for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}) has been processed.</p>
+          <p>Your revaluation request for <strong>${data.courseName}</strong> (Examination ${data.examinationNumber}) has been processed.</p>
           <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #0369a1;">Changes:</p>
             <pre style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 14px; white-space: pre-wrap;">${data.changesSummary || 'N/A'}</pre>
@@ -487,7 +487,7 @@ Your exam application has been successfully submitted to the Academic Board.
 
 Application Summary:
 - Course: ${data.courseName || 'N/A'}
-- Semester: ${data.semesterNumber || 'N/A'}
+- Examination: ${data.examinationNumber || 'N/A'}
 - Students: ${data.studentsCount || 'N/A'}
 - Subjects: ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}
 - Total Fee: ${data.totalFee || 'N/A'}
@@ -506,7 +506,7 @@ Exam Schedule Published
 
 Dear ${data.instituteName},
 
-The Academic Board has published the exam schedule for ${data.courseName} (Semester ${data.semesterNumber}).
+The Academic Board has published the exam schedule for ${data.courseName} (Examination ${data.examinationNumber}).
 
 Exam Schedule:
 - Venue: ${data.venue || 'TBD'}

@@ -90,7 +90,7 @@ router.get('/debug/create-dummy', async (req, res) => {
           semiMembershipFormUrl: 'http://example.com/membership.pdf',
         },
         remittedToAcademy: false,
-        semesters: [{ semesterNumber: 1, attendancePercentage: 0, thesisApproved: false, eligibilityStatus: 'Pending' }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 0, thesisApproved: false, eligibilityStatus: 'Pending' }],
       });
     } else {
       student.dateOfBirth = new Date('2026-07-21');
@@ -115,7 +115,7 @@ router.get('/debug/create-dummy', async (req, res) => {
       await Result.create({
         student: student._id,
         academicYear: '2026',
-        semester: 1,
+        examination: 1,
         isPublished: false,
         subjects: []
       });

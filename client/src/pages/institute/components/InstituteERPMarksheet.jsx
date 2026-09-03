@@ -37,12 +37,12 @@ const InstituteERPMarksheet = ({
   fetchERPData,
   user
 }) => {
-  const [marksheetType, setMarksheetType] = useState('semester'); // 'semester' | 'cumulative'
+  const [marksheetType, setMarksheetType] = useState('examination'); // 'examination' | 'cumulative'
   const [activeTab, setActiveTab] = useState('generator'); // 'generator' | 'templates'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('1');
+  const [selectedExamination, setSelectedExamination] = useState('1');
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -62,11 +62,11 @@ const InstituteERPMarksheet = ({
     controllerTitle: "Controller - Examinations, SEMI",
     controllerSignatureUrl: null,
     issueDate: new Date().toISOString().split('T')[0],
-    gradingScaleNote: "Grading: O (>=90%), A+ (80-89%), A (70-79%), B+ (60-69%), B (50-59%), C (40-49%), D (35-39%), F (<35%)",
+    gradingScaleNote: "Result: PASS / FAIL",
     instructions: [
       "This marksheet is an official statement of academic performance issued by SEMI.",
       "Any erasure or alteration invalidates this document.",
-      "Minimum passing mark in each subject is 50% for aggregate / 40% per theory paper."
+      "Result is declared as PASS or FAIL for each subject without disclosure of marks."
     ]
   });
 
@@ -125,88 +125,66 @@ const InstituteERPMarksheet = ({
     }));
   };
 
-  // Helper function to build marks structure for a candidate
+  // Helper function to build result structure for a candidate
   const getStudentMarksData = (student) => {
     const studentIdStr = String(student._id || student.id);
     const studentResults = results.filter(r => String(r.student?._id || r.student) === studentIdStr);
 
-    if (marksheetType === 'semester') {
-      const semNum = Number(selectedSemester);
-      const semResult = studentResults.find(r => Number(r.semester) === semNum);
+    if (marksheetType === 'examination') {
+      const examNum = Number(selectedExamination);
+      const semResult = studentResults.find(r => Number(r.examination) === examNum);
 
       let subjectsList = [];
       if (semResult && semResult.subjects && semResult.subjects.length > 0) {
-        subjectsList = semResult.subjects.map(s => ({
-          code: s.subjectCode || 'SUB',
-          name: s.subjectName || 'Subject',
-          internal: s.internalMarks || 0,
-          external: s.externalMarks || 0,
-          total: (s.internalMarks || 0) + (s.externalMarks || 0),
-          maxMarks: 100,
-          status: ((s.internalMarks || 0) + (s.externalMarks || 0)) >= 50 ? 'PASS' : 'FAIL'
-        }));
+        subjectsList = semResult.subjects.map(s => {
+          const subGrade = (s.grade || '').toUpperCase();
+          return {
+            code: s.subjectCode || 'SUB',
+            name: s.subjectName || 'Subject',
+            status: ['F', 'RA', 'ABSENT', 'WH'].includes(subGrade) ? 'FAIL' : 'PASS'
+          };
+        });
       } else {
-        // Fallback default subjects for template preview if no recorded exam result yet
         subjectsList = [
-          { code: 'EM-101', name: 'Basic Sciences & Emergency Resuscitation', internal: 24, external: 62, total: 86, maxMarks: 100, status: 'PASS' },
-          { code: 'EM-102', name: 'Surgical Emergencies & Trauma Care', internal: 22, external: 58, total: 80, maxMarks: 100, status: 'PASS' },
-          { code: 'EM-103', name: 'Medical & Cardiac Emergencies', internal: 25, external: 65, total: 90, maxMarks: 100, status: 'PASS' },
-          { code: 'EM-104', name: 'Pediatric & Neonatal Emergencies', internal: 21, external: 54, total: 75, maxMarks: 100, status: 'PASS' }
+          { code: 'EM-101', name: 'Basic Sciences & Emergency Resuscitation', status: 'PASS' },
+          { code: 'EM-102', name: 'Surgical Emergencies & Trauma Care', status: 'PASS' },
+          { code: 'EM-103', name: 'Medical & Cardiac Emergencies', status: 'PASS' },
+          { code: 'EM-104', name: 'Pediatric & Neonatal Emergencies', status: 'PASS' }
         ];
       }
 
-      const totalObtained = semResult ? (semResult.totalMarks || subjectsList.reduce((acc, curr) => acc + curr.total, 0)) : subjectsList.reduce((acc, curr) => acc + curr.total, 0);
-      const maxTotal = subjectsList.length * 100;
-      const percentage = semResult ? (semResult.percentage || Math.round((totalObtained / maxTotal) * 100)) : Math.round((totalObtained / maxTotal) * 100);
-      const resultStatus = semResult ? (semResult.resultStatus || (percentage >= 50 ? 'PASS' : 'FAIL')) : (percentage >= 50 ? 'PASS' : 'FAIL');
+      const overallStatus = semResult ? (semResult.resultStatus || 'PASS') : 'PASS';
 
       return {
-        type: 'Semester',
-        semesterLabel: `Semester ${selectedSemester}`,
+        type: 'Examination',
+        examinationLabel: `Examination ${selectedExamination}`,
         subjects: subjectsList,
-        totalObtained,
-        maxTotal,
-        percentage,
-        resultStatus
+        resultStatus: overallStatus
       };
     } else {
-      // Cumulative Total Semesters Marksheet
-      let semesterSummaries = [];
+      // Cumulative Total Examinations Statement
+      let examinationSummaries = [];
 
-      // Loop through sem 1 to 4 (or available results)
-      [1, 2, 3, 4].forEach(semNum => {
-        const semResult = studentResults.find(r => Number(r.semester) === semNum);
+      [1, 2].forEach(semNum => {
+        const semResult = studentResults.find(r => Number(r.examination) === semNum);
         if (semResult) {
-          semesterSummaries.push({
-            semesterLabel: `Semester ${semNum}`,
-            totalMarks: semResult.totalMarks || 0,
-            maxMarks: 400,
-            percentage: semResult.percentage || 0,
+          examinationSummaries.push({
+            examinationLabel: `Examination ${semNum}`,
             status: semResult.resultStatus || 'PASS'
           });
         } else {
-          // Default mock data for cumulative overview
-          semesterSummaries.push({
-            semesterLabel: `Semester ${semNum}`,
-            totalMarks: 320 + (semNum * 5),
-            maxMarks: 400,
-            percentage: 80 + semNum,
+          examinationSummaries.push({
+            examinationLabel: `Examination ${semNum}`,
             status: 'PASS'
           });
         }
       });
 
-      const grandTotalObtained = semesterSummaries.reduce((acc, curr) => acc + curr.totalMarks, 0);
-      const grandMaxMarks = semesterSummaries.reduce((acc, curr) => acc + curr.maxMarks, 0);
-      const overallPercentage = Math.round((grandTotalObtained / grandMaxMarks) * 100);
-      const overallStatus = semesterSummaries.every(s => s.status === 'PASS') ? 'PASS' : 'FAIL';
+      const overallStatus = examinationSummaries.every(s => s.status === 'PASS') ? 'PASS' : 'FAIL';
 
       return {
         type: 'Cumulative',
-        semesterSummaries,
-        grandTotalObtained,
-        grandMaxMarks,
-        overallPercentage,
+        examinationSummaries,
         overallStatus
       };
     }
@@ -239,11 +217,11 @@ const InstituteERPMarksheet = ({
         };
       });
 
-      setSuccessMsg(`🎉 Successfully generated ${generatedList.length} ${marksheetType === 'semester' ? 'Semester' : 'Cumulative'} Marksheet(s)!`);
+      setSuccessMsg(`🎉 Successfully generated ${generatedList.length} ${marksheetType === 'examination' ? 'Examination' : 'Cumulative'} Marksheet(s)!`);
       setViewingMarksheets(generatedList);
       setViewingBatchInfo({
         batchName: selectedBatchId ? `Selected Candidates (${generatedList.length})` : 'All Batches',
-        courseName: marksheetType === 'semester' ? `Semester ${selectedSemester} Marksheet` : 'Cumulative Total Semesters Marksheet'
+        courseName: marksheetType === 'examination' ? `Examination ${selectedExamination} Marksheet` : 'Cumulative Total Examinations Marksheet'
       });
     } catch (err) {
       console.error('Error generating marksheets:', err);
@@ -270,7 +248,7 @@ const InstituteERPMarksheet = ({
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Academic Marksheets</h2>
             <p className="text-xs text-slate-400 font-semibold mt-1">
-              Generate, customize form fields, and download semester and cumulative total sem marksheets
+              Generate, customize form fields, and download examination and cumulative total examination marksheets
             </p>
           </div>
         </div>
@@ -279,14 +257,14 @@ const InstituteERPMarksheet = ({
         <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
           <button
             type="button"
-            onClick={() => setMarksheetType('semester')}
+            onClick={() => setMarksheetType('examination')}
             className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-              marksheetType === 'semester' 
+              marksheetType === 'examination' 
                 ? 'bg-white text-emerald-700 shadow-sm' 
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Semester Marksheet
+            Examination Marksheet
           </button>
           <button
             type="button"
@@ -297,7 +275,7 @@ const InstituteERPMarksheet = ({
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Cumulative Total Sem Marksheet
+            Cumulative Total Exam Marksheet
           </button>
         </div>
       </div>
@@ -366,16 +344,16 @@ const InstituteERPMarksheet = ({
                 </select>
               </div>
 
-              {marksheetType === 'semester' && (
+              {marksheetType === 'examination' && (
                 <div>
-                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Semester</label>
+                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Examination</label>
                   <select
-                    value={selectedSemester}
-                    onChange={(e) => setSelectedSemester(e.target.value)}
+                    value={selectedExamination}
+                    onChange={(e) => setSelectedExamination(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white"
                   >
                     {[1, 2, 3, 4, 5, 6].map(sem => (
-                      <option key={sem} value={sem}>Semester {sem}</option>
+                      <option key={sem} value={sem}>Examination {sem}</option>
                     ))}
                   </select>
                 </div>
@@ -683,16 +661,15 @@ const InstituteERPMarksheet = ({
                   {/* Section II Academic Marks & Evaluation */}
                   <div className="space-y-1 pt-1">
                     <h4 className="text-xs font-bold italic underline font-sans">
-                      Section II. Performance Statement ({mItem.marksData.type === 'Semester' ? mItem.marksData.semesterLabel : 'Cumulative Total Semesters'}):
+                      Section II. Performance Statement ({mItem.marksData.type === 'Examination' ? mItem.marksData.examinationLabel : 'Cumulative Total Examinations'}):
                     </h4>
 
-                    {mItem.marksData.type === 'Semester' ? (
+                    {mItem.marksData.type === 'Examination' ? (
                       <table className="w-full border border-black text-xs font-sans border-collapse mt-2">
                         <thead>
                           <tr className="border-b border-black bg-slate-100 text-left font-bold">
                             <th className="p-2 border-r border-black w-16 text-center">Code</th>
                             <th className="p-2 border-r border-black">Subject Title</th>
-                            <th className="p-2 border-r border-black w-20 text-center">Total</th>
                             <th className="p-2 text-center w-16">Result</th>
                           </tr>
                         </thead>
@@ -701,7 +678,6 @@ const InstituteERPMarksheet = ({
                             <tr key={sIdx} className="border-b border-black last:border-b-0">
                               <td className="p-2 border-r border-black font-mono text-center">{sub.code}</td>
                               <td className="p-2 border-r border-black font-medium">{sub.name}</td>
-                              <td className="p-2 border-r border-black text-center font-mono font-bold">{sub.total}</td>
                               <td className="p-2 text-center font-bold">
                                 <span className={sub.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}>
                                   {sub.status}
@@ -710,39 +686,20 @@ const InstituteERPMarksheet = ({
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot>
-                          <tr className="border-t-2 border-black bg-slate-50 font-bold">
-                            <td colSpan="2" className="p-2 text-right border-r border-black uppercase text-[11px]">
-                              Aggregate Total Marks
-                            </td>
-                            <td className="p-2 text-center border-r border-black font-mono">
-                              {mItem.marksData.totalObtained} / {mItem.marksData.maxTotal}
-                            </td>
-                            <td className="p-2 text-center font-bold text-emerald-800">
-                              {mItem.marksData.percentage}%
-                            </td>
-                          </tr>
-                        </tfoot>
                       </table>
                     ) : (
-                      /* Cumulative Semester Summary Table */
+                      /* Cumulative Examination Summary Table */
                       <table className="w-full border border-black text-xs font-sans border-collapse mt-2">
                         <thead>
                           <tr className="border-b border-black bg-slate-100 text-left font-bold">
-                            <th className="p-2 border-r border-black">Semester</th>
-                            <th className="p-2 border-r border-black text-center">Max Marks</th>
-                            <th className="p-2 border-r border-black text-center">Marks Obtained</th>
-                            <th className="p-2 border-r border-black text-center">Percentage</th>
-                            <th className="p-2 text-center">Status</th>
+                            <th className="p-2 border-r border-black">Examination</th>
+                            <th className="p-2 text-center">Result</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {mItem.marksData.semesterSummaries.map((sem, sIdx) => (
+                          {mItem.marksData.examinationSummaries.map((sem, sIdx) => (
                             <tr key={sIdx} className="border-b border-black last:border-b-0">
-                              <td className="p-2 border-r border-black font-bold">{sem.semesterLabel}</td>
-                              <td className="p-2 border-r border-black text-center font-mono">{sem.maxMarks}</td>
-                              <td className="p-2 border-r border-black text-center font-mono font-bold">{sem.totalMarks}</td>
-                              <td className="p-2 border-r border-black text-center font-mono font-bold">{sem.percentage}%</td>
+                              <td className="p-2 border-r border-black font-bold">{sem.examinationLabel}</td>
                               <td className="p-2 text-center font-bold">
                                 <span className={sem.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}>
                                   {sem.status}
@@ -751,25 +708,6 @@ const InstituteERPMarksheet = ({
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot>
-                          <tr className="border-t-2 border-black bg-slate-50 font-bold">
-                            <td className="p-2 text-right border-r border-black uppercase text-[11px]">
-                              Cumulative Grand Total
-                            </td>
-                            <td className="p-2 text-center border-r border-black font-mono">
-                              {mItem.marksData.grandMaxMarks}
-                            </td>
-                            <td className="p-2 text-center border-r border-black font-mono font-bold">
-                              {mItem.marksData.grandTotalObtained}
-                            </td>
-                            <td className="p-2 text-center border-r border-black font-bold text-emerald-800">
-                              {mItem.marksData.overallPercentage}%
-                            </td>
-                            <td className="p-2 text-center font-black text-emerald-700">
-                              {mItem.marksData.overallStatus}
-                            </td>
-                          </tr>
-                        </tfoot>
                       </table>
                     )}
                   </div>

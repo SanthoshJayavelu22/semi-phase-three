@@ -14,7 +14,7 @@ import { createResultSchema, updateResultSchema, bulkUploadSchema } from '../val
 
 export const getAllResults = async (req: Request, res: Response) => {
   try {
-    const { page = '1', limit = '20', academicYear, semester, resultStatus, isPublished, studentId, search } = req.query;
+    const { page = '1', limit = '20', academicYear, examination, resultStatus, isPublished, studentId, search } = req.query;
 
     const query: any = {};
 
@@ -29,7 +29,7 @@ export const getAllResults = async (req: Request, res: Response) => {
     }
 
     if (academicYear) query.academicYear = academicYear;
-    if (semester) query.semester = parseInt(semester as string);
+    if (examination) query.examination = parseInt(examination as string);
     if (resultStatus) query.resultStatus = resultStatus;
     if (isPublished !== undefined) query.isPublished = isPublished === 'true';
     if (studentId) query.student = studentId;
@@ -123,7 +123,7 @@ export const getResultByStudent = async (req: Request, res: Response) => {
 
     const results = await Result.find({ student: student._id })
       .populate('student', 'firstName lastName enrollmentId email')
-      .sort({ academicYear: -1, semester: -1 });
+      .sort({ academicYear: -1, examination: -1 });
 
     if (!results || results.length === 0) {
       return sendError({ req, res, statusCode: 404, message: 'No results found for this student' });
@@ -153,7 +153,7 @@ export const createResult = async (req: Request, res: Response) => {
     const existingResult = await Result.findOne({
       student: validatedData.student,
       academicYear: validatedData.academicYear,
-      semester: validatedData.semester,
+      examination: validatedData.examination,
     });
 
     if (existingResult) {
@@ -161,7 +161,7 @@ export const createResult = async (req: Request, res: Response) => {
         req,
         res,
         statusCode: 400,
-        message: 'Result already exists for this student in the given academic year and semester',
+        message: 'Result already exists for this student in the given academic year and examination',
       });
     }
 
@@ -193,7 +193,7 @@ export const createResult = async (req: Request, res: Response) => {
       await pdfGeneratorService.generateMarksheetPDF({
         result: populatedResult,
         student,
-        marksheetNumber: `MS-${(student as any).enrollmentId}-${populatedResult.academicYear}-S${populatedResult.semester}`,
+        marksheetNumber: `MS-${(student as any).enrollmentId}-${populatedResult.academicYear}-S${populatedResult.examination}`,
       });
     }
 
@@ -251,7 +251,7 @@ export const updateResult = async (req: Request, res: Response) => {
         await pdfGeneratorService.generateMarksheetPDF({
           result: populated,
           student,
-          marksheetNumber: `MS-${(student as any).enrollmentId}-${populated.academicYear}-S${populated.semester}`,
+          marksheetNumber: `MS-${(student as any).enrollmentId}-${populated.academicYear}-S${populated.examination}`,
         });
       }
     }
@@ -328,6 +328,33 @@ export const publishResult = async (req: Request, res: Response) => {
       }
     }
 
+    // ── NEW: Track exam attempt on the student record ──
+    try {
+      const student = await Student.findById(result.student);
+      if (student) {
+        if (!student.examAttempts) student.examAttempts = [];
+        const attemptIndex = student.examAttempts.findIndex(
+          (e) => e.examinationNumber === result.examination
+        );
+
+        if (attemptIndex !== -1) {
+          student.examAttempts[attemptIndex].attemptCount += 1;
+          student.examAttempts[attemptIndex].lastResultStatus = result.resultStatus;
+          student.examAttempts[attemptIndex].lastExamDate = new Date();
+        } else {
+          student.examAttempts.push({
+            examinationNumber: result.examination,
+            attemptCount: 1,
+            lastResultStatus: result.resultStatus,
+            lastExamDate: new Date(),
+          });
+        }
+        await student.save();
+      }
+    } catch (attemptErr) {
+      console.error('Failed to update student exam attempts on result publish:', attemptErr);
+    }
+
     // Notify institute (and student if email known) that results are published
     try {
       const student = await Student.findById(result.student).populate('course', 'name');
@@ -340,7 +367,7 @@ export const publishResult = async (req: Request, res: Response) => {
           studentName: `${student.firstName} ${student.lastName}`.trim(),
           studentEmail: student.email,
           courseName: (student as any).course?.name || 'N/A',
-          semesterNumber: result.semester,
+          examinationNumber: result.examination,
           resultStatus: result.resultStatus,
         });
       }
@@ -356,12 +383,12 @@ export const publishResult = async (req: Request, res: Response) => {
 
 export const searchResults = async (req: Request, res: Response) => {
   try {
-    const { q, academicYear, semester, department, resultStatus, fromDate, toDate } = req.query;
+    const { q, academicYear, examination, department, resultStatus, fromDate, toDate } = req.query;
 
     const searchResultsData = await resultService.advancedSearch({
       query: q,
       academicYear,
-      semester,
+      examination,
       department,
       resultStatus,
       fromDate,
@@ -376,9 +403,9 @@ export const searchResults = async (req: Request, res: Response) => {
 
 export const getResultStatistics = async (req: Request, res: Response) => {
   try {
-    const { academicYear, semester } = req.query;
+    const { academicYear, examination } = req.query;
 
-    const statistics = await resultService.getResultStatistics({ academicYear, semester });
+    const statistics = await resultService.getResultStatistics({ academicYear, examination });
 
     return sendSuccess({ req, res, message: 'Statistics retrieved successfully', data: statistics });
   } catch (error: any) {
@@ -409,13 +436,13 @@ export const bulkUploadResults = async (req: Request, res: Response) => {
 // Schema for file-based bulk upload
 const fileBulkUploadSchema = z.object({
   academicYear: z.string().min(1, 'Academic year is required'),
-  semester: z.coerce.number().int().min(1).max(8, 'Semester must be between 1 and 8'),
+  examination: z.coerce.number().int().min(1).max(8, 'Examination must be between 1 and 8'),
   format: z.enum(['docx', 'pdf', 'xlsx', 'csv']),
 });
 
 export const bulkUploadFromFile = async (req: Request, res: Response) => {
   try {
-    const { academicYear, semester, format } = fileBulkUploadSchema.parse(req.body);
+    const { academicYear, examination, format } = fileBulkUploadSchema.parse(req.body);
     const file = req.file;
 
     if (!file) {
@@ -483,7 +510,7 @@ export const bulkUploadFromFile = async (req: Request, res: Response) => {
       resultsToUpload.push({
         student: studentId,
         academicYear: academicYear || result.academicYear || '2024-25',
-        semester: semester || result.semester || 1,
+        examination: examination || result.examination || 1,
         subjects,
       });
     }
@@ -576,8 +603,8 @@ export const getStudentResultHistory = async (req: Request, res: Response) => {
     const { studentId } = req.params;
 
     const results = await Result.find({ student: studentId, isPublished: true })
-      .select('academicYear semester totalMarks percentage cgpa division resultStatus')
-      .sort({ academicYear: -1, semester: -1 });
+      .select('academicYear examination totalMarks percentage cgpa division resultStatus')
+      .sort({ academicYear: -1, examination: -1 });
 
     if (!results || results.length === 0) {
       return sendError({ req, res, statusCode: 404, message: 'No results found for this student' });

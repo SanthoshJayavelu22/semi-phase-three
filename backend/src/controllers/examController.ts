@@ -11,6 +11,7 @@ import { User } from '../models/userModel';
 import notificationService from '../services/notificationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { emitEvent } from '../config/socket';
+import { classifyStudentsForExamFee, checkStudentReappearance, resolveFeeConfiguration } from '../services/examFeeService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ const jsonStringArray = z.preprocess(parseJsonArray, z.array(z.string().min(1)))
 const examApplySchema = z.object({
   courseId:   z.string().min(1, 'Course ID is required'),
   batchId:    z.string().optional(),
-  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination Number is required').max(2),
   studentIds: z.preprocess(parseJsonArray, z.array(z.string().min(1)).min(1, 'At least one student must be selected')),
   utrNumber:  z.string().optional(),
   subjects:   z.preprocess(parseJsonArray, z.array(z.string().min(1)).min(1, 'At least one subject is required')),
@@ -160,50 +161,71 @@ export const applyForExam = async (req: Request, res: Response) => {
       });
     }
 
+    // ── NEW: Classify students (first-attempt vs reappearing) & resolve fee ──
+    const feeSummary = await classifyStudentsForExamFee(
+      validatedData.studentIds,
+      validatedData.examinationNumber,
+      course
+    );
+
     // Fetch fee records for examination fees
     const feeRecords = await FeeRecord.find({
       student: { $in: validatedData.studentIds },
-      semesterNumber: validatedData.semesterNumber,
+      examinationNumber: validatedData.examinationNumber,
       paymentPurpose: 'Examination fee'
     });
     const paidStudentIds = new Set(feeRecords.map((f: any) => f.student.toString()));
 
+    // Reappearing students who have a payable fee must have paid it;
+    // first-attempt students are fee-waived by default so no payment required.
+    const feeRequiredSet = new Set(
+      (feeSummary.examFeeApplicable ? feeSummary.reappearingStudents : [])
+    );
+
     // Eligibility check
     const ineligible = students.filter(s => {
-      const sem = s.semesters.find((sm: any) => sm.semesterNumber === validatedData.semesterNumber);
-      if (!sem) return true; // ineligible if no semester record
-      return !(sem.attendancePercentage >= 75 && sem.thesisApproved && paidStudentIds.has(s._id.toString()));
+      const sem = s.examinations.find((sm: any) => sm.examinationNumber === validatedData.examinationNumber);
+      if (!sem) return true; // ineligible if no examination record
+
+      const feeSatisfied = !feeRequiredSet.has(s._id.toString()) || paidStudentIds.has(s._id.toString());
+      return !(sem.attendancePercentage >= 75 && sem.thesisApproved && feeSatisfied);
     });
 
     if (ineligible.length > 0) {
       return sendError({
         req, res, statusCode: 400,
         message: 'Cannot apply for exam. One or more selected students are ineligible.',
-        errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or exam fee) for this semester' })),
+        errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or applicable exam fee) for this examination' })),
       });
     }
 
     // Duplicate check
     const existing = await ExamApplication.findOne({
       batch: batch._id,
-      semesterNumber: validatedData.semesterNumber,
+      examinationNumber: validatedData.examinationNumber,
       students: { $in: validatedData.studentIds },
       status: { $in: ['Pending', 'Approved', 'SchedulePublished'] },
     });
     if (existing) {
-      return sendError({ req, res, statusCode: 400, message: 'An exam application already exists for one or more selected students in this batch and semester.' });
+      return sendError({ req, res, statusCode: 400, message: 'An exam application already exists for one or more selected students in this batch and examination.' });
     }
 
     const application = await ExamApplication.create({
       institute: institute._id,
       course: course._id,
       batch: batch._id,
-      semesterNumber: validatedData.semesterNumber,
+      examinationNumber: validatedData.examinationNumber,
       students: validatedData.studentIds,
       subjects: validatedData.subjects,
       status: 'Pending',
       utrNumber: validatedData.utrNumber,
       examFeeReceiptUrl,
+      examFeeApplicable: feeSummary.examFeeApplicable,
+      examFeeAmount: feeSummary.examFeeAmount,
+      reappearingFeeAmount: feeSummary.reappearingFeeAmount,
+      firstAttemptFeeAmount: feeSummary.firstAttemptFeeAmount,
+      reappearingStudents: feeSummary.reappearingStudents,
+      firstAttemptStudents: feeSummary.firstAttemptStudents,
     });
 
     emitEvent('EXAM_APPLICATION_UPDATED', { applicationId: application._id, status: 'Pending' });
@@ -215,7 +237,7 @@ export const applyForExam = async (req: Request, res: Response) => {
         instituteName: institute.orgName,
         instituteEmail: user?.email || institute.emailAddress,
         courseName: course.name,
-        semesterNumber: validatedData.semesterNumber,
+        examinationNumber: validatedData.examinationNumber,
         subjects: validatedData.subjects,
         totalFee: 0,
         paymentId: validatedData.utrNumber || 'N/A',
@@ -270,7 +292,7 @@ export const getExamApplicationById = async (req: Request, res: Response) => {
       .populate('institute', 'orgName instituteAddress')
       .populate('course', 'name')
       .populate('batch', 'year')
-      .populate('students', 'firstName lastName enrollmentId email attendancePercentage thesisApproved remittedToAcademy');
+      .populate('students', 'firstName lastName enrollmentId email attendancePercentage thesisApproved remittedToAcademy examAttempts');
 
     if (!application) return sendError({ req, res, statusCode: 404, message: 'Exam application not found' });
 
@@ -315,25 +337,43 @@ export const updateExamApplication = async (req: Request, res: Response) => {
       }
       const feeRecords = await FeeRecord.find({
         student: { $in: validatedData.studentIds },
-        semesterNumber: application.semesterNumber,
+        examinationNumber: application.examinationNumber,
         paymentPurpose: 'Examination fee'
       });
       const paidStudentIds = new Set(feeRecords.map((f: any) => f.student.toString()));
 
+      // ── NEW: Recompute fee classification for the updated students ──
+      const course = await Course.findById(application.course);
+      const feeSummary = await classifyStudentsForExamFee(
+        validatedData.studentIds,
+        application.examinationNumber,
+        course
+      );
+      const feeRequiredSet = new Set(
+        (feeSummary.examFeeApplicable ? feeSummary.reappearingStudents : [])
+      );
+
       const ineligible = students.filter(s => {
-        const sem = s.semesters.find((sm: any) => sm.semesterNumber === application.semesterNumber);
+        const sem = s.examinations.find((sm: any) => sm.examinationNumber === application.examinationNumber);
         if (!sem) return true;
-        return !(sem.attendancePercentage >= 75 && sem.thesisApproved && paidStudentIds.has(s._id.toString()));
+        const feeSatisfied = !feeRequiredSet.has(s._id.toString()) || paidStudentIds.has(s._id.toString());
+        return !(sem.attendancePercentage >= 75 && sem.thesisApproved && feeSatisfied);
       });
 
       if (ineligible.length > 0) {
         return sendError({
           req, res, statusCode: 400,
           message: 'One or more updated students are ineligible.',
-          errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or exam fee) for this semester' })),
+          errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or applicable exam fee) for this examination' })),
         });
       }
       application.students = validatedData.studentIds.map((id: string) => id as any);
+      application.examFeeApplicable = feeSummary.examFeeApplicable;
+      application.examFeeAmount = feeSummary.examFeeAmount;
+      application.reappearingFeeAmount = feeSummary.reappearingFeeAmount;
+      application.firstAttemptFeeAmount = feeSummary.firstAttemptFeeAmount;
+      application.reappearingStudents = feeSummary.reappearingStudents as any;
+      application.firstAttemptStudents = feeSummary.firstAttemptStudents as any;
     }
 
     await application.save();
@@ -412,7 +452,7 @@ export const reviewExamApplication = async (req: Request, res: Response) => {
             instituteName: instituteDoc.orgName,
             instituteEmail: instituteUser?.email || instituteDoc.emailAddress,
             courseName: courseDoc?.name || 'N/A',
-            semesterNumber: application.semesterNumber,
+            examinationNumber: application.examinationNumber,
             examDate: application.scheduledDate || new Date(),
             remarks: validatedData.remarks || 'Approved by Academic Board',
           });
@@ -484,7 +524,7 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
           instituteName: instituteDoc.orgName,
           instituteEmail: instituteUser?.email || instituteDoc.emailAddress,
           courseName: (application as any).course?.name || 'N/A',
-          semesterNumber: application.semesterNumber,
+          examinationNumber: application.examinationNumber,
           examVenue: application.examVenue,
           examCenter: application.examCenter,
           examDate: application.scheduledDate || new Date(),
@@ -643,7 +683,7 @@ export const generateHallTickets = async (req: Request, res: Response) => {
           subjectSchedules,
           subjects,
           courseName: courseDoc.name,
-          semesterNumber: application.semesterNumber,
+          examinationNumber: application.examinationNumber,
           // NEW: Practical details
           practicalExam: {
             name:     practicalExam.name,
@@ -685,6 +725,91 @@ export const listHallTickets = async (req: Request, res: Response) => {
       req, res,
       message: `${tickets.length} hall ticket(s) retrieved successfully`,
       data: tickets,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ─── GET Single Hall Ticket by ID ────────────────────────────────────────────
+
+export const checkExamFeeApplicability = async (req: Request, res: Response) => {
+  try {
+    const studentId = String(req.params.studentId);
+    const examinationNumber = parseInt(String(req.params.examinationNumber));
+
+    const student = await Student.findById(studentId).populate('course');
+    if (!student) return sendError({ req, res, statusCode: 404, message: 'Student not found' });
+
+    const course = student.course || await Course.findById(
+      (student as any).courseId || (student as any).course
+    );
+
+    const status = await checkStudentReappearance(studentId, examinationNumber);
+
+    const feeConfig = course
+      ? resolveFeeConfiguration(course, examinationNumber)
+      : { firstAttemptFee: 0, reappearingFee: 0, feeApplicableForFirstAttempt: false };
+
+    // First attempt: fee applies only when the course opts in AND fee > 0.
+    // Reappearing: fee applies only when the reappearing fee > 0.
+    let examFeeApplicable = false;
+    let examFeeAmount = 0;
+    let applicableFee = '';
+    if (status.isReappearing) {
+      examFeeApplicable = feeConfig.reappearingFee > 0;
+      examFeeAmount = feeConfig.reappearingFee;
+      applicableFee = 'reappearing';
+    } else {
+      examFeeApplicable = feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0;
+      examFeeAmount = feeConfig.firstAttemptFee;
+      applicableFee = 'firstAttempt';
+    }
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Exam fee applicability checked',
+      data: {
+        studentId,
+        examinationNumber,
+        isReappearing: status.isReappearing,
+        attemptCount: status.attemptCount,
+        previousResult: status.previousResult,
+        firstAttemptFee: feeConfig.firstAttemptFee,
+        reappearingFee: feeConfig.reappearingFee,
+        feeApplicableForFirstAttempt: feeConfig.feeApplicableForFirstAttempt,
+        applicableFee,
+        examFeeApplicable,
+        examFeeAmount,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const getExamFeeConfiguration = async (req: Request, res: Response) => {
+  try {
+    const courseId = String(req.params.courseId);
+    const examinationNumber = parseInt(String(req.params.examinationNumber));
+
+    const course = await Course.findById(courseId);
+    if (!course) return sendError({ req, res, statusCode: 404, message: 'Course not found' });
+
+    const feeConfig = resolveFeeConfiguration(course, examinationNumber);
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Exam fee configuration retrieved successfully',
+      data: {
+        courseId,
+        examinationNumber,
+        firstAttemptFee: feeConfig.firstAttemptFee,
+        reappearingFee: feeConfig.reappearingFee,
+        feeApplicableForFirstAttempt: feeConfig.feeApplicableForFirstAttempt,
+      },
     });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });

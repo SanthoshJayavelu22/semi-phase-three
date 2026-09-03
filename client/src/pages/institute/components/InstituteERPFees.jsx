@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Eye, CheckCircle2, ChevronLeft, ChevronRight, X, CreditCard, User, Loader2, FileText, ArrowRight, Check } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import { academicService } from '../../../api/academic';
+import examService from '../../../api/exams';
 import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
 import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
 
@@ -16,7 +17,7 @@ const fmtDate = (val) => {
 
 const STEPS = [
   { num: 1, label: 'Select Student', icon: User },
-  { num: 2, label: 'Choose Semester', icon: FileText },
+  { num: 2, label: 'Choose Examination', icon: FileText },
   { num: 3, label: 'Enter Payment', icon: CreditCard },
   { num: 4, label: 'Review & Submit', icon: CheckCircle2 },
 ];
@@ -25,8 +26,8 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   const [step, setStep] = useState(1);
 
   const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
-  const [unpaidSemesters, setUnpaidSemesters] = useState([]);
+  const [selectedExamination, setSelectedExamination] = useState('');
+  const [unpaidExaminations, setUnpaidExaminations] = useState([]);
   const [feeType, setFeeType] = useState('Examination fee');
   const [amount, setAmount] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
@@ -34,6 +35,9 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
 
   const [feeRecords, setFeeRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [feeCheck, setFeeCheck] = useState(null);
+  const [feeCheckLoading, setFeeCheckLoading] = useState(false);
 
   const [viewingTx, setViewingTx] = useState(null);
   const [toast, setToast] = useState(null);
@@ -87,11 +91,36 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   const resetForm = () => {
     setStep(1);
     setSelectedStudentId('');
-    setSelectedSemester('');
+    setSelectedExamination('');
     setAmount('');
     setFeeType('Examination fee');
     setPaymentDate(new Date().toISOString().split('T')[0]);
+    setFeeCheck(null);
   };
+
+    // Resolve the applicable exam fee for the selected student + examination.
+  useEffect(() => {
+    if (!selectedStudentId || !selectedExamination) {
+      setFeeCheck(null);
+      return;
+    }
+    let cancelled = false;
+    setFeeCheckLoading(true);
+    examService
+      .checkExamFeeApplicability(selectedStudentId, parseInt(selectedExamination))
+      .then((res) => {
+        if (cancelled) return;
+        const data = res?.data?.data || res?.data || res;
+        setFeeCheck(data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setFeeCheck(null);
+      })
+      .finally(() => {
+        if (!cancelled) setFeeCheckLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedStudentId, selectedExamination]);
 
   const eligibleStudents = students;
   const selectedStudent = students.find(s => s._id === selectedStudentId || s.id === selectedStudentId);
@@ -99,46 +128,54 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   useEffect(() => {
     setTimeout(() => {
       if (!selectedStudentId) {
-        setUnpaidSemesters([]);
+        setUnpaidExaminations([]);
         return;
       }
-      const paidSemesters = feeRecords
+      const paidExaminations = feeRecords
         .filter(r => (r.student?._id === selectedStudentId || r.student?.id === selectedStudentId || r.student === selectedStudentId) && r.paymentPurpose === feeType)
-        .map(r => Number(r.semesterNumber));
+        .map(r => Number(r.examinationNumber));
       const available = [1, 2, 3, 4, 5, 6]
-        .filter(num => !paidSemesters.includes(num))
-        .map(num => ({ semesterNumber: num }));
-      setUnpaidSemesters(available);
-      if (selectedSemester && paidSemesters.includes(Number(selectedSemester))) {
-        setSelectedSemester('');
+        .filter(num => !paidExaminations.includes(num))
+        .map(num => ({ examinationNumber: num }));
+      setUnpaidExaminations(available);
+      if (selectedExamination && paidExaminations.includes(Number(selectedExamination))) {
+        setSelectedExamination('');
       }
     }, 0);
-  }, [selectedStudentId, feeRecords, feeType, selectedSemester]);
+  }, [selectedStudentId, feeRecords, feeType, selectedExamination]);
 
   useEffect(() => {
+    // Auto-fill the amount from the resolved exam fee configuration when a fee
+    // is applicable; otherwise leave blank (fee waived / not payable).
     setTimeout(() => {
-      if (selectedStudent && courses.length > 0) {
-        const studentCourseName = selectedStudent.course || selectedStudent.courseName;
-        const course = courses.find(c =>
-          c.name === studentCourseName ||
-          c.courseCode === studentCourseName ||
-          c._id === selectedStudent.courseId
-        );
-        if (course && course.examinationFee) {
-          setAmount(course.examinationFee.toString().replace(/,/g, ''));
-        } else {
-          setAmount('');
+      if (selectedStudent && selectedExamination) {
+        if (feeCheck?.examFeeApplicable && Number(feeCheck.examFeeAmount) > 0) {
+          setAmount(String(feeCheck.examFeeAmount).replace(/,/g, ''));
+          return;
         }
-      } else {
-        setAmount('');
       }
+      setAmount('');
     }, 0);
-  }, [selectedStudent, courses]);
+  }, [selectedStudent, selectedExamination, feeCheck]);
+
+  // Exam fee is only payable when the resolved configuration deems it
+  // applicable (reappearing with fee > 0, or first-attempt with opt-in).
+  const isExamFeePurpose = String(feeType).toLowerCase().includes('exam');
+  const examFeeApplicable = isExamFeePurpose
+    ? Boolean(feeCheck?.examFeeApplicable && Number(feeCheck.examFeeAmount) > 0)
+    : true;
+  const isReappearing = Boolean(feeCheck?.isReappearing);
+  const isFeeWaived = isExamFeePurpose && !examFeeApplicable;
 
   const canProceedFrom = (s) => {
     if (s === 1) return !!selectedStudentId;
-    if (s === 2) return !!selectedSemester;
+    if (s === 2) {
+      if (!selectedExamination) return false;
+      // Allow proceeding to confirm fee status, but block paying a waived fee.
+      return true;
+    }
     if (s === 3) {
+      if (isFeeWaived) return false;
       const parsedAmount = parseFloat(amount);
       return !isNaN(parsedAmount) && parsedAmount > 0 && !!paymentDate;
     }
@@ -160,8 +197,12 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       setToast({ message: 'Please select a student.', type: 'warning' });
       return;
     }
-    if (!selectedSemester) {
-      setToast({ message: 'Please select a semester.', type: 'warning' });
+    if (!selectedExamination) {
+      setToast({ message: 'Please select an examination.', type: 'warning' });
+      return;
+    }
+    if (isFeeWaived) {
+      setToast({ message: 'No exam fee is applicable for this student & examination (fee is waived). Payment cannot be recorded.', type: 'warning' });
       return;
     }
     const parsedAmount = parseFloat(amount);
@@ -191,7 +232,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         name: 'Semi Phase 3 Student Fees',
         description: `Fee Payment - ${feeType}`,
         paymentType: 'exam',
-        additionalData: { studentId: selectedStudentId, purpose: feeType, semester: selectedSemester },
+        additionalData: { studentId: selectedStudentId, purpose: feeType, examination: selectedExamination },
         prefill: { name: selectedStudent?.fullName || '', email: selectedStudent?.email || '' },
         onSuccess: async (response) => {
           try {
@@ -201,7 +242,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
               razorpay_signature: response.razorpay_signature,
             });
             await academicService.payStudentFees(selectedStudentId, {
-              semesterNumber: parseInt(selectedSemester),
+              examinationNumber: parseInt(selectedExamination),
               amount: parseFloat(amount),
               paymentMode: 'Razorpay Online',
               paymentDate,
@@ -303,7 +344,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Student *</label>
         <select
           value={selectedStudentId}
-          onChange={(e) => { setSelectedStudentId(e.target.value); setSelectedSemester(''); }}
+          onChange={(e) => { setSelectedStudentId(e.target.value); setSelectedExamination(''); }}
           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
           required
         >
@@ -339,9 +380,9 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       <div>
         <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
           <FileText className="w-5 h-5 text-blue-500" />
-          Choose Semester
+          Choose Examination
         </h3>
-        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Select the semester for which fee is to be paid</p>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Select the examination for which fee is to be paid</p>
       </div>
       {selectedStudent && (
         <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 mb-2">
@@ -352,27 +393,46 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
           </p>
         </div>
       )}
-      {unpaidSemesters.length === 0 ? (
+      {unpaidExaminations.length === 0 ? (
         <div className="py-10 text-center">
           <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-300 mb-3" />
-          <p className="text-sm font-bold text-slate-500">All semesters paid for this student!</p>
+          <p className="text-sm font-bold text-slate-500">All examinations paid for this student!</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          {unpaidSemesters.map(sem => (
+          {unpaidExaminations.map(sem => (
             <button
-              key={sem.semesterNumber}
+              key={sem.examinationNumber}
               type="button"
-              onClick={() => setSelectedSemester(sem.semesterNumber)}
+              onClick={() => setSelectedExamination(sem.examinationNumber)}
               className={`py-4 rounded-2xl text-sm font-bold transition-all border cursor-pointer ${
-                String(selectedSemester) === String(sem.semesterNumber)
+                String(selectedExamination) === String(sem.examinationNumber)
                   ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20 scale-105'
                   : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-sm'
               }`}
             >
-              Sem {sem.semesterNumber}
+              Exam {sem.examinationNumber}
             </button>
           ))}
+        </div>
+      )}
+      {selectedExamination && (
+        <div className={`rounded-2xl p-4 border ${isFeeWaived ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'} mt-3`}>
+          {feeCheckLoading ? (
+            <p className="text-[11px] font-bold text-slate-500 flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking exam fee applicability...
+            </p>
+          ) : isFeeWaived ? (
+            <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              No exam fee applicable for {isReappearing ? 'this reappearing student' : 'this first-attempt student'} in Examination {selectedExamination} — fee is waived. Payment cannot be recorded.
+            </p>
+          ) : (
+            <p className="text-[11px] font-bold text-amber-700 flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Exam fee of {fmtCurrency(feeCheck?.examFeeAmount)} is applicable for this {isReappearing ? 'reappearing' : 'first-attempt'} student in Examination {selectedExamination}.
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -387,6 +447,14 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         </h3>
         <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Configure payment amount</p>
       </div>
+      {isFeeWaived && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+          <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            No exam fee applicable for this {isReappearing ? 'reappearing' : 'first-attempt'} student & examination — the fee is waived. You cannot record a payment here.
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Fee Type</label>
@@ -407,10 +475,11 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
               type="number"
               required
               min="1"
-              placeholder="Enter amount..."
+              placeholder={isFeeWaived ? 'No fee applicable' : 'Enter amount...'}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+              disabled={isFeeWaived}
+              className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -443,7 +512,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       { label: 'Student', value: selectedStudent?.fullName || '—' },
       { label: 'Enrollment No', value: selectedStudent?.enrollmentNo || '—' },
       { label: 'Course', value: selectedStudent?.course || selectedStudent?.courseName || '—' },
-      { label: 'Semester', value: `Semester ${selectedSemester}` },
+      { label: 'Examination', value: `Examination ${selectedExamination}` },
       { label: 'Fee Type', value: feeType },
       { label: 'Amount', value: fmtCurrency(amount) },
       { label: 'Payment Mode', value: 'Razorpay Online' },
@@ -535,7 +604,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
             <button
               type="button"
               onClick={handleSubmitPayment}
-              disabled={submitting}
+              disabled={submitting || isFeeWaived}
               className="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-md shadow-emerald-500/10 cursor-pointer"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
@@ -586,7 +655,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                         <td className="px-6 py-4 font-mono font-bold text-blue-600">{enrollmentId}</td>
                         <td className="px-6 py-4 font-bold text-slate-700">
                           {rec.paymentPurpose}
-                          {rec.semesterNumber && <span className="block text-[10px] text-slate-400">Sem {rec.semesterNumber}</span>}
+                          {rec.examinationNumber && <span className="block text-[10px] text-slate-400">Exam {rec.examinationNumber}</span>}
                         </td>
                         <td className="px-6 py-4 font-mono font-bold text-slate-800">{fmtCurrency(rec.amount)}</td>
                         <td className="px-6 py-4 text-slate-600">{rec.paymentMode}</td>
@@ -693,7 +762,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Fee Purpose</span>
-                    <span className="text-slate-800 font-bold block mt-0.5">{viewingTx.paymentPurpose} {viewingTx.semesterNumber ? `(Sem ${viewingTx.semesterNumber})` : ''}</span>
+                    <span className="text-slate-800 font-bold block mt-0.5">{viewingTx.paymentPurpose} {viewingTx.examinationNumber ? `(Exam ${viewingTx.examinationNumber})` : ''}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Payment Mode</span>

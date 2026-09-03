@@ -6,8 +6,10 @@ import { Student } from '../models/studentModel';
 import { FeeRecord } from '../models/feeRecordModel';
 import { Remittance } from '../models/remittanceModel';
 import { Institute } from '../models/instituteModel';
+import { Result } from '../models/resultModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { getFeeCategory, getFeeCategoryLabel } from '../utils/feeCategories';
+import { resolveFeeConfiguration, checkStudentReappearance } from '../services/examFeeService';
 import path from 'path';
 import razorpayInstance, { isRazorpayConfigured, keyId, keySecret } from '../config/razorpay';
 import crypto from 'crypto';
@@ -25,26 +27,27 @@ const getFileUrl = (filePath: string) => {
 // VALIDATION SCHEMAS
 // ==========================================
 
-const semesterSubjectSchema = z.object({
+const examinationSubjectSchema = z.object({
   code: z.string().optional().default(''),
   name: z.string().min(1, 'Subject Name is required'),
 });
 
-const semesterPracticalSchema = z.object({
+const examinationPracticalSchema = z.object({
   code: z.string().optional().default(''),
   name: z.string().min(1, 'Practical Exam Name is required'),
 });
 
-const courseSemesterSchema = z.object({
-  semesterNumber: z.coerce.number(),
-  semesterName: z.string().optional().default(''),
+const courseExaminationSchema = z.object({
+  examinationNumber: z.coerce.number().refine((n) => n === 1 || n === 2, 'Examination number must be 1 or 2'),
+  examinationName: z.string().optional().default(''),
+  monthsRequired: z.coerce.number().min(0).optional().default(0),
   subjects: z.preprocess(
     (val) => (Array.isArray(val) ? val.filter((s: any) => s && typeof s.name === 'string' && s.name.trim().length > 0) : []),
-    z.array(semesterSubjectSchema).optional().default([])
+    z.array(examinationSubjectSchema).optional().default([])
   ),
   practicalExams: z.preprocess(
     (val) => (Array.isArray(val) ? val.filter((p: any) => p && typeof p.name === 'string' && p.name.trim().length > 0) : []),
-    z.array(semesterPracticalSchema).optional().default([])
+    z.array(examinationPracticalSchema).optional().default([])
   ),
 });
 
@@ -58,8 +61,14 @@ const courseCreateSchema = z.object({
   subjects: z.array(z.string()).optional(),
   practicalExamName: z.string().optional(),
   practicalExams: z.array(z.string()).optional(),
-  semesters: z.array(courseSemesterSchema).optional(),
+  examinations: z.array(courseExaminationSchema).optional(),
   status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
+  examinationFee: z.coerce.number().min(0).optional(),
+  reappearingExaminationFee: z.coerce.number().min(0).optional(),
+  feeApplicableForFirstAttempt: z.preprocess(
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
+    z.boolean()
+  ).optional(),
 });
 
 const courseUpdateSchema = z.object({
@@ -72,8 +81,14 @@ const courseUpdateSchema = z.object({
   subjects: z.array(z.string()).optional(),
   practicalExamName: z.string().optional(),
   practicalExams: z.array(z.string()).optional(),
-  semesters: z.array(courseSemesterSchema).optional(),
+  examinations: z.array(courseExaminationSchema).optional(),
   status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
+  examinationFee: z.coerce.number().min(0).optional(),
+  reappearingExaminationFee: z.coerce.number().min(0).optional(),
+  feeApplicableForFirstAttempt: z.preprocess(
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
+    z.boolean()
+  ).optional(),
 });
 
 const batchCreateSchema = z.object({
@@ -144,7 +159,7 @@ const studentUpdateSchema = z.object({
 });
 
 const feeRecordSchema = z.object({
-  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination Number is required').max(2),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   paymentMode: z.string().min(1, 'Payment Mode is required'),
   utrNumber: z.string().optional(),
@@ -153,6 +168,17 @@ const feeRecordSchema = z.object({
   razorpayOrderId: z.string().optional(),
   razorpayPaymentId: z.string().optional(),
   razorpaySignature: z.string().optional(),
+});
+
+const reimbursableFeeSchema = z.object({
+  courseId: z.string().min(1, 'Course ID is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination Number is required').max(2),
+  firstAttemptFee: z.coerce.number().min(0, 'First attempt fee cannot be negative').optional().default(0),
+  reappearingFee: z.coerce.number().min(0, 'Reappearing fee cannot be negative').optional().default(0),
+  feeApplicableForFirstAttempt: z.preprocess(
+    (val) => String(val).toLowerCase() === 'true' || val === '1' || val === true || val === 1,
+    z.boolean()
+  ).optional().default(false),
 });
 
 const remittanceSchema = z.object({
@@ -188,10 +214,10 @@ export const createCourse = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists in the centralized catalog.' });
     }
 
-    if (validatedData.semesters && Array.isArray(validatedData.semesters)) {
+    if (validatedData.examinations && Array.isArray(validatedData.examinations)) {
       if (!validatedData.subjects || validatedData.subjects.length === 0) {
         const flatSubs: string[] = [];
-        validatedData.semesters.forEach(s => {
+        validatedData.examinations.forEach(s => {
           (s.subjects || []).forEach(sub => {
             if (sub.name) {
               flatSubs.push(sub.code ? `${sub.code}: ${sub.name}` : sub.name);
@@ -202,7 +228,7 @@ export const createCourse = async (req: Request, res: Response) => {
       }
       if (!validatedData.practicalExams || validatedData.practicalExams.length === 0) {
         const flatPracs: string[] = [];
-        validatedData.semesters.forEach(s => {
+        validatedData.examinations.forEach(s => {
           (s.practicalExams || []).forEach(prac => {
             if (prac.name) {
               flatPracs.push(prac.code ? `${prac.code}: ${prac.name}` : prac.name);
@@ -317,10 +343,10 @@ export const updateCourse = async (req: Request, res: Response) => {
       }
     }
 
-    if (validatedData.semesters && Array.isArray(validatedData.semesters)) {
+    if (validatedData.examinations && Array.isArray(validatedData.examinations)) {
       if (!validatedData.subjects || validatedData.subjects.length === 0) {
         const flatSubs: string[] = [];
-        validatedData.semesters.forEach(s => {
+        validatedData.examinations.forEach(s => {
           (s.subjects || []).forEach(sub => {
             if (sub.name) {
               flatSubs.push(sub.code ? `${sub.code}: ${sub.name}` : sub.name);
@@ -331,7 +357,7 @@ export const updateCourse = async (req: Request, res: Response) => {
       }
       if (!validatedData.practicalExams || validatedData.practicalExams.length === 0) {
         const flatPracs: string[] = [];
-        validatedData.semesters.forEach(s => {
+        validatedData.examinations.forEach(s => {
           (s.practicalExams || []).forEach(prac => {
             if (prac.name) {
               flatPracs.push(prac.code ? `${prac.code}: ${prac.name}` : prac.name);
@@ -773,15 +799,20 @@ export const addStudent = async (req: Request, res: Response) => {
       }
     }
 
-    const numYears = parseInt(course.courseDuration || '1') || 1;
-    const totalSemesters = course.durationType === 'Years' ? numYears * 2 : 1; 
-    
-    const semesters = Array.from({ length: totalSemesters }, (_, i) => ({
-      semesterNumber: i + 1,
-      attendancePercentage: 0,
-      thesisApproved: false,
-      eligibilityStatus: 'Pending' as const,
-    }));
+    const examinations = [
+      {
+        examinationNumber: 1,
+        attendancePercentage: 0,
+        thesisApproved: false,
+        eligibilityStatus: 'Pending' as const,
+      },
+      {
+        examinationNumber: 2,
+        attendancePercentage: 0,
+        thesisApproved: false,
+        eligibilityStatus: 'Pending' as const,
+      },
+    ];
 
     const student = await Student.create({
       enrollmentId,
@@ -815,7 +846,7 @@ export const addStudent = async (req: Request, res: Response) => {
         hodSignatureUrl: files['hodSignature'] ? getFileUrl(files['hodSignature'][0].path) : undefined,
       },
       remittedToAcademy: false,
-      semesters,
+      examinations,
     });
 
     // Update batch active fellows count
@@ -873,9 +904,39 @@ export const recordStudentFee = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found under this institute' });
     }
 
+    // Exam fee eligibility guard: an exam fee may only be collected when the
+    // configured fee is actually applicable (waived for first attempt unless
+    // opted-in; removed for reappearing when the fee is set to 0).
+    const isExamFeePurpose =
+      String(validatedData.paymentPurpose).toLowerCase().includes('exam');
+    if (isExamFeePurpose) {
+      const course = student.course || await Course.findById(
+        (student as any).courseId || (student as any).course
+      );
+      const status = await checkStudentReappearance(String(student._id), validatedData.examinationNumber);
+      const feeConfig = course
+        ? resolveFeeConfiguration(course, validatedData.examinationNumber)
+        : { firstAttemptFee: 0, reappearingFee: 0, feeApplicableForFirstAttempt: false };
+
+      const feeApplicable = status.isReappearing
+        ? feeConfig.reappearingFee > 0
+        : feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0;
+
+      if (!feeApplicable) {
+        return sendError({
+          req,
+          res,
+          statusCode: 422,
+          message: status.isReappearing
+            ? 'Exam fee has been waived for reappearing students for this course/examination. Payment cannot be recorded.'
+            : 'Exam fee is waived for first-attempt students for this course/examination. Payment cannot be recorded.',
+        });
+      }
+    }
+
     const feeRecord = await FeeRecord.create({
       student: student._id,
-      semesterNumber: validatedData.semesterNumber,
+      examinationNumber: validatedData.examinationNumber,
       amount: validatedData.amount,
       paymentMode: validatedData.paymentMode || 'Razorpay Online',
       utrNumber: validatedData.razorpayPaymentId || validatedData.utrNumber,
@@ -1068,7 +1129,7 @@ export const recordRemittance = async (req: Request, res: Response) => {
 // ==========================================
 
 const studentMetricsUpdateSchema = z.object({
-  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination Number is required').max(2),
   attendancePercentage: z.coerce.number().min(0).max(100, 'Attendance must be between 0 and 100').optional(),
   thesisApproved: z.preprocess(
     (val) => val === 'true' || val === true || val === '1',
@@ -1082,7 +1143,7 @@ const studentMetricsUpdateSchema = z.object({
 
 export const listStudents = async (req: Request, res: Response) => {
   try {
-    const { courseId, batchId, search, isEligible, semesterNumber, verificationStatus, instituteId } = req.query;
+    const { courseId, batchId, search, isEligible, examinationNumber, verificationStatus, instituteId } = req.query;
     const query: any = {};
 
     if (req.user.role === 'institute') {
@@ -1115,22 +1176,22 @@ export const listStudents = async (req: Request, res: Response) => {
       ];
     }
 
-    // We can't query nested array conditions perfectly with just isEligible if we don't have semesterNumber
+    // We can't query nested array conditions perfectly with just isEligible if we don't have examinationNumber
     // but if we do have it:
-    if (semesterNumber) {
-      const semNum = parseInt(semesterNumber as string);
+    if (examinationNumber) {
+      const examNum = parseInt(examinationNumber as string);
       if (isEligible === 'true') {
-        query.semesters = {
+        query.examinations = {
           $elemMatch: {
-            semesterNumber: semNum,
+            examinationNumber: examNum,
             attendancePercentage: { $gte: 75 },
             thesisApproved: true
           }
         };
       } else if (isEligible === 'false') {
-        query.semesters = {
+        query.examinations = {
           $elemMatch: {
-            semesterNumber: semNum,
+            examinationNumber: examNum,
             $or: [
               { attendancePercentage: { $lt: 75 } },
               { thesisApproved: false },
@@ -1148,20 +1209,20 @@ export const listStudents = async (req: Request, res: Response) => {
 
     const formattedStudents = students.map((student) => {
       const sObj: any = student.toObject();
-      const sSemesters = sObj.semesters || [];
-      const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+      const sExaminations = sObj.examinations || [];
+      const latestExam = sExaminations.length > 0 ? sExaminations[sExaminations.length - 1] : null;
 
       const attendancePct = (sObj.attendancePercentage !== undefined && sObj.attendancePercentage !== null && sObj.attendancePercentage > 0)
         ? sObj.attendancePercentage
-        : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+        : (latestExam && latestExam.attendancePercentage !== undefined ? latestExam.attendancePercentage : 0);
 
-      const isThesisApproved = Boolean(sObj.thesisApproved || sSemesters.some((sem: any) => sem.thesisApproved));
-      const isThesisUploaded = Boolean(sSemesters.some((sem: any) => sem.thesisDocumentUrl));
+      const isThesisApproved = Boolean(sObj.thesisApproved || sExaminations.some((sem: any) => sem.thesisApproved));
+      const isThesisUploaded = Boolean(sExaminations.some((sem: any) => sem.thesisDocumentUrl));
       const isRemitted = Boolean(sObj.remittedToAcademy || sObj.razorpayPaymentId);
 
       let isStudentEligible = false;
-      if (semesterNumber) {
-        const sem = sSemesters.find((s: any) => s.semesterNumber === parseInt(semesterNumber as string));
+      if (examinationNumber) {
+        const sem = sExaminations.find((s: any) => s.examinationNumber === parseInt(examinationNumber as string));
         if (sem) {
           isStudentEligible = sem.attendancePercentage >= 75 && sem.thesisApproved;
         }
@@ -1209,41 +1270,41 @@ export const updateAcademicMetrics = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized' });
     }
 
-    const semesterIndex = student.semesters.findIndex(s => s.semesterNumber === validatedData.semesterNumber);
-    if (semesterIndex === -1) {
-      return sendError({ req, res, statusCode: 404, message: 'Semester not found for this student' });
+    const examinationIndex = student.examinations.findIndex(s => s.examinationNumber === validatedData.examinationNumber);
+    if (examinationIndex === -1) {
+      return sendError({ req, res, statusCode: 404, message: 'Examination not found for this student' });
     }
 
     if (validatedData.clearAttendance) {
-      student.semesters[semesterIndex].attendancePercentage = 0;
+      student.examinations[examinationIndex].attendancePercentage = 0;
     } else if (validatedData.attendancePercentage !== undefined) {
-      student.semesters[semesterIndex].attendancePercentage = validatedData.attendancePercentage;
+      student.examinations[examinationIndex].attendancePercentage = validatedData.attendancePercentage;
     }
     
     if (validatedData.clearThesis) {
-      student.semesters[semesterIndex].thesisApproved = false;
-      student.semesters[semesterIndex].thesisDocumentUrl = undefined;
+      student.examinations[examinationIndex].thesisApproved = false;
+      student.examinations[examinationIndex].thesisDocumentUrl = undefined;
     } else if (validatedData.thesisApproved !== undefined) {
-      student.semesters[semesterIndex].thesisApproved = validatedData.thesisApproved;
+      student.examinations[examinationIndex].thesisApproved = validatedData.thesisApproved;
     }
 
     if (!validatedData.clearThesis && req.files) {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       if (files['thesisDocument'] && files['thesisDocument'].length > 0) {
-        student.semesters[semesterIndex].thesisDocumentUrl = getFileUrl(files['thesisDocument'][0].path);
+        student.examinations[examinationIndex].thesisDocumentUrl = getFileUrl(files['thesisDocument'][0].path);
       }
     }
 
     if (validatedData.eligibilityStatus) {
-      student.semesters[semesterIndex].eligibilityStatus = validatedData.eligibilityStatus;
+      student.examinations[examinationIndex].eligibilityStatus = validatedData.eligibilityStatus;
       if (validatedData.rejectionNotes) {
-        (student.semesters[semesterIndex] as any).rejectionNotes = validatedData.rejectionNotes;
+        (student.examinations[examinationIndex] as any).rejectionNotes = validatedData.rejectionNotes;
       }
     }
 
     await student.save();
 
-    const isStudentEligible = student.semesters[semesterIndex].attendancePercentage >= 75 && student.semesters[semesterIndex].thesisApproved;
+    const isStudentEligible = student.examinations[examinationIndex].attendancePercentage >= 75 && student.examinations[examinationIndex].thesisApproved;
 
     return sendSuccess({
       req,
@@ -1263,11 +1324,11 @@ export const updateAcademicMetrics = async (req: Request, res: Response) => {
 export const evaluateEligibility = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semesterNumber } = req.query;
+    const { examinationNumber } = req.query;
     const query: any = { _id: studentId };
 
-    if (!semesterNumber) {
-      return sendError({ req, res, statusCode: 400, message: 'Semester Number is required to evaluate eligibility' });
+    if (!examinationNumber) {
+      return sendError({ req, res, statusCode: 400, message: 'Examination Number is required to evaluate eligibility' });
     }
 
     if (req.user.role === 'institute') {
@@ -1285,36 +1346,66 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized' });
     }
 
-    const semNum = parseInt(semesterNumber as string);
-    const semesterRecord = student.semesters.find(s => s.semesterNumber === semNum);
+    const examNum = parseInt(examinationNumber as string);
+    const examRecord = student.examinations.find(s => s.examinationNumber === examNum);
     
-    if (!semesterRecord) {
-      return sendError({ req, res, statusCode: 404, message: 'Semester record not found for this student' });
+    if (!examRecord) {
+      return sendError({ req, res, statusCode: 404, message: 'Examination record not found for this student' });
     }
 
-    // Check fee record for this student and semester
-    const feeRecord = await FeeRecord.findOne({ student: student._id, semesterNumber: semNum, paymentPurpose: 'Examination fee' });
+    // Check fee record for this student and examination
+    // ── NEW: Fee is only required when applicable (reappearing students).
+    //    First-attempt students are waived unless the course opts in.
+    const feeRecord = await FeeRecord.findOne({ student: student._id, examinationNumber: examNum, paymentPurpose: 'Examination fee' });
+    const courseDoc = student.course as any;
+    const courseForFee = await Course.findById(courseDoc?._id || courseDoc);
+    const perExamFee = courseForFee?.examFeeConfig?.[`exam_${examNum}`];
+    const feeApplicableForFirstAttempt =
+      perExamFee?.feeApplicableForFirstAttempt ??
+      courseForFee?.feeApplicableForFirstAttempt ??
+      false;
+
+    const priorResults = await Result.find({
+      student: student._id,
+      examination: examNum,
+      isPublished: true,
+    }).sort({ createdAt: -1 });
+    const latestResult = priorResults[0];
+    const isReappearing = !!latestResult && (
+      latestResult.resultStatus === 'FAIL' ||
+      latestResult.resultStatus === 'SUPPLEMENTARY' ||
+      latestResult.resultStatus === 'REVALUATION_PENDING'
+    );
+
+    const feeRequired = isReappearing || feeApplicableForFirstAttempt;
+    const feeStatus = {
+      status: !feeRequired ? 'Waived' : feeRecord ? 'Paid' : 'Pending',
+      isValid: !feeRequired || !!feeRecord,
+      isReappearing,
+      feeApplicable: feeRequired,
+      description: !feeRequired
+        ? 'Exam fee is waived for this student (first attempt).'
+        : feeRecord
+          ? 'Exam fee payment has been verified for this examination.'
+          : isReappearing
+            ? 'Exam fee payment is required (reappearing student) but has not been recorded.'
+            : 'Exam fee payment is missing for this examination.',
+    };
 
     const checklist = {
-      feeStatus: {
-        status: feeRecord ? 'Paid' : 'Pending',
-        isValid: !!feeRecord,
-        description: feeRecord
-          ? 'Exam fee payment has been verified for this semester.'
-          : 'Exam fee payment is missing for this semester.',
-      },
+      feeStatus,
       attendance: {
-        value: semesterRecord.attendancePercentage,
+        value: examRecord.attendancePercentage,
         threshold: 75,
-        isValid: semesterRecord.attendancePercentage >= 75,
-        description: semesterRecord.attendancePercentage >= 75
-          ? `Attendance is ${semesterRecord.attendancePercentage}%, which meets the minimum 75% requirement.`
-          : `Attendance is ${semesterRecord.attendancePercentage}%, which is below the minimum 75% requirement.`,
+        isValid: examRecord.attendancePercentage >= 75,
+        description: examRecord.attendancePercentage >= 75
+          ? `Attendance is ${examRecord.attendancePercentage}%, which meets the minimum 75% requirement.`
+          : `Attendance is ${examRecord.attendancePercentage}%, which is below the minimum 75% requirement.`,
       },
       thesisApproval: {
-        status: semesterRecord.thesisApproved ? 'Approved' : 'Pending',
-        isValid: semesterRecord.thesisApproved,
-        description: semesterRecord.thesisApproved
+        status: examRecord.thesisApproved ? 'Approved' : 'Pending',
+        isValid: examRecord.thesisApproved,
+        description: examRecord.thesisApproved
           ? 'Thesis evaluation has been approved by the board.'
           : 'Thesis submission is pending approval or has not been approved.',
       },
@@ -1386,7 +1477,7 @@ export const getRemittances = async (req: Request, res: Response) => {
 export const getStudentById = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semesterNumber } = req.query;
+    const { examinationNumber } = req.query;
     const query: any = { _id: studentId };
 
     if (req.user.role === 'institute') {
@@ -1407,8 +1498,8 @@ export const getStudentById = async (req: Request, res: Response) => {
     }
 
     let isStudentEligible = false;
-    if (semesterNumber) {
-      const sem = student.semesters.find(s => s.semesterNumber === parseInt(semesterNumber as string));
+    if (examinationNumber) {
+      const sem = student.examinations.find(s => s.examinationNumber === parseInt(examinationNumber as string));
       if (sem) {
         isStudentEligible = sem.attendancePercentage >= 75 && sem.thesisApproved;
       }
@@ -1517,8 +1608,8 @@ export const updateStudent = async (req: Request, res: Response) => {
 
     await student.save();
 
-    const latestSemester = student.semesters?.[student.semesters.length - 1];
-    const isStudentEligible = latestSemester ? (latestSemester.attendancePercentage >= 75 && latestSemester.thesisApproved) : false;
+    const latestExamination = student.examinations?.[student.examinations.length - 1];
+    const isStudentEligible = latestExamination ? (latestExamination.attendancePercentage >= 75 && latestExamination.thesisApproved) : false;
 
     // Fetch updated student with populate
     const updatedStudent = await Student.findById(student._id)
@@ -1776,8 +1867,164 @@ export const verifyAcademicPayment = async (req: Request, res: Response) => {
 };
 
 // ==========================================
-// STUDENT ENROLLMENT VERIFICATION (ACADEMIC DEPARTMENT)
+// EXAM FEE CONFIGURATION (Academy / Board)
 // ==========================================
+
+export const getExamFeeConfigurationByCourse = async (req: Request, res: Response) => {
+  try {
+    const courseId = String(req.params.courseId);
+    const examinationNumber = parseInt(String(req.params.examinationNumber));
+
+    const course = await Course.findById(courseId);
+    if (!course) return sendError({ req, res, statusCode: 404, message: 'Course not found' });
+
+    const perExam = course.examFeeConfig?.[`exam_${examinationNumber}`];
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Exam fee configuration retrieved successfully',
+      data: {
+        courseId,
+        examinationNumber,
+        firstAttemptFee: perExam?.firstAttemptFee ?? course.examinationFee ?? 0,
+        reappearingFee:
+          perExam?.reappearingFee ??
+          course.reappearingExaminationFee ??
+          course.examinationFee ??
+          0,
+        feeApplicableForFirstAttempt:
+          perExam?.feeApplicableForFirstAttempt ??
+          course.feeApplicableForFirstAttempt ??
+          false,
+      },
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+export const updateExamFeeConfiguration = async (req: Request, res: Response) => {
+  try {
+    const validatedData = reimbursableFeeSchema.parse(req.body);
+
+    const course = await Course.findById(validatedData.courseId);
+    if (!course) return sendError({ req, res, statusCode: 404, message: 'Course not found' });
+
+    if (!course.examFeeConfig) course.examFeeConfig = {} as any;
+
+    (course.examFeeConfig as any)[`exam_${validatedData.examinationNumber}`] = {
+      // Respect an explicit 0 (fee removed) so the Academy can waive the
+      // reappearing fee as well.
+      firstAttemptFee: validatedData.firstAttemptFee != null ? validatedData.firstAttemptFee : 0,
+      reappearingFee:
+        validatedData.reappearingFee != null
+          ? validatedData.reappearingFee
+          : Number(course.reappearingExaminationFee) ||
+            Number(course.examinationFee) ||
+            0,
+      feeApplicableForFirstAttempt: validatedData.feeApplicableForFirstAttempt,
+      updatedBy: req.user._id,
+      updatedAt: new Date(),
+    };
+
+    await course.save();
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Exam fee configuration updated successfully',
+      data: course.examFeeConfig,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) throw error;
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
+
+// ==========================================
+// REAPPEARING (ARREAR) STUDENTS
+// ==========================================
+
+export const getReappearingStudents = async (req: Request, res: Response) => {
+  try {
+    const { courseId, batchId, examination } = req.query;
+
+    if (!courseId || !batchId || !examination) {
+      return sendError({ req, res, statusCode: 400, message: 'Course, batch, and examination are required' });
+    }
+
+    const query: any = { course: courseId, batch: batchId };
+
+    if (req.user.role === 'institute') {
+      const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
+      if (!institute) {
+        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute is not approved.' });
+      }
+      query.institute = institute._id;
+    }
+
+    const students = await Student.find(query)
+      .select('firstName lastName enrollmentId course batch')
+      .populate('course', 'name');
+
+    const studentIds = students.map(s => s._id);
+    const examinationNumber = parseInt(String(examination), 10);
+
+    const results = await Result.find({
+      student: { $in: studentIds },
+      examination: examinationNumber,
+      isPublished: true,
+      resultStatus: { $in: ['FAIL', 'SUPPLEMENTARY'] },
+    }).sort({ createdAt: -1 });
+
+    const resultMap = new Map<string, any>();
+    results.forEach(r => resultMap.set(r.student.toString(), r));
+
+    const feeRecords = await FeeRecord.find({
+      student: { $in: studentIds },
+      examinationNumber,
+      paymentPurpose: 'Examination fee',
+    });
+
+    const paidStudentIds = new Set<string>(feeRecords.map(f => String((f as any).student || '')));
+
+    const reappearingStudents = students
+      .map(s => {
+        const result = resultMap.get(s._id.toString());
+        const failedSubjects = (result?.subjects || [])
+          .filter((sub: any) => ['F', 'RA', 'ABSENT'].includes(sub.grade))
+          .map((sub: any) => ({
+            subjectCode: sub.subjectCode,
+            subjectName: sub.subjectName,
+            originalMarks: sub.totalMarks || 0,
+            originalGrade: sub.grade,
+          }));
+
+        return {
+          studentId: s._id,
+          name: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+          enrollmentId: s.enrollmentId,
+          courseId: s.course?._id || courseId,
+          batchId: batchId,
+          examination: examinationNumber,
+          failedSubjects,
+          resultId: result?._id,
+          hasPayment: paidStudentIds.has(s._id.toString()),
+        };
+      })
+      .filter(s => s.failedSubjects.length > 0);
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Reappearing students retrieved successfully',
+      data: reappearingStudents,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
 
 export const verifyStudentEnrollment = async (req: Request, res: Response) => {
   try {

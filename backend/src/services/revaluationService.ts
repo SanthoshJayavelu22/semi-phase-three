@@ -205,31 +205,31 @@ class RevaluationService {
     try {
       const studentDoc = await Student.findById(result.student);
       if (studentDoc) {
-        let semRecord = studentDoc.semesters.find((s: any) => s.semesterNumber === result.semester);
-        if (!semRecord) {
-          studentDoc.semesters.push({
-            semesterNumber: result.semester,
+        let examRecord = studentDoc.examinations.find((e: any) => e.examinationNumber === result.examination);
+        if (!examRecord) {
+          studentDoc.examinations.push({
+            examinationNumber: result.examination as 1 | 2,
             attendancePercentage: 80,
             thesisApproved: false,
             eligibilityStatus: 'Approved',
             marks: []
           });
-          semRecord = studentDoc.semesters[studentDoc.semesters.length - 1];
+          examRecord = studentDoc.examinations[studentDoc.examinations.length - 1];
         }
 
-        if (!semRecord.marks) {
-          semRecord.marks = [];
+        if (!examRecord.marks) {
+          examRecord.marks = [];
         }
 
-        const semMarks = semRecord.marks;
+        const examMarks = examRecord.marks;
         result.subjects.forEach((resSubj: any) => {
-          const mIdx = semMarks.findIndex((m: any) => m.subjectCode === resSubj.subjectCode);
+          const mIdx = examMarks.findIndex((m: any) => m.subjectCode === resSubj.subjectCode);
           if (mIdx !== -1) {
-            semMarks[mIdx].marksObtained = resSubj.totalMarks;
-            semMarks[mIdx].grade = resSubj.grade;
-            semMarks[mIdx].totalMarks = 100;
+            examMarks[mIdx].marksObtained = resSubj.totalMarks;
+            examMarks[mIdx].grade = resSubj.grade;
+            examMarks[mIdx].totalMarks = 100;
           } else {
-            semMarks.push({
+            examMarks.push({
               subjectCode: resSubj.subjectCode,
               subjectName: resSubj.subjectName,
               marksObtained: resSubj.totalMarks,
@@ -314,7 +314,7 @@ class RevaluationService {
   async getRevaluationStatistics(filters: any) {
     const query: any = {};
     if (filters.academicYear) query.academicYear = filters.academicYear;
-    if (filters.semester) query.semester = parseInt(filters.semester);
+    if (filters.examination) query.examination = parseInt(filters.examination);
 
     const requests = await RevaluationRequest.find(query);
 

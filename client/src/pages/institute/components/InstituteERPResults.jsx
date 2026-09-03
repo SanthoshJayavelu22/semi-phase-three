@@ -11,14 +11,10 @@ import {
   Users,
   Calendar,
   Award,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   CheckCircle2,
   XCircle,
   FileSpreadsheet,
   Loader2,
-  BarChart3,
   Clock,
   X,
 } from 'lucide-react';
@@ -40,7 +36,7 @@ const InstituteERPResults = ({ user }) => {
   // ─── Filters ──────────────────────────────────────────────────────────────
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [resultStatusFilter, setResultStatusFilter] = useState('All');
 
@@ -141,7 +137,7 @@ const InstituteERPResults = ({ user }) => {
   }, [selectedCourse, filteredBatches, selectedBatch]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Get students for the selected batch (drives semester options)
+  // Get students for the selected batch (drives examination options)
   const studentsForBatch = useMemo(() => {
     if (!selectedBatch) return students;
     return students.filter(s => {
@@ -150,29 +146,29 @@ const InstituteERPResults = ({ user }) => {
     });
   }, [students, selectedBatch]);
 
-  // Get available semesters for the selected batch
-  const availableSemesters = useMemo(() => {
+  // Get available examinations for the selected batch
+  const availableExaminations = useMemo(() => {
     const semSet = new Set();
     studentsForBatch.forEach(s => {
-      if (s.semesters) {
-        s.semesters.forEach(sem => semSet.add(sem.semesterNumber));
+      if (s.examinations) {
+        s.examinations.forEach(sem => semSet.add(sem.examinationNumber));
       }
     });
     return Array.from(semSet).sort((a, b) => a - b);
   }, [studentsForBatch]);
 
-  // Auto-select first semester when batch changes and no valid semester is selected
+  // Auto-select first examination when batch changes and no valid examination is selected
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (selectedBatch && availableSemesters.length > 0) {
-      const currentSemExists = availableSemesters.includes(Number(selectedSemester));
-      if (!selectedSemester || !currentSemExists) {
-        setSelectedSemester(String(availableSemesters[0]));
+    if (selectedBatch && availableExaminations.length > 0) {
+      const currentSemExists = availableExaminations.includes(Number(selectedExamination));
+      if (!selectedExamination || !currentSemExists) {
+        setSelectedExamination(String(availableExaminations[0]));
       }
     } else if (!selectedBatch) {
-      setSelectedSemester('');
+      setSelectedExamination('');
     }
-  }, [selectedBatch, availableSemesters, selectedSemester]);
+  }, [selectedBatch, availableExaminations, selectedExamination]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Get student lookup map
@@ -225,9 +221,9 @@ const InstituteERPResults = ({ user }) => {
       filtered = filtered.filter(r => studentIdsInBatch.includes(String(r.student?._id || r.student)));
     }
 
-    // Filter by semester
-    if (selectedSemester) {
-      filtered = filtered.filter(r => String(r.semester) === String(selectedSemester));
+    // Filter by examination
+    if (selectedExamination) {
+      filtered = filtered.filter(r => String(r.examination) === String(selectedExamination));
     }
 
     // Filter by status
@@ -247,7 +243,7 @@ const InstituteERPResults = ({ user }) => {
     }
 
     return filtered;
-  }, [results, selectedCourse, selectedBatch, selectedSemester, resultStatusFilter, searchQuery, students, studentMap]);
+  }, [results, selectedCourse, selectedBatch, selectedExamination, resultStatusFilter, searchQuery, students, studentMap]);
 
   // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
@@ -262,13 +258,8 @@ const InstituteERPResults = ({ user }) => {
     const passed = filteredResults.filter(r => r.resultStatus === 'PASS').length;
     const failed = filteredResults.filter(r => r.resultStatus === 'FAIL').length;
     const supplementary = filteredResults.filter(r => r.resultStatus === 'SUPPLEMENTARY').length;
-    const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
 
-    const avgPercentage = total > 0
-      ? Math.round(filteredResults.reduce((sum, r) => sum + (r.percentage || 0), 0) / total)
-      : 0;
-
-    return { total, passed, failed, supplementary, passRate, avgPercentage };
+    return { total, passed, failed, supplementary };
   }, [filteredResults]);
 
   // ─── Handlers ────────────────────────────────────────────────────────────
@@ -300,7 +291,7 @@ const InstituteERPResults = ({ user }) => {
     }
 
     // Create CSV content
-    const headers = ['Enrollment ID', 'Student Name', 'Course', 'Batch', 'Semester', 'Total Marks', 'Percentage', 'Result'];
+    const headers = ['Enrollment ID', 'Student Name', 'Course', 'Batch', 'Examination', 'Result'];
     const rows = filteredResults.map(r => {
       const student = studentMap[r.student?._id || r.student];
       const course = courseMap[student?.course?._id || student?.course || student?.courseId];
@@ -311,9 +302,7 @@ const InstituteERPResults = ({ user }) => {
         student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Unknown' : 'Unknown',
         course?.name || 'N/A',
         batch?.name || 'N/A',
-        r.semester || 'N/A',
-        r.totalMarks || 0,
-        r.percentage || 0,
+        r.examination || 'N/A',
         r.resultStatus || 'N/A',
       ];
     });
@@ -339,32 +328,6 @@ const InstituteERPResults = ({ user }) => {
       REVALUATION_PENDING: { label: 'Revaluation Pending', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" /> },
     };
     return map[status] || map.FAIL;
-  };
-
-  const getGradeColor = (percentage) => {
-    if (percentage >= 90) return 'text-emerald-600';
-    if (percentage >= 80) return 'text-emerald-500';
-    if (percentage >= 70) return 'text-blue-600';
-    if (percentage >= 60) return 'text-amber-600';
-    if (percentage >= 50) return 'text-amber-500';
-    return 'text-rose-600';
-  };
-
-  const getGradeIcon = (percentage) => {
-    if (percentage >= 80) return <TrendingUp className="w-4 h-4 text-emerald-600" />;
-    if (percentage >= 60) return <Minus className="w-4 h-4 text-amber-600" />;
-    return <TrendingDown className="w-4 h-4 text-rose-600" />;
-  };
-
-  const getGradeLetter = (percentage) => {
-    if (percentage >= 90) return 'O';
-    if (percentage >= 80) return 'A+';
-    if (percentage >= 70) return 'A';
-    if (percentage >= 60) return 'B+';
-    if (percentage >= 50) return 'B';
-    if (percentage >= 40) return 'C';
-    if (percentage >= 35) return 'D';
-    return 'F';
   };
 
   const getStudentName = (result) => {
@@ -484,7 +447,7 @@ const InstituteERPResults = ({ user }) => {
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
           <p className="text-2xl font-black text-emerald-600 mt-1">{stats.passed}</p>
-          <span className="text-[9px] text-emerald-600 font-medium">{stats.passRate}% Pass Rate</span>
+          <span className="text-[9px] text-emerald-600 font-medium">Cleared</span>
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
@@ -496,11 +459,11 @@ const InstituteERPResults = ({ user }) => {
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Avg Percentage</span>
-            <BarChart3 className="w-4 h-4 text-indigo-500" />
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Reappearing</span>
+            <Clock className="w-4 h-4 text-indigo-500" />
           </div>
-          <p className="text-2xl font-black text-indigo-600 mt-1">{stats.avgPercentage}%</p>
-          <span className="text-[9px] text-indigo-600 font-medium">Overall Average</span>
+          <p className="text-2xl font-black text-indigo-600 mt-1">{stats.failed + stats.supplementary}</p>
+          <span className="text-[9px] text-indigo-600 font-medium">Require Reappearance</span>
         </div>
       </div>
 
@@ -520,7 +483,7 @@ const InstituteERPResults = ({ user }) => {
                   setSelectedCourse(e.target.value);
                   // Reset dependent filters
                   setSelectedBatch('');
-                  setSelectedSemester('');
+                  setSelectedExamination('');
                   setCurrentPage(1);
                 }}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
@@ -548,7 +511,7 @@ const InstituteERPResults = ({ user }) => {
                 value={selectedBatch}
                 onChange={(e) => {
                   setSelectedBatch(e.target.value);
-                  setSelectedSemester('');
+                  setSelectedExamination('');
                   setCurrentPage(1);
                 }}
                 disabled={!selectedCourse || filteredBatches.length === 0}
@@ -567,28 +530,28 @@ const InstituteERPResults = ({ user }) => {
             </div>
           </div>
 
-          {/* Semester Filter - Dependent on Batch */}
+          {/* Examination Filter - Dependent on Batch */}
           <div>
             <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
-              Semester <span className="text-rose-500">*</span>
+              Examination <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <select
-                value={selectedSemester}
+                value={selectedExamination}
                 onChange={(e) => {
-                  setSelectedSemester(e.target.value);
+                  setSelectedExamination(e.target.value);
                   setCurrentPage(1);
                 }}
-                disabled={!selectedBatch || availableSemesters.length === 0}
+                disabled={!selectedBatch || availableExaminations.length === 0}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {availableSemesters.length > 0 ? (
-                  availableSemesters.map(sem => (
-                    <option key={sem} value={sem}>Semester {sem}</option>
+                {availableExaminations.length > 0 ? (
+                  availableExaminations.map(sem => (
+                    <option key={sem} value={sem}>Examination {sem}</option>
                   ))
                 ) : (
-                  <option value="">{selectedBatch ? 'No semesters available' : 'Select batch first'}</option>
+                  <option value="">{selectedBatch ? 'No examinations available' : 'Select batch first'}</option>
                 )}
               </select>
             </div>
@@ -637,10 +600,10 @@ const InstituteERPResults = ({ user }) => {
           <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">
             {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''}
           </span>
-          {(selectedSemester || resultStatusFilter !== 'All' || searchQuery) && (
+          {(selectedExamination || resultStatusFilter !== 'All' || searchQuery) && (
             <button
               onClick={() => {
-                setSelectedSemester('');
+                setSelectedExamination('');
                 setResultStatusFilter('All');
                 setSearchQuery('');
                 setCurrentPage(1);
@@ -665,9 +628,9 @@ const InstituteERPResults = ({ user }) => {
               Batch: {batches.find(b => String(b._id || b.id) === String(selectedBatch))?.name || 'Selected'}
             </span>
           )}
-          {selectedSemester && (
+          {selectedExamination && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 border border-purple-200 rounded-full text-[10px] font-bold text-purple-700">
-              Semester {selectedSemester}
+              Examination {selectedExamination}
             </span>
           )}
           {resultStatusFilter !== 'All' && (
@@ -687,10 +650,7 @@ const InstituteERPResults = ({ user }) => {
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Enrollment ID</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Marks</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Examination</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-32">Actions</th>
               </tr>
@@ -699,8 +659,6 @@ const InstituteERPResults = ({ user }) => {
               {paginatedResults.length > 0 ? (
                 paginatedResults.map((result, idx) => {
                   const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
-                  const percentage = result.percentage || 0;
-                  const grade = getGradeLetter(percentage);
                   const statusBadge = getResultBadge(result.resultStatus);
                   const studentName = getStudentName(result);
                   const enrollmentId = getStudentEnrollment(result);
@@ -713,28 +671,7 @@ const InstituteERPResults = ({ user }) => {
                       <td className="px-4 py-3.5 font-bold text-slate-800">{studentName}</td>
                       <td className="px-4 py-3.5 font-mono font-bold text-blue-600">{enrollmentId}</td>
                       <td className="px-4 py-3.5 text-center font-bold text-slate-700">
-                        Semester {result.semester || 'N/A'}
-                      </td>
-                      <td className="px-4 py-3.5 text-center font-bold text-slate-700">
-                        {result.totalMarks || 0}
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        <span className={`font-black text-sm ${getGradeColor(percentage)}`}>
-                          {percentage}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
-                          percentage >= 90 ? 'bg-emerald-100 border-emerald-200 text-emerald-700' :
-                          percentage >= 80 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                          percentage >= 70 ? 'bg-blue-100 border-blue-200 text-blue-700' :
-                          percentage >= 60 ? 'bg-amber-100 border-amber-200 text-amber-700' :
-                          percentage >= 50 ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                          'bg-rose-100 border-rose-200 text-rose-700'
-                        }`}>
-                          {getGradeIcon(percentage)}
-                          {grade}
-                        </span>
+                        Examination {result.examination || 'N/A'}
                       </td>
                       <td className="px-4 py-3.5 text-center">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${statusBadge.color}`}>
@@ -774,7 +711,7 @@ const InstituteERPResults = ({ user }) => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="9" className="px-4 py-16 text-center">
+                  <td colSpan="6" className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Award className="w-12 h-12 text-slate-200 stroke-1" />
                       <p className="text-sm font-bold text-slate-500">No results found</p>
@@ -849,8 +786,8 @@ const InstituteERPResults = ({ user }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">Semester {viewingResult.semester || 'N/A'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">Examination {viewingResult.examination || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Year</span>
@@ -860,43 +797,36 @@ const InstituteERPResults = ({ user }) => {
               </div>
 
               {/* Result Summary */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 text-center">
-                  <span className="text-[8px] uppercase font-black text-slate-400 block">Total Marks</span>
-                  <span className="text-lg font-black text-slate-800">{viewingResult.totalMarks || 0}</span>
-                </div>
-                <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 text-center">
-                  <span className="text-[8px] uppercase font-black text-slate-400 block">Percentage</span>
-                  <span className={`text-lg font-black ${getGradeColor(viewingResult.percentage || 0)}`}>
-                    {viewingResult.percentage || 0}%
-                  </span>
-                </div>
-                <div className={`rounded-xl p-3 text-center ${
-                  viewingResult.resultStatus === 'PASS' ? 'bg-emerald-50/50 border border-emerald-100' :
-                  viewingResult.resultStatus === 'FAIL' ? 'bg-rose-50/50 border border-rose-100' :
-                  viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'bg-amber-50/50 border border-amber-100' :
-                  'bg-blue-50/50 border border-blue-100'
+              <div className={`rounded-2xl p-6 text-center border-2 ${
+                viewingResult.resultStatus === 'PASS' ? 'bg-emerald-50/60 border-emerald-200' :
+                viewingResult.resultStatus === 'FAIL' ? 'bg-rose-50/60 border-rose-200' :
+                viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'bg-amber-50/60 border-amber-200' :
+                'bg-blue-50/60 border-blue-200'
+              }`}>
+                <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-2">Final Result</span>
+                <span className={`text-2xl font-black ${
+                  viewingResult.resultStatus === 'PASS' ? 'text-emerald-700' :
+                  viewingResult.resultStatus === 'FAIL' ? 'text-rose-700' :
+                  viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'text-amber-700' :
+                  'text-blue-700'
                 }`}>
-                  <span className="text-[8px] uppercase font-black text-slate-400 block">Result</span>
-                  <span className={`text-lg font-black ${
-                    viewingResult.resultStatus === 'PASS' ? 'text-emerald-700' :
-                    viewingResult.resultStatus === 'FAIL' ? 'text-rose-700' :
-                    viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'text-amber-700' :
-                    'text-blue-700'
-                  }`}>
-                    {viewingResult.resultStatus === 'PASS' ? '✅ Pass' :
-                     viewingResult.resultStatus === 'FAIL' ? '❌ Fail' :
-                     viewingResult.resultStatus === 'SUPPLEMENTARY' ? '🔄 Supplementary' :
-                     '⏳ Revaluation Pending'}
-                  </span>
-                </div>
+                  {viewingResult.resultStatus === 'PASS' ? '✅ Pass' :
+                   viewingResult.resultStatus === 'FAIL' ? '❌ Fail' :
+                   viewingResult.resultStatus === 'SUPPLEMENTARY' ? '🔄 Supplementary' :
+                   '⏳ Revaluation Pending'}
+                </span>
+                {(viewingResult.resultStatus === 'FAIL' || viewingResult.resultStatus === 'SUPPLEMENTARY') && (
+                  <p className="text-[10px] font-bold text-rose-600 mt-2">
+                    This candidate is required to reappear for the examination.
+                  </p>
+                )}
               </div>
 
-              {/* Subject-wise Marks */}
+              {/* Subject-wise Pass/Fail */}
               {viewingResult.subjects && viewingResult.subjects.length > 0 && (
                 <div>
                   <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
-                    Subject-wise Marks
+                    Subject-wise Status
                   </h4>
                   <div className="overflow-x-auto border border-slate-100 rounded-2xl">
                     <table className="w-full text-left border-collapse text-xs">
@@ -905,16 +835,13 @@ const InstituteERPResults = ({ user }) => {
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Code</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Name</th>
-                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
-                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50 bg-white">
                         {viewingResult.subjects.map((subject, idx) => {
-                          const total = subject.totalMarks || 0;
-                          const gradeColor = total >= 70 ? 'text-emerald-700' : total >= 50 ? 'text-amber-700' : 'text-rose-700';
-                          const gradeBg = total >= 70 ? 'bg-emerald-50 border-emerald-200' : total >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-rose-50 border-rose-200';
-
+                          const subGrade = (subject.grade || '').toUpperCase();
+                          const subPass = !['F', 'RA', 'ABSENT', 'WH'].includes(subGrade);
                           return (
                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="px-3 py-2.5 text-center font-mono font-bold text-slate-400">
@@ -922,29 +849,18 @@ const InstituteERPResults = ({ user }) => {
                               </td>
                               <td className="px-3 py-2.5 font-mono font-bold text-slate-600">{subject.subjectCode || 'N/A'}</td>
                               <td className="px-3 py-2.5 font-bold text-slate-700">{subject.subjectName || 'N/A'}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-slate-800">{total}</td>
                               <td className="px-3 py-2.5 text-center">
-                                <span className={`inline-flex px-2.5 py-0.5 rounded-lg text-[9px] font-bold border ${gradeBg} ${gradeColor}`}>
-                                  {total >= 90 ? 'O' : total >= 80 ? 'A+' : total >= 70 ? 'A' : total >= 60 ? 'B+' : total >= 50 ? 'B' : total >= 40 ? 'C' : total >= 35 ? 'D' : 'F'}
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold border ${
+                                  subPass ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
+                                }`}>
+                                  {subPass ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                  {subPass ? 'Pass' : 'Fail'}
                                 </span>
                               </td>
                             </tr>
                           );
                         })}
                       </tbody>
-                      <tfoot>
-                        <tr className="bg-slate-50/70 border-t border-slate-200">
-                          <td colSpan="3" className="px-3 py-2.5 font-black text-xs text-slate-700 text-right">
-                            Overall Total
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-black text-slate-800">{viewingResult.totalMarks || 0}</td>
-                          <td className="px-3 py-2.5 text-center">
-                            <span className={`font-black text-sm ${getGradeColor(viewingResult.percentage || 0)}`}>
-                              {viewingResult.percentage || 0}%
-                            </span>
-                          </td>
-                        </tr>
-                      </tfoot>
                     </table>
                   </div>
                 </div>

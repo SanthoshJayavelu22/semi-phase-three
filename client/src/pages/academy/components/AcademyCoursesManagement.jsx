@@ -8,24 +8,25 @@ import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import Pagination from '../../../Components/Pagination';
 
-// Helper to calculate required semester count based on course duration and durationType
-const getSemesterCount = (duration, durationType) => {
+// Helper to calculate required examination count based on course duration and durationType
+const getExaminationCount = (duration, durationType) => {
   const durVal = parseInt(duration, 10) || 1;
-  if (durationType === 'Years') return Math.max(1, durVal * 2);
-  if (durationType === 'Months') return Math.max(1, Math.ceil(durVal / 6));
-  return 1;
+  if (durationType === 'Years') return Math.min(2, Math.max(1, durVal * 2));
+  if (durationType === 'Months') return Math.min(2, Math.max(1, Math.ceil(durVal / 6)));
+  return Math.min(2, 1);
 };
 
-// Helper to sync semesters array length while preserving existing data
-const syncSemesters = (existingSemesters = [], targetCount) => {
+// Helper to sync examinations array length while preserving existing data
+const syncExaminations = (existingExaminations = [], targetCount) => {
   const count = Math.max(1, targetCount || 1);
   const result = [];
   for (let i = 1; i <= count; i++) {
-    const existing = (existingSemesters || []).find(s => s.semesterNumber === i);
+    const existing = (existingExaminations || []).find(e => e.examinationNumber === i);
     if (existing) {
       result.push({
-        semesterNumber: i,
-        semesterName: existing.semesterName || `Semester ${i}`,
+        examinationNumber: i,
+        examinationName: existing.examinationName || `Examination ${i}`,
+        monthsRequired: existing.monthsRequired || '',
         subjects: existing.subjects && existing.subjects.length > 0 
           ? existing.subjects.map(s => typeof s === 'string' ? { code: '', name: s } : { code: s.code || '', name: s.name || '' })
           : [{ code: '', name: '' }],
@@ -35,8 +36,9 @@ const syncSemesters = (existingSemesters = [], targetCount) => {
       });
     } else {
       result.push({
-        semesterNumber: i,
-        semesterName: `Semester ${i}`,
+        examinationNumber: i,
+        examinationName: `Examination ${i}`,
+        monthsRequired: '',
         subjects: [{ code: '', name: '' }],
         practicalExams: [{ code: '', name: '' }],
       });
@@ -49,7 +51,7 @@ export default function AcademyCoursesManagement() {
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [courseSearch, setCourseSearch] = useState('');
-  const [activeCreateSemTab, setActiveCreateSemTab] = useState(1);
+  const [activeCreateExamTab, setActiveCreateExamTab] = useState(1);
   const [isCreateLoading, setIsCreateLoading] = useState(false);
 
   const [courseForm, setCourseForm] = useState({
@@ -59,18 +61,16 @@ export default function AcademyCoursesManagement() {
     programCategory: 'Emergency Medicine',
     courseDuration: '2',
     durationType: 'Years',
-    semesters: [
-      { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: 'EM-101', name: 'Basic Emergency Care' }], practicalExams: [{ code: 'PRAC-101', name: 'Airway Management OSCE' }] },
-      { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: 'EM-201', name: 'Advanced Trauma Care' }], practicalExams: [{ code: 'PRAC-201', name: 'Trauma Resuscitation OSCE' }] },
-      { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: 'EM-301', name: 'Cardiovascular Emergencies' }], practicalExams: [{ code: 'PRAC-301', name: 'ACLS Practical Station' }] },
-      { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: 'EM-401', name: 'Critical Care & Toxicology' }], practicalExams: [{ code: 'PRAC-401', name: 'Final Clinical OSCE' }] }
+    examinations: [
+      { examinationNumber: 1, examinationName: 'Examination 1', monthsRequired: '', subjects: [{ code: 'EM-101', name: 'Basic Emergency Care' }], practicalExams: [{ code: 'PRAC-101', name: 'Airway Management OSCE' }] },
+      { examinationNumber: 2, examinationName: 'Examination 2', monthsRequired: '', subjects: [{ code: 'EM-201', name: 'Advanced Trauma Care' }], practicalExams: [{ code: 'PRAC-201', name: 'Trauma Resuscitation OSCE' }] }
     ],
     status: 'Active'
   });
 
   // Modal states
   const [editingCourse, setEditingCourse] = useState(null);
-  const [activeEditSemTab, setActiveEditSemTab] = useState(1);
+  const [activeEditExamTab, setActiveEditExamTab] = useState(1);
   const [editForm, setEditForm] = useState({
     name: '',
     courseCode: '',
@@ -78,7 +78,7 @@ export default function AcademyCoursesManagement() {
     programCategory: 'Emergency Medicine',
     courseDuration: '2',
     durationType: 'Years',
-    semesters: [],
+    examinations: [],
     status: 'Active'
   });
   const [isEditLoading, setIsEditLoading] = useState(false);
@@ -90,22 +90,22 @@ export default function AcademyCoursesManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  // Auto-sync semesters array when creation form duration changes
+  // Auto-sync examinations array when creation form duration changes
   useEffect(() => {
-    const targetCount = getSemesterCount(courseForm.courseDuration, courseForm.durationType);
-    const updatedSemesters = syncSemesters(courseForm.semesters, targetCount);
-    if (JSON.stringify(updatedSemesters) !== JSON.stringify(courseForm.semesters)) {
-      setCourseForm(prev => ({ ...prev, semesters: updatedSemesters }));
+    const targetCount = getExaminationCount(courseForm.courseDuration, courseForm.durationType);
+    const updatedExaminations = syncExaminations(courseForm.examinations, targetCount);
+    if (JSON.stringify(updatedExaminations) !== JSON.stringify(courseForm.examinations)) {
+      setCourseForm(prev => ({ ...prev, examinations: updatedExaminations }));
     }
   }, [courseForm.courseDuration, courseForm.durationType]);
 
-  // Auto-sync edit modal semesters when duration changes
+  // Auto-sync edit modal examinations when duration changes
   useEffect(() => {
     if (!editingCourse) return;
-    const targetCount = getSemesterCount(editForm.courseDuration, editForm.durationType);
-    const updatedSemesters = syncSemesters(editForm.semesters, targetCount);
-    if (JSON.stringify(updatedSemesters) !== JSON.stringify(editForm.semesters)) {
-      setEditForm(prev => ({ ...prev, semesters: updatedSemesters }));
+    const targetCount = getExaminationCount(editForm.courseDuration, editForm.durationType);
+    const updatedExaminations = syncExaminations(editForm.examinations, targetCount);
+    if (JSON.stringify(updatedExaminations) !== JSON.stringify(editForm.examinations)) {
+      setEditForm(prev => ({ ...prev, examinations: updatedExaminations }));
     }
   }, [editForm.courseDuration, editForm.durationType, editingCourse]);
 
@@ -150,76 +150,76 @@ export default function AcademyCoursesManagement() {
 
   const totalPages = Math.ceil(filteredCourses.length / itemsPerPage) || 1;
 
-  // ─── Semester Subject & Practical Management Helpers ──────────────────────
-  const handleSemesterSubjectChange = (isEdit, semNum, subjectIdx, field, val) => {
+  // ─── Examination Subject & Practical Management Helpers ──────────────────────
+  const handleExaminationSubjectChange = (isEdit, examNum, subjectIdx, field, val) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        const newSubs = [...(s.subjects || [])];
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        const newSubs = [...(e.subjects || [])];
         newSubs[subjectIdx] = { ...newSubs[subjectIdx], [field]: val };
-        return { ...s, subjects: newSubs };
+        return { ...e, subjects: newSubs };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const addSemesterSubject = (isEdit, semNum) => {
+  const addExaminationSubject = (isEdit, examNum) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        return { ...s, subjects: [...(s.subjects || []), { code: '', name: '' }] };
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        return { ...e, subjects: [...(e.subjects || []), { code: '', name: '' }] };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const removeSemesterSubject = (isEdit, semNum, subjectIdx) => {
+  const removeExaminationSubject = (isEdit, examNum, subjectIdx) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        const newSubs = s.subjects.filter((_, idx) => idx !== subjectIdx);
-        return { ...s, subjects: newSubs.length > 0 ? newSubs : [{ code: '', name: '' }] };
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        const newSubs = e.subjects.filter((_, idx) => idx !== subjectIdx);
+        return { ...e, subjects: newSubs.length > 0 ? newSubs : [{ code: '', name: '' }] };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const handleSemesterPracticalChange = (isEdit, semNum, pracIdx, field, val) => {
+  const handleExaminationPracticalChange = (isEdit, examNum, pracIdx, field, val) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        const newPracs = [...(s.practicalExams || [])];
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        const newPracs = [...(e.practicalExams || [])];
         newPracs[pracIdx] = { ...newPracs[pracIdx], [field]: val };
-        return { ...s, practicalExams: newPracs };
+        return { ...e, practicalExams: newPracs };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const addSemesterPractical = (isEdit, semNum) => {
+  const addExaminationPractical = (isEdit, examNum) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        return { ...s, practicalExams: [...(s.practicalExams || []), { code: '', name: '' }] };
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        return { ...e, practicalExams: [...(e.practicalExams || []), { code: '', name: '' }] };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const removeSemesterPractical = (isEdit, semNum, pracIdx) => {
+  const removeExaminationPractical = (isEdit, examNum, pracIdx) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        const newPracs = s.practicalExams.filter((_, idx) => idx !== pracIdx);
-        return { ...s, practicalExams: newPracs.length > 0 ? newPracs : [{ code: '', name: '' }] };
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        const newPracs = e.practicalExams.filter((_, idx) => idx !== pracIdx);
+        return { ...e, practicalExams: newPracs.length > 0 ? newPracs : [{ code: '', name: '' }] };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
@@ -231,12 +231,13 @@ export default function AcademyCoursesManagement() {
       return;
     }
 
-    // Clean semesters
-    const cleanedSemesters = (courseForm.semesters || []).map(sem => ({
-      semesterNumber: sem.semesterNumber,
-      semesterName: sem.semesterName || `Semester ${sem.semesterNumber}`,
-      subjects: (sem.subjects || []).filter(s => s.name && s.name.trim().length > 0),
-      practicalExams: (sem.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
+    // Clean examinations
+    const cleanedExaminations = (courseForm.examinations || []).map(exam => ({
+      examinationNumber: exam.examinationNumber,
+      examinationName: exam.examinationName || `Examination ${exam.examinationNumber}`,
+      monthsRequired: exam.monthsRequired || '',
+      subjects: (exam.subjects || []).filter(s => s.name && s.name.trim().length > 0),
+      practicalExams: (exam.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
     }));
 
     setIsCreateLoading(true);
@@ -253,7 +254,7 @@ export default function AcademyCoursesManagement() {
         programCategory: courseForm.programCategory,
         courseDuration: courseForm.courseDuration,
         durationType: courseForm.durationType,
-        semesters: cleanedSemesters,
+        examinations: cleanedExaminations,
         status: 'Active'
       };
 
@@ -273,7 +274,7 @@ export default function AcademyCoursesManagement() {
         programCategory: 'Emergency Medicine',
         courseDuration: '2',
         durationType: 'Years',
-        semesters: syncSemesters([], 4),
+        examinations: syncExaminations([], 2),
         status: 'Active'
       });
 
@@ -293,7 +294,7 @@ export default function AcademyCoursesManagement() {
   // ─── Edit Modal ────────────────────────────────────────────────────────────
   const openEditModal = (c) => {
     setEditingCourse(c);
-    setActiveEditSemTab(1);
+    setActiveEditExamTab(1);
     setEditForm({
       name: c.name || '',
       courseCode: c.courseCode || '',
@@ -301,7 +302,7 @@ export default function AcademyCoursesManagement() {
       programCategory: c.programCategory || 'Emergency Medicine',
       courseDuration: c.courseDuration || '2',
       durationType: c.durationType || 'Years',
-      semesters: c.semesters && c.semesters.length > 0 ? c.semesters : syncSemesters([], getSemesterCount(c.courseDuration, c.durationType)),
+      examinations: c.examinations && c.examinations.length > 0 ? c.examinations : syncExaminations([], getExaminationCount(c.courseDuration, c.durationType)),
       status: c.status || 'Active'
     });
   };
@@ -313,11 +314,12 @@ export default function AcademyCoursesManagement() {
       return;
     }
 
-    const cleanedSemesters = (editForm.semesters || []).map(sem => ({
-      semesterNumber: sem.semesterNumber,
-      semesterName: sem.semesterName || `Semester ${sem.semesterNumber}`,
-      subjects: (sem.subjects || []).filter(s => s.name && s.name.trim().length > 0),
-      practicalExams: (sem.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
+    const cleanedExaminations = (editForm.examinations || []).map(exam => ({
+      examinationNumber: exam.examinationNumber,
+      examinationName: exam.examinationName || `Examination ${exam.examinationNumber}`,
+      monthsRequired: exam.monthsRequired || '',
+      subjects: (exam.subjects || []).filter(s => s.name && s.name.trim().length > 0),
+      practicalExams: (exam.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
     }));
 
     setIsEditLoading(true);
@@ -333,7 +335,7 @@ export default function AcademyCoursesManagement() {
         programCategory: editForm.programCategory,
         courseDuration: editForm.courseDuration,
         durationType: editForm.durationType,
-        semesters: cleanedSemesters,
+        examinations: cleanedExaminations,
         status: editForm.status
       }, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -400,28 +402,28 @@ export default function AcademyCoursesManagement() {
     });
   };
 
-  // ─── Render Semester Editor Component ───────────────────────────────────────
-  const renderSemesterEditor = (formState, activeTab, setActiveTab, isEdit) => {
-    const sems = formState.semesters || [];
-    const activeSem = sems.find(s => s.semesterNumber === activeTab) || sems[0] || { semesterNumber: 1, subjects: [], practicalExams: [] };
+  // ─── Render Examination Editor Component ─────────────────────────────────────
+  const renderExaminationEditor = (formState, activeTab, setActiveTab, isEdit) => {
+    const exams = formState.examinations || [];
+    const activeExam = exams.find(e => e.examinationNumber === activeTab) || exams[0] || { examinationNumber: 1, monthsRequired: '', subjects: [], practicalExams: [] };
 
     return (
       <div className="space-y-4 pt-4 border-t border-slate-200">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
             <h4 className="text-xs font-black uppercase tracking-wider text-indigo-600 flex items-center gap-2">
-              <Layers className="w-4 h-4" /> Semester Breakdown & Curriculum ({sems.length} Semesters)
+              <Layers className="w-4 h-4" /> Examination Breakdown & Curriculum ({exams.length} Examinations)
             </h4>
-            <p className="text-[11px] text-slate-500">Define theory subjects and practical OSCE modules for each semester</p>
+            <p className="text-[11px] text-slate-500">Define theory subjects and practical OSCE modules for each examination</p>
           </div>
         </div>
 
-        {/* Semester Tab Buttons */}
+        {/* Examination Tab Buttons */}
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {sems.map((sem) => {
-            const num = sem.semesterNumber;
-            const subCount = (sem.subjects || []).filter(s => s.name?.trim()).length;
-            const pracCount = (sem.practicalExams || []).filter(p => p.name?.trim()).length;
+          {exams.map((exam) => {
+            const num = exam.examinationNumber;
+            const subCount = (exam.subjects || []).filter(s => s.name?.trim()).length;
+            const pracCount = (exam.practicalExams || []).filter(p => p.name?.trim()).length;
             const isTabActive = activeTab === num;
 
             return (
@@ -435,7 +437,7 @@ export default function AcademyCoursesManagement() {
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                 }`}
               >
-                <span>Semester {num}</span>
+                <span>Examination {num}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${
                   isTabActive ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-200 text-slate-600'
                 }`}>
@@ -446,22 +448,48 @@ export default function AcademyCoursesManagement() {
           })}
         </div>
 
-        {/* Active Semester Editor Card */}
-        {activeSem && (
+        {/* Active Examination Editor Card */}
+        {activeExam && (
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-6">
             
+            {/* 0. Months Required */}
+            <div className="space-y-2">
+              <div>
+                <span className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                  Months Required for Examination {activeExam.examinationNumber}
+                </span>
+              </div>
+              <input
+                type="number"
+                min="1"
+                placeholder="e.g. 6"
+                value={activeExam.monthsRequired || ''}
+                onChange={(e) => {
+                  const updater = isEdit ? setEditForm : setCourseForm;
+                  updater(prev => {
+                    const examList = (prev.examinations || []).map(ex => {
+                      if (ex.examinationNumber !== activeExam.examinationNumber) return ex;
+                      return { ...ex, monthsRequired: e.target.value };
+                    });
+                    return { ...prev, examinations: examList };
+                  });
+                }}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
+              />
+            </div>
+
             {/* 1. Subjects Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs font-black uppercase text-slate-800 tracking-wider">
-                    Theory Subjects for Semester {activeSem.semesterNumber}
+                    Theory Subjects for Examination {activeExam.examinationNumber}
                   </span>
                   <p className="text-[10px] text-slate-500">Add subject codes and official SEMI subject titles</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => addSemesterSubject(isEdit, activeSem.semesterNumber)}
+                  onClick={() => addExaminationSubject(isEdit, activeExam.examinationNumber)}
                   className="text-[11px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Subject
@@ -469,14 +497,14 @@ export default function AcademyCoursesManagement() {
               </div>
 
               <div className="space-y-2">
-                {(activeSem.subjects || []).map((sub, sIdx) => (
+                {(activeExam.subjects || []).map((sub, sIdx) => (
                   <div key={sIdx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
                     <div className="sm:col-span-3">
                       <input
                         type="text"
                         placeholder="Subject Code (e.g. EM-101)"
                         value={sub.code || ''}
-                        onChange={(e) => handleSemesterSubjectChange(isEdit, activeSem.semesterNumber, sIdx, 'code', e.target.value)}
+                        onChange={(e) => handleExaminationSubjectChange(isEdit, activeExam.examinationNumber, sIdx, 'code', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-mono font-bold"
                       />
                     </div>
@@ -485,14 +513,14 @@ export default function AcademyCoursesManagement() {
                         type="text"
                         placeholder="Subject Name (e.g. Resuscitation & Shock Management)"
                         value={sub.name || ''}
-                        onChange={(e) => handleSemesterSubjectChange(isEdit, activeSem.semesterNumber, sIdx, 'name', e.target.value)}
+                        onChange={(e) => handleExaminationSubjectChange(isEdit, activeExam.examinationNumber, sIdx, 'name', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
                       />
                     </div>
                     <div className="sm:col-span-1 flex justify-end">
                       <button
                         type="button"
-                        onClick={() => removeSemesterSubject(isEdit, activeSem.semesterNumber, sIdx)}
+                        onClick={() => removeExaminationSubject(isEdit, activeExam.examinationNumber, sIdx)}
                         className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
                         title="Remove Subject"
                       >
@@ -509,13 +537,13 @@ export default function AcademyCoursesManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs font-black uppercase text-slate-800 tracking-wider">
-                    Practical & OSCE Stations for Semester {activeSem.semesterNumber}
+                    Practical & OSCE Stations for Examination {activeExam.examinationNumber}
                   </span>
                   <p className="text-[10px] text-slate-500">Add practical examination modules, stations and codes</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => addSemesterPractical(isEdit, activeSem.semesterNumber)}
+                  onClick={() => addExaminationPractical(isEdit, activeExam.examinationNumber)}
                   className="text-[11px] bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Practical Exam
@@ -523,14 +551,14 @@ export default function AcademyCoursesManagement() {
               </div>
 
               <div className="space-y-2">
-                {(activeSem.practicalExams || []).map((prac, pIdx) => (
+                {(activeExam.practicalExams || []).map((prac, pIdx) => (
                   <div key={pIdx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
                     <div className="sm:col-span-3">
                       <input
                         type="text"
                         placeholder="Practical Code (e.g. PRAC-101)"
                         value={prac.code || ''}
-                        onChange={(e) => handleSemesterPracticalChange(isEdit, activeSem.semesterNumber, pIdx, 'code', e.target.value)}
+                        onChange={(e) => handleExaminationPracticalChange(isEdit, activeExam.examinationNumber, pIdx, 'code', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-purple-500 text-xs font-mono font-bold"
                       />
                     </div>
@@ -539,14 +567,14 @@ export default function AcademyCoursesManagement() {
                         type="text"
                         placeholder="Practical Station Name (e.g. Clinical OSCE Station: Airway & Vascular Access)"
                         value={prac.name || ''}
-                        onChange={(e) => handleSemesterPracticalChange(isEdit, activeSem.semesterNumber, pIdx, 'name', e.target.value)}
+                        onChange={(e) => handleExaminationPracticalChange(isEdit, activeExam.examinationNumber, pIdx, 'name', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-purple-500 text-xs font-semibold"
                       />
                     </div>
                     <div className="sm:col-span-1 flex justify-end">
                       <button
                         type="button"
-                        onClick={() => removeSemesterPractical(isEdit, activeSem.semesterNumber, pIdx)}
+                        onClick={() => removeExaminationPractical(isEdit, activeExam.examinationNumber, pIdx)}
                         className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
                         title="Remove Practical Exam"
                       >
@@ -596,7 +624,7 @@ export default function AcademyCoursesManagement() {
             <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">
               Create New Standardized Course
             </h3>
-            <p className="text-xs text-slate-500">Define course code, category, duration, semester subjects & practical exams</p>
+            <p className="text-xs text-slate-500">Define course code, category, duration, examination subjects & practical exams</p>
           </div>
           <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full border border-indigo-100">
             Admin Controlled
@@ -683,8 +711,8 @@ export default function AcademyCoursesManagement() {
             </div>
           </div>
 
-          {/* Dynamic Semester, Subject & Practical Exams Editor */}
-          {renderSemesterEditor(courseForm, activeCreateSemTab, setActiveCreateSemTab, false)}
+          {/* Dynamic Examination, Subject & Practical Exams Editor */}
+          {renderExaminationEditor(courseForm, activeCreateExamTab, setActiveCreateExamTab, false)}
 
           <div className="flex justify-end pt-4">
             <button
@@ -741,7 +769,7 @@ export default function AcademyCoursesManagement() {
                 <th className="px-5 py-4 font-bold">Course Title</th>
                 <th className="px-5 py-4 font-bold">Program Type</th>
                 <th className="px-5 py-4 font-bold">Duration</th>
-                <th className="px-5 py-4 font-bold">Semesters</th>
+                <th className="px-5 py-4 font-bold">Examinations</th>
                 <th className="px-5 py-4 font-bold">Active Batches</th>
                 <th className="px-5 py-4 font-bold">Status</th>
                 <th className="px-5 py-4 font-bold text-center">Actions</th>
@@ -752,7 +780,7 @@ export default function AcademyCoursesManagement() {
                 paginatedCourses.map((c, idx) => {
                   const globalIdx = (currentPage - 1) * itemsPerPage + idx;
                   const isActive = c.status === 'Active';
-                  const semCount = c.semesters?.length || getSemesterCount(c.courseDuration, c.durationType);
+                  const examCount = c.examinations?.length || getExaminationCount(c.courseDuration, c.durationType);
                   const batchCount = c.batchesCount || 0;
 
                   return (
@@ -772,7 +800,7 @@ export default function AcademyCoursesManagement() {
                       <td className="px-5 py-4 text-slate-600">{c.courseDuration} {c.durationType}</td>
                       <td className="px-5 py-4">
                         <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
-                          {semCount} Semesters
+                          {examCount} Examinations
                         </span>
                       </td>
                       <td className="px-5 py-4">
@@ -938,7 +966,7 @@ export default function AcademyCoursesManagement() {
                 </div>
               </div>
 
-              {renderSemesterEditor(editForm, activeEditSemTab, setActiveEditSemTab, true)}
+              {renderExaminationEditor(editForm, activeEditExamTab, setActiveEditExamTab, true)}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
@@ -996,21 +1024,26 @@ export default function AcademyCoursesManagement() {
                 </div>
               </div>
 
-              {/* Semesters list */}
+              {/* Examinations list */}
               <div className="space-y-4">
-                <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Semester-wise Curriculum</h4>
-                {(viewingCourse.semesters || []).map((sem) => (
-                  <div key={sem.semesterNumber} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Examination-wise Curriculum</h4>
+                {(viewingCourse.examinations || []).map((exam) => (
+                  <div key={exam.examinationNumber} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
                     <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                       <span className="font-black text-indigo-700 text-xs uppercase">
-                        Semester {sem.semesterNumber}: {sem.semesterName || `Semester ${sem.semesterNumber}`}
+                        Examination {exam.examinationNumber}: {exam.examinationName || `Examination ${exam.examinationNumber}`}
                       </span>
+                      {exam.monthsRequired && (
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {exam.monthsRequired} months required
+                        </span>
+                      )}
                     </div>
 
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Theory Subjects:</span>
                       <div className="flex flex-wrap gap-2">
-                        {(sem.subjects || []).map((s, sIdx) => (
+                        {(exam.subjects || []).map((s, sIdx) => (
                           <span key={sIdx} className="bg-indigo-50 text-indigo-800 border border-indigo-100 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
                             {s.code && <strong className="font-mono mr-1 text-indigo-600">[{s.code}]</strong>}
                             {s.name}
@@ -1022,7 +1055,7 @@ export default function AcademyCoursesManagement() {
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Practical Exams:</span>
                       <div className="flex flex-wrap gap-2">
-                        {(sem.practicalExams || []).map((p, pIdx) => (
+                        {(exam.practicalExams || []).map((p, pIdx) => (
                           <span key={pIdx} className="bg-purple-50 text-purple-800 border border-purple-100 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
                             {p.code && <strong className="font-mono mr-1 text-purple-600">[{p.code}]</strong>}
                             {p.name}

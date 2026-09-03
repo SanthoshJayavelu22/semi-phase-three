@@ -34,7 +34,7 @@ export const generateMarksheet = async (req: Request, res: Response) => {
     const marksheet = await Marksheet.create({
       student: student._id,
       academicYear: result.academicYear,
-      semester: result.semester,
+      examination: result.examination,
       result: resultId,
       marksheetNumber,
       marksheetPDF: pdfUrl,
@@ -50,19 +50,19 @@ export const generateMarksheet = async (req: Request, res: Response) => {
 
 export const getAllMarksheets = async (req: Request, res: Response) => {
   try {
-    const { page = '1', limit = '20', studentId, academicYear, semester } = req.query;
+    const { page = '1', limit = '20', studentId, academicYear, examination } = req.query;
 
     const query: any = {};
     if (studentId) query.student = studentId;
     if (academicYear) query.academicYear = academicYear;
-    if (semester) query.semester = parseInt(semester as string);
+    if (examination) query.examination = parseInt(examination as string);
 
     const options = {
       page: parseInt(page as string),
       limit: parseInt(limit as string),
       populate: [
         { path: 'student', select: 'firstName lastName enrollmentId email' },
-        { path: 'result', select: 'academicYear semester totalMarks percentage' },
+        { path: 'result', select: 'academicYear examination totalMarks percentage' },
       ],
       sort: { createdAt: -1 } as any,
     };
@@ -79,7 +79,7 @@ export const getMarksheetById = async (req: Request, res: Response) => {
   try {
     const marksheet = await Marksheet.findById(req.params.id)
       .populate('student', 'firstName lastName enrollmentId email')
-      .populate('result', 'academicYear semester subjects totalMarks percentage cgpa sgpa division');
+      .populate('result', 'academicYear examination subjects totalMarks percentage cgpa sgpa division');
 
     if (!marksheet) {
       return sendError({ req, res, statusCode: 404, message: 'Marksheet not found' });
@@ -188,8 +188,8 @@ export const getStudentMarksheets = async (req: Request, res: Response) => {
     const { studentId } = req.params;
 
     const marksheets = await Marksheet.find({ student: studentId })
-      .populate('result', 'academicYear semester subjects totalMarks percentage cgpa sgpa division')
-      .sort({ academicYear: -1, semester: -1 });
+      .populate('result', 'academicYear examination subjects totalMarks percentage cgpa sgpa division')
+      .sort({ academicYear: -1, examination: -1 });
 
     if (!marksheets || marksheets.length === 0) {
       return sendError({ req, res, statusCode: 404, message: 'No marksheets found for this student' });

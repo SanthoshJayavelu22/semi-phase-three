@@ -11,10 +11,10 @@ export const revaluationService = {
   // ─── Razorpay Payment ──────────────────────────────────────────────────────
   createRazorpayOrder: (data) => apiClient.post('/revaluation/payment/create-order', data),
   verifyRazorpayPayment: (data) => apiClient.post('/revaluation/payment/verify', data),
-  getPaymentStatus: (studentId, semester) =>
-    apiClient.get(`/revaluation/payment/status/${studentId}`, { params: { semester } }),
-  verifyOrderStatus: (orderId, studentId, semester) =>
-    apiClient.get(`/revaluation/payment/verify-order/${orderId}`, { params: { studentId, semester } }),
+  getPaymentStatus: (studentId, examination) =>
+    apiClient.get(`/revaluation/payment/status/${studentId}`, { params: { examination } }),
+  verifyOrderStatus: (orderId, studentId, examination) =>
+    apiClient.get(`/revaluation/payment/verify-order/${orderId}`, { params: { studentId, examination } }),
 
   // ─── Institute Specific ─────────────────────────────────────────────────────
   getInstituteSummary: () => apiClient.get('/revaluation/institute/summary'),
@@ -24,6 +24,10 @@ export const revaluationService = {
 
   // ─── Academy Specific ──────────────────────────────────────────────────────
   getAcademySummary: (params) => apiClient.get('/revaluation/academy/summary', { params }),
+
+  // ─── Reappearing / Arrear Students ─────────────────────────────────────────
+  getReappearingStudents: (params) =>
+    apiClient.get('/academic/students/reappearing', { params }),
 
   // ─── Revaluation Result Routes ─────────────────────────────────────────────
   getRevaluationResults: (id) => apiClient.get(`/revaluation/requests/${id}/results`),

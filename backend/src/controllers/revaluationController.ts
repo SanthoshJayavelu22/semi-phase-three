@@ -22,10 +22,10 @@ import {
 // ─── Create Razorpay Order for Revaluation Fee ──────────────────────────────
 export const createRevaluationRazorpayOrder = async (req: Request, res: Response) => {
   try {
-    const { studentId, semester, totalFee, requestId, subjects } = req.body;
+    const { studentId, examination, totalFee, requestId, subjects } = req.body;
 
-    if (!studentId || !semester || !totalFee) {
-      return sendError({ req, res, statusCode: 400, message: 'Student ID, semester, and total fee are required' });
+    if (!studentId || !examination || !totalFee) {
+      return sendError({ req, res, statusCode: 400, message: 'Student ID, examination, and total fee are required' });
     }
 
     const institute = await Institute.findOne({ user: req.user._id });
@@ -42,11 +42,11 @@ export const createRevaluationRazorpayOrder = async (req: Request, res: Response
     const existingFee = await FeeRecord.findOne({
       student: studentId,
       paymentPurpose: 'Revaluation fee',
-      semesterNumber: semester,
+      examinationNumber: examination,
     });
 
     if (existingFee) {
-      return sendError({ req, res, statusCode: 400, message: 'Revaluation fee already paid for this semester' });
+      return sendError({ req, res, statusCode: 400, message: 'Revaluation fee already paid for this examination' });
     }
 
     const amountInPaise = Math.round(Number(totalFee) * 100);
@@ -55,10 +55,10 @@ export const createRevaluationRazorpayOrder = async (req: Request, res: Response
       const options = {
         amount: amountInPaise,
         currency: 'INR',
-        receipt: `reval_${student.enrollmentId}_${semester}_${Date.now()}`,
+        receipt: `reval_${student.enrollmentId}_${examination}_${Date.now()}`,
         notes: {
           studentId: studentId.toString(),
-          semester: semester.toString(),
+          examination: examination.toString(),
           requestId: requestId || 'pending',
           purpose: 'Revaluation fee',
           subjectCodes: subjects ? subjects.map((s: any) => s.subjectCode).join(',') : '',
@@ -110,7 +110,7 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
       razorpay_order_id,
       razorpay_signature,
       studentId,
-      semester,
+      examination,
       subjects,
       academicYear,
       instituteId,
@@ -153,7 +153,7 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
     // Create fee record
     const feeRecord = await FeeRecord.create({
       student: studentId,
-      semesterNumber: semester,
+      examinationNumber: examination,
       amount: totalFee,
       paymentMode: 'Razorpay Online',
       utrNumber: razorpay_payment_id,
@@ -171,7 +171,7 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
       result: resultId,
       institute: instituteId,
       academicYear: academicYear,
-      semester: semester,
+      examination: examination,
       subjects: subjects,
       feePerSubject: feePerSubject || 500,
       totalFee: totalFee,
@@ -212,7 +212,7 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
         studentName: student ? `${student.firstName} ${student.lastName}`.trim() : 'N/A',
         studentEmail: student?.email || 'N/A',
         courseName: (student as any)?.course?.name || 'N/A',
-        semesterNumber: semester,
+        examinationNumber: examination,
         subjects: (Array.isArray(subjects) ? subjects : []).map((s: any) =>
           s?.subjectName || s?.subjectCode || String(s)
         ),
@@ -245,12 +245,12 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
 export const getRevaluationPaymentStatus = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semester } = req.query;
+    const { examination } = req.query;
 
     const feeRecord = await FeeRecord.findOne({
       student: studentId,
       paymentPurpose: 'Revaluation fee',
-      semesterNumber: semester ? parseInt(semester as string) : undefined,
+      examinationNumber: examination ? parseInt(examination as string) : undefined,
     }).sort({ createdAt: -1 });
 
     return sendSuccess({
@@ -277,7 +277,7 @@ export const verifyRevaluationOrderStatus = async (req: Request, res: Response) 
   try {
     const orderId = req.params.orderId as string;
     const studentId = req.query.studentId as string;
-    const semester = req.query.semester as string;
+    const examination = req.query.examination as string;
 
     // Check if fee already exists
     const existingFee = await FeeRecord.findOne({
@@ -318,7 +318,7 @@ export const verifyRevaluationOrderStatus = async (req: Request, res: Response) 
           // Create fee record if not exists
           const feeRecord = await FeeRecord.create({
             student: studentId,
-            semesterNumber: semester ? parseInt(semester as string) : undefined,
+            examinationNumber: examination ? parseInt(examination as string) : undefined,
             amount: payment.amount / 100,
             paymentMode: 'Razorpay Online',
             utrNumber: payment.id,
@@ -413,7 +413,7 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
     const feeRecord = await FeeRecord.findOne({
       student: validatedData.student,
       paymentPurpose: 'Revaluation fee',
-      semesterNumber: validatedData.semester,
+      examinationNumber: validatedData.examination,
     }).sort({ createdAt: -1 });
 
     if (!feeRecord) {
@@ -464,10 +464,10 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
 // ─── Get Eligible Students for Revaluation (Institute) ──────────────────────
 export const getEligibleStudents = async (req: Request, res: Response) => {
   try {
-    const { courseId, batchId, semester } = req.query;
+    const { courseId, batchId, examination } = req.query;
 
-    if (!courseId || !batchId || !semester) {
-      return sendError({ req, res, statusCode: 400, message: 'Course, batch, and semester are required' });
+    if (!courseId || !batchId || !examination) {
+      return sendError({ req, res, statusCode: 400, message: 'Course, batch, and examination are required' });
     }
 
     const institute = await Institute.findOne({ user: req.user._id });
@@ -482,7 +482,7 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
     };
     const students = await Student.find(studentFilter).populate('course', 'name');
 
-    const semNum = parseInt(semester as string);
+    const examNum = parseInt(examination as string);
     if (students.length === 0) {
       return sendSuccess({ req, res, message: 'Eligible students retrieved successfully', data: [] });
     }
@@ -492,18 +492,18 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
     const [results, feeRecords, existingRequests] = await Promise.all([
       Result.find({
         student: { $in: studentIds },
-        semester: semNum,
+        examination: examNum,
         isPublished: true,
         isRevaluationActive: true,
       }).lean(),
       FeeRecord.find({
         student: { $in: studentIds },
         paymentPurpose: 'Revaluation fee',
-        semesterNumber: semNum,
+        examinationNumber: examNum,
       }).lean(),
       RevaluationRequest.find({
         student: { $in: studentIds },
-        semester: semNum,
+        examination: examNum,
         status: { $nin: ['REJECTED', 'CANCELLED'] },
       }).lean(),
     ]);
@@ -564,7 +564,7 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
         course: student.course,
         instituteId: institute._id,
         resultId: result._id,
-        semester: semNum,
+        examination: examNum,
         academicYear: result.academicYear,
         subjects: eligibleSubjects,
         allSubjects,
@@ -590,10 +590,10 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
 export const getSingleStudentEligibility = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semester } = req.query;
+    const { examination } = req.query;
 
-    if (!semester) {
-      return sendError({ req, res, statusCode: 400, message: 'Semester is required' });
+    if (!examination) {
+      return sendError({ req, res, statusCode: 400, message: 'Examination is required' });
     }
 
     const institute = await Institute.findOne({ user: req.user._id });
@@ -606,15 +606,15 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
       return sendError({ req, res, statusCode: 404, message: 'Student not found' });
     }
 
-    const semNum = parseInt(semester as string);
+    const examNum = parseInt(examination as string);
     const result = await Result.findOne({
       student: student._id,
-      semester: semNum,
+      examination: examNum,
       isPublished: true,
     });
 
     if (!result) {
-      return sendError({ req, res, statusCode: 404, message: 'Published result not found for this semester' });
+      return sendError({ req, res, statusCode: 404, message: 'Published result not found for this examination' });
     }
 
     if (!result.isRevaluationActive || (result.revaluationDeadline && new Date() > result.revaluationDeadline)) {
@@ -625,7 +625,7 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
     const existingPayment = await FeeRecord.findOne({
       student: student._id,
       paymentPurpose: 'Revaluation fee',
-      semesterNumber: semNum,
+      examinationNumber: examNum,
     });
 
     // Check if request already exists
@@ -675,7 +675,7 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
         course: student.course,
         instituteId: institute._id,
         resultId: result._id,
-        semester: semNum,
+        examination: examNum,
         academicYear: result.academicYear,
         subjects: eligibleSubjects,
         allSubjects,
@@ -700,7 +700,7 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
       status,
       institute,
       academicYear,
-      semester,
+      examination,
       courseId,
       batchId,
       studentId,
@@ -724,7 +724,7 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
 
     if (status) query.status = status;
     if (academicYear) query.academicYear = academicYear;
-    if (semester) query.semester = parseInt(semester as string);
+    if (examination) query.examination = parseInt(examination as string);
     if (studentId) query.student = studentId;
 
     // Course, batch and search filtering via student lookup
@@ -769,7 +769,7 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
       populate: [
         { path: 'student', select: 'firstName lastName enrollmentId email course batch' },
         { path: 'institute', select: 'orgName' },
-        { path: 'result', select: 'academicYear semester totalMarks percentage resultStatus' },
+        { path: 'result', select: 'academicYear examination totalMarks percentage resultStatus' },
         { path: 'assignedEvaluator', select: 'name email' },
         { path: 'revaluationResults', select: 'subjectCode subjectName originalMarks revisedTotalMarks marksChange reviewStatus isFinal revisedGrade' },
       ],
@@ -789,7 +789,7 @@ export const getRevaluationRequestById = async (req: Request, res: Response) => 
     const request = await RevaluationRequest.findById(req.params.id)
       .populate('student', 'firstName lastName enrollmentId email course batch')
       .populate('institute', 'orgName')
-      .populate('result', 'academicYear semester totalMarks percentage subjects resultStatus')
+      .populate('result', 'academicYear examination totalMarks percentage subjects resultStatus')
       .populate('assignedEvaluator', 'name email')
       .populate('revaluationResults');
 
@@ -1109,7 +1109,7 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
         studentName: student ? `${student.firstName} ${student.lastName}`.trim() : 'N/A',
         studentEmail: student?.email || 'N/A',
         courseName: (student as any)?.course?.name || 'N/A',
-        semesterNumber: request.semester,
+        examinationNumber: request.examination,
         revaluationResults: revalResults.map((r: any) => ({
           subjectName: r.subjectName,
           originalMarks: r.originalMarks,
@@ -1166,11 +1166,11 @@ export const getInstituteSummary = async (req: Request, res: Response) => {
 // ─── Academy Revaluation Summary ─────────────────────────────────────────────
 export const getAcademySummary = async (req: Request, res: Response) => {
   try {
-    const { academicYear, semester } = req.query;
+    const { academicYear, examination } = req.query;
 
     const query: any = {};
     if (academicYear) query.academicYear = academicYear;
-    if (semester) query.semester = parseInt(semester as string);
+    if (examination) query.examination = parseInt(examination as string);
 
     const requests = await RevaluationRequest.find(query);
 
@@ -1231,9 +1231,9 @@ export const getAcademySummary = async (req: Request, res: Response) => {
 
 export const getRevaluationStatistics = async (req: Request, res: Response) => {
   try {
-    const { academicYear, semester } = req.query;
+    const { academicYear, examination } = req.query;
 
-    const statistics = await revaluationService.getRevaluationStatistics({ academicYear, semester });
+    const statistics = await revaluationService.getRevaluationStatistics({ academicYear, examination });
 
     return sendSuccess({ req, res, message: 'Revaluation statistics retrieved successfully', data: statistics });
   } catch (error: any) {
