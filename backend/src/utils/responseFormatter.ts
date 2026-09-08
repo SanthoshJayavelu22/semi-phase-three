@@ -5,7 +5,7 @@ interface SuccessResponseParams {
   req?: Request;
   res: Response;
   message?: string;
-  data?: any;
+  data?: any; 
   statusCode?: number;
 }
 
