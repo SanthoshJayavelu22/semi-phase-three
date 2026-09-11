@@ -37,6 +37,39 @@ export const checkStudentReappearance = async (
 };
 
 /**
+ * Safely read a per-examination fee config entry from a course.
+ *
+ * `examFeeConfig` is a Mongoose Map (schema `type: Map`), which only supports
+ * `.get()`/`.set()`. Bracket access does NOT work on mongoose Map instances and
+ * silently returns `undefined`. This helper supports both mongoose Maps and
+ * legacy plain-object hydration so reads never silently fall back to defaults.
+ */
+export const getExamFeeConfigEntry = (course: any, examinationNumber: number) => {
+  const map = course?.examFeeConfig;
+  if (!map) return undefined;
+  const key = `exam_${examinationNumber}`;
+  return typeof map.get === 'function' ? map.get(key) : map[key];
+};
+
+/**
+ * Safely write a per-examination fee config entry onto a course.
+ *
+ * Uses the mongoose Map `.set()` API (which persists on save) and falls back to
+ * plain-object assignment for legacy documents that were never hydrated as a
+ * Map.
+ */
+export const setExamFeeConfigEntry = (course: any, examinationNumber: number, value: any) => {
+  const key = `exam_${examinationNumber}`;
+  if (course.examFeeConfig && typeof course.examFeeConfig.set === 'function') {
+    course.examFeeConfig.set(key, value);
+  } else {
+    if (!course.examFeeConfig) course.examFeeConfig = {};
+    (course.examFeeConfig as any)[key] = value;
+  }
+  return course;
+};
+
+/**
  * Resolve the applicable fee for a course/examination and whether a fee applies
  * at all. Fee configuration can be supplied per-course/per-examination (via the
  * `examFeeConfig` Map), otherwise falls back to the course-level fields.
@@ -52,7 +85,7 @@ export const resolveFeeConfiguration = (
   let reappearingFee = 0;
   let feeApplicableForFirstAttempt = false;
 
-  const perExam = course?.examFeeConfig?.[`exam_${examinationNumber}`];
+  const perExam = getExamFeeConfigEntry(course, examinationNumber);
   if (perExam) {
     // Use nullish coalescing so an explicit 0 (fee removed) is respected.
     firstAttemptFee =

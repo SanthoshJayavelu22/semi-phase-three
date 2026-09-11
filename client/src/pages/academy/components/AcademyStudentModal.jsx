@@ -7,19 +7,19 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
   // Helper to safely format document URLs
   const getDocUrl = (url) => {
     if (!url) return null;
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const filename = url.replace(/\\/g, '/').split('/').pop();
-    return getUploadUrl(filename);
+    return getUploadUrl(url);
   };
 
   const docs = student.documents || {};
   const sExaminations = student.examinations || [];
-  const latestSem = sExaminations.length > 0 ? sExaminations[sExaminations.length - 1] : null;
-  
-  // Calculate attendance: root property OR latest examination OR average
+
+  const thesisDocUrl = sExaminations.find(sem => sem.thesisDocumentUrl)?.thesisDocumentUrl || null;
+  const thesisApprovedAny = sExaminations.some(sem => sem.thesisApproved);
+
+  // Calculate attendance: root property OR best (max) examination attendance
   const attendancePct = (student.attendancePercentage !== undefined && student.attendancePercentage !== null && student.attendancePercentage > 0)
     ? student.attendancePercentage
-    : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+    : (sExaminations.length > 0 ? Math.max(...sExaminations.map(sem => sem.attendancePercentage || 0)) : 0);
 
   // Remittance status: student.remittedToAcademy OR razorpayPaymentId
   const isRemitted = Boolean(student.remittedToAcademy || student.razorpayPaymentId);
@@ -320,10 +320,16 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                   href={getDocUrl(docs.passportPhotoUrl)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex justify-between items-center p-3 bg-slate-50 border border-slate-150 hover:border-blue-300 hover:bg-blue-50/20 rounded-xl transition-all group"
+                  className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-150 hover:border-blue-300 hover:bg-blue-50/20 rounded-xl transition-all group"
                 >
+                  <img
+                    src={getDocUrl(docs.passportPhotoUrl)}
+                    alt="Passport Size Photograph"
+                    className="w-12 h-12 object-cover rounded-lg border border-slate-200 bg-white flex-shrink-0"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
                   <span className="font-bold text-slate-700 text-[11px] block truncate">Passport Size Photograph</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-600 transition-colors ml-auto" />
                 </a>
               )}
 
@@ -384,6 +390,18 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                 >
                   <span className="font-bold text-slate-700 text-[11px] block truncate">Signed Membership Form</span>
                   <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                </a>
+              )}
+
+              {thesisDocUrl && (
+                <a
+                  href={getDocUrl(thesisDocUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-indigo-50/60 border border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-indigo-800 text-[11px] block truncate">📄 Thesis Document {thesisApprovedAny ? '✓' : '⏳'}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-indigo-600 group-hover:text-indigo-800 transition-colors" />
                 </a>
               )}
 

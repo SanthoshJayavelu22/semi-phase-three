@@ -9,19 +9,10 @@ import { Institute } from '../models/instituteModel';
 import { Result } from '../models/resultModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { getFeeCategory, getFeeCategoryLabel } from '../utils/feeCategories';
-import { resolveFeeConfiguration, checkStudentReappearance } from '../services/examFeeService';
-import path from 'path';
+import { resolveFeeConfiguration, checkStudentReappearance, getExamFeeConfigEntry, setExamFeeConfigEntry } from '../services/examFeeService';
 import razorpayInstance, { isRazorpayConfigured, keyId, keySecret } from '../config/razorpay';
 import crypto from 'crypto';
-const getFileUrl = (filePath: string) => {
-  if (!filePath) return '';
-  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-    return filePath;
-  }
-  const filename = path.basename(filePath);
-  const baseUrl = (process.env.BASE_URL || 'http://localhost:5003').replace(/\/$/, '');
-  return `${baseUrl}/api/uploads/${filename}`;
-};
+import { getFileUrl } from '../utils/fileHelpers';
 
 // ==========================================
 // VALIDATION SCHEMAS
@@ -38,7 +29,7 @@ const examinationPracticalSchema = z.object({
 });
 
 const courseExaminationSchema = z.object({
-  examinationNumber: z.coerce.number().refine((n) => n === 1 || n === 2, 'Examination number must be 1 or 2'),
+  examinationNumber: z.coerce.number().min(1, 'Examination number is required').max(10, 'A course can have at most 10 examinations'),
   examinationName: z.string().optional().default(''),
   monthsRequired: z.coerce.number().min(0).optional().default(0),
   subjects: z.preprocess(
@@ -1354,16 +1345,17 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
     }
 
     // Check fee record for this student and examination
-    // ── NEW: Fee is only required when applicable (reappearing students).
-    //    First-attempt students are waived unless the course opts in.
     const feeRecord = await FeeRecord.findOne({ student: student._id, examinationNumber: examNum, paymentPurpose: 'Examination fee' });
     const courseDoc = student.course as any;
     const courseForFee = await Course.findById(courseDoc?._id || courseDoc);
-    const perExamFee = courseForFee?.examFeeConfig?.[`exam_${examNum}`];
-    const feeApplicableForFirstAttempt =
-      perExamFee?.feeApplicableForFirstAttempt ??
-      courseForFee?.feeApplicableForFirstAttempt ??
-      false;
+
+    // Fee eligibility check only applies when a fee is actually set for this
+    // course/examination or the student is reappearing:
+    // - reappearing students pay when a reappearing fee is configured (> 0);
+    // - first-attempt students pay only when the course opts in with a fee > 0.
+    const feeConfig = courseForFee
+      ? resolveFeeConfiguration(courseForFee, examNum)
+      : { firstAttemptFee: 0, reappearingFee: 0, feeApplicableForFirstAttempt: false };
 
     const priorResults = await Result.find({
       student: student._id,
@@ -1377,19 +1369,21 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
       latestResult.resultStatus === 'REVALUATION_PENDING'
     );
 
-    const feeRequired = isReappearing || feeApplicableForFirstAttempt;
+    const feeRequired = isReappearing
+      ? feeConfig.reappearingFee > 0
+      : feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0;
     const feeStatus = {
       status: !feeRequired ? 'Waived' : feeRecord ? 'Paid' : 'Pending',
       isValid: !feeRequired || !!feeRecord,
       isReappearing,
       feeApplicable: feeRequired,
       description: !feeRequired
-        ? 'Exam fee is waived for this student (first attempt).'
+        ? isReappearing
+          ? 'Exam fee is waived for this student (no reappearing fee is set for this examination).'
+          : 'Exam fee is waived for this student (first attempt).'
         : feeRecord
           ? 'Exam fee payment has been verified for this examination.'
-          : isReappearing
-            ? 'Exam fee payment is required (reappearing student) but has not been recorded.'
-            : 'Exam fee payment is missing for this examination.',
+          : 'Exam fee payment is required but has not been recorded.',
     };
 
     const checklist = {
@@ -1878,7 +1872,7 @@ export const getExamFeeConfigurationByCourse = async (req: Request, res: Respons
     const course = await Course.findById(courseId);
     if (!course) return sendError({ req, res, statusCode: 404, message: 'Course not found' });
 
-    const perExam = course.examFeeConfig?.[`exam_${examinationNumber}`];
+    const perExam = getExamFeeConfigEntry(course, examinationNumber);
 
     return sendSuccess({
       req,
@@ -1913,7 +1907,7 @@ export const updateExamFeeConfiguration = async (req: Request, res: Response) =>
 
     if (!course.examFeeConfig) course.examFeeConfig = {} as any;
 
-    (course.examFeeConfig as any)[`exam_${validatedData.examinationNumber}`] = {
+    setExamFeeConfigEntry(course, validatedData.examinationNumber, {
       // Respect an explicit 0 (fee removed) so the Academy can waive the
       // reappearing fee as well.
       firstAttemptFee: validatedData.firstAttemptFee != null ? validatedData.firstAttemptFee : 0,
@@ -1926,7 +1920,7 @@ export const updateExamFeeConfiguration = async (req: Request, res: Response) =>
       feeApplicableForFirstAttempt: validatedData.feeApplicableForFirstAttempt,
       updatedBy: req.user._id,
       updatedAt: new Date(),
-    };
+    });
 
     await course.save();
 

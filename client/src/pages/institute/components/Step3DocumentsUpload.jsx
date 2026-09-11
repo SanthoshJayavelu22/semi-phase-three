@@ -4,6 +4,9 @@ import Toast from '../../../Components/Toast';
 
 const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, setUploadProgress }) => {
   const [toast, setToast] = useState(null);
+
+  const ACCEPTED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
   const MANDATORY_DOCUMENTS = [
     { key: 'equipmentList', label: 'Emergency Department Equipment List *' },
     { key: 'facultyList', label: 'Emergency Department Faculty List (EM Qualified) *' },
@@ -15,6 +18,11 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
   ];
 
   const handleFileUpload = (key, file) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!ACCEPTED_EXTENSIONS.includes(`.${ext}`)) {
+      setToast({ message: `Unsupported file type (.${ext}). Please upload a PDF, Word, Excel, PowerPoint, image, or text file.`, type: 'error' });
+      return;
+    }
     if (file.size > 2 * 1024 * 1024) {
       setToast({ message: 'File size must be under 2MB', type: 'error' });
       return;
@@ -76,6 +84,7 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
                         type="file"
                         id={`change-file-${doc.key}`}
                         className="hidden"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,image/jpeg,image/png,image/webp,image/gif"
                         onChange={(e) => {
                           const file = e.target.files[0];
                           if (file) {
@@ -115,6 +124,7 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
                       type="file"
                       id={`file-${doc.key}`}
                       className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,image/jpeg,image/png,image/webp,image/gif"
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {

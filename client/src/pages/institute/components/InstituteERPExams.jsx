@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check, DollarSign } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check, DollarSign, Clock } from 'lucide-react';
 import examService from '../../../api/exams';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
@@ -140,16 +140,19 @@ const InstituteERPExams = ({
       }
       const isVerified = s.verificationStatus === 'Approved';
       const isAttendanceOk = (sem.attendancePercentage || 0) >= 75;
+      const isThesisUploaded = !!sem.thesisDocumentUrl;
       const isThesisOk = !!sem.thesisApproved;
       const sid = s.id || s._id;
       const isExamFeePaid = feeRecords.some(r =>
         (r.student?._id === sid || r.student === sid || r.student?.id === sid || r.student === sid) &&
         r.paymentPurpose === 'Examination fee' && r.examinationNumber?.toString() === selectedExamination.toString()
       );
-      // Fees are waived for first-attempt students; only reappearing students
-      // with an applicable fee must have paid.
-      const isReappearing = reappearanceMap[sid]?.isReappearing;
-      const feeRequired = isReappearing || feeConfig?.feeApplicableForFirstAttempt;
+      // The fee eligibility check only applies when a fee is set for this
+      // course/examination or the student is reappearing. The backend resolves
+      // this per student (reappearing with fee > 0, or first-attempt with an
+      // opted-in fee > 0) via checkExamFeeApplicability.
+      const isReappearing = !!reappearanceMap[sid]?.isReappearing;
+      const feeRequired = !!reappearanceMap[sid]?.examFeeApplicable;
       const isExamFeeSatisfied = feeRequired ? isExamFeePaid : true;
       const hasNbls = !!s.documents?.nblsCertificateUrl;
       const hasNcls = !!s.documents?.nclsCertificateUrl;
@@ -162,7 +165,7 @@ const InstituteERPExams = ({
       const reasons = [];
       if (!isVerified) reasons.push(`Verification pending (${s.verificationStatus || 'Pending'})`);
       if (!isAttendanceOk) reasons.push(`Attendance low (${sem.attendancePercentage || 0}%)`);
-      if (!isThesisOk) reasons.push("Thesis not uploaded");
+      if (!isThesisOk) reasons.push(isThesisUploaded ? "Thesis pending board approval" : "Thesis not uploaded");
       if (!isExamFeeSatisfied) reasons.push("Exam fee not paid");
       if (!isCourseCertsOk) {
         reasons.push("Missing Course Completion Certificate (at least one of NBLS, NCLS, NTLS, NULS required)");
@@ -172,6 +175,7 @@ const InstituteERPExams = ({
         isEligible,
         isVerified,
         isAttendanceOk,
+        isThesisUploaded,
         isThesisOk,
         isExamFeePaid,
         isExamFeeSatisfied,
@@ -411,16 +415,30 @@ const InstituteERPExams = ({
                   </td>
                   <td className="px-4 py-3 text-center">
                     {e ? (
-                      e.isThesisOk
-                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
-                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                      e.isThesisOk ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                      ) : e.isThesisUploaded ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-black" title="Thesis uploaded, awaiting board approval">
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          Uploaded
+                        </span>
+                      ) : (
+                        <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                      )
                     ) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {e ? (
-                      e.isExamFeePaid
-                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
-                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                      e.feeRequired ? (
+                        e.isExamFeePaid
+                          ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                          : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-500 text-[9px] uppercase font-black" title="No exam fee applies for this student">
+                          <CheckCircle2 className="w-3 h-3 text-slate-400" />
+                          Waived
+                        </span>
+                      )
                     ) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-center">

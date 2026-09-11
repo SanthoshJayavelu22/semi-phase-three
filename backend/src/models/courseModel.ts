@@ -11,7 +11,7 @@ export interface IExaminationPractical {
 }
 
 export interface IExaminationCourse {
-  examinationNumber: 1 | 2;
+  examinationNumber: number;
   examinationName?: string;
   monthsRequired?: number;
   subjects?: IExaminationSubject[];
@@ -97,7 +97,7 @@ const courseSchema: Schema = new Schema(
     examinations: {
       type: [
         {
-          examinationNumber: { type: Number, required: true, enum: [1, 2] },
+          examinationNumber: { type: Number, required: true },
           examinationName: { type: String, default: '' },
           monthsRequired: { type: Number, default: 0 },
           subjects: [

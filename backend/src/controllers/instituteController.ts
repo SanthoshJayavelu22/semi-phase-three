@@ -8,21 +8,7 @@ import { z } from 'zod';
 import sendEmail from '../utils/sendEmail';
 import razorpayInstance, { keyId } from '../config/razorpay';
 import crypto from 'crypto';
-import path from 'path'; 
-
-const getFileUrl = (filePath: string) => {
-  if (!filePath) return '';
-  // Cloudinary (or any external/absolute) URLs are returned as-is so the stored
-  // link points directly at the CDN and works from any environment.
-  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-    return filePath;
-  }
-  // Local uploads are stored as an origin-agnostic relative path so the
-  // frontend can resolve them against whichever backend origin it is talking to
-  // (localhost in dev, the production domain in prod).
-  const filename = path.basename(filePath).replace(/\\/g, '/');
-  return `/api/uploads/${filename}`;
-};
+import { getFileUrl } from '../utils/fileHelpers';
 
 const instituteSchema = z.object({
   orgName: z.string().min(1, 'Organization Name is required'),

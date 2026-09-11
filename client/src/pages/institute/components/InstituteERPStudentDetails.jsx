@@ -71,6 +71,24 @@ const InstituteERPStudentDetails = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Course completion certificates upload (NBLS / NCLS / NTLS / NULS)
+  const CERT_FIELDS = [
+    { key: 'nblsCertificate', label: 'NBLS (Basic Life Support)', icon: '🩺' },
+    { key: 'nclsCertificate', label: 'NCLS (Comprehensive Life Support)', icon: '❤️' },
+    { key: 'ntlsCertificate', label: 'NTLS (Trauma Life Support)', icon: '🩹' },
+    { key: 'nulsCertificate', label: 'NULS (Ultrasound Life Support)', icon: '📡' },
+  ];
+  const [certFiles, setCertFiles] = useState({});
+
+  const selectCertFile = (field, file) => {
+    setToast(null);
+    if (file && file.size > 10 * 1024 * 1024) {
+      setToast({ message: 'File size must be under 10MB.', type: 'warning' });
+      return;
+    }
+    setCertFiles(prev => ({ ...prev, [field]: file || null }));
+  };
+
   const [viewingStudent, setViewingStudent] = useState(null);
   const [viewingExamination, setViewingExamination] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -179,6 +197,7 @@ const InstituteERPStudentDetails = ({
   // ─── Student Selection ──────────────────────────────────────────────────────
   const handleStudentSelect = (studentId) => {
     setSelectedStudentId(studentId);
+    setCertFiles({});
     const student = students.find(s => String(s.id) === studentId || String(s._id) === studentId);
     if (student) {
       setStudentSearchText(`${student.enrollmentNo || `STUD00${student.id}`} - ${student.fullName}`);
@@ -287,6 +306,13 @@ const InstituteERPStudentDetails = ({
 
       await academicService.updateAcademicMetrics(selectedStudentId, payload);
 
+      const selectedCerts = Object.entries(certFiles).filter(([, f]) => f instanceof File);
+      if (selectedCerts.length > 0) {
+        const certFormData = new FormData();
+        selectedCerts.forEach(([k, v]) => certFormData.append(k, v));
+        await academicService.uploadCourseCertificates(selectedStudentId, certFormData);
+      }
+
       setSuccessMsg('\uD83C\uDF89 Student details updated successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
 
@@ -298,6 +324,7 @@ const InstituteERPStudentDetails = ({
       setAttendance('');
       setUploadedFile(null);
       setUploadProgress(0);
+      setCertFiles({});
 
     } catch (err) {
       setErrorMsg(err.response?.data?.message || err.message || 'Failed to submit details');
@@ -349,11 +376,17 @@ const InstituteERPStudentDetails = ({
 
   // ─── Render Helpers ────────────────────────────────────────────────────────
   const getStatusBadge = (record) => {
-    const isComplete = (record.attendancePercentage || 0) >= 75 && record.thesisApproved;
-    if (isComplete) {
-      return { label: 'Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+    const attendanceOk = (record.attendancePercentage || 0) >= 75;
+    if (record.thesisApproved) {
+      if (attendanceOk) {
+        return { label: 'Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+      }
+      return { label: 'Attendance Pending', color: 'bg-amber-100 text-amber-700 border-amber-200' };
     }
-    return { label: 'Incomplete', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    if (record.thesisDocumentUrl) {
+      return { label: 'Awaiting Approval', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    }
+    return { label: 'Incomplete', color: 'bg-rose-100 text-rose-700 border-rose-200' };
   };
 
   const getThesisStatus = (record) => {
@@ -376,6 +409,10 @@ const InstituteERPStudentDetails = ({
     const someComplete = visible.some(s => s.attendancePercentage >= 75 && s.thesisApproved);
     if (someComplete) {
       return { label: 'Partial', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    }
+    const awaitingApproval = visible.some(s => !s.thesisApproved && s.thesisDocumentUrl);
+    if (awaitingApproval) {
+      return { label: 'Awaiting Approval', color: 'bg-blue-100 text-blue-700 border-blue-200' };
     }
     return { label: 'Incomplete', color: 'bg-rose-100 text-rose-700 border-rose-200' };
   };
@@ -717,7 +754,7 @@ const InstituteERPStudentDetails = ({
           <div>
             <h3 className="text-base font-black text-slate-800 tracking-tight">Update Record</h3>
             <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
-              Enter attendance and upload thesis
+              Enter attendance, upload thesis & course completion certificates
             </p>
           </div>
 
@@ -857,18 +894,60 @@ const InstituteERPStudentDetails = ({
                 >
                   <UploadCloud className="w-7 h-7 text-blue-500" />
                   <span className="text-xs font-bold text-blue-600">Click or drag to upload</span>
-                  <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">PDF, DOCX, ZIP (Max 10MB)</span>
+                  <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">PDF, DOCX (Max 10MB)</span>
                   <input
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileSelect}
                     className="hidden"
-                    accept=".pdf,.docx,.zip"
+                    accept=".pdf,.docx"
                   />
                 </div>
               )}
               <p className="text-[9px] text-slate-400 font-medium mt-1.5">
                 Upload thesis document (optional if only updating attendance)
+              </p>
+            </div>
+
+            {/* Course Completion Certificates (NBLS / NCLS / NTLS / NULS) */}
+            <div>
+              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+                Course Completion Certificates
+              </label>
+              <div className="grid grid-cols-1 gap-2.5">
+                {CERT_FIELDS.map(cert => {
+                  const currentStudent = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
+                  const currentUrl = currentStudent?.documents?.[`${cert.key}Url`];
+                  return (
+                    <div key={cert.key} className="flex items-center gap-2.5 p-2.5 bg-white border rounded-xl transition-all">
+                      <span className="text-lg flex-shrink-0">{cert.icon}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-600 truncate">{cert.label}</span>
+                        <span className={`block text-[10px] font-bold ${currentUrl ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {currentUrl
+                            ? '✓ Linked'
+                            : certFiles[cert.key] ? `Selected: ${certFiles[cert.key].name}` : 'Not uploaded'}
+                        </span>
+                      </div>
+                      <label className={`flex-none px-2.5 py-1.5 bg-slate-50 border border-dashed border-slate-300 hover:border-indigo-400 rounded-lg transition-all cursor-pointer ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <span className="text-[9px] font-bold text-slate-600">{certFiles[cert.key] ? 'Change' : 'Choose'}</span>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                          className="hidden"
+                          disabled={isSubmitting}
+                          onChange={(e) => {
+                            selectCertFile(cert.key, e.target.files[0] || null);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[9px] text-slate-400 font-medium mt-1.5">
+                Upload mandatory course completion certificates (min 1 required for exam eligibility).
               </p>
             </div>
 

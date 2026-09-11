@@ -12,17 +12,9 @@ import notificationService from '../services/notificationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { emitEvent } from '../config/socket';
 import { classifyStudentsForExamFee, checkStudentReappearance, resolveFeeConfiguration } from '../services/examFeeService';
+import { getFileUrl } from '../utils/fileHelpers';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const getFileUrl = (filePath: string) => {
-  if (filePath.startsWith('http')) return filePath;
-  const normalized = filePath.replace(/\\/g, '/');
-  const uploadsIndex = normalized.indexOf('uploads/');
-  return uploadsIndex !== -1
-    ? `${process.env.BASE_URL || 'http://localhost:5003'}/${normalized.substring(uploadsIndex)}`
-    : filePath;
-};
 
 /** Resolve the institute document for the logged-in institute user */
 const resolveInstitute = async (userId: string) =>
@@ -176,11 +168,16 @@ export const applyForExam = async (req: Request, res: Response) => {
     });
     const paidStudentIds = new Set(feeRecords.map((f: any) => f.student.toString()));
 
-    // Reappearing students who have a payable fee must have paid it;
-    // first-attempt students are fee-waived by default so no payment required.
+    // Students who owe a fee must have paid it:
+    // - reappearing students always pay when a reappearing fee is configured;
+    // - first-attempt students pay only when the course opts to charge them.
+    const { feeConfig } = feeSummary;
     const feeRequiredSet = new Set(
-      (feeSummary.examFeeApplicable ? feeSummary.reappearingStudents : [])
+      feeConfig.reappearingFee > 0 ? feeSummary.reappearingStudents : []
     );
+    if (feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0) {
+      feeSummary.firstAttemptStudents.forEach((id) => feeRequiredSet.add(id));
+    }
 
     // Eligibility check
     const ineligible = students.filter(s => {
@@ -349,9 +346,13 @@ export const updateExamApplication = async (req: Request, res: Response) => {
         application.examinationNumber,
         course
       );
+      const { feeConfig } = feeSummary;
       const feeRequiredSet = new Set(
-        (feeSummary.examFeeApplicable ? feeSummary.reappearingStudents : [])
+        feeConfig.reappearingFee > 0 ? feeSummary.reappearingStudents : []
       );
+      if (feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0) {
+        feeSummary.firstAttemptStudents.forEach((id) => feeRequiredSet.add(id));
+      }
 
       const ineligible = students.filter(s => {
         const sem = s.examinations.find((sm: any) => sm.examinationNumber === application.examinationNumber);

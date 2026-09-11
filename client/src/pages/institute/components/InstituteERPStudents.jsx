@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone } from 'lucide-react';
+import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone, UploadCloud, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
+import academicService from '../../../api/academic';
 import InstituteStudentEditModal from './InstituteStudentEditModal';
 import Pagination from '../../../Components/Pagination';
 
@@ -18,12 +19,69 @@ const InstituteERPStudents = ({
   onUpdateStudent,
   courses,
   batches,
-  setActiveTab
+  setActiveTab,
+  fetchERPData
 }) => {
   const [selectedStudentForView, setSelectedStudentForView] = useState(null);
   const [selectedStudentForEdit, setSelectedStudentForEdit] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Course completion certificates quick-upload (NBLS / NCLS / NTLS / NULS)
+  const [certFiles, setCertFiles] = useState({});
+  const [certUploading, setCertUploading] = useState(false);
+  const [certSuccess, setCertSuccess] = useState('');
+  const [certError, setCertError] = useState('');
+
+  const CERT_FIELDS = [
+    { key: 'nblsCertificate', label: 'NBLS (Basic Life Support)', icon: '🩺' },
+    { key: 'nclsCertificate', label: 'NCLS (Comprehensive Life Support)', icon: '❤️' },
+    { key: 'ntlsCertificate', label: 'NTLS (Trauma Life Support)', icon: '🩹' },
+    { key: 'nulsCertificate', label: 'NULS (Ultrasound Life Support)', icon: '📡' },
+  ];
+
+  const selectCertFile = (field, file) => {
+    setCertError('');
+    setCertSuccess('');
+    if (file && file.size > 10 * 1024 * 1024) {
+      setCertError('File is too large. Maximum size is 10MB.');
+      return;
+    }
+    setCertFiles(prev => ({ ...prev, [field]: file || null }));
+  };
+
+  const uploadCertificates = async () => {
+    const selected = Object.entries(certFiles).filter(([, f]) => f instanceof File);
+    if (selected.length === 0) {
+      setCertError('Select at least one certificate file to upload.');
+      return;
+    }
+    if (!selectedStudentForView) return;
+    setCertUploading(true);
+    setCertError('');
+    setCertSuccess('');
+    try {
+      const formData = new FormData();
+      selected.forEach(([k, v]) => formData.append(k, v));
+      const res = await academicService.uploadCourseCertificates(
+        selectedStudentForView._id || selectedStudentForView.id,
+        formData
+      );
+      const data = res?.data?.data || res?.data || {};
+      const newDocs = { ...(selectedStudentForView.documents || {}), ...(data.documents || {}) };
+      setSelectedStudentForView(prev => (prev ? { ...prev, documents: newDocs } : prev));
+      setCertFiles({});
+      if (fetchERPData) await fetchERPData();
+      const hasLinked = newDocs.nblsCertificateUrl || newDocs.nclsCertificateUrl || newDocs.ntlsCertificateUrl || newDocs.nulsCertificateUrl;
+      setCertSuccess(hasLinked
+        ? 'Certificates uploaded and linked to this fellow. Exam eligibility certificate requirement is now satisfied.'
+        : 'Certificates uploaded successfully.');
+    } catch (err) {
+      setCertError(err?.parsedMessage || err?.message || 'Failed to upload certificates. Please try again.');
+    } finally {
+      setCertUploading(false);
+    }
+  };
 
   const getDocUrl = (url) => {
     if (!url) return '';
@@ -632,6 +690,95 @@ const InstituteERPStudents = ({
                             </div>
                           );
                         })}
+                      </div>
+
+                      {/* Quick upload for course completion certificates */}
+                      <div className="mt-5 p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3">
+                        <div className="flex items-center gap-2">
+                          <UploadCloud className="w-4 h-4 text-indigo-500" />
+                          <span className="text-[11px] uppercase font-black tracking-widest text-indigo-700">
+                            Upload Course Completion Certificates
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {CERT_FIELDS.map(cert => {
+                            const alreadyUploaded = !!selectedStudentForView.documents?.[`${cert.key}Url`];
+                            return (
+                              <label
+                                key={cert.key}
+                                className={`flex items-center gap-2.5 px-3 py-2.5 bg-white border rounded-xl transition-all cursor-pointer ${
+                                  alreadyUploaded
+                                    ? 'border-emerald-200 hover:border-emerald-400'
+                                    : 'border-dashed border-slate-300 hover:border-indigo-400'
+                                }`}
+                              >
+                                <span className="text-lg">{cert.icon}</span>
+                                <div className="min-w-0 flex-1">
+                                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-600 truncate">{cert.label}</span>
+                                  <span className={`block text-[10px] font-bold ${alreadyUploaded ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                    {alreadyUploaded
+                                      ? '✓ Linked'
+                                      : certFiles[cert.key] ? `Selected: ${certFiles[cert.key].name}` : 'Choose file to upload'}
+                                  </span>
+                                </div>
+                                <input
+                                  type="file"
+                                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                  className="hidden"
+                                  disabled={certUploading}
+                                  onChange={(e) => {
+                                    selectCertFile(cert.key, e.target.files[0] || null);
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </label>
+                            );
+                          })}
+                        </div>
+
+                        {certError && (
+                          <div className="flex items-start gap-2 p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-[11px] font-bold text-rose-700">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>{certError}</span>
+                          </div>
+                        )}
+                        {certSuccess && (
+                          <div className="flex items-start gap-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] font-bold text-emerald-700">
+                            <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>{certSuccess}</span>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center justify-end gap-2.5">
+                          <span className="text-[10px] text-slate-400 font-semibold mr-auto">
+                            At least 1 certificate required for exam eligibility.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedStudentForEdit(selectedStudentForView)}
+                            className="px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-all cursor-pointer"
+                          >
+                            Open Full Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={uploadCertificates}
+                            disabled={certUploading}
+                            className="px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            {certUploading ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <UploadCloud className="w-3.5 h-3.5" />
+                                Upload Selected
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

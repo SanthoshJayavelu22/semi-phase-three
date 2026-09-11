@@ -35,12 +35,15 @@ const AcademyInspectorModal = ({
   }, [isVerifyingPayment]);
 
   const [approvedQuota, setApprovedQuota] = useState(() => {
-    return parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5;
+    return String(parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5);
   });
+
+  const [isApproving, setIsApproving] = useState(false);
 
   useEffect(() => {
     if (selectedApp) {
-      setApprovedQuota(parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5);
+      setApprovedQuota(String(parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5));
+      setIsApproving(false);
     }
   }, [selectedApp]);
 
@@ -366,7 +369,18 @@ const AcademyInspectorModal = ({
                   min="1"
                   max="100"
                   value={approvedQuota}
-                  onChange={(e) => setApprovedQuota(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '' || raw === '-') {
+                      setApprovedQuota(raw);
+                      return;
+                    }
+                    const num = parseInt(raw, 10);
+                    if (!isNaN(num)) {
+                      setApprovedQuota(String(num));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
                   className="w-16 px-2 py-1 bg-white border border-indigo-300 rounded-lg text-xs font-black text-indigo-900 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <span className="text-[10px] font-bold text-indigo-500">Seats/Batch</span>
@@ -387,17 +401,34 @@ const AcademyInspectorModal = ({
                   Reject
                 </button>
                 <button
-                  onClick={() => handleApprove(approvedQuota)}
-                  disabled={!isPaymentComplete}
+                  onClick={() => {
+                    const num = parseInt(approvedQuota, 10);
+                    if (!approvedQuota || approvedQuota.trim() === '' || isNaN(num) || num <= 0) {
+                      alert('Please enter a valid batch quota limit (must be greater than 0).');
+                      return;
+                    }
+                    setIsApproving(true);
+                    handleApprove(num);
+                  }}
+                  disabled={!isPaymentComplete || isApproving}
                   className={`px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
-                    isPaymentComplete
+                    isPaymentComplete && !isApproving
                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 cursor-pointer'
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}
                   title={!isPaymentComplete ? 'Payment must be completed before approval' : ''}
                 >
-                  <ShieldCheck className="w-4 h-4" />
-                  Approve ({approvedQuota} Seats Limit)
+                  {isApproving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Approving...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      Approve ({approvedQuota || '?'} Seats Limit)
+                    </>
+                  )}
                 </button>
               </>
             )}

@@ -21,6 +21,11 @@ const Step4PaymentSubmit = ({
   };
 
   const handleSignatureFileUpload = (file) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!['pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff', 'heic'].includes(ext)) {
+      setToast({ message: `Unsupported file type (.${ext}). Please upload a signature image or PDF file.`, type: 'error' });
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       setToast({ message: 'Signature file must be under 5MB.', type: 'error' });
       return;

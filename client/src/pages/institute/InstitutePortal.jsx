@@ -659,11 +659,10 @@ const InstitutePortal = () => {
             if (Array.isArray(data)) {
               const formatted = data.map(s => {
                 const sExaminations = s.examinations || [];
-                const latestExam = sExaminations.length > 0 ? sExaminations[sExaminations.length - 1] : null;
 
                 const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
                   ? s.attendancePercentage
-                  : (latestExam && latestExam.attendancePercentage !== undefined ? latestExam.attendancePercentage : 0);
+                  : (sExaminations.length > 0 ? Math.max(...sExaminations.map(sem => sem.attendancePercentage || 0)) : 0);
 
                 const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(sem => sem.thesisApproved));
                 const isThesisUploaded = Boolean(sExaminations.some(sem => sem.thesisDocumentUrl));
@@ -2209,6 +2208,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             courses={courses}
             batches={batches}
             setActiveTab={setActiveTab}
+            fetchERPData={fetchERPData}
           />
         );
       case 'fees':

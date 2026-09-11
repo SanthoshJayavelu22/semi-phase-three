@@ -182,11 +182,10 @@ const AcademyPortal = () => {
       if (Array.isArray(studentsData)) {
         const formatted = studentsData.map(s => {
           const sExaminations = s.examinations || [];
-          const latestExam = sExaminations.length > 0 ? sExaminations[sExaminations.length - 1] : null;
 
           const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
             ? s.attendancePercentage
-            : (latestExam && latestExam.attendancePercentage !== undefined ? latestExam.attendancePercentage : 0);
+            : (sExaminations.length > 0 ? Math.max(...sExaminations.map(sem => sem.attendancePercentage || 0)) : 0);
 
           const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(exam => exam.thesisApproved));
           const isThesisUploaded = Boolean(sExaminations.some(exam => exam.thesisDocumentUrl));

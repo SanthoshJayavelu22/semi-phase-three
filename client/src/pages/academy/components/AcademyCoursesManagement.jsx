@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
-  Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle, Loader2, Plus, 
-  CheckCircle2, Layers, Award, Sparkles, GraduationCap 
+  Search, Eye, Edit, Trash2, BookOpen, X, Save, Loader2, Plus, 
+  Layers, GraduationCap 
 } from 'lucide-react';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
@@ -14,6 +14,30 @@ const getExaminationCount = (duration, durationType) => {
   if (durationType === 'Years') return Math.min(2, Math.max(1, durVal * 2));
   if (durationType === 'Months') return Math.min(2, Math.max(1, Math.ceil(durVal / 6)));
   return Math.min(2, 1);
+};
+
+// Compute global course duration (in months, and a friendly label) from per-exam
+// monthsRequired values. Returns { months, display }.
+const computeDurationFromExams = (examinations = []) => {
+  const totalMonths = examinations.reduce((sum, e) => sum + (parseInt(e.monthsRequired, 10) || 0), 0);
+  if (totalMonths <= 0) return { months: 0, display: 'Not set' };
+  if (totalMonths % 12 === 0) {
+    return { months: totalMonths, display: `${totalMonths / 12} Year${totalMonths / 12 > 1 ? 's' : ''}` };
+  }
+  return { months: totalMonths, display: `${totalMonths} Months` };
+};
+
+// Display total duration for a course, preferring derived value from exams
+const courseDurationDisplay = (course) => {
+  if (course.examinations && course.examinations.length > 0) {
+    return computeDurationFromExams(course.examinations).display;
+  }
+  if (course.courseDuration) {
+    if (course.durationType === 'Years' && parseInt(course.courseDuration, 10) === 1) return '1 Year';
+    if (course.durationType === 'Years') return `${course.courseDuration} Years`;
+    return `${course.courseDuration} ${course.durationType || 'Months'}`;
+  }
+  return 'Not set';
 };
 
 // Helper to sync examinations array length while preserving existing data
@@ -89,25 +113,6 @@ export default function AcademyCoursesManagement() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-
-  // Auto-sync examinations array when creation form duration changes
-  useEffect(() => {
-    const targetCount = getExaminationCount(courseForm.courseDuration, courseForm.durationType);
-    const updatedExaminations = syncExaminations(courseForm.examinations, targetCount);
-    if (JSON.stringify(updatedExaminations) !== JSON.stringify(courseForm.examinations)) {
-      setCourseForm(prev => ({ ...prev, examinations: updatedExaminations }));
-    }
-  }, [courseForm.courseDuration, courseForm.durationType]);
-
-  // Auto-sync edit modal examinations when duration changes
-  useEffect(() => {
-    if (!editingCourse) return;
-    const targetCount = getExaminationCount(editForm.courseDuration, editForm.durationType);
-    const updatedExaminations = syncExaminations(editForm.examinations, targetCount);
-    if (JSON.stringify(updatedExaminations) !== JSON.stringify(editForm.examinations)) {
-      setEditForm(prev => ({ ...prev, examinations: updatedExaminations }));
-    }
-  }, [editForm.courseDuration, editForm.durationType, editingCourse]);
 
   // Fetch all courses
   const fetchCourses = useCallback(async () => {
@@ -223,6 +228,47 @@ export default function AcademyCoursesManagement() {
     });
   };
 
+  // Add a new examination to create/edit form while preserving existing data
+  const addExamination = (isEdit) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const examList = (prev.examinations || []).map(e => ({ ...e }));
+      const nextNum = examList.length > 0
+        ? Math.max(...examList.map(e => e.examinationNumber)) + 1
+        : 1;
+      examList.push({
+        examinationNumber: nextNum,
+        examinationName: `Examination ${nextNum}`,
+        monthsRequired: '',
+        subjects: [{ code: '', name: '' }],
+        practicalExams: [{ code: '', name: '' }],
+      });
+      return { ...prev, examinations: examList };
+    });
+  };
+
+  // Remove an examination (keeps at least 1, renumberes remaining exams)
+  const removeExamination = (isEdit, examNum) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const examList = (prev.examinations || []).filter(e => e.examinationNumber !== examNum);
+      if (examList.length === 0) {
+        examList.push({
+          examinationNumber: 1,
+          examinationName: 'Examination 1',
+          monthsRequired: '',
+          subjects: [{ code: '', name: '' }],
+          practicalExams: [{ code: '', name: '' }],
+        });
+      }
+      const renumbered = examList
+        .slice()
+        .sort((a, b) => a.examinationNumber - b.examinationNumber)
+        .map((e, idx) => ({ ...e, examinationNumber: idx + 1 }));
+      return { ...prev, examinations: renumbered };
+    });
+  };
+
   // ─── Creation handler ──────────────────────────────────────────────────────
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
@@ -240,6 +286,8 @@ export default function AcademyCoursesManagement() {
       practicalExams: (exam.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
     }));
 
+    const derivedDuration = computeDurationFromExams(cleanedExaminations);
+
     setIsCreateLoading(true);
     try {
       const token = localStorage.getItem('semi_board_token') || 
@@ -252,8 +300,8 @@ export default function AcademyCoursesManagement() {
         courseCode: (courseForm.courseCode || '').trim().toUpperCase(),
         courseType: courseForm.courseType,
         programCategory: courseForm.programCategory,
-        courseDuration: courseForm.courseDuration,
-        durationType: courseForm.durationType,
+        courseDuration: derivedDuration.months > 0 ? String(derivedDuration.months) : '0',
+        durationType: 'Months',
         examinations: cleanedExaminations,
         status: 'Active'
       };
@@ -272,8 +320,6 @@ export default function AcademyCoursesManagement() {
         courseCode: '',
         courseType: 'Fellowship',
         programCategory: 'Emergency Medicine',
-        courseDuration: '2',
-        durationType: 'Years',
         examinations: syncExaminations([], 2),
         status: 'Active'
       });
@@ -300,9 +346,7 @@ export default function AcademyCoursesManagement() {
       courseCode: c.courseCode || '',
       courseType: c.courseType || 'Fellowship',
       programCategory: c.programCategory || 'Emergency Medicine',
-      courseDuration: c.courseDuration || '2',
-      durationType: c.durationType || 'Years',
-      examinations: c.examinations && c.examinations.length > 0 ? c.examinations : syncExaminations([], getExaminationCount(c.courseDuration, c.durationType)),
+      examinations: c.examinations && c.examinations.length > 0 ? c.examinations : syncExaminations([], 2),
       status: c.status || 'Active'
     });
   };
@@ -328,13 +372,15 @@ export default function AcademyCoursesManagement() {
                     localStorage.getItem('semi_access_token') || 
                     localStorage.getItem('semi_token');
 
+      const derivedDuration = computeDurationFromExams(cleanedExaminations);
+
       await academicService.updateCourse(editingCourse._id, {
         name: editForm.name.trim(),
         courseCode: (editForm.courseCode || '').trim().toUpperCase(),
         courseType: editForm.courseType,
         programCategory: editForm.programCategory,
-        courseDuration: editForm.courseDuration,
-        durationType: editForm.durationType,
+        courseDuration: derivedDuration.months > 0 ? String(derivedDuration.months) : '0',
+        durationType: 'Months',
         examinations: cleanedExaminations,
         status: editForm.status
       }, {
@@ -414,7 +460,24 @@ export default function AcademyCoursesManagement() {
             <h4 className="text-xs font-black uppercase tracking-wider text-indigo-600 flex items-center gap-2">
               <Layers className="w-4 h-4" /> Examination Breakdown & Curriculum ({exams.length} Examinations)
             </h4>
-            <p className="text-[11px] text-slate-500">Define theory subjects and practical OSCE modules for each examination</p>
+            <p className="text-[11px] text-slate-500">Set each examination's duration in months, then define theory subjects and practical OSCE modules</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => removeExamination(isEdit, activeExam?.examinationNumber)}
+              disabled={exams.length <= 1}
+              className="text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Remove Exam
+            </button>
+            <button
+              type="button"
+              onClick={() => addExamination(isEdit)}
+              className="text-[11px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Exam
+            </button>
           </div>
         </div>
 
@@ -452,12 +515,13 @@ export default function AcademyCoursesManagement() {
         {activeExam && (
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-6">
             
-            {/* 0. Months Required */}
+            {/* Examination Duration (months) */}
             <div className="space-y-2">
               <div>
                 <span className="text-xs font-black uppercase text-slate-800 tracking-wider">
-                  Months Required for Examination {activeExam.examinationNumber}
+                  Duration of Examination {activeExam.examinationNumber} (in Months)
                 </span>
+                <p className="text-[10px] text-slate-500">How long students study before sitting this examination</p>
               </div>
               <input
                 type="number"
@@ -624,7 +688,7 @@ export default function AcademyCoursesManagement() {
             <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">
               Create New Standardized Course
             </h3>
-            <p className="text-xs text-slate-500">Define course code, category, duration, examination subjects & practical exams</p>
+            <p className="text-xs text-slate-500">Define course code, category, per-examination duration, examination subjects & practical exams</p>
           </div>
           <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full border border-indigo-100">
             Admin Controlled
@@ -682,32 +746,6 @@ export default function AcademyCoursesManagement() {
                 onChange={(e) => setCourseForm({ ...courseForm, programCategory: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-semibold"
               />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Course Duration *</label>
-              <input
-                type="number"
-                min="1"
-                required
-                placeholder="e.g. 2"
-                value={courseForm.courseDuration}
-                onChange={(e) => setCourseForm({ ...courseForm, courseDuration: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-semibold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Duration Type *</label>
-              <select
-                value={courseForm.durationType}
-                onChange={(e) => setCourseForm({ ...courseForm, durationType: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-bold"
-              >
-                <option value="Years">Years</option>
-                <option value="Months">Months</option>
-                <option value="Weeks">Weeks</option>
-              </select>
             </div>
           </div>
 
@@ -797,7 +835,9 @@ export default function AcademyCoursesManagement() {
                           {c.courseType || 'Fellowship'}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-slate-600">{c.courseDuration} {c.durationType}</td>
+                      <td className="px-5 py-4 text-slate-600">
+                        {courseDurationDisplay(c)}
+                      </td>
                       <td className="px-5 py-4">
                         <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
                           {examCount} Examinations
@@ -942,18 +982,6 @@ export default function AcademyCoursesManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Duration</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={editForm.courseDuration}
-                    onChange={(e) => setEditForm({ ...editForm, courseDuration: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
-                  />
-                </div>
-
-                <div>
                   <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Status</label>
                   <select
                     value={editForm.status}
@@ -1019,8 +1047,8 @@ export default function AcademyCoursesManagement() {
                   <span className="font-bold text-slate-800">{viewingCourse.programCategory}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Duration</span>
-                  <span className="font-bold text-slate-800">{viewingCourse.courseDuration} {viewingCourse.durationType}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Duration</span>
+                  <span className="font-bold text-slate-800">{courseDurationDisplay(viewingCourse)}</span>
                 </div>
               </div>
 
