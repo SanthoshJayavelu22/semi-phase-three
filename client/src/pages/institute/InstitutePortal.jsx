@@ -411,6 +411,7 @@ const InstitutePortal = () => {
           admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
           status: s.remittedToAcademy ? 'Completed' : 'Active',
           remittedToAcademy: s.remittedToAcademy || false,
+          verificationStatus: s.verificationStatus || 'Pending Verification',
           attendancePercentage: s.attendancePercentage || 0,
           thesisApproved: s.thesisApproved || false,
           courseId: s.course?._id || s.course,

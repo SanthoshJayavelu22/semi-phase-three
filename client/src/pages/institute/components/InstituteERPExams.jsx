@@ -495,9 +495,12 @@ const InstituteERPExams = ({
                           Eligible
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[9px] uppercase font-black" title={e.reasonsText}>
-                          <XCircle className="w-3 h-3" />
-                          Ineligible
+                        <span className="inline-flex flex-col items-center gap-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[9px] uppercase font-black">
+                            <XCircle className="w-3 h-3" />
+                            Ineligible
+                          </span>
+                          <span className="text-[8px] text-rose-400 font-semibold leading-tight max-w-[170px]">{e.reasonsText}</span>
                         </span>
                       )
                     ) : (

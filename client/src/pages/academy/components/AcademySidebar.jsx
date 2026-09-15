@@ -6,6 +6,7 @@ import {
   UserCheck, 
   ClipboardList,
   FileSpreadsheet,
+  FileCheck2,
   BarChart3,
   Globe,           // For Publish Results
   RefreshCw,       // For Publishing Details
@@ -33,6 +34,7 @@ const NAV_GROUPS = [
     groupTitle: 'Verification & Fees',
     items: [
       { id: 'verification', path: '/academy/verification', label: 'Student Verification', Icon: UserCheck },
+      { id: 'academic-verification', path: '/academy/academic-verification', label: 'Thesis & Docs Verification', Icon: FileCheck2 },
       { id: 'eligibility', path: '/academy/eligibility', label: 'Exam Approvals', Icon: ClipboardList },
       { id: 'remittance', path: '/academy/remittance', label: 'Fee Payment Audit', Icon: CreditCard },
       { id: 'fee-config', path: '/academy/fee-config', label: 'Exam Fee Settings', Icon: Settings },
