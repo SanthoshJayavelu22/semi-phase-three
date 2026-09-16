@@ -14,6 +14,7 @@ import marksRoutes from '../marksRoutes';
 import hallTicketRoutes from '../hallTicketRoutes';
 import syncRoutes from '../syncRoutes';
 import treasuryRoutes from '../treasuryRoutes';
+import seedRoutes from '../seedRoutes';
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.use('/marks', marksRoutes);
 router.use('/hall-tickets', hallTicketRoutes);
 router.use('/sync', syncRoutes);
 router.use('/treasury', treasuryRoutes);
+router.use('/seed', seedRoutes);
 router.use('/', paymentRoutes);
 
 export default router;

@@ -41,7 +41,7 @@ const jsonStringArray = z.preprocess(parseJsonArray, z.array(z.string().min(1)))
 
 const examApplySchema = z.object({
   courseId:   z.string().min(1, 'Course ID is required'),
-  batchId:    z.string().optional(),
+  batchId:    z.string().min(1, 'Batch ID is required'),
   examinationNumber: z.coerce.number().min(1, 'Examination Number is required').max(2),
   studentIds: z.preprocess(parseJsonArray, z.array(z.string().min(1)).min(1, 'At least one student must be selected')),
   utrNumber:  z.string().optional(),
@@ -98,29 +98,19 @@ export const applyForExam = async (req: Request, res: Response) => {
     const course = await Course.findOne({ _id: validatedData.courseId });
     if (!course) return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist.' });
 
-    // Auto-resolve batchId if not provided
-    let batchId = validatedData.batchId;
-    if (!batchId) {
-      // Get batch from the first student
-      const firstStudent = await Student.findOne({ _id: { $in: validatedData.studentIds }, course: course._id });
-      if (firstStudent && firstStudent.batch) {
-        batchId = firstStudent.batch.toString();
-      }
-    }
-    if (!batchId) return sendError({ req, res, statusCode: 400, message: 'Could not determine the batch. Please ensure students have a batch assigned.' });
+    const batch = await Batch.findOne({ _id: validatedData.batchId, course: course._id });
+    if (!batch) return sendError({ req, res, statusCode: 404, message: 'Specified Batch does not exist for this course.' });
 
-    const batch = await Batch.findOne({ _id: batchId, course: course._id });
-    if (!batch) return sendError({ req, res, statusCode: 404, message: 'Specified Batch does not exist.' });
-
-    // Validate students
+    // Validate students belong to this institute, course, AND batch
     const students = await Student.find({
       _id: { $in: validatedData.studentIds },
       institute: institute._id,
       course: course._id,
+      batch: batch._id,
     });
 
     if (students.length !== validatedData.studentIds.length) {
-      return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to the specified course.' });
+      return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to the specified batch.' });
     }
 
     const unapprovedStudents = students.filter((s: any) => s.verificationStatus && s.verificationStatus !== 'Approved');
@@ -196,15 +186,26 @@ export const applyForExam = async (req: Request, res: Response) => {
       });
     }
 
-    // Duplicate check
-    const existing = await ExamApplication.findOne({
+    // Duplicate check per batch & examination number
+    const existingBatchApp = await ExamApplication.findOne({
+      institute: institute._id,
+      course: course._id,
       batch: batch._id,
+      examinationNumber: validatedData.examinationNumber,
+      status: { $in: ['Pending', 'Approved', 'SchedulePublished'] },
+    });
+    if (existingBatchApp) {
+      return sendError({ req, res, statusCode: 400, message: `An active exam application already exists for this batch (${batch.name}) and Examination ${validatedData.examinationNumber}.` });
+    }
+
+    // Duplicate check per student
+    const existingStudentApp = await ExamApplication.findOne({
       examinationNumber: validatedData.examinationNumber,
       students: { $in: validatedData.studentIds },
       status: { $in: ['Pending', 'Approved', 'SchedulePublished'] },
     });
-    if (existing) {
-      return sendError({ req, res, statusCode: 400, message: 'An exam application already exists for one or more selected students in this batch and examination.' });
+    if (existingStudentApp) {
+      return sendError({ req, res, statusCode: 400, message: 'One or more selected students already have an active exam application for this examination.' });
     }
 
     const application = await ExamApplication.create({
@@ -271,7 +272,7 @@ export const listExamApplications = async (req: Request, res: Response) => {
     const applications = await ExamApplication.find(query)
       .populate('institute', 'orgName')
       .populate('course', 'name')
-      .populate('batch', 'year')
+      .populate('batch', 'name year')
       .populate('students', 'firstName lastName enrollmentId email')
       .sort({ createdAt: -1 });
 
@@ -288,7 +289,7 @@ export const getExamApplicationById = async (req: Request, res: Response) => {
     const application = await ExamApplication.findById(req.params.id)
       .populate('institute', 'orgName instituteAddress')
       .populate('course', 'name')
-      .populate('batch', 'year')
+      .populate('batch', 'name year')
       .populate('students', 'firstName lastName enrollmentId email attendancePercentage thesisApproved remittedToAcademy examAttempts');
 
     if (!application) return sendError({ req, res, statusCode: 404, message: 'Exam application not found' });
@@ -440,6 +441,22 @@ export const reviewExamApplication = async (req: Request, res: Response) => {
 
     await application.save();
 
+    // Synchronize Student.examinations[].eligibilityStatus for each candidate in this batch application
+    if (application.students && application.students.length > 0) {
+      const studentEligibilityStatus = validatedData.status === 'Approved' ? 'Approved' : 'Rejected';
+      await Student.updateMany(
+        {
+          _id: { $in: application.students },
+          'examinations.examinationNumber': application.examinationNumber,
+        },
+        {
+          $set: {
+            'examinations.$.eligibilityStatus': studentEligibilityStatus,
+          },
+        }
+      );
+    }
+
     // Notify institute when the application is approved
     if (validatedData.status === 'Approved') {
       try {
@@ -479,7 +496,7 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
     const application = await ExamApplication.findById(req.params.id)
       .populate('institute', 'orgName')
       .populate('course', 'name')
-      .populate('batch', 'year');
+      .populate('batch', 'name year');
 
     if (!application) return sendError({ req, res, statusCode: 404, message: 'Exam application not found' });
 
@@ -568,7 +585,7 @@ export const generateHallTickets = async (req: Request, res: Response) => {
     const application = await ExamApplication.findById(req.params.id)
       .populate('institute', 'orgName instituteAddress')
       .populate('course', 'name subjects')
-      .populate('batch', 'year')
+      .populate('batch', 'name year')
       .populate('students', 'firstName lastName enrollmentId contactNumber documents');
 
     if (!application) return sendError({ req, res, statusCode: 404, message: 'Exam application not found' });

@@ -52,9 +52,10 @@ if (process.env.SENTRY_DSN && Sentry) {
   }
 }
 
-// Connect to database and seed Super Admin
+// Connect to database and seed Super Admin & Dummy Data for Academy and Institute
 const initApp = async () => {
   await connectDB();
+  logger.info('Initializing application and seeding mock data for Academy & Institute portals...');
   await seedSuperAdmin();
   await Batch.syncIndexes().catch((err: any) => console.log('Batch index sync:', err.message));
 };

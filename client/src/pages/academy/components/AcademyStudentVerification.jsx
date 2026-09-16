@@ -172,6 +172,10 @@ export default function AcademyStudentVerification({
       setActionRemarks('');
       setInspectingStudent(null);
       
+      if (statusToSet === 'Approved') setActiveTab('approved');
+      else if (statusToSet === 'Correction Required') setActiveTab('correction');
+      else if (statusToSet === 'Rejected') setActiveTab('rejected');
+
       // Refresh board data
       if (fetchBoardData) {
         await fetchBoardData();

@@ -39,6 +39,7 @@ export default function AcademyThesisVerification({
   const [filterInstitute, setFilterInstitute] = useState('');
   const [filterCourse, setFilterCourse] = useState('');
   const [filterBatch, setFilterBatch] = useState('');
+  const [filterExam, setFilterExam] = useState('');
 
   // Active record being reviewed in the modal (student + examination)
   const [inspectingRecord, setInspectingRecord] = useState(null);
@@ -58,8 +59,8 @@ export default function AcademyThesisVerification({
   const batches = useMemo(() => [...new Set(students.map(s => s.batch).filter(Boolean))].sort(), [students]);
 
   // Flatten students -> (student, examination) verification records
-  // Sequential: only show the CURRENT examination for each student
-  // If Exam 1 is Approved → show only Exam 2, otherwise show only Exam 1
+  // Maintain distinct records for each examination so approved Exam 1 records
+  // stay certified and visible under the 'Certified' tab instead of being overwritten by an unstarted Exam 2.
   const studentRecords = useMemo(() => {
     const records = [];
     (students || []).forEach(s => {
@@ -69,25 +70,42 @@ export default function AcademyThesisVerification({
 
       const exam1 = exams.find(e => e.examinationNumber === 1);
       const exam2 = exams.find(e => e.examinationNumber === 2);
+      const exam1Approved = exam1?.eligibilityStatus === 'Approved';
 
-      // Determine which single examination to show for this student
-      const currentExam = (exam1 && exam1.eligibilityStatus === 'Approved') ? exam2 : exam1;
+      // Always include Examination 1
+      if (exam1) {
+        records.push({
+          ...s,
+          examinationNumber: 1,
+          attendancePercentage: Number(exam1.attendancePercentage ?? 0),
+          thesisApproved: Boolean(exam1.thesisApproved),
+          thesisDocumentUrl: exam1.thesisDocumentUrl || '',
+          eligibilityStatus: exam1.eligibilityStatus || 'Pending',
+          rejectionNotes: exam1.rejectionNotes || '',
+        });
+      }
 
-      if (!currentExam) return;
+      // Include Examination 2 if:
+      // 1) Exam 2 has data (attendance > 0, thesis uploaded, thesis approved, or non-pending status)
+      // 2) OR Exam 1 is approved AND Exam 2 has active attendance/thesis submissions or user filtered for Exam 2
+      if (exam2) {
+        const hasExam2Data = (exam2.attendancePercentage !== undefined && exam2.attendancePercentage > 0) ||
+                             !!exam2.thesisDocumentUrl ||
+                             exam2.thesisApproved ||
+                             (exam2.eligibilityStatus && exam2.eligibilityStatus !== 'Pending');
 
-      const attendance = Number(currentExam.attendancePercentage ?? 0);
-      const thesisUrl = currentExam.thesisDocumentUrl || '';
-      const thesisApproved = Boolean(currentExam.thesisApproved);
-      const status = currentExam.eligibilityStatus || 'Pending';
-      records.push({
-        ...s,
-        examinationNumber: currentExam.examinationNumber,
-        attendancePercentage: attendance,
-        thesisApproved,
-        thesisDocumentUrl: thesisUrl,
-        eligibilityStatus: status,
-        rejectionNotes: currentExam.rejectionNotes || '',
-      });
+        if (hasExam2Data || (exam1Approved && (exam2.thesisDocumentUrl || exam2.attendancePercentage > 0))) {
+          records.push({
+            ...s,
+            examinationNumber: 2,
+            attendancePercentage: Number(exam2.attendancePercentage ?? 0),
+            thesisApproved: Boolean(exam2.thesisApproved),
+            thesisDocumentUrl: exam2.thesisDocumentUrl || '',
+            eligibilityStatus: exam2.eligibilityStatus || 'Pending',
+            rejectionNotes: exam2.rejectionNotes || '',
+          });
+        }
+      }
     });
     return records;
   }, [students]);
@@ -107,6 +125,7 @@ export default function AcademyThesisVerification({
       if (filterInstitute && record.institute !== filterInstitute) return false;
       if (filterCourse && record.course !== filterCourse) return false;
       if (filterBatch && record.batch !== filterBatch) return false;
+      if (filterExam && String(record.examinationNumber) !== String(filterExam)) return false;
 
       // Text search
       if (searchQuery.trim()) {
@@ -123,7 +142,7 @@ export default function AcademyThesisVerification({
 
       return true;
     });
-  }, [studentRecords, activeTab, filterInstitute, filterCourse, filterBatch, searchQuery]);
+  }, [studentRecords, activeTab, filterInstitute, filterCourse, filterBatch, filterExam, searchQuery]);
 
   // Statistics counters
   const stats = useMemo(() => {
@@ -219,6 +238,7 @@ export default function AcademyThesisVerification({
       setInspectingRecord(null);
       setActionType(null);
       setActionRemarks('');
+      setActiveTab('certified');
       if (fetchBoardData) await fetchBoardData();
     } catch (err) {
       console.error('Error certifying eligibility:', err);
@@ -465,7 +485,7 @@ export default function AcademyThesisVerification({
           })}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
           {/* Search Box */}
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -521,6 +541,19 @@ export default function AcademyThesisVerification({
               {batches.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
+
+          {/* Examination Filter */}
+          <div>
+            <select
+              value={filterExam}
+              onChange={(e) => setFilterExam(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50 font-medium text-slate-700"
+            >
+              <option value="">All Examinations</option>
+              <option value="1">Examination 1</option>
+              <option value="2">Examination 2</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -533,17 +566,18 @@ export default function AcademyThesisVerification({
             </div>
             <h3 className="text-base font-bold text-slate-800">No Verification Records Found</h3>
             <p className="text-xs text-slate-500 max-w-sm">
-              {searchQuery || filterInstitute || filterCourse || filterBatch
+              {searchQuery || filterInstitute || filterCourse || filterBatch || filterExam
                 ? 'No records match your current filter criteria. Try clearing some filters.'
                 : `There are currently no records under "${activeTab}" status.`}
             </p>
-            {(searchQuery || filterInstitute || filterCourse || filterBatch) && (
+            {(searchQuery || filterInstitute || filterCourse || filterBatch || filterExam) && (
               <button
                 onClick={() => {
                   setSearchQuery('');
                   setFilterInstitute('');
                   setFilterCourse('');
                   setFilterBatch('');
+                  setFilterExam('');
                 }}
                 className="mt-2 text-xs text-primary-600 font-bold hover:underline"
               >

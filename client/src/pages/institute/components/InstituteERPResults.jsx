@@ -205,6 +205,15 @@ const InstituteERPResults = ({ user }) => {
   const filteredResults = useMemo(() => {
     let filtered = [...results];
 
+    // Only show results that are published and whose scheduled publication time has passed
+    const now = new Date();
+    filtered = filtered.filter(r => {
+      const isPub = r.isPublished || r.published;
+      if (!isPub) return false;
+      if (r.publishedDate && new Date(r.publishedDate) > now) return false;
+      return true;
+    });
+
     // Filter by course
     if (selectedCourse) {
       const studentIdsInCourse = students

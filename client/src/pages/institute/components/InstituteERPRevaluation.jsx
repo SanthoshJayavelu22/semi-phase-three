@@ -135,14 +135,25 @@ const InstituteERPRevaluation = () => {
         examination: selectedExamination,
       });
       const data = res.data?.data || res.data || [];
+      const list = Array.isArray(data) ? data : [];
+      // Ensure pass students are not shown - only failed students can apply for revaluation
+      const failedOnly = list.filter((student) => {
+        if (student.resultStatus === 'PASS') {
+          const subjects = student.allSubjects || student.subjects || [];
+          return subjects.some(
+            (s) => ['F', 'RA', 'WH'].includes(s.originalGrade) || ((s.originalMarks || 0) < 40 && s.originalGrade !== 'ABSENT')
+          );
+        }
+        return true;
+      });
 
       // Initialize selectedSubjects for all students with empty sets
       const initialSubjects = {};
-      data.forEach((student) => {
+      failedOnly.forEach((student) => {
         initialSubjects[student.studentId] = new Set();
       });
 
-      setEligibleStudents(Array.isArray(data) ? data : []);
+      setEligibleStudents(failedOnly);
       setSelectedSubjects(initialSubjects);
       setExpandedStudent(null);
       setSelectedSingleStudent(null);
@@ -532,10 +543,10 @@ const InstituteERPRevaluation = () => {
     if (grade === 'ABSENT') {
       return { label: 'ABSENT', color: 'bg-slate-100 text-slate-500 border-slate-200', icon: <XCircle className="w-3 h-3 text-slate-400" /> };
     }
-    if (marks >= 40) {
-      return { label: 'PASS', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3 h-3 text-emerald-500" /> };
+    if (['F', 'RA', 'WH'].includes(grade) || marks < 40) {
+      return { label: 'FAIL', color: 'bg-rose-100 text-rose-700 border-rose-200', icon: <AlertCircle className="w-3 h-3 text-rose-500" /> };
     }
-    return { label: 'FAIL', color: 'bg-rose-100 text-rose-700 border-rose-200', icon: <AlertCircle className="w-3 h-3 text-rose-500" /> };
+    return { label: 'PASS', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3 h-3 text-emerald-500" /> };
   };
 
   const getResultBadge = (finalResult) => {
@@ -597,7 +608,7 @@ const InstituteERPRevaluation = () => {
           <div className="mt-4 border-t border-slate-100 pt-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">
-                Select Subjects for Revaluation
+                Select Failed Subjects for Revaluation
               </span>
               <button
                 onClick={() => toggleAllSubjectsForStudent(student.studentId, allSubjects)}
@@ -748,6 +759,10 @@ const InstituteERPRevaluation = () => {
                         <span className="text-[10px] font-mono text-slate-400">{student.enrollmentId}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-300" />
                         <span className="text-[10px] font-medium text-slate-500">Exam {student.examination}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300" />
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                          {student.resultStatus === 'SUPPLEMENTARY' ? 'SUPPLEMENTARY' : 'FAILED'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -854,13 +869,11 @@ const InstituteERPRevaluation = () => {
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-3.5 h-3.5 text-slate-400" />
                     <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">
-                      All Subjects — Click any subject to toggle selection
+                      Failed Subjects — Select for Revaluation
                     </span>
-                    {hasAbsentSubjects && (
-                      <span className="text-[8px] text-slate-400 font-medium bg-slate-200/50 px-2 py-0.5 rounded-full">
-                        Absent disabled
-                      </span>
-                    )}
+                    <span className="text-[8px] text-slate-400 font-medium bg-slate-200/50 px-2 py-0.5 rounded-full">
+                      Passed & Absent disabled
+                    </span>
                   </div>
                   <button
                     onClick={(e) => {
@@ -936,7 +949,7 @@ const InstituteERPRevaluation = () => {
 
                 <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium border-t border-slate-100 pt-2.5">
                   <span>
-                    {totalEligible} eligible · {allSubjects.length - totalEligible} absent (disabled)
+                    {totalEligible} eligible failed subject{totalEligible !== 1 ? 's' : ''} · {allSubjects.length - totalEligible} passed/absent
                   </span>
                   <span className="flex items-center gap-1">
                     <CreditCard className="w-3 h-3" />
@@ -1352,7 +1365,7 @@ const InstituteERPRevaluation = () => {
                 {singleStudentMode ? 'Student Revaluation' : 'Select Students'}
               </h3>
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                {singleStudentMode ? selectedSingleStudent?.name : `${eligibleStudents.length} eligible students`}
+                {singleStudentMode ? selectedSingleStudent?.name : `${eligibleStudents.length} failed students eligible`}
               </p>
             </div>
           </div>
@@ -1455,8 +1468,8 @@ const InstituteERPRevaluation = () => {
                     <Users className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black tracking-tight">{eligibleStudents.length} Students</h3>
-                    <p className="text-xs text-blue-200 font-medium">with published results for this examination</p>
+                    <h3 className="text-lg font-black tracking-tight">{eligibleStudents.length} Failed Students</h3>
+                    <p className="text-xs text-blue-200 font-medium">eligible to apply for revaluation</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
@@ -1480,14 +1493,13 @@ const InstituteERPRevaluation = () => {
             {renderStudentCards()}
           </>
         ) : selectedCourse && selectedBatch && selectedExamination ? (
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 border-2 border-amber-200 rounded-2xl p-12 text-center">
-            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-amber-200">
-              <AlertCircle className="w-10 h-10 text-amber-500" />
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 border-2 border-emerald-200 rounded-2xl p-12 text-center">
+            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-200">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
-            <h3 className="text-lg font-black text-amber-800">No Students Found</h3>
-            <p className="text-sm text-amber-600 mt-2 max-w-md mx-auto">
-              No students with published results found for the selected batch and examination.
-              Students must have published results to apply for revaluation.
+            <h3 className="text-lg font-black text-emerald-800">No Failed Students Found</h3>
+            <p className="text-sm text-emerald-600 mt-2 max-w-md mx-auto">
+              All students have passed this examination. Revaluation and reappear are only applicable for failed students.
             </p>
           </div>
         ) : (

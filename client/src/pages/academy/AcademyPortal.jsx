@@ -191,9 +191,14 @@ const AcademyPortal = () => {
           const isThesisUploaded = Boolean(sExaminations.some(exam => exam.thesisDocumentUrl));
           const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
 
+          const isAnyExamApproved = sExaminations.some(exam => exam.eligibilityStatus === 'Approved');
+
           let eligibility = 'Pending';
           let reason = '';
-          if (!isRemitted) {
+          if (isAnyExamApproved || s.eligibilityStatus === 'Approved') {
+            eligibility = 'Approved';
+            reason = 'Certified and approved by Academic Board.';
+          } else if (!isRemitted) {
             eligibility = 'Rejected';
             reason = 'Academy fee remittance is pending.';
           } else if (attendancePct < 75) {
@@ -244,6 +249,12 @@ const AcademyPortal = () => {
             utrNumber: s.utrNumber,
             homeAddress: s.homeAddress,
             contactNumber: s.contactNumber,
+            verificationStatus: s.verificationStatus || 'Pending Verification',
+            verificationRemarks: s.verificationRemarks || '',
+            verifiedAt: s.verifiedAt,
+            verifiedBy: s.verifiedBy,
+            correctionRequestedAt: s.correctionRequestedAt,
+            correctionResubmittedAt: s.correctionResubmittedAt,
             examinations: sExaminations
           };
         });

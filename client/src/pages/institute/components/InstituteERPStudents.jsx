@@ -96,6 +96,15 @@ const InstituteERPStudents = ({
     return Array.from(new Set(students.map(s => s.courseName || (typeof s.course === 'string' ? s.course : (s.course?.name || s.course?.courseName || ''))).filter(Boolean)));
   }, [students]);
 
+  const normalizeStatus = (status) => {
+    if (!status) return 'Pending Verification';
+    const s = String(status).trim().toLowerCase();
+    if (s === 'approved' || s === 'verified') return 'Approved';
+    if (s.includes('correct')) return 'Correction Required';
+    if (s.includes('reject')) return 'Rejected';
+    return 'Pending Verification';
+  };
+
   const filteredList = useMemo(() => {
     return students.filter(s => {
       const name = s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
@@ -107,13 +116,12 @@ const InstituteERPStudents = ({
                             email.toLowerCase().includes(studentSearch.toLowerCase()) ||
                             regNo.toLowerCase().includes(studentSearch.toLowerCase());
       
-      const vStatus = s.verificationStatus || 'Pending Verification';
+      const vStatus = normalizeStatus(s.verificationStatus || s.status);
       const matchesStatus = studentFilter === 'All' || 
         (studentFilter === 'Approved' && vStatus === 'Approved') ||
         (studentFilter === 'Pending' && vStatus === 'Pending Verification') ||
         (studentFilter === 'Correction' && vStatus === 'Correction Required') ||
-        (studentFilter === 'Rejected' && vStatus === 'Rejected') ||
-        s.status === studentFilter;
+        (studentFilter === 'Rejected' && vStatus === 'Rejected');
       
       const bName = s.batchName || (typeof s.batch === 'string' ? s.batch : (s.batch?.name || (s.batch?.year ? `Batch ${s.batch.year}` : ''))) || '';
       const matchesBatch = selectedStudentFilterBatch === 'All' || bName === selectedStudentFilterBatch || String(s.batchId || s.batch?._id) === String(selectedStudentFilterBatch);
@@ -127,7 +135,7 @@ const InstituteERPStudents = ({
 
   // Count candidates needing correction
   const correctionCount = useMemo(() => {
-    return students.filter(s => s.verificationStatus === 'Correction Required').length;
+    return students.filter(s => normalizeStatus(s.verificationStatus || s.status) === 'Correction Required').length;
   }, [students]);
 
   // Reset page when filters change
@@ -141,7 +149,8 @@ const InstituteERPStudents = ({
     return filteredList.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredList, currentPage]);
 
-  const getVerificationBadge = (vStatus) => {
+  const getVerificationBadge = (rawStatus) => {
+    const vStatus = normalizeStatus(rawStatus);
     switch (vStatus) {
       case 'Approved':
         return (
@@ -302,7 +311,7 @@ const InstituteERPStudents = ({
                 const name = student.fullName || 'Dr. Arjun Kumar';
                 const course = student.courseName || student.course || 'General Medicine';
                 const studentId = student._id || student.id;
-                const vStatus = student.verificationStatus || 'Pending Verification';
+                const vStatus = normalizeStatus(student.verificationStatus || student.status);
 
                 return (
                   <tr key={studentId || idx} className="hover:bg-slate-50/30 transition-colors">
@@ -414,7 +423,7 @@ const InstituteERPStudents = ({
                 <div>
                   <span className="text-2xl font-black text-slate-900 block leading-tight">{selectedStudentForView.fullName}</span>
                   <div className="flex flex-wrap gap-2.5 items-center mt-2">
-                    {getVerificationBadge(selectedStudentForView.verificationStatus || 'Pending Verification')}
+                    {getVerificationBadge(selectedStudentForView.verificationStatus || selectedStudentForView.status)}
                     <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
                       {selectedStudentForView.status || 'Active'}
                     </span>
@@ -428,9 +437,9 @@ const InstituteERPStudents = ({
               {/* Verification Audit Alert if Remarks Present */}
               {selectedStudentForView.verificationRemarks && (
                 <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
-                  selectedStudentForView.verificationStatus === 'Correction Required'
+                  normalizeStatus(selectedStudentForView.verificationStatus || selectedStudentForView.status) === 'Correction Required'
                     ? 'bg-purple-50 border-purple-200 text-purple-900'
-                    : selectedStudentForView.verificationStatus === 'Rejected'
+                    : normalizeStatus(selectedStudentForView.verificationStatus || selectedStudentForView.status) === 'Rejected'
                     ? 'bg-red-50 border-red-200 text-red-900'
                     : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                 }`}>

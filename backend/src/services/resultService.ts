@@ -82,7 +82,11 @@ class ResultService {
   }
 
   async advancedSearch(filters: any) {
-    const query: any = { isPublished: true };
+    const now = new Date();
+    const query: any = {
+      isPublished: true,
+      publishedDate: { $lte: now },
+    };
 
     if (filters.query) {
       const students = await Student.find({
@@ -100,9 +104,11 @@ class ResultService {
     if (filters.resultStatus) query.resultStatus = filters.resultStatus;
 
     if (filters.fromDate || filters.toDate) {
-      query.publishedDate = {};
       if (filters.fromDate) query.publishedDate.$gte = new Date(filters.fromDate);
-      if (filters.toDate) query.publishedDate.$lte = new Date(filters.toDate);
+      if (filters.toDate) {
+        const to = new Date(filters.toDate);
+        query.publishedDate.$lte = to < now ? to : now;
+      }
     }
 
     if (filters.department) {
@@ -121,7 +127,11 @@ class ResultService {
   }
 
   async getResultStatistics(filters: any) {
-    const query: any = { isPublished: true };
+    const now = new Date();
+    const query: any = {
+      isPublished: true,
+      publishedDate: { $lte: now },
+    };
     if (filters.academicYear) query.academicYear = filters.academicYear;
     if (filters.examination) query.examination = parseInt(filters.examination);
 

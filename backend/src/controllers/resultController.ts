@@ -18,7 +18,7 @@ export const getAllResults = async (req: Request, res: Response) => {
 
     const query: any = {};
 
-    // Institute users should only see results for their own students
+    // Institute users should only see results for their own students and ONLY published results where publishedDate <= now
     if (req.user.role === 'institute') {
       const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
       if (!institute) {
@@ -26,6 +26,8 @@ export const getAllResults = async (req: Request, res: Response) => {
       }
       const studentIds = await Student.find({ institute: institute._id }).distinct('_id');
       query.student = { $in: studentIds };
+      query.isPublished = true;
+      query.publishedDate = { $lte: new Date() };
     }
 
     if (academicYear) query.academicYear = academicYear;
@@ -82,6 +84,14 @@ export const getResultById = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Result not found' });
     }
 
+    // Institute users cannot access unpublished or future-scheduled results
+    if (req.user.role === 'institute') {
+      const now = new Date();
+      if (!result.isPublished || (result.publishedDate && new Date(result.publishedDate) > now)) {
+        return sendError({ req, res, statusCode: 404, message: 'Result not found or not yet published' });
+      }
+    }
+
     return sendSuccess({ req, res, message: 'Result retrieved successfully', data: result });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
@@ -121,12 +131,22 @@ export const getResultByStudent = async (req: Request, res: Response) => {
       }
     }
 
-    const results = await Result.find({ student: student._id })
+    const now = new Date();
+    const results = await Result.find({
+      student: student._id,
+      isPublished: true,
+      publishedDate: { $lte: now },
+    })
       .populate('student', 'firstName lastName enrollmentId email')
       .sort({ academicYear: -1, examination: -1 });
 
     if (!results || results.length === 0) {
-      return sendError({ req, res, statusCode: 404, message: 'No results found for this student' });
+      return sendError({
+        req,
+        res,
+        statusCode: 404,
+        message: 'No published results found for this student. Results may be scheduled for publication at a later time.',
+      });
     }
 
     return sendSuccess({
@@ -579,6 +599,14 @@ export const downloadMarksheet = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Marksheet not found' });
     }
 
+    if (req.user?.role === 'institute') {
+      const resultDoc = await Result.findById(resultId);
+      const now = new Date();
+      if (!resultDoc || !resultDoc.isPublished || (resultDoc.publishedDate && new Date(resultDoc.publishedDate) > now)) {
+        return sendError({ req, res, statusCode: 403, message: 'Marksheet is not available until the scheduled publication time.' });
+      }
+    }
+
     marksheet.downloadedCount += 1;
     marksheet.lastDownloaded = new Date();
     await marksheet.save();
@@ -602,12 +630,17 @@ export const getStudentResultHistory = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
 
-    const results = await Result.find({ student: studentId, isPublished: true })
+    const now = new Date();
+    const results = await Result.find({
+      student: studentId,
+      isPublished: true,
+      publishedDate: { $lte: now },
+    })
       .select('academicYear examination totalMarks percentage cgpa division resultStatus')
       .sort({ academicYear: -1, examination: -1 });
 
     if (!results || results.length === 0) {
-      return sendError({ req, res, statusCode: 404, message: 'No results found for this student' });
+      return sendError({ req, res, statusCode: 404, message: 'No published results found for this student' });
     }
 
     return sendSuccess({ req, res, message: 'Student result history retrieved successfully', data: results });

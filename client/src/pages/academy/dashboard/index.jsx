@@ -8,8 +8,8 @@ import AcademyDashboard from '../components/AcademyDashboard';
 export default function AcademyDashboardPage() {
   const navigate = useNavigate();
   const context = useOutletContext() || {};
-  const dynamicMetrics = context.dynamicMetrics || {};
-  const allApplications = context.allApplications || [];
+  const dynamicMetrics = context.dynamicMetrics || context.metrics || {};
+  const allApplications = context.allApplications || context.applications || [];
 
   const setActiveTab = tab => {
     const routes = {

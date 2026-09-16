@@ -341,6 +341,84 @@ const InstitutePortal = () => {
   const [selectedStudentFilterCourse, setSelectedStudentFilterCourse] = useState('All');
 
   // ─── DATA FETCHING ─────────────────────────────────────────────────────────────
+  const formatStudentRecord = useCallback((s) => {
+    const sExaminations = s.examinations || [];
+
+    const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
+      ? s.attendancePercentage
+      : (sExaminations.length > 0 ? Math.max(...sExaminations.map(sem => sem.attendancePercentage || 0)) : 0);
+
+    const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(sem => sem.thesisApproved));
+    const isThesisUploaded = Boolean(sExaminations.some(sem => sem.thesisDocumentUrl));
+    const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
+
+    // Normalize verification status safely
+    let vStatus = s.verificationStatus;
+    if (!vStatus && s.status === 'Approved') vStatus = 'Approved';
+    if (vStatus) {
+      const vLower = String(vStatus).trim().toLowerCase();
+      if (vLower === 'approved' || vLower === 'verified') vStatus = 'Approved';
+      else if (vLower.includes('correct')) vStatus = 'Correction Required';
+      else if (vLower.includes('reject')) vStatus = 'Rejected';
+      else if (vLower.includes('pending')) vStatus = 'Pending Verification';
+    } else {
+      vStatus = 'Pending Verification';
+    }
+
+    const courseObj = s.course;
+    const batchObj = s.batch;
+    const courseName = typeof courseObj === 'string' ? courseObj : (courseObj?.name || courseObj?.courseName || s.courseName || 'General Medicine');
+    const batchName = typeof batchObj === 'string' ? batchObj : (batchObj?.name || (batchObj?.year ? `Batch ${batchObj.year}` : (s.batchName || 'Batch 2026')));
+
+    return {
+      id: s._id || s.id,
+      _id: s._id || s.id,
+      fullName: s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Dr. Fellow',
+      firstName: s.firstName || '',
+      lastName: s.lastName || '',
+      email: s.email || '',
+      phone: s.contactNumber || s.phone || '',
+      qualification: s.qualification || '',
+      graduationYear: s.yearOfPassing?.toString() || s.graduationYear || '',
+      yearOfPassing: s.yearOfPassing,
+      enrollmentNo: s.enrollmentId || s.enrollmentNo || '',
+      enrollmentId: s.enrollmentId || s.enrollmentNo || '',
+      admissionDate: s.createdAt?.split('T')[0] || s.admissionDate || new Date().toISOString().split('T')[0],
+      status: isRemitted ? 'Completed' : (s.status || 'Active'),
+      remittedToAcademy: isRemitted,
+      verificationStatus: vStatus,
+      verificationRemarks: s.verificationRemarks || '',
+      verifiedAt: s.verifiedAt,
+      verifiedBy: s.verifiedBy,
+      correctionRequestedAt: s.correctionRequestedAt,
+      correctionResubmittedAt: s.correctionResubmittedAt,
+      attendancePercentage: attendancePct,
+      thesisApproved: isThesisApproved,
+      thesisUploaded: isThesisUploaded,
+      examinations: sExaminations,
+      courseId: courseObj?._id || courseObj?.id || courseObj || s.courseId,
+      batchId: batchObj?._id || batchObj?.id || batchObj || s.batchId,
+      courseName,
+      batchName,
+      course: courseObj,
+      batch: batchObj,
+      homeAddress: s.homeAddress || '',
+      contactNumber: s.contactNumber || s.phone || '',
+      courseDirector: s.courseDirector || '',
+      razorpayOrderId: s.razorpayOrderId || '',
+      razorpayPaymentId: s.razorpayPaymentId || '',
+      razorpaySignature: s.razorpaySignature || '',
+      medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber || '',
+      universityName: s.universityName || '',
+      mbbsQualification: s.mbbsQualification || '',
+      fmgeClearanceStatus: s.fmgeClearanceStatus || 'Not Applicable',
+      isForeignGraduate: Boolean(s.isForeignGraduate),
+      documents: s.documents || {},
+      isEligible: s.isEligible,
+      dateOfBirth: s.dateOfBirth,
+    };
+  }, []);
+
   const fetchERPData = useCallback(async () => {
     try {
       const coursesRes = await academicService.getCourses();
@@ -399,39 +477,7 @@ const InstitutePortal = () => {
       const studentsRes = await academicService.listStudents();
       const studentsData = extractData(studentsRes) || [];
       if (Array.isArray(studentsData)) {
-        const formatted = studentsData.map(s => ({
-          id: s._id,
-          _id: s._id,
-          fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-          email: s.email,
-          phone: s.contactNumber,
-          qualification: s.qualification,
-          graduationYear: s.yearOfPassing?.toString() || '',
-          enrollmentNo: s.enrollmentId,
-          admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-          status: s.remittedToAcademy ? 'Completed' : 'Active',
-          remittedToAcademy: s.remittedToAcademy || false,
-          verificationStatus: s.verificationStatus || 'Pending Verification',
-          attendancePercentage: s.attendancePercentage || 0,
-          thesisApproved: s.thesisApproved || false,
-          courseId: s.course?._id || s.course,
-          batchId: s.batch?._id || s.batch,
-          courseName: s.course?.name || 'General Medicine',
-          batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-          homeAddress: s.homeAddress,
-          contactNumber: s.contactNumber,
-          courseDirector: s.courseDirector,
-          razorpayOrderId: s.razorpayOrderId,
-          razorpayPaymentId: s.razorpayPaymentId,
-          razorpaySignature: s.razorpaySignature,
-          medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
-          universityName: s.universityName,
-          mbbsQualification: s.mbbsQualification,
-          fmgeClearanceStatus: s.fmgeClearanceStatus,
-          isForeignGraduate: s.isForeignGraduate,
-          documents: s.documents || {},
-          examinations: s.examinations || [],
-        }));
+        const formatted = studentsData.map(formatStudentRecord);
         setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
@@ -658,51 +704,7 @@ const InstitutePortal = () => {
           academicService.listStudents().then(res => {
             const data = extractData(res) || [];
             if (Array.isArray(data)) {
-              const formatted = data.map(s => {
-                const sExaminations = s.examinations || [];
-
-                const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
-                  ? s.attendancePercentage
-                  : (sExaminations.length > 0 ? Math.max(...sExaminations.map(sem => sem.attendancePercentage || 0)) : 0);
-
-                const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(sem => sem.thesisApproved));
-                const isThesisUploaded = Boolean(sExaminations.some(sem => sem.thesisDocumentUrl));
-                const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
-
-                return {
-                  id: s._id,
-                  _id: s._id,
-                  fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-                  email: s.email,
-                  phone: s.contactNumber,
-                  qualification: s.qualification,
-                  graduationYear: s.yearOfPassing?.toString() || '',
-                  enrollmentNo: s.enrollmentId,
-                  admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-                  status: isRemitted ? 'Completed' : 'Active',
-                  remittedToAcademy: isRemitted,
-                  attendancePercentage: attendancePct,
-                  thesisApproved: isThesisApproved,
-                  thesisUploaded: isThesisUploaded,
-                  examinations: sExaminations,
-                  courseId: s.course?._id || s.course,
-                  batchId: s.batch?._id || s.batch,
-                  courseName: s.course?.name || 'General Medicine',
-                  batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-                  homeAddress: s.homeAddress,
-                  contactNumber: s.contactNumber,
-                  courseDirector: s.courseDirector,
-                  razorpayOrderId: s.razorpayOrderId,
-                  razorpayPaymentId: s.razorpayPaymentId,
-                  razorpaySignature: s.razorpaySignature,
-                  medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
-                  universityName: s.universityName,
-                  mbbsQualification: s.mbbsQualification,
-                  fmgeClearanceStatus: s.fmgeClearanceStatus,
-                  isForeignGraduate: s.isForeignGraduate,
-                  documents: s.documents || {},
-                };
-              });
+              const formatted = data.map(formatStudentRecord);
               setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
             }
           }).catch(() => {});
@@ -719,7 +721,7 @@ const InstitutePortal = () => {
 
     const intervalId = setInterval(fetchCurrentPageData, 3000);
     return () => clearInterval(intervalId);
-  }, [user, currentStep, activeTab, fetchApplication, fetchERPData]);
+  }, [user, currentStep, activeTab, fetchApplication, fetchERPData, formatStudentRecord]);
 
 
 

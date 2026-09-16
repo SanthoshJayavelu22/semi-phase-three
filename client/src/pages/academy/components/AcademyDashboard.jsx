@@ -16,8 +16,22 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const AcademyDashboard = ({ dynamicMetrics = {}, setActiveTab, allApplications = [] }) => {
+const AcademyDashboard = ({ dynamicMetrics: propMetrics = {}, setActiveTab, allApplications = [] }) => {
   const navigate = useNavigate();
+
+  const dynamicMetrics = React.useMemo(() => {
+    if (propMetrics && (propMetrics.total > 0 || propMetrics.approved > 0 || propMetrics.pending > 0 || propMetrics.rejected > 0)) {
+      return propMetrics;
+    }
+    let pending = 0, approved = 0, rejected = 0;
+    (allApplications || []).forEach(app => {
+      const s = (app.status || '').toLowerCase().trim().replace(/\s+/g, '_');
+      if (s === 'approved' || s === 'active_erp') approved++;
+      else if (s === 'rejected') rejected++;
+      else pending++;
+    });
+    return { pending, approved, rejected, total: allApplications.length };
+  }, [propMetrics, allApplications]);
 
   // Quick navigation helper (supports both prop tab setter and router navigation)
   const handleNavigate = (path, tabName) => {
@@ -54,7 +68,7 @@ const AcademyDashboard = ({ dynamicMetrics = {}, setActiveTab, allApplications =
             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer"
           >
             <Building2 className="w-4 h-4" />
-            Applications ({dynamicMetrics?.pending || 0})
+            Applications ({dynamicMetrics?.total || allApplications?.length || 0})
           </button>
           <button
             onClick={() => handleNavigate('/academy/remittance', 'remittance')}

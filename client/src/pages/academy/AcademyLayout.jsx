@@ -83,7 +83,7 @@ export default function AcademyLayout() {
       if (Array.isArray(appsData)) {
         const formatted = appsData.map(app => {
           const statusMapped = app.status
-            ? app.status.toLowerCase().replace(' ', '_')
+            ? app.status.toLowerCase().trim().replace(/\s+/g, '_')
             : 'pending_review';
           return {
             id: app._id,
@@ -178,9 +178,14 @@ export default function AcademyLayout() {
           const hasNuls = !!s.documents?.nulsCertificateUrl;
           const isCourseCertsOk = hasNbls || hasNcls || hasNtls || hasNuls;
 
+          const isAnyExamApproved = sExaminations.some(exam => exam.eligibilityStatus === 'Approved');
+
           let eligibility = 'Pending';
           let reason = '';
-          if (!isRemitted) {
+          if (isAnyExamApproved || s.eligibilityStatus === 'Approved') {
+            eligibility = 'Approved';
+            reason = 'Certified and approved by Academic Board.';
+          } else if (!isRemitted) {
             eligibility = 'Rejected';
             reason = 'Academy fee remittance is pending.';
           } else if (attendancePct < 75) {
@@ -383,12 +388,12 @@ export default function AcademyLayout() {
   const dynamicMetrics = useMemo(() => {
     let pending = 0, approved = 0, rejected = 0;
     allApplications.forEach(app => {
-      const s = app.status;
-      if (s === 'pending_review' || s === 'pending_evaluation' || s === 'submitted') pending++;
-      else if (s === 'approved' || s === 'active_erp') approved++;
+      const s = (app.status || '').toLowerCase().trim().replace(/\s+/g, '_');
+      if (s === 'approved' || s === 'active_erp') approved++;
       else if (s === 'rejected') rejected++;
+      else pending++;
     });
-    return { pending, approved, rejected, total: pending + approved + rejected };
+    return { pending, approved, rejected, total: allApplications.length };
   }, [allApplications]);
 
   const filteredApplications = useMemo(() =>
@@ -578,6 +583,7 @@ export default function AcademyLayout() {
     filteredStudents,
     rawStudents: activeStudents,
     allApplications,
+    dynamicMetrics,
     metrics: dynamicMetrics,
     searchQuery, setSearchQuery,
     studentSearchQuery, setStudentSearchQuery,

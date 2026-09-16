@@ -72,6 +72,9 @@ const AcademyPublishingDetails = () => {
           const courseTitle = courseObj.name || courseObj.courseName || r.courseName || 'Emergency Medicine';
 
           const pubDateObj = r.publishedDate ? new Date(r.publishedDate) : (r.createdAt ? new Date(r.createdAt) : new Date());
+          const isPublished = !!(r.isPublished || r.published);
+          const isFuture = pubDateObj > new Date();
+          const pubStatus = isPublished ? (isFuture ? 'Scheduled' : 'Published') : 'Scheduled';
 
           return {
             id: r._id || r.id || Math.random(),
@@ -82,12 +85,12 @@ const AcademyPublishingDetails = () => {
             date: pubDateObj.toISOString().split('T')[0],
             time: pubDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             ampm: '',
-            status: r.isPublished || r.published ? 'Published' : 'Scheduled',
+            status: pubStatus,
             autoPublish: false,
             studentsCount: 1,
             publishedBy: 'SEMI Board Controller',
             publishedAt: pubDateObj.toISOString(),
-            notificationSent: true,
+            notificationSent: !isFuture,
             results: r.subjects || []
           };
         });

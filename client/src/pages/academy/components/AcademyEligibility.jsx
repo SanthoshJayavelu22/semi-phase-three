@@ -30,27 +30,47 @@ const AcademyEligibility = ({
   const [pubPracticalExam, setPubPracticalExam] = useState({ name: '', venue: '', date: '', time: '', subjects: [] });
   const [pubLoading, setPubLoading] = useState(false);
 
+  const [batchFilter, setBatchFilter] = useState('All');
+
+  const availableBatches = useMemo(() => {
+    const bMap = new Map();
+    examApplications.forEach(app => {
+      const b = app.batch;
+      if (b && (b._id || b.id)) {
+        const id = String(b._id || b.id);
+        const name = b.name || (b.year ? `Batch ${b.year}` : 'Batch');
+        bMap.set(id, name);
+      }
+    });
+    return Array.from(bMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [examApplications]);
+
   // Filter lists
   const filteredList = useMemo(() => {
     return examApplications.filter(app => {
+      const batchName = app.batch?.name || (app.batch?.year ? `Batch ${app.batch.year}` : '');
       const matchSearch = 
         (app.institute?.orgName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (app.course?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        batchName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (app.examinationNumber ? `Examination ${app.examinationNumber}` : '').toLowerCase().includes(searchQuery.toLowerCase());
       
       const appStatus = app.status || 'Pending';
       const matchFilter = statusFilter === 'All' || appStatus === statusFilter;
 
-      return matchSearch && matchFilter;
+      const appBatchId = app.batch?._id || app.batch?.id || app.batch;
+      const matchBatch = batchFilter === 'All' || String(appBatchId) === String(batchFilter);
+
+      return matchSearch && matchFilter && matchBatch;
     });
-  }, [examApplications, searchQuery, statusFilter]);
+  }, [examApplications, searchQuery, statusFilter, batchFilter]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, batchFilter]);
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
   const paginatedList = useMemo(() => {
@@ -211,6 +231,20 @@ const AcademyEligibility = ({
             />
           </div>
 
+          {/* Batch Filter Dropdown */}
+          {availableBatches.length > 0 && (
+            <select
+              value={batchFilter}
+              onChange={(e) => setBatchFilter(e.target.value)}
+              className="px-3 py-2.5 bg-slate-50 border border-gray-200 hover:border-gray-300 focus:border-blue-500 rounded-xl text-xs font-bold text-gray-800 focus:outline-none transition-all cursor-pointer"
+            >
+              <option value="All">All Batches</option>
+              {availableBatches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
+
           {/* Filters */}
           <div className="flex gap-2">
             <button
@@ -266,6 +300,7 @@ const AcademyEligibility = ({
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest w-12 text-center">#</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Institute</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Course</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Batch</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Examination</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Students</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</th>
@@ -288,6 +323,7 @@ const AcademyEligibility = ({
                       </td>
                       <td className="px-6 py-4 font-extrabold text-slate-900">{app.institute?.orgName || 'N/A'}</td>
                       <td className="px-6 py-4 text-slate-500 font-semibold">{app.course?.name || 'MBBS'}</td>
+                      <td className="px-6 py-4 font-bold text-indigo-700">{app.batch?.name || (app.batch?.year ? `Batch ${app.batch.year}` : 'N/A')}</td>
                       <td className="px-6 py-4 font-extrabold text-slate-900">{app.examinationNumber ? `Examination ${app.examinationNumber}` : 'N/A'}</td>
                       <td className="px-6 py-4 text-center font-extrabold text-slate-900">{app.students?.length || 0}</td>
                       <td className="px-6 py-4">
@@ -344,7 +380,7 @@ const AcademyEligibility = ({
                 })
               ) : (
                 <tr>
-                  <td colSpan="8" className="px-6 py-16 text-center text-gray-400 font-medium">
+                  <td colSpan="9" className="px-6 py-16 text-center text-gray-400 font-medium">
                     <ClipboardList className="w-10 h-10 mx-auto text-gray-300 mb-4 stroke-1 animate-pulse" />
                     <p className="text-sm font-bold text-slate-500">No exam applications requests found</p>
                     <p className="text-[10px] text-slate-400 mt-1">Adjust filters or search parameters and try again</p>
@@ -407,34 +443,40 @@ const AcademyEligibility = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2.5">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
-                    <span className="text-slate-800 font-bold block mt-0.5">{reviewingApp.examinationNumber ? `Examination ${reviewingApp.examinationNumber}` : 'N/A'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Batch</span>
+                    <span className="text-indigo-700 font-extrabold block mt-0.5">
+                      {reviewingApp.batch?.name || (reviewingApp.batch?.year ? `Batch ${reviewingApp.batch.year}` : 'N/A')}
+                    </span>
                   </div>
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrolled Candidates</span>
-                    <span className="text-indigo-600 font-mono font-black block text-xs mt-0.5">{reviewingApp.students?.length || 0} Students</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold block mt-0.5">{reviewingApp.examinationNumber ? `Examination ${reviewingApp.examinationNumber}` : 'N/A'}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2.5">
                   <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrolled Candidates</span>
+                    <span className="text-indigo-600 font-mono font-black block text-xs mt-0.5">{reviewingApp.students?.length || 0} Students</span>
+                  </div>
+                  <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">UTR Number</span>
                     <span className="text-slate-800 font-mono font-bold block text-xs mt-0.5">{reviewingApp.utrNumber || 'N/A'}</span>
                   </div>
-                  <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Exam Fee Receipt</span>
-                    {reviewingApp.examFeeReceiptUrl ? (
-                      <a 
-                        href={getUploadUrl(reviewingApp.examFeeReceiptUrl)}
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="text-blue-600 hover:text-blue-700 font-bold block text-xs mt-0.5 underline"
-                      >
-                        View Receipt
-                      </a>
-                    ) : (
-                      <span className="text-slate-400 font-semibold block text-xs mt-0.5">Not Provided</span>
-                    )}
-                  </div>
+                </div>
+                <div className="border-t border-slate-200/50 pt-2.5">
+                  <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Exam Fee Receipt</span>
+                  {reviewingApp.examFeeReceiptUrl ? (
+                    <a 
+                      href={getUploadUrl(reviewingApp.examFeeReceiptUrl)}
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="text-blue-600 hover:text-blue-700 font-bold block text-xs mt-0.5 underline"
+                    >
+                      View Receipt
+                    </a>
+                  ) : (
+                    <span className="text-slate-400 font-semibold block text-xs mt-0.5">Not Provided</span>
+                  )}
                 </div>
               </div>
 
@@ -563,13 +605,17 @@ const AcademyEligibility = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2">
                   <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Batch</span>
+                    <span className="text-indigo-700 font-extrabold">{publishingApp.batch?.name || (publishingApp.batch?.year ? `Batch ${publishingApp.batch.year}` : 'N/A')}</span>
+                  </div>
+                  <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
                     <span className="text-slate-800 font-bold">{publishingApp.examinationNumber ? `Examination ${publishingApp.examinationNumber}` : 'N/A'}</span>
                   </div>
-                  <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Students</span>
-                    <span className="text-indigo-600 font-black">{publishingApp.students?.length || 0}</span>
-                  </div>
+                </div>
+                <div className="border-t border-slate-200/50 pt-2">
+                  <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrolled Candidates</span>
+                  <span className="text-indigo-600 font-black">{publishingApp.students?.length || 0} Students</span>
                 </div>
               </div>
 

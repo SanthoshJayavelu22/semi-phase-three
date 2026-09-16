@@ -697,6 +697,64 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
   }
 };
 
+// ─── Publish Results Helper ──────────────────────────────────────────────────
+
+export const parsePublishDateTime = (dateInput: string | Date, timeStr?: string): Date => {
+  let year: number;
+  let monthIndex: number;
+  let day: number;
+
+  if (dateInput instanceof Date) {
+    year = dateInput.getFullYear();
+    monthIndex = dateInput.getMonth();
+    day = dateInput.getDate();
+  } else {
+    const cleanDate = dateInput.includes('T') ? dateInput.split('T')[0] : dateInput;
+    const parts = cleanDate.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      year = parts[0];
+      monthIndex = parts[1] - 1;
+      day = parts[2];
+    } else {
+      const d = new Date(dateInput);
+      year = d.getFullYear();
+      monthIndex = d.getMonth();
+      day = d.getDate();
+    }
+  }
+
+  let hours = 0;
+  let minutes = 0;
+
+  if (timeStr) {
+    const trimmed = timeStr.trim();
+    // 24-hour format: "HH:MM" or "HH:MM:SS"
+    const match24 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (match24) {
+      hours = parseInt(match24[1], 10);
+      minutes = parseInt(match24[2], 10);
+    } else {
+      // 12-hour format: "6 PM", "06:00 PM", "6:30am", "6:00"
+      const match12 = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+      if (match12) {
+        let h = parseInt(match12[1], 10);
+        const m = match12[2] ? parseInt(match12[2], 10) : 0;
+        const ampm = match12[3] ? match12[3].toUpperCase() : null;
+
+        if (ampm === 'PM' && h < 12) {
+          h += 12;
+        } else if (ampm === 'AM' && h === 12) {
+          h = 0;
+        }
+        hours = h;
+        minutes = m;
+      }
+    }
+  }
+
+  return new Date(year, monthIndex, day, hours, minutes, 0, 0);
+};
+
 // ─── Publish Results ──────────────────────────────────────────────────────────
 
 const publishResultsSchema = z.object({
@@ -704,7 +762,7 @@ const publishResultsSchema = z.object({
   batchId: z.string().min(1),
   courseId: z.string().min(1),
   academicYear: z.string().min(1),
-  publishDate: z.string().transform((val) => new Date(val)),
+  publishDate: z.string().min(1),
   publishTime: z.string().min(1),
   selectedStudentIds: z.array(z.string()).optional(),
   sendNotifications: z.boolean().default(false),
@@ -714,6 +772,14 @@ export const publishResults = async (req: Request, res: Response) => {
   try {
     const validatedData = publishResultsSchema.parse(req.body);
     const userId = req.user._id;
+
+    const scheduledDate = parsePublishDateTime(validatedData.publishDate, validatedData.publishTime);
+    if (isNaN(scheduledDate.getTime())) {
+      return sendError({ req, res, statusCode: 400, message: 'Invalid publication date or time provided.' });
+    }
+
+    const now = new Date();
+    const isFuture = scheduledDate.getTime() > now.getTime();
 
     // Resolve student IDs for this batch/course (Result model stores student ref only)
     const studentQuery: any = {
@@ -747,23 +813,28 @@ export const publishResults = async (req: Request, res: Response) => {
     const publishedResults: any[] = [];
 
     for (const result of results) {
+      // If already live-published in the past, skip
       if (result.isPublished) {
-        skippedCount++;
-        continue;
+        const isAlreadyLive = result.publishedDate && new Date(result.publishedDate) <= now;
+        if (isAlreadyLive) {
+          skippedCount++;
+          continue;
+        }
+        // If it was scheduled for future, allow updating/rescheduling to new date/time
       }
 
       result.isPublished = true;
-      result.publishedDate = validatedData.publishDate;
+      result.publishedDate = scheduledDate;
 
-      const deadline = new Date(validatedData.publishDate);
+      const deadline = new Date(scheduledDate);
       deadline.setDate(deadline.getDate() + 10);
       result.revaluationDeadline = deadline;
-      result.isRevaluationActive = true;
+      result.isRevaluationActive = !isFuture;
 
       result.auditHistory.push({
         action: 'PUBLISHED',
         performedBy: userId,
-        timestamp: new Date(),
+        timestamp: now,
       });
 
       await result.save();
@@ -771,29 +842,35 @@ export const publishResults = async (req: Request, res: Response) => {
       publishedResults.push(result);
     }
 
-    // Generate certificates for passed students
-    if (validatedData.sendNotifications) {
+    // Generate certificates for passed students if live publishing immediately
+    if (validatedData.sendNotifications && !isFuture) {
       for (const result of publishedResults) {
         if (result.resultStatus === 'PASS') {
-          // Generate provisional certificate
-          // This would call the certificate generation service
           console.log(`[MOCK] Generating provisional certificate for student: ${result.student}`);
         }
       }
     }
 
+    const statusText = isFuture ? 'Scheduled' : 'Published';
+    const message = isFuture
+      ? `Successfully scheduled ${publishedCount} results for publication on ${scheduledDate.toLocaleDateString()} at ${validatedData.publishTime}. Results will automatically become visible to institutes and students at that time.`
+      : `Published ${publishedCount} results successfully (${skippedCount} already published).`;
+
     return sendSuccess({
       req,
       res,
-      message: `Published ${publishedCount} results, ${skippedCount} already published`,
+      message,
       data: {
+        status: statusText,
+        isScheduled: isFuture,
         publishedCount,
         skippedCount,
         totalResults: results.length,
         publishedResults,
-        publishDate: validatedData.publishDate,
+        publishDate: scheduledDate,
         publishTime: validatedData.publishTime,
-        notificationsSent: validatedData.sendNotifications,
+        scheduledDate,
+        notificationsSent: validatedData.sendNotifications && !isFuture,
       },
     });
   } catch (error: any) {
@@ -827,12 +904,14 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
     const existingResults = await Result.find({
       student: { $in: studentIds },
       examination: examNum,
-    }).select('student isPublished');
+    }).select('student isPublished publishedDate');
 
     const resultMap = new Map();
     for (const r of existingResults) {
       resultMap.set(String(r.student), r);
     }
+
+    const now = new Date();
 
     const statusData = students.map((student) => {
       const examinationRecord = student.examinations.find(
@@ -848,7 +927,20 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
 
       const resultRecord = resultMap.get(String(student._id));
       const resultExists = !!resultRecord;
-      const isPublished = resultExists && resultRecord.isPublished;
+      const isPublished = resultExists && !!resultRecord.isPublished;
+      const isScheduled = isPublished && resultRecord.publishedDate && new Date(resultRecord.publishedDate) > now;
+      const isLivePublished = isPublished && !isScheduled;
+
+      let status = 'No Marks';
+      if (isScheduled) {
+        status = 'Scheduled';
+      } else if (isLivePublished) {
+        status = 'Published';
+      } else if (hasMarks && allMarked) {
+        status = 'Ready';
+      } else if (hasMarks) {
+        status = 'Partial';
+      }
 
       return {
         studentId: student._id,
@@ -858,13 +950,9 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
         allMarked: hasMarks ? allMarked : false,
         resultExists,
         isPublished,
-        status: isPublished
-          ? 'Published'
-          : hasMarks && allMarked
-            ? 'Ready'
-            : hasMarks
-              ? 'Partial'
-              : 'No Marks',
+        isScheduled,
+        publishedDate: resultRecord?.publishedDate || null,
+        status,
         student,
       };
     });
@@ -874,13 +962,14 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
     const partial = statusData.filter((s) => s.status === 'Partial').length;
     const noMarks = statusData.filter((s) => s.status === 'No Marks').length;
     const published = statusData.filter((s) => s.status === 'Published').length;
+    const scheduled = statusData.filter((s) => s.status === 'Scheduled').length;
 
     return sendSuccess({
       req,
       res,
       message: 'Publication status retrieved successfully',
       data: {
-        summary: { total, ready, partial, noMarks, published },
+        summary: { total, ready, partial, noMarks, published, scheduled },
         students: statusData,
       },
     });

@@ -139,6 +139,19 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
       }
     }
 
+    // Check if result exists and verify student is a failed student
+    const result = await Result.findById(resultId);
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+    }
+    const hasFailedStatus = result.resultStatus === 'FAIL' || result.resultStatus === 'SUPPLEMENTARY';
+    const failedSubjects = (result.subjects || []).filter((s: any) => 
+      ['F', 'RA', 'WH'].includes(s.grade) || ((s.totalMarks || 0) < 40 && s.grade !== 'ABSENT')
+    );
+    if (result.resultStatus === 'PASS' && failedSubjects.length === 0) {
+      return sendError({ req, res, statusCode: 400, message: 'Only failed students can apply for revaluation' });
+    }
+
     // Check if payment already processed
     const existingRequest = await RevaluationRequest.findOne({
       student: studentId,
@@ -524,7 +537,6 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
         continue;
       }
 
-
       // Check if request already exists
       const existingRequest = await RevaluationRequest.findOne({
         student: student._id,
@@ -534,24 +546,43 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
 
       if (existingRequest) continue;
 
+      // Only failed students can apply for revaluation. Pass students should not be shown.
+      const hasFailedStatus = result.resultStatus === 'FAIL' || result.resultStatus === 'SUPPLEMENTARY';
+      const failedSubjects = (result.subjects || []).filter((s: any) => 
+        ['F', 'RA', 'WH'].includes(s.grade) || ((s.totalMarks || 0) < 40 && s.grade !== 'ABSENT')
+      );
+      const isFailedStudent = hasFailedStatus || failedSubjects.length > 0;
+      const isPassStudent = result.resultStatus === 'PASS' && failedSubjects.length === 0;
+
+      if (isPassStudent || !isFailedStudent) {
+        // Skip pass students completely
+        continue;
+      }
+
       const allSubjects = result.subjects.map((subject: any) => {
         const isAbsent = subject.grade === 'ABSENT';
         const marks = subject.totalMarks || 0;
+        const isSubjectPassed = !isAbsent && marks >= 40 && !['F', 'RA', 'WH'].includes(subject.grade);
+        const isSubjectFailed = !isAbsent && !isSubjectPassed;
         return {
           subjectCode: subject.subjectCode,
           subjectName: subject.subjectName,
           originalMarks: marks,
-          originalGrade: subject.grade || 'F',
+          originalGrade: subject.grade || (isSubjectPassed ? 'P' : 'F'),
           internalMarks: subject.internalMarks || 0,
           externalMarks: subject.externalMarks || 0,
           isAbsent,
-          isEligible: !isAbsent,
+          isPassed: isSubjectPassed,
+          isFailed: isSubjectFailed,
+          // Only failed subjects are eligible for revaluation (absent must reappear, passed cannot be revalued)
+          isEligible: isSubjectFailed,
           revaluationReason: '',
         };
       });
 
       const eligibleSubjects = allSubjects.filter((subject: any) => subject.isEligible);
 
+      // If no eligible failed subjects (e.g. absent in all subjects, so can only reappear), skip
       if (eligibleSubjects.length === 0) continue;
 
       const feePerSubject = Number(process.env.REVALUATION_FEE_PER_SUBJECT_INR) || 500;
@@ -564,6 +595,7 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
         course: student.course,
         instituteId: institute._id,
         resultId: result._id,
+        resultStatus: result.resultStatus || 'FAIL',
         examination: examNum,
         academicYear: result.academicYear,
         subjects: eligibleSubjects,
@@ -621,6 +653,22 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
       return sendError({ req, res, statusCode: 400, message: 'Revaluation period has expired for this result' });
     }
 
+    // Only failed students can apply for revaluation
+    const hasFailedStatus = result.resultStatus === 'FAIL' || result.resultStatus === 'SUPPLEMENTARY';
+    const failedSubjects = (result.subjects || []).filter((s: any) => 
+      ['F', 'RA', 'WH'].includes(s.grade) || ((s.totalMarks || 0) < 40 && s.grade !== 'ABSENT')
+    );
+    const isPassStudent = result.resultStatus === 'PASS' && failedSubjects.length === 0;
+
+    if (isPassStudent || (!hasFailedStatus && failedSubjects.length === 0)) {
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: 'Student has passed this examination. Revaluation is only available for failed students.',
+      });
+    }
+
     // Check if already paid
     const existingPayment = await FeeRecord.findOne({
       student: student._id,
@@ -642,15 +690,20 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
     const allSubjects = result.subjects.map((subject: any) => {
       const isAbsent = subject.grade === 'ABSENT';
       const marks = subject.totalMarks || 0;
+      const isSubjectPassed = !isAbsent && marks >= 40 && !['F', 'RA', 'WH'].includes(subject.grade);
+      const isSubjectFailed = !isAbsent && !isSubjectPassed;
       return {
         subjectCode: subject.subjectCode,
         subjectName: subject.subjectName,
         originalMarks: marks,
-        originalGrade: subject.grade || 'F',
+        originalGrade: subject.grade || (isSubjectPassed ? 'P' : 'F'),
         internalMarks: subject.internalMarks || 0,
         externalMarks: subject.externalMarks || 0,
         isAbsent,
-        isEligible: !isAbsent,
+        isPassed: isSubjectPassed,
+        isFailed: isSubjectFailed,
+        // Only failed subjects are eligible for revaluation
+        isEligible: isSubjectFailed,
         revaluationReason: '',
       };
     });
@@ -658,7 +711,7 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
     const eligibleSubjects = allSubjects.filter((subject: any) => subject.isEligible);
 
     if (eligibleSubjects.length === 0) {
-      return sendError({ req, res, statusCode: 400, message: 'No eligible subjects found for revaluation' });
+      return sendError({ req, res, statusCode: 400, message: 'No eligible failed subjects found for revaluation' });
     }
 
     const feePerSubject = Number(process.env.REVALUATION_FEE_PER_SUBJECT_INR) || 500;

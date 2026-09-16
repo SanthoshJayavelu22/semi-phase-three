@@ -13,12 +13,14 @@ const STEPS = [
 
 const InstituteERPExams = ({
   courses = [],
+  batches = [],
   students = [],
   examApplications = [],
   fetchERPData
 }) => {
   const [step, setStep] = useState(1);
   const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [selectedBatchId, setSelectedBatchId] = useState('');
   const [selectedExamination, setSelectedExamination] = useState('');
 
   const [viewingApp, setViewingApp] = useState(null);
@@ -59,12 +61,37 @@ const InstituteERPExams = ({
     }
   }, [courses, selectedCourseId]);
 
+  const courseBatches = useMemo(() => {
+    if (!selectedCourseId) return [];
+    return batches.filter(b => {
+      const bCourseId = b.course?._id || b.course?.id || b.course || b.courseId;
+      return String(bCourseId) === String(selectedCourseId);
+    });
+  }, [batches, selectedCourseId]);
+
+  useEffect(() => {
+    if (courseBatches.length > 0) {
+      const exists = courseBatches.some(b => String(b.id || b._id) === String(selectedBatchId));
+      if (!exists) {
+        setSelectedBatchId(courseBatches[0].id || courseBatches[0]._id);
+      }
+    } else {
+      setSelectedBatchId('');
+    }
+  }, [courseBatches, selectedBatchId]);
+
+  const selectedBatch = useMemo(() => {
+    return batches.find(b => String(b.id || b._id) === String(selectedBatchId));
+  }, [batches, selectedBatchId]);
+
   const filteredStudents = useMemo(() => {
     if (!selectedCourseId) return [];
-    return students.filter(s =>
-      String(s.courseId) === String(selectedCourseId)
-    );
-  }, [students, selectedCourseId]);
+    return students.filter(s => {
+      const matchCourse = String(s.courseId) === String(selectedCourseId);
+      const matchBatch = selectedBatchId ? String(s.batchId) === String(selectedBatchId) : true;
+      return matchCourse && matchBatch;
+    });
+  }, [students, selectedCourseId, selectedBatchId]);
 
   const filteredStudentIdsKey = filteredStudents
     .map((s) => s.id || s._id)
@@ -138,7 +165,7 @@ const InstituteERPExams = ({
         map[s.id || s._id] = { isEligible: false, reasonsText: `No record for Exam ${selectedExamination}` };
         return;
       }
-      const isVerified = s.verificationStatus === 'Approved';
+      const isVerified = (s.verificationStatus === 'Approved' || String(s.verificationStatus || s.status).toLowerCase() === 'approved');
       const isAttendanceOk = (sem.attendancePercentage || 0) >= 75;
       const isThesisUploaded = !!sem.thesisDocumentUrl;
       const isThesisOk = !!sem.thesisApproved;
@@ -200,7 +227,7 @@ const InstituteERPExams = ({
   }, [filteredStudents, studentEligibility]);
 
   const canProceedFrom = (s) => {
-    if (s === 1) return !!selectedCourseId && !!selectedExamination;
+    if (s === 1) return !!selectedCourseId && !!selectedBatchId && !!selectedExamination;
     if (s === 2) return eligibleStudentIds.length > 0;
     return true;
   };
@@ -208,9 +235,17 @@ const InstituteERPExams = ({
   const handleNext = () => {
     if (!canProceedFrom(step)) {
       if (step === 1) {
-        setToast({ message: 'Please select a course and examination.', type: 'warning' });
+        if (!selectedCourseId) {
+          setToast({ message: 'Please select a course.', type: 'warning' });
+        } else if (!selectedBatchId) {
+          setToast({ message: 'Please select an academic batch.', type: 'warning' });
+        } else if (!selectedExamination) {
+          setToast({ message: 'Please select an examination.', type: 'warning' });
+        } else {
+          setToast({ message: 'Please select course, batch, and examination.', type: 'warning' });
+        }
       } else if (step === 2) {
-        setToast({ message: 'No eligible students found. Cannot proceed to submit.', type: 'warning' });
+        setToast({ message: 'No eligible students found in this batch. Cannot proceed to submit.', type: 'warning' });
       }
       return;
     }
@@ -232,10 +267,10 @@ const InstituteERPExams = ({
       const courseSubjects = selectedCourse?.subjects || ['All'];
       const payload = {
         courseId: selectedCourseId,
+        batchId: selectedBatchId,
         examinationNumber: parseInt(selectedExamination),
         studentIds: eligibleStudentIds,
         subjects: courseSubjects,
-        batchId: filteredStudents[0]?.batchId || filteredStudents[0]?.batch?._id || filteredStudents[0]?.batch,
       };
       await examService.applyForExam(payload);
       if (fetchERPData) {
@@ -317,20 +352,44 @@ const InstituteERPExams = ({
       <div>
         <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-blue-500" />
-          Select Course & Examination
+          Select Course, Batch & Examination
         </h3>
-        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Choose the course and examination to prepare exam applications</p>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Choose the course, batch, and examination to prepare exam applications</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course *</label>
           <select
             value={selectedCourseId}
-            onChange={(e) => { setSelectedCourseId(e.target.value); setSelectedExamination(''); }}
+            onChange={(e) => { 
+              setSelectedCourseId(e.target.value); 
+              setSelectedBatchId('');
+              setSelectedExamination(''); 
+            }}
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
           >
             {courses.map(c => <option key={c.id || c._id} value={c.id || c._id}>{c.courseName || c.name}</option>)}
             {courses.length === 0 && <option value="">No courses available</option>}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Academic Batch *</label>
+          <select
+            value={selectedBatchId}
+            onChange={(e) => { 
+              setSelectedBatchId(e.target.value); 
+              setSelectedExamination(''); 
+            }}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            required
+          >
+            <option value="">Select Batch</option>
+            {courseBatches.map(b => (
+              <option key={b.id || b._id} value={b.id || b._id}>
+                {b.name || `Batch ${b.year || ''}`}
+              </option>
+            ))}
+            {courseBatches.length === 0 && <option value="" disabled>No batches found for this course</option>}
           </select>
         </div>
         <div>
@@ -348,15 +407,16 @@ const InstituteERPExams = ({
           </select>
         </div>
       </div>
-      {selectedCourseId && selectedExamination && (
+      {selectedCourseId && selectedBatchId && selectedExamination && (
         <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 flex items-center gap-3">
-          <GraduationCap className="w-8 h-8 text-blue-400" />
+          <GraduationCap className="w-8 h-8 text-blue-400 flex-shrink-0" />
           <div>
             <p className="text-sm font-extrabold text-slate-800">
               {courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected Course'}
+              <span className="text-indigo-600 font-black ml-2">({selectedBatch?.name || 'Batch'})</span>
             </p>
             <p className="text-[10px] font-bold text-slate-400">
-              Examination {selectedExamination} · {filteredStudents.length} student(s) enrolled
+              Examination {selectedExamination} · {filteredStudents.length} student(s) enrolled in this batch
             </p>
           </div>
         </div>
@@ -378,7 +438,9 @@ const InstituteERPExams = ({
           <p className="text-xs font-bold text-slate-600">
             Course: <span className="text-slate-800">{courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected'}</span>
             <span className="text-slate-300 mx-2">|</span>
-            Examination: <span className="text-slate-800">{selectedExamination}</span>
+            Batch: <span className="text-indigo-600 font-extrabold">{selectedBatch?.name || 'Selected Batch'}</span>
+            <span className="text-slate-300 mx-2">|</span>
+            Examination: <span className="text-slate-800">Examination {selectedExamination}</span>
           </p>
         </div>
       )}
@@ -549,24 +611,24 @@ const InstituteERPExams = ({
             <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Course</span>
             <span className="text-sm font-extrabold text-slate-800">{selectedCourse?.courseName || 'Selected Course'}</span>
           </div>
+          <div className="bg-indigo-50/40 border border-indigo-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Academic Batch</span>
+            <span className="text-sm font-extrabold text-indigo-800">{selectedBatch?.name || 'Selected Batch'}</span>
+          </div>
           <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4">
             <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Examination</span>
             <span className="text-sm font-extrabold text-slate-800">Examination {selectedExamination}</span>
           </div>
           <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-4">
-            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Eligible Students</span>
-            <span className="text-sm font-extrabold text-emerald-700">{eligibleStudentIds.length}</span>
-          </div>
-          <div className="bg-slate-50/40 border border-slate-100 rounded-2xl p-4">
-            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Total Enrolled</span>
-            <span className="text-sm font-extrabold text-slate-700">{filteredStudents.length}</span>
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Eligible Students (Batch)</span>
+            <span className="text-sm font-extrabold text-emerald-700">{eligibleStudentIds.length} / {filteredStudents.length}</span>
           </div>
         </div>
         <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-bold text-amber-800">Review before submitting</p>
-            <p className="text-[10px] text-amber-700 mt-0.5">This will create exam applications for all {eligibleStudentIds.length} eligible student(s). Ineligible students will be excluded.</p>
+            <p className="text-[10px] text-amber-700 mt-0.5">This will create an exam application specifically for {selectedBatch?.name || 'this batch'} for {eligibleStudentIds.length} eligible student(s). Ineligible students will be excluded.</p>
           </div>
         </div>
         {submitting && (
@@ -665,7 +727,7 @@ const InstituteERPExams = ({
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px]">
                     <th className="px-4 py-4 font-black w-12 text-center">#</th>
-                    <th className="px-4 py-4 font-black">Course</th>
+                    <th className="px-4 py-4 font-black">Course & Batch</th>
                     <th className="px-4 py-4 font-black text-center">Students</th>
                     <th className="px-4 py-4 font-black text-center">Status</th>
                     <th className="px-4 py-4 font-black text-center">Action</th>
@@ -680,6 +742,9 @@ const InstituteERPExams = ({
                         <td className="px-4 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
                         <td className="px-4 py-4">
                           <span className="font-bold text-slate-700 block">{app.course?.name || 'Course'}</span>
+                          <span className="text-[10px] font-bold text-indigo-600 block">
+                            {app.batch?.name || (app.batch?.year ? `Batch ${app.batch.year}` : 'Batch')}
+                          </span>
                           <span className="text-[10px] text-slate-400">Exam {app.examinationNumber}</span>
                         </td>
                         <td className="px-4 py-4 text-center font-bold text-slate-700">{app.students?.length || 0}</td>
@@ -781,10 +846,26 @@ const InstituteERPExams = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  <div>
+                    <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Academic Batch</span>
+                    <span className="text-indigo-600 font-bold">{viewingApp.batch?.name || (viewingApp.batch?.year ? `Batch ${viewingApp.batch.year}` : 'N/A')}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-3">
+                <div className="flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-slate-400" />
                   <div>
                     <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
-                    <span className="text-slate-800 font-bold">{viewingApp.examinationNumber}</span>
+                    <span className="text-slate-800 font-bold">Examination {viewingApp.examinationNumber}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  <div>
+                    <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Batch Candidates</span>
+                    <span className="text-slate-800 font-bold">{viewingApp.students?.length || 0} enrolled</span>
                   </div>
                 </div>
               </div>

@@ -138,4 +138,8 @@ const examApplicationSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+// Batch-level compound indexes for efficient lookups and querying
+examApplicationSchema.index({ institute: 1, course: 1, batch: 1, examinationNumber: 1 });
+examApplicationSchema.index({ batch: 1, examinationNumber: 1, status: 1 });
+
 export const ExamApplication = mongoose.model<IExamApplication>('ExamApplication', examApplicationSchema);

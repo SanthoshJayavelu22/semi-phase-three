@@ -1201,24 +1201,25 @@ export const listStudents = async (req: Request, res: Response) => {
     const formattedStudents = students.map((student) => {
       const sObj: any = student.toObject();
       const sExaminations = sObj.examinations || [];
-      const latestExam = sExaminations.length > 0 ? sExaminations[sExaminations.length - 1] : null;
+      const examWithData = [...sExaminations].reverse().find((e: any) => (e.attendancePercentage && e.attendancePercentage > 0) || e.thesisApproved || e.eligibilityStatus === 'Approved') || sExaminations[0] || null;
 
       const attendancePct = (sObj.attendancePercentage !== undefined && sObj.attendancePercentage !== null && sObj.attendancePercentage > 0)
         ? sObj.attendancePercentage
-        : (latestExam && latestExam.attendancePercentage !== undefined ? latestExam.attendancePercentage : 0);
+        : (examWithData && examWithData.attendancePercentage !== undefined ? examWithData.attendancePercentage : 0);
 
       const isThesisApproved = Boolean(sObj.thesisApproved || sExaminations.some((sem: any) => sem.thesisApproved));
       const isThesisUploaded = Boolean(sExaminations.some((sem: any) => sem.thesisDocumentUrl));
       const isRemitted = Boolean(sObj.remittedToAcademy || sObj.razorpayPaymentId);
+      const isAnyExamApproved = sExaminations.some((sem: any) => sem.eligibilityStatus === 'Approved');
 
       let isStudentEligible = false;
       if (examinationNumber) {
         const sem = sExaminations.find((s: any) => s.examinationNumber === parseInt(examinationNumber as string));
         if (sem) {
-          isStudentEligible = sem.attendancePercentage >= 75 && sem.thesisApproved;
+          isStudentEligible = sem.eligibilityStatus === 'Approved' || (sem.attendancePercentage >= 75 && sem.thesisApproved);
         }
       } else {
-        isStudentEligible = isRemitted && attendancePct >= 75 && (isThesisApproved || isThesisUploaded);
+        isStudentEligible = isAnyExamApproved || (isRemitted && attendancePct >= 75 && (isThesisApproved || isThesisUploaded));
       }
 
       return {
@@ -1234,7 +1235,7 @@ export const listStudents = async (req: Request, res: Response) => {
     return sendSuccess({
       req,
       res,
-      message: 'Students list retrieved successfully',
+      message: 'Students retrieved successfully',
       data: formattedStudents,
     });
   } catch (error: any) {
@@ -1244,8 +1245,8 @@ export const listStudents = async (req: Request, res: Response) => {
 
 export const updateAcademicMetrics = async (req: Request, res: Response) => {
   try {
-    const { studentId } = req.params;
     const validatedData = studentMetricsUpdateSchema.parse(req.body);
+    const { studentId } = req.params;
     const query: any = { _id: studentId };
 
     if (req.user.role === 'institute') {
@@ -1293,9 +1294,14 @@ export const updateAcademicMetrics = async (req: Request, res: Response) => {
       }
     }
 
+    // Keep student-level aggregations in sync with examination metrics
+    student.thesisApproved = student.examinations.some(e => e.thesisApproved);
+    student.attendancePercentage = Math.max(...student.examinations.map(e => e.attendancePercentage || 0));
+
     await student.save();
 
-    const isStudentEligible = student.examinations[examinationIndex].attendancePercentage >= 75 && student.examinations[examinationIndex].thesisApproved;
+    const isStudentEligible = student.examinations[examinationIndex].eligibilityStatus === 'Approved' ||
+      (student.examinations[examinationIndex].attendancePercentage >= 75 && student.examinations[examinationIndex].thesisApproved);
 
     return sendSuccess({
       req,
@@ -1416,7 +1422,8 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
       },
     };
 
-    const isEligible = checklist.feeStatus.isValid && checklist.attendance.isValid && checklist.thesisApproval.isValid && checklist.courseCertificates.isValid;
+    const isEligible = examRecord.eligibilityStatus === 'Approved' || 
+      (checklist.feeStatus.isValid && checklist.attendance.isValid && checklist.thesisApproval.isValid && checklist.courseCertificates.isValid);
 
     return sendSuccess({
       req,
@@ -1986,14 +1993,20 @@ export const getReappearingStudents = async (req: Request, res: Response) => {
     const reappearingStudents = students
       .map(s => {
         const result = resultMap.get(s._id.toString());
+        if (!result) return null;
+
         const failedSubjects = (result?.subjects || [])
-          .filter((sub: any) => ['F', 'RA', 'ABSENT'].includes(sub.grade))
+          .filter((sub: any) => ['F', 'RA', 'ABSENT', 'WH'].includes(sub.grade) || (sub.totalMarks !== undefined && sub.totalMarks < 40))
           .map((sub: any) => ({
             subjectCode: sub.subjectCode,
             subjectName: sub.subjectName,
             originalMarks: sub.totalMarks || 0,
             originalGrade: sub.grade,
           }));
+
+        if (result.resultStatus === 'PASS' && failedSubjects.length === 0) {
+          return null;
+        }
 
         return {
           studentId: s._id,
@@ -2007,7 +2020,7 @@ export const getReappearingStudents = async (req: Request, res: Response) => {
           hasPayment: paidStudentIds.has(s._id.toString()),
         };
       })
-      .filter(s => s.failedSubjects.length > 0);
+      .filter((s): s is NonNullable<typeof s> => !!s && s.failedSubjects.length > 0);
 
     return sendSuccess({
       req,

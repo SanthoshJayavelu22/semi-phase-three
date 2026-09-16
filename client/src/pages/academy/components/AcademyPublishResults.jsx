@@ -83,6 +83,7 @@ const AcademyPublishResults = () => {
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
   const [publishDate, setPublishDate] = useState('');
   const [publishTime, setPublishTime] = useState('');
+  const [publishMinute, setPublishMinute] = useState('00');
   const [publishAMPM, setPublishAMPM] = useState('AM');
   const [includeAllStudents, setIncludeAllStudents] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState([]);
@@ -166,8 +167,8 @@ const AcademyPublishResults = () => {
   }, [batches, selectedCourse]);
 
   const statusSummary = useMemo(() => {
-    if (!publicationStatus) return { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0 };
-    return publicationStatus.summary || { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0 };
+    if (!publicationStatus) return { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0, scheduled: 0 };
+    return publicationStatus.summary || { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0, scheduled: 0 };
   }, [publicationStatus]);
 
   const studentList = useMemo(() => {
@@ -249,7 +250,7 @@ const AcademyPublishResults = () => {
 
     setConfirmConfig({
       title: 'Publish Results',
-      message: `Are you sure you want to publish results for ${readyToPublish} student(s)?\n\n• Date: ${new Date(publishDate).toLocaleDateString()}\n• Time: ${publishTime} ${publishAMPM}\n• Notifications: ${sendNotifications ? 'Yes' : 'No'}`,
+      message: `Are you sure you want to publish results for ${readyToPublish} student(s)?\n\n• Date: ${new Date(publishDate).toLocaleDateString()}\n• Time: ${publishTime}:${publishMinute} ${publishAMPM}\n• Notifications: ${sendNotifications ? 'Yes' : 'No'}`,
       type: 'success',
       confirmText: 'Publish Now',
       onConfirm: async () => {
@@ -263,7 +264,7 @@ const AcademyPublishResults = () => {
             courseId: selectedCourse,
             academicYear: selectedAcademicYear || new Date().getFullYear().toString(),
             publishDate,
-            publishTime: `${publishTime} ${publishAMPM}`,
+            publishTime: `${publishTime}:${publishMinute} ${publishAMPM}`,
             selectedStudentIds: !includeAllStudents ? selectedStudents : undefined,
             sendNotifications,
           };
@@ -274,8 +275,11 @@ const AcademyPublishResults = () => {
           setPublishResult(data);
           setStep(3);
 
+          const isScheduled = data.isScheduled || data.status === 'Scheduled';
           setToast({
-            message: `✅ Published ${data.publishedCount} results successfully!`,
+            message: isScheduled
+              ? `🗓️ Successfully scheduled ${data.publishedCount} results for ${data.publishTime}!`
+              : `✅ Published ${data.publishedCount} results successfully!`,
             type: 'success',
           });
 
@@ -300,6 +304,7 @@ const AcademyPublishResults = () => {
     setSelectedAcademicYear('');
     setPublishDate('');
     setPublishTime('');
+    setPublishMinute('00');
     setSelectedStudents([]);
     setIncludeAllStudents(true);
     setCurrentPage(1);
@@ -329,6 +334,7 @@ const AcademyPublishResults = () => {
       Partial: { label: '⚠️ Partial', color: 'bg-amber-100 text-amber-700 border-amber-200' },
       'No Marks': { label: '❌ No Marks', color: 'bg-rose-100 text-rose-700 border-rose-200' },
       Published: { label: '📄 Published', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+      Scheduled: { label: '⏰ Scheduled', color: 'bg-purple-100 text-purple-700 border-purple-200' },
     };
     return map[status] || map['No Marks'];
   };
@@ -337,6 +343,7 @@ const AcademyPublishResults = () => {
     if (status === 'Ready') return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
     if (status === 'Partial') return <AlertCircle className="w-4 h-4 text-amber-600" />;
     if (status === 'Published') return <CheckCircle2 className="w-4 h-4 text-blue-600" />;
+    if (status === 'Scheduled') return <Clock className="w-4 h-4 text-purple-600" />;
     return <X className="w-4 h-4 text-rose-600" />;
   };
 
@@ -482,6 +489,12 @@ const AcademyPublishResults = () => {
               <X className="w-4 h-4 text-rose-600" />
               <span className="text-sm font-bold text-rose-700">No Marks: {statusSummary.noMarks}</span>
             </div>
+            {statusSummary.scheduled > 0 && (
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-bold text-purple-700">Scheduled: {statusSummary.scheduled}</span>
+              </div>
+            )}
             {statusSummary.published > 0 && (
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-blue-600" />
@@ -695,7 +708,7 @@ const AcademyPublishResults = () => {
                   type="number"
                   min="1"
                   max="12"
-                  placeholder="10"
+                  placeholder="6"
                   value={publishTime}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
@@ -705,13 +718,31 @@ const AcademyPublishResults = () => {
                       setPublishTime('');
                     }
                   }}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  className="w-full pl-10 pr-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
                 />
               </div>
               <select
+                value={publishMinute}
+                onChange={(e) => setPublishMinute(e.target.value)}
+                className="px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value="00">:00</option>
+                <option value="05">:05</option>
+                <option value="10">:10</option>
+                <option value="15">:15</option>
+                <option value="20">:20</option>
+                <option value="25">:25</option>
+                <option value="30">:30</option>
+                <option value="35">:35</option>
+                <option value="40">:40</option>
+                <option value="45">:45</option>
+                <option value="50">:50</option>
+                <option value="55">:55</option>
+              </select>
+              <select
                 value={publishAMPM}
                 onChange={(e) => setPublishAMPM(e.target.value)}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                className="px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
               >
                 <option value="AM">AM</option>
                 <option value="PM">PM</option>
@@ -795,51 +826,62 @@ const AcademyPublishResults = () => {
   );
 
   // ─── Step 3: Publication Complete ──────────────────────────────────────────
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center">
-        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-        </div>
-        <h3 className="text-xl font-black text-emerald-800">🎉 Results Published Successfully!</h3>
-        <p className="text-sm text-emerald-700 font-medium mt-2">
-          {publishResult?.publishedCount} results published, {publishResult?.skippedCount} already published
-        </p>
-        <div className="mt-3 flex items-center justify-center gap-4 text-xs text-emerald-700">
-          <span>📅 {publishDate ? new Date(publishDate).toLocaleDateString() : 'N/A'}</span>
-          <span>⏰ {publishTime} {publishAMPM}</span>
-          <span>📧 {sendNotifications ? 'Notifications Sent' : 'No Notifications'}</span>
-        </div>
-      </div>
+  const renderStep3 = () => {
+    const isScheduled = publishResult?.isScheduled || publishResult?.status === 'Scheduled';
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-          <span className="text-[10px] uppercase font-black text-slate-400 block">Published</span>
-          <span className="text-2xl font-black text-emerald-600">{publishResult?.publishedCount || 0}</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-          <span className="text-[10px] uppercase font-black text-slate-400 block">Skipped</span>
-          <span className="text-2xl font-black text-amber-600">{publishResult?.skippedCount || 0}</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-          <span className="text-[10px] uppercase font-black text-slate-400 block">Total</span>
-          <span className="text-2xl font-black text-slate-800">{publishResult?.totalResults || 0}</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-          <span className="text-[10px] uppercase font-black text-slate-400 block">Notifications</span>
-          <span className="text-2xl font-black text-blue-600">{sendNotifications ? '✅ Sent' : '⏸️ Off'}</span>
-        </div>
-      </div>
-
-
-
-      {/* Generated Results Preview */}
-      {publishResult?.publishedResults?.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-slate-200 bg-slate-50/50">
-            <h4 className="text-sm font-bold text-slate-700">Published Results</h4>
+    return (
+      <div className="space-y-6">
+        <div className={`p-6 text-center rounded-2xl border ${
+          isScheduled ? 'bg-purple-50 border-purple-200' : 'bg-emerald-50 border-emerald-200'
+        }`}>
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
+            isScheduled ? 'bg-purple-100 text-purple-600' : 'bg-emerald-100 text-emerald-600'
+          }`}>
+            {isScheduled ? <Clock className="w-10 h-10" /> : <CheckCircle2 className="w-10 h-10" />}
           </div>
+          <h3 className={`text-xl font-black ${isScheduled ? 'text-purple-800' : 'text-emerald-800'}`}>
+            {isScheduled ? '🗓️ Results Scheduled Successfully!' : '🎉 Results Published Successfully!'}
+          </h3>
+          <p className={`text-sm font-medium mt-2 ${isScheduled ? 'text-purple-700' : 'text-emerald-700'}`}>
+            {isScheduled
+              ? `${publishResult?.publishedCount} results scheduled. They will automatically become visible to institutes and students at the scheduled date and time.`
+              : `${publishResult?.publishedCount} results published, ${publishResult?.skippedCount} already published`}
+          </p>
+          <div className={`mt-3 flex items-center justify-center gap-4 text-xs font-semibold ${
+            isScheduled ? 'text-purple-700' : 'text-emerald-700'
+          }`}>
+            <span>📅 {publishDate ? new Date(publishDate).toLocaleDateString() : 'N/A'}</span>
+            <span>⏰ {publishTime}:{publishMinute} {publishAMPM}</span>
+            <span>📧 {sendNotifications ? (isScheduled ? 'Notifications deferred to release time' : 'Notifications Sent') : 'No Notifications'}</span>
+          </div>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">{isScheduled ? 'Scheduled' : 'Published'}</span>
+            <span className={`text-2xl font-black ${isScheduled ? 'text-purple-600' : 'text-emerald-600'}`}>{publishResult?.publishedCount || 0}</span>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Skipped</span>
+            <span className="text-2xl font-black text-amber-600">{publishResult?.skippedCount || 0}</span>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Total</span>
+            <span className="text-2xl font-black text-slate-800">{publishResult?.totalResults || 0}</span>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Notifications</span>
+            <span className="text-2xl font-black text-blue-600">{sendNotifications ? (isScheduled ? '⏰ Deferred' : '✅ Sent') : '⏸️ Off'}</span>
+          </div>
+        </div>
+
+        {/* Generated Results Preview */}
+        {publishResult?.publishedResults?.length > 0 && (
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-slate-200 bg-slate-50/50">
+              <h4 className="text-sm font-bold text-slate-700">{isScheduled ? 'Scheduled Results' : 'Published Results'}</h4>
+            </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -899,6 +941,7 @@ const AcademyPublishResults = () => {
       </div>
     </div>
   );
+};
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
