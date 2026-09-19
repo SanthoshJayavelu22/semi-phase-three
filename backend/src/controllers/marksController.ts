@@ -1159,12 +1159,19 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
         (s: any) => s.examinationNumber === examNum
       );
 
-      const hasMarks = examinationRecord?.marks && examinationRecord.marks.length > 0;
-      const allMarked = examinationRecord?.marks
-        ? examinationRecord.marks.every(
-            (m: any) => m.isAbsent === true || m.marksObtained !== null
-          )
-        : false;
+      const isMarkRecorded = (m: any) =>
+        m &&
+        (m.isAbsent === true ||
+          (typeof m.status === 'string' && m.status.trim() !== '') ||
+          (typeof m.grade === 'string' && m.grade.trim() !== '' && m.grade !== 'NOT RECORDED') ||
+          (m.marksObtained !== null && m.marksObtained !== undefined));
+
+      const marks = examinationRecord?.marks || [];
+      const totalMarksCount = marks.length;
+      const recordedMarksCount = marks.filter(isMarkRecorded).length;
+
+      const hasAnyMarks = recordedMarksCount > 0;
+      const allMarked = totalMarksCount > 0 && recordedMarksCount === totalMarksCount;
 
       const resultRecord = resultMap.get(String(student._id));
       const resultExists = !!resultRecord;
@@ -1177,9 +1184,9 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
         status = 'Scheduled';
       } else if (isLivePublished) {
         status = 'Published';
-      } else if (hasMarks && allMarked) {
+      } else if (hasAnyMarks && allMarked) {
         status = 'Ready';
-      } else if (hasMarks) {
+      } else if (hasAnyMarks) {
         status = 'Partial';
       }
 
@@ -1187,8 +1194,8 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
         studentId: student._id,
         name: `${student.firstName} ${student.lastName}`,
         enrollmentId: student.enrollmentId,
-        hasMarks: hasMarks || false,
-        allMarked: hasMarks ? allMarked : false,
+        hasMarks: hasAnyMarks,
+        allMarked,
         resultExists,
         isPublished,
         isScheduled,

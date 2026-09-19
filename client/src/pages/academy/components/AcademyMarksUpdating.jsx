@@ -562,8 +562,20 @@ const AcademyMarksUpdating = () => {
               ) : (
                 paginatedStudents.map((student) => {
                   const isSelected = selectedStudent?._id === student._id;
-                  const hasMarks = student.marks && student.marks.length > 0;
-                  const allEntered = student.marks?.every((m) => !!m.status || !!m.resultStatus || m.isAbsent === true || m.marksObtained !== null);
+                  const currentStudent = isSelected && selectedStudent ? selectedStudent : student;
+                  const marks = currentStudent.marks || [];
+                  const totalSubjects = marks.length;
+                  const enteredCount = marks.filter(
+                    (m) =>
+                      m?.isAbsent === true ||
+                      (typeof m?.status === 'string' && m.status.trim() !== '') ||
+                      (typeof m?.resultStatus === 'string' && m.resultStatus.trim() !== '') ||
+                      (m?.marksObtained !== null && m?.marksObtained !== undefined && m?.marksObtained !== '') ||
+                      (typeof m?.grade === 'string' && m.grade.trim() !== '' && m.grade !== 'NOT RECORDED')
+                  ).length;
+
+                  const isComplete = totalSubjects > 0 && enteredCount === totalSubjects;
+                  const isPartial = enteredCount > 0 && enteredCount < totalSubjects;
 
                   return (
                     <button
@@ -589,17 +601,17 @@ const AcademyMarksUpdating = () => {
                             <span className="text-xs font-medium text-slate-500">{student.batch?.year || 'N/A'}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            {hasMarks && allEntered ? (
+                            {isComplete ? (
                               <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
                                 ✓ Complete
                               </span>
-                            ) : hasMarks ? (
+                            ) : isPartial ? (
                               <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
                                 ⚠ Partial
                               </span>
                             ) : (
                               <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
-                                ✗ No Result
+                                ✗ Not Recorded
                               </span>
                             )}
                             <span className="text-xs text-slate-400">•</span>
@@ -656,7 +668,11 @@ const AcademyMarksUpdating = () => {
                     <span className="text-xs font-bold text-slate-700">Overall:</span>
                     <span
                       className={`text-lg font-black ${
-                        overall.status === 'PASS' ? 'text-emerald-600' : 'text-rose-600'
+                        overall.status === 'PASS'
+                          ? 'text-emerald-600'
+                          : overall.status === 'FAIL'
+                            ? 'text-rose-600'
+                            : 'text-slate-400'
                       }`}
                     >
                       {overall.status === 'PASS' ? 'PASS' : overall.status === 'FAIL' ? 'FAIL' : 'N/A'}
