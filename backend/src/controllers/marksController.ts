@@ -19,6 +19,7 @@ const updateMarksSchema = z.object({
         marksObtained: z.union([z.coerce.number(), z.null()]).optional(),
         isAbsent: z.boolean().default(false),
         totalMarks: z.coerce.number().default(100),
+        status: z.string().optional(),
       })
     )
     .min(1, 'At least one subject is required'),
@@ -38,6 +39,7 @@ const bulkUpdateMarksSchema = z.object({
               marksObtained: z.union([z.coerce.number(), z.null()]).optional(),
               isAbsent: z.boolean().default(false),
               totalMarks: z.coerce.number().default(100),
+              status: z.string().optional(),
             })
           )
           .min(1),
@@ -79,60 +81,212 @@ const getInstituteId = async (userId: string) => {
   return institute?._id || null;
 };
 
-const buildDefaultMarks = (courseSubjects: string[]) => {
-  return courseSubjects.map((sub) => ({
-    subjectCode: sub.substring(0, 6).toUpperCase(),
-    subjectName: sub,
-    marksObtained: null,
-    totalMarks: 100,
-    isAbsent: false,
-    grade: '',
-  }));
+const formatMarkWithStatus = (m: any) => {
+  const markObj = m && typeof m.toObject === 'function' ? m.toObject() : { ...m };
+  let status = (markObj.status || '').toUpperCase();
+  const isAbsent = markObj.isAbsent === true || markObj.grade === 'ABSENT' || status === 'ABSENT';
+  if (!status) {
+    if (isAbsent) {
+      status = 'ABSENT';
+    } else if (markObj.grade === 'F' || markObj.marksObtained === 0) {
+      status = 'FAIL';
+    } else if (markObj.marksObtained !== null && markObj.marksObtained !== undefined) {
+      status = markObj.marksObtained >= 50 ? 'PASS' : 'FAIL';
+    } else if (markObj.grade && markObj.grade !== '') {
+      status = ['O', 'A+', 'A', 'B+', 'B', 'C', 'D'].includes(markObj.grade) ? 'PASS' : '';
+    }
+  }
+  const subjectCode = markObj.subjectCode || markObj.code || '';
+  const subjectName = markObj.subjectName || markObj.name || markObj.subject || '';
+  return {
+    ...markObj,
+    subjectCode,
+    subjectName,
+    status,
+    isAbsent,
+  };
 };
 
-const getSubjectsForCourse = async (courseId: any) => {
+const getCourseSubjectsList = async (
+  courseIdOrDoc: any,
+  examinationNumber: number = 1
+): Promise<{ code: string; name: string }[]> => {
   try {
-    const course = await Course.findById(courseId);
-    return course?.subjects?.length ? course.subjects : [];
-  } catch {
+    const courseId = courseIdOrDoc?._id || courseIdOrDoc;
+    let course =
+      courseIdOrDoc && (courseIdOrDoc.examinations || courseIdOrDoc.subjects)
+        ? courseIdOrDoc
+        : null;
+
+    if (!course && courseId) {
+      course = await Course.findById(courseId);
+    }
+    if (!course) return [];
+
+    const examNum = Number(examinationNumber) || 1;
+
+    // 1. Check course.examinations for this specific examinationNumber
+    const exam = (course.examinations || []).find(
+      (e: any) => Number(e.examinationNumber) === examNum
+    );
+    if (exam && exam.subjects && exam.subjects.length > 0) {
+      const validSubs = exam.subjects
+        .filter((s: any) => s && (s.name || s.subjectName))
+        .map((s: any, idx: number) => ({
+          code: s.code || s.subjectCode || `SUB${idx + 1}`,
+          name: (s.name || s.subjectName || '').trim(),
+        }));
+      if (validSubs.length > 0) return validSubs;
+    }
+
+    // 2. Check if any examination in course.examinations has subjects
+    for (const otherExam of course.examinations || []) {
+      if (otherExam && otherExam.subjects && otherExam.subjects.length > 0) {
+        const validSubs = otherExam.subjects
+          .filter((s: any) => s && (s.name || s.subjectName))
+          .map((s: any, idx: number) => ({
+            code: s.code || s.subjectCode || `SUB${idx + 1}`,
+            name: (s.name || s.subjectName || '').trim(),
+          }));
+        if (validSubs.length > 0) return validSubs;
+      }
+    }
+
+    // 3. Check course.subjects
+    if (course.subjects && course.subjects.length > 0) {
+      return course.subjects.map((sub: any, idx: number) => {
+        if (typeof sub === 'string') {
+          const parts = sub.split(':');
+          if (parts.length > 1 && parts[0].trim().length <= 10) {
+            return {
+              code: parts[0].trim(),
+              name: parts.slice(1).join(':').trim(),
+            };
+          }
+          const cleanSub = sub.trim();
+          const cleanCode = cleanSub.replace(/[^A-Za-z0-9]/g, '').substring(0, 6).toUpperCase();
+          return {
+            code: `${cleanCode || 'SUB'}${idx + 1}`,
+            name: cleanSub,
+          };
+        }
+        return {
+          code: sub.code || sub.subjectCode || `SUB${idx + 1}`,
+          name: sub.name || sub.subjectName || `Subject ${idx + 1}`,
+        };
+      });
+    }
+
+    return [];
+  } catch (err) {
+    console.error('Error in getCourseSubjectsList:', err);
     return [];
   }
 };
 
-const resolveMergedMarks = async (studentId: any, examinationNumber: number, existingMarks: any[]) => {
+const buildDefaultMarks = (courseSubjectsList: { code: string; name: string }[]) => {
+  return (courseSubjectsList || []).map((sub, idx) => ({
+    subjectCode: sub.code || `SUB${idx + 1}`,
+    subjectName: sub.name || `Subject ${idx + 1}`,
+    marksObtained: null,
+    totalMarks: 100,
+    isAbsent: false,
+    grade: '',
+    status: '',
+  }));
+};
+
+const enrichMarksWithCourseSubjects = (
+  existingMarks: any[],
+  courseSubjects: { code: string; name: string }[]
+) => {
+  if (!existingMarks || existingMarks.length === 0) {
+    return buildDefaultMarks(courseSubjects);
+  }
+
+  return existingMarks.map((m: any, idx: number) => {
+    const formatted = formatMarkWithStatus(m);
+    let subjectCode = formatted.subjectCode;
+    let subjectName = formatted.subjectName;
+
+    // If subjectName or subjectCode is missing, look it up from courseSubjects
+    if (!subjectName || !subjectCode) {
+      const match =
+        courseSubjects.find(
+          (cs) =>
+            (subjectCode && cs.code.toLowerCase() === subjectCode.toLowerCase()) ||
+            (subjectName && cs.name.toLowerCase() === subjectName.toLowerCase())
+        ) || courseSubjects[idx];
+
+      if (match) {
+        if (!subjectCode) subjectCode = match.code;
+        if (!subjectName) subjectName = match.name;
+      }
+    }
+
+    return {
+      ...formatted,
+      subjectCode: subjectCode || `SUB${idx + 1}`,
+      subjectName: subjectName || `Subject ${idx + 1}`,
+    };
+  });
+};
+
+const resolveMergedMarks = async (
+  studentId: any,
+  examinationNumber: number,
+  existingMarks: any[],
+  courseSubjects: { code: string; name: string }[] = []
+) => {
   try {
     const resultDoc = await Result.findOne({ student: studentId, examination: examinationNumber });
-    if (!resultDoc || !resultDoc.subjects || resultDoc.subjects.length === 0) {
-      return existingMarks;
+    let merged = [...(existingMarks || [])];
+
+    if (resultDoc && resultDoc.subjects && resultDoc.subjects.length > 0) {
+      resultDoc.subjects.forEach((resSubj: any) => {
+        const subCode = resSubj.subjectCode || resSubj.code || '';
+        const subName = resSubj.subjectName || resSubj.name || '';
+        const idx = merged.findIndex(
+          (m: any) =>
+            (m.subjectCode && subCode && m.subjectCode.toLowerCase() === subCode.toLowerCase()) ||
+            (m.subjectName && subName && m.subjectName.toLowerCase() === subName.toLowerCase())
+        );
+        const isAbsent = resSubj.grade === 'ABSENT';
+        const markVal = resSubj.totalMarks;
+        const status = isAbsent
+          ? 'ABSENT'
+          : resSubj.grade === 'F' || (markVal !== null && markVal !== undefined && markVal < 50)
+            ? 'FAIL'
+            : 'PASS';
+
+        if (idx !== -1) {
+          merged[idx] = {
+            ...merged[idx],
+            subjectCode: merged[idx].subjectCode || subCode,
+            subjectName: merged[idx].subjectName || subName,
+            marksObtained: markVal ?? merged[idx].marksObtained,
+            grade: resSubj.grade || merged[idx].grade,
+            isAbsent,
+            status: status || merged[idx].status,
+          };
+        } else {
+          merged.push({
+            subjectCode: subCode,
+            subjectName: subName,
+            marksObtained: markVal,
+            totalMarks: 100,
+            isAbsent,
+            grade: resSubj.grade,
+            status,
+          });
+        }
+      });
     }
-    const merged = [...existingMarks];
-    resultDoc.subjects.forEach((resSubj: any) => {
-      const idx = merged.findIndex(
-        (m: any) =>
-          (m.subjectCode && resSubj.subjectCode && m.subjectCode.toLowerCase() === resSubj.subjectCode.toLowerCase()) ||
-          (m.subjectName && resSubj.subjectName && m.subjectName.toLowerCase() === resSubj.subjectName.toLowerCase())
-      );
-      if (idx !== -1) {
-        merged[idx] = {
-          ...merged[idx],
-          marksObtained: resSubj.totalMarks ?? merged[idx].marksObtained,
-          grade: resSubj.grade || merged[idx].grade,
-          isAbsent: resSubj.grade === 'ABSENT'
-        };
-      } else {
-        merged.push({
-          subjectCode: resSubj.subjectCode,
-          subjectName: resSubj.subjectName,
-          marksObtained: resSubj.totalMarks,
-          totalMarks: 100,
-          isAbsent: resSubj.grade === 'ABSENT',
-          grade: resSubj.grade
-        });
-      }
-    });
-    return merged;
-  } catch {
-    return existingMarks;
+
+    return enrichMarksWithCourseSubjects(merged, courseSubjects);
+  } catch (err) {
+    console.error('Error in resolveMergedMarks:', err);
+    return enrichMarksWithCourseSubjects(existingMarks || [], courseSubjects);
   }
 };
 
@@ -165,7 +319,7 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
     }
 
     const students = await Student.find(query)
-      .populate('course', 'name subjects')
+      .populate('course', 'name subjects examinations')
       .populate('batch', 'year name')
       .populate('institute', 'orgName')
       .sort({ createdAt: -1 });
@@ -173,11 +327,15 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
     const formattedStudents = await Promise.all(
       students.map(async (student) => {
         const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
-
         const examinationRecord = student.examinations.find((s) => s.examinationNumber === examNum);
+        const courseSubjects = await getCourseSubjectsList(student.course, examNum);
 
-        const baseMarks = examinationRecord ? (examinationRecord.marks || []) : buildDefaultMarks(await getSubjectsForCourse(student.course));
-        const mergedMarks = await resolveMergedMarks(student._id, examNum, baseMarks);
+        const baseMarks =
+          examinationRecord?.marks && examinationRecord.marks.length > 0
+            ? enrichMarksWithCourseSubjects(examinationRecord.marks, courseSubjects)
+            : buildDefaultMarks(courseSubjects);
+
+        const mergedMarks = await resolveMergedMarks(student._id, examNum, baseMarks, courseSubjects);
 
         if (examinationRecord) {
           return {
@@ -254,7 +412,7 @@ export const getStudentMarks = async (req: Request, res: Response) => {
     }
 
     const student = await Student.findOne(query)
-      .populate('course', 'name subjects')
+      .populate('course', 'name subjects examinations')
       .populate('batch', 'year name');
 
     if (!student) {
@@ -263,14 +421,14 @@ export const getStudentMarks = async (req: Request, res: Response) => {
 
     const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
     const examinationRecord = student.examinations.find((s) => s.examinationNumber === examNum);
+    const courseSubjects = await getCourseSubjectsList(student.course, examNum);
 
-    let rawMarks = examinationRecord?.marks || [];
-    if (!examinationRecord) {
-      const courseSubjects = await getSubjectsForCourse(student.course);
-      rawMarks = buildDefaultMarks(courseSubjects);
-    }
+    const baseMarks =
+      examinationRecord?.marks && examinationRecord.marks.length > 0
+        ? enrichMarksWithCourseSubjects(examinationRecord.marks, courseSubjects)
+        : buildDefaultMarks(courseSubjects);
 
-    const marks = await resolveMergedMarks(student._id, examNum, rawMarks);
+    const marks = await resolveMergedMarks(student._id, examNum, baseMarks, courseSubjects);
 
     return sendSuccess({
       req,
@@ -325,6 +483,7 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
     }
 
     const examNum = validatedData.examinationNumber;
+    const courseSubjects = await getCourseSubjectsList(student.course, examNum);
     let examinationIndex = student.examinations.findIndex((s) => s.examinationNumber === examNum);
 
     if (examinationIndex === -1) {
@@ -344,18 +503,52 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
     }
 
     for (const subject of validatedData.subjects) {
+      let status = (subject.status || '').toUpperCase();
+      const isAbsent = subject.isAbsent || status === 'ABSENT';
+      let marksObtained = isAbsent ? null : subject.marksObtained ?? null;
+
+      let subjectCode = subject.subjectCode?.trim() || '';
+      let subjectName = subject.subjectName?.trim() || '';
+
+      if (!subjectName || !subjectCode) {
+        const match = courseSubjects.find(
+          (cs) =>
+            (subjectCode && cs.code.toLowerCase() === subjectCode.toLowerCase()) ||
+            (subjectName && cs.name.toLowerCase() === subjectName.toLowerCase())
+        );
+        if (match) {
+          if (!subjectCode) subjectCode = match.code;
+          if (!subjectName) subjectName = match.name;
+        }
+      }
+
+      if (!status) {
+        if (isAbsent) {
+          status = 'ABSENT';
+        } else if (marksObtained !== null && marksObtained !== undefined) {
+          status = marksObtained >= 50 ? 'PASS' : 'FAIL';
+        }
+      } else if (!isAbsent) {
+        if (status === 'PASS' && (marksObtained === null || marksObtained === undefined || marksObtained < 50)) {
+          marksObtained = 100;
+        } else if (status === 'FAIL' && (marksObtained === null || marksObtained === undefined || marksObtained >= 50)) {
+          marksObtained = 0;
+        }
+      }
+
       const marksData = {
-        subjectCode: subject.subjectCode,
-        subjectName: subject.subjectName,
-        marksObtained: subject.isAbsent ? null : subject.marksObtained ?? null,
+        subjectCode: subjectCode || `SUB-${Date.now()}`,
+        subjectName: subjectName || 'Subject',
+        marksObtained,
         totalMarks: subject.totalMarks || 100,
-        isAbsent: subject.isAbsent || false,
-        grade: subject.isAbsent ? 'ABSENT' : calculateGrade(subject.marksObtained ?? null, subject.totalMarks || 100),
+        isAbsent,
+        grade: isAbsent ? 'ABSENT' : calculateGrade(marksObtained, subject.totalMarks || 100),
+        status,
         updatedBy: req.user._id,
         updatedAt: new Date(),
       };
 
-      const existingIndex = examination.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
+      const existingIndex = examination.marks.findIndex((m) => m.subjectCode === subjectCode);
       if (existingIndex !== -1) {
         examination.marks[existingIndex] = marksData;
       } else {
@@ -379,7 +572,7 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
         enrollmentId: student.enrollmentId,
         fullName: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
         examinationNumber: examNum,
-        marks: examination.marks,
+        marks: enrichMarksWithCourseSubjects(examination.marks || [], courseSubjects),
         attendancePercentage: examination.attendancePercentage || 0,
         thesisApproved: examination.thesisApproved || false,
         eligibilityStatus: examination.eligibilityStatus || 'Pending',
@@ -400,16 +593,27 @@ export const bulkUpdateMarks = async (req: Request, res: Response) => {
     const validatedData = bulkUpdateMarksSchema.parse(req.body);
     const results: any[] = [];
     const errors: any[] = [];
+    const examNum = validatedData.examinationNumber;
 
     for (const studentData of validatedData.students) {
       try {
-        const student = await Student.findById(studentData.studentId);
+        const query: any = { _id: studentData.studentId };
+
+        if (req.user.role === 'institute') {
+          const instituteIdForUser = await getInstituteId(req.user._id);
+          if (!instituteIdForUser) {
+            errors.push({ studentId: studentData.studentId, error: 'Access Denied' });
+            continue;
+          }
+          query.institute = instituteIdForUser;
+        }
+
+        const student = await Student.findOne(query);
         if (!student) {
           errors.push({ studentId: studentData.studentId, error: 'Student not found' });
           continue;
         }
 
-        const examNum = validatedData.examinationNumber;
         let examinationIndex = student.examinations.findIndex((s) => s.examinationNumber === examNum);
 
         if (examinationIndex === -1) {
@@ -428,19 +632,55 @@ export const bulkUpdateMarks = async (req: Request, res: Response) => {
           examination.marks = [];
         }
 
+        const courseSubjects = await getCourseSubjectsList(student.course, examNum);
+
         for (const subject of studentData.subjects) {
+          let status = (subject.status || '').toUpperCase();
+          const isAbsent = subject.isAbsent || status === 'ABSENT';
+          let marksObtained = isAbsent ? null : subject.marksObtained ?? null;
+
+          let subjectCode = subject.subjectCode?.trim() || '';
+          let subjectName = subject.subjectName?.trim() || '';
+
+          if (!subjectName || !subjectCode) {
+            const match = courseSubjects.find(
+              (cs) =>
+                (subjectCode && cs.code.toLowerCase() === subjectCode.toLowerCase()) ||
+                (subjectName && cs.name.toLowerCase() === subjectName.toLowerCase())
+            );
+            if (match) {
+              if (!subjectCode) subjectCode = match.code;
+              if (!subjectName) subjectName = match.name;
+            }
+          }
+
+          if (!status) {
+            if (isAbsent) {
+              status = 'ABSENT';
+            } else if (marksObtained !== null && marksObtained !== undefined) {
+              status = marksObtained >= 50 ? 'PASS' : 'FAIL';
+            }
+          } else if (!isAbsent) {
+            if (status === 'PASS' && (marksObtained === null || marksObtained === undefined || marksObtained < 50)) {
+              marksObtained = 100;
+            } else if (status === 'FAIL' && (marksObtained === null || marksObtained === undefined || marksObtained >= 50)) {
+              marksObtained = 0;
+            }
+          }
+
           const marksData = {
-            subjectCode: subject.subjectCode,
-            subjectName: subject.subjectName,
-            marksObtained: subject.isAbsent ? null : subject.marksObtained ?? null,
+            subjectCode: subjectCode || `SUB-${Date.now()}`,
+            subjectName: subjectName || 'Subject',
+            marksObtained,
             totalMarks: subject.totalMarks || 100,
-            isAbsent: subject.isAbsent || false,
-            grade: subject.isAbsent ? 'ABSENT' : calculateGrade(subject.marksObtained ?? null, subject.totalMarks || 100),
+            isAbsent,
+            grade: isAbsent ? 'ABSENT' : calculateGrade(marksObtained, subject.totalMarks || 100),
+            status,
             updatedBy: req.user._id,
             updatedAt: new Date(),
           };
 
-          const existingIndex = examination.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
+          const existingIndex = examination.marks.findIndex((m) => m.subjectCode === subjectCode);
           if (existingIndex !== -1) {
             examination.marks[existingIndex] = marksData;
           } else {
@@ -451,8 +691,9 @@ export const bulkUpdateMarks = async (req: Request, res: Response) => {
         // Mark examinations array as modified so Mongoose persists nested updates
         student.markModified('examinations');
         await student.save({ validateModifiedOnly: true });
+
+        emitEvent('MARKS_UPDATED', { studentId: student._id, examinationNumber: examNum });
         results.push({
-          studentId: studentData.studentId,
           name: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
           status: 'success',
         });
@@ -480,16 +721,16 @@ export const bulkUpdateMarks = async (req: Request, res: Response) => {
 export const getCourseSubjects = async (req: Request, res: Response) => {
   try {
     const { courseId } = req.params;
+    const { examinationNumber } = req.query;
+    const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
 
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found' });
-    }
+    const subjects = await getCourseSubjectsList(courseId, examNum);
 
-    const subjects = course.subjects || [];
-    const subjectList = subjects.map((name: string, index: number) => ({
-      code: `${name.substring(0, 6).toUpperCase()}${index + 1}`,
-      name,
+    const subjectList = subjects.map((sub, index) => ({
+      code: sub.code || `SUB${index + 1}`,
+      name: sub.name || `Subject ${index + 1}`,
+      subjectCode: sub.code || `SUB${index + 1}`,
+      subjectName: sub.name || `Subject ${index + 1}`,
     }));
 
     return sendSuccess({

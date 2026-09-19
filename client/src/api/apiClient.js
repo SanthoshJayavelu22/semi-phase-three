@@ -166,7 +166,7 @@ const clearStoredSession = () => {
 };
 
 // Hard-redirect to the correct portal login page
-const redirectToLogin = () => {
+export const redirectToLogin = () => {
   if (typeof window === 'undefined') return;
   window.location.href = window.location.pathname.startsWith('/institute')
     ? '/institute/login'
@@ -191,10 +191,23 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // A request retried with a freshly refreshed token that STILL 401s means the
-    // user account no longer exists (deleted / DB re-seeded) or the token is dead.
+    // If a request fails with 401 even after a successful retry, the refresh
+    // token is likely invalid or the user session has been terminated server-side.
+    // In this case, it's safer to clear the session and redirect to login.
     if (error.response?.status === 401 && originalRequest?._retry) {
+      console.log("Token refresh succeeded, but the new token was also rejected. Session is invalid. Logging out.");
       clearStoredSession();
+      // Optional: redirect to login page
+      // redirectToLogin(); 
+      return Promise.reject(error);
+    }
+
+    // If the request to refresh the token itself fails with a 401,
+    // it means the refresh token is invalid. This requires a logout.
+    if (error.response?.status === 401 && originalRequest?.url?.includes('/auth/refresh-token')) {
+      console.log("Refresh token is invalid. Logging out.");
+      clearStoredSession();
+      // redirectToLogin();
       return Promise.reject(error);
     }
 

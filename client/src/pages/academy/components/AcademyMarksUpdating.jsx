@@ -22,6 +22,8 @@ import ConfirmModal from '../../../Components/ConfirmModal';
 import marksService from '../../../api/marks';
 import Pagination from '../../../Components/Pagination';
 
+const STATUS_CYCLE = ['', 'PASS', 'FAIL', 'ABSENT'];
+
 const AcademyMarksUpdating = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
   const [students, setStudents] = useState([]);
@@ -39,6 +41,57 @@ const AcademyMarksUpdating = () => {
   const [studentListPage, setStudentListPage] = useState(1);
   const studentsPerPage = 10;
 
+  // ─── Status & Normalization Helpers ────────────────────────────────────────
+  const deriveStatusFromMark = useCallback((m) => {
+    if (!m) return '';
+    if (m.status && typeof m.status === 'string' && m.status.trim() !== '') {
+      return m.status.toUpperCase();
+    }
+    if (m.isAbsent === true || m.grade === 'ABSENT') return 'ABSENT';
+    if (m.grade === 'F' || m.marksObtained === 0) return 'FAIL';
+    if (m.marksObtained !== null && m.marksObtained !== undefined && m.marksObtained !== '') {
+      return Number(m.marksObtained) >= 50 ? 'PASS' : 'FAIL';
+    }
+    if (m.grade && typeof m.grade === 'string' && m.grade.trim() !== '') {
+      return ['O', 'A+', 'A', 'B+', 'B', 'C', 'D'].includes(m.grade) ? 'PASS' : '';
+    }
+    return '';
+  }, []);
+
+  const deriveMarkFromStatus = useCallback((status) => {
+    if (status === 'ABSENT') return null;
+    if (status === 'PASS') return 100;
+    if (status === 'FAIL') return 0;
+    return null;
+  }, []);
+
+  const normalizeStudent = useCallback(
+    (student) => {
+      if (!student) return null;
+      const marks = (student.marks || []).map((m, idx) => {
+        const status = deriveStatusFromMark(m);
+        const subjectCode = m.subjectCode || m.code || `SUB${idx + 1}`;
+        const subjectName = m.subjectName || m.name || m.subject || `Subject ${idx + 1}`;
+        return {
+          ...m,
+          subjectCode,
+          subjectName,
+          status,
+          isAbsent: status === 'ABSENT' || m.isAbsent === true,
+          marksObtained:
+            m.marksObtained !== null && m.marksObtained !== undefined
+              ? m.marksObtained
+              : deriveMarkFromStatus(status),
+        };
+      });
+      return {
+        ...student,
+        marks,
+      };
+    },
+    [deriveStatusFromMark, deriveMarkFromStatus]
+  );
+
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const fetchStudents = useCallback(async () => {
     try {
@@ -52,14 +105,20 @@ const AcademyMarksUpdating = () => {
 
       const res = await marksService.getStudentsWithMarks(params);
       const data = res.data?.data || res.data || [];
-      setStudents(data);
+      const normalizedData = data.map(normalizeStudent);
+      setStudents(normalizedData);
+      setSelectedStudent((prev) => {
+        if (!prev?._id) return prev;
+        const fresh = normalizedData.find((s) => s._id === prev._id);
+        return fresh ? fresh : prev;
+      });
     } catch (err) {
       console.error('Error fetching students:', err);
       setToast({ message: err.parsedMessage || 'Failed to load students.', type: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [selectedBatch, selectedCourse, selectedInstitute, searchQuery, selectedExamination]);
+  }, [selectedBatch, selectedCourse, selectedInstitute, searchQuery, selectedExamination, normalizeStudent]);
 
   useEffect(() => {
     const id = setTimeout(() => fetchStudents(), 0);
@@ -72,17 +131,42 @@ const AcademyMarksUpdating = () => {
     let cancelled = false;
     marksService
       .getStudentMarks(selectedStudent._id, selectedExamination)
-      .then((res) => {
+      .then(async (res) => {
         if (cancelled) return;
         const data = res.data?.data || res.data;
-        if (data) setSelectedStudent(data);
+        if (data) {
+          let normalized = normalizeStudent(data);
+          const courseId = data.course?._id || data.course;
+          if ((!normalized.marks || normalized.marks.length === 0) && courseId) {
+            try {
+              const subjRes = await marksService.getCourseSubjects(courseId, selectedExamination);
+              const subjects = subjRes.data?.data || [];
+              if (subjects.length > 0 && !cancelled) {
+                const seeded = subjects.map((s, idx) => ({
+                  subjectCode: s.code || s.subjectCode || `SUB${idx + 1}`,
+                  subjectName: s.name || s.subjectName || `Subject ${idx + 1}`,
+                  marksObtained: null,
+                  totalMarks: 100,
+                  isAbsent: false,
+                  grade: '',
+                  status: '',
+                }));
+                normalized = { ...normalized, marks: seeded };
+              }
+            } catch {
+              // ignore
+            }
+          }
+          if (!cancelled) {
+            setSelectedStudent(normalized);
+          }
+        }
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedExamination]);
+  }, [selectedExamination, normalizeStudent, selectedStudent?._id]);
 
   // ─── Derived Data ──────────────────────────────────────────────────────────
   const batchOptions = useMemo(() => {
@@ -132,9 +216,11 @@ const AcademyMarksUpdating = () => {
     });
   }, [students, searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setStudentListPage(1);
   }, [searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const totalStudentPages = Math.ceil(filteredStudents.length / studentsPerPage);
   const paginatedStudents = useMemo(
@@ -143,42 +229,61 @@ const AcademyMarksUpdating = () => {
   );
 
   // ─── Student Selection ─────────────────────────────────────────────────────
-  const handleSelectStudent = useCallback(async (student) => {
-    setSelectedStudent(student);
+  const handleSelectStudent = useCallback(
+    async (student) => {
+      const normalized = normalizeStudent(student);
+      setSelectedStudent(normalized);
 
-    if (student.course?._id) {
-      try {
-        const res = await marksService.getCourseSubjects(student.course._id);
-        const subjects = res.data?.data || [];
-        // Seed subjects from course subjects if the student has none saved yet
-        if (subjects.length > 0 && (!student.marks || student.marks.length === 0)) {
-          const seeded = subjects.map((s) => ({
-            subjectCode: s.code,
-            subjectName: s.name,
-            marksObtained: null,
-            totalMarks: 100,
-            isAbsent: false,
-            grade: '',
-            status: '',
-          }));
-          setSelectedStudent({ ...student, marks: seeded });
+      const courseId = student.course?._id || student.course;
+      if (courseId) {
+        try {
+          const res = await marksService.getCourseSubjects(courseId, selectedExamination);
+          const subjects = res.data?.data || [];
+          if (subjects.length > 0) {
+            setSelectedStudent((prev) => {
+              if (!prev || prev._id !== student._id) return prev;
+              const currentMarks = prev.marks || [];
+              if (currentMarks.length === 0) {
+                const seeded = subjects.map((s, idx) => ({
+                  subjectCode: s.code || s.subjectCode || `SUB${idx + 1}`,
+                  subjectName: s.name || s.subjectName || `Subject ${idx + 1}`,
+                  marksObtained: null,
+                  totalMarks: 100,
+                  isAbsent: false,
+                  grade: '',
+                  status: '',
+                }));
+                return { ...prev, marks: seeded };
+              }
+              // If current marks are missing subjectName or subjectCode, enrich them:
+              const enriched = currentMarks.map((m, idx) => {
+                const subCode = m.subjectCode || m.code;
+                const subName = m.subjectName || m.name;
+                const match =
+                  subjects.find(
+                    (s) =>
+                      (subCode && s.code && s.code.toLowerCase() === subCode.toLowerCase()) ||
+                      (subName && s.name && s.name.toLowerCase() === subName.toLowerCase())
+                  ) || subjects[idx];
+
+                return {
+                  ...m,
+                  subjectCode: subCode || match?.code || match?.subjectCode || `SUB${idx + 1}`,
+                  subjectName: subName || match?.name || match?.subjectName || `Subject ${idx + 1}`,
+                };
+              });
+              return { ...prev, marks: enriched };
+            });
+          }
+        } catch (err) {
+          console.error('Error fetching course subjects:', err);
         }
-      } catch (err) {
-        console.error('Error fetching course subjects:', err);
       }
-    }
-  }, []);
+    },
+    [normalizeStudent, selectedExamination]
+  );
 
   // ─── Result Handlers ──────────────────────────────────────────────────────
-  const STATUS_CYCLE = ['', 'PASS', 'FAIL', 'ABSENT'];
-
-  const deriveMarkFromStatus = (status) => {
-    if (status === 'ABSENT') return null;
-    if (status === 'PASS') return 100;
-    if (status === 'FAIL') return 50;
-    return null;
-  };
-
   const handleStatusChange = useCallback(
     (subjectCode, status) => {
       if (!selectedStudent) return;
@@ -193,7 +298,7 @@ const AcademyMarksUpdating = () => {
       });
       setSelectedStudent({ ...selectedStudent, marks });
     },
-    [selectedStudent]
+    [selectedStudent, deriveMarkFromStatus]
   );
 
   const handleCycleStatus = useCallback(
@@ -207,9 +312,11 @@ const AcademyMarksUpdating = () => {
 
   const handleAddSubject = useCallback(() => {
     if (!selectedStudent) return;
+    const currentMarks = selectedStudent.marks || [];
+    const nextIdx = currentMarks.length + 1;
     const newSubject = {
-      subjectCode: `SUB-${Date.now()}`,
-      subjectName: 'New Subject',
+      subjectCode: `SUB-${nextIdx}`,
+      subjectName: `Subject ${nextIdx}`,
       marksObtained: null,
       totalMarks: 100,
       isAbsent: false,
@@ -218,7 +325,7 @@ const AcademyMarksUpdating = () => {
     };
     setSelectedStudent({
       ...selectedStudent,
-      marks: [...(selectedStudent.marks || []), newSubject],
+      marks: [...currentMarks, newSubject],
     });
   }, [selectedStudent]);
 
@@ -270,12 +377,13 @@ const AcademyMarksUpdating = () => {
     try {
       const payload = {
         examinationNumber: Number(selectedExamination),
-        subjects: marks.map((m) => ({
-          subjectCode: m.subjectCode,
-          subjectName: m.subjectName,
+        subjects: marks.map((m, idx) => ({
+          subjectCode: m.subjectCode || m.code || `SUB-${idx + 1}`,
+          subjectName: m.subjectName || m.name || m.subject || `Subject ${idx + 1}`,
           marksObtained: deriveMarkFromStatus(m.status),
           isAbsent: m.status === 'ABSENT',
           totalMarks: Number(m.totalMarks) || 100,
+          status: m.status,
         })),
       };
 
@@ -286,7 +394,7 @@ const AcademyMarksUpdating = () => {
       const updatedRes = await marksService.getStudentMarks(studentId, selectedExamination);
       const updatedData = updatedRes.data?.data || updatedRes.data;
       if (updatedData) {
-        setSelectedStudent(updatedData);
+        setSelectedStudent(normalizeStudent(updatedData));
       }
 
       setToast({ message: 'Results saved successfully!', type: 'success' });
@@ -296,7 +404,7 @@ const AcademyMarksUpdating = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedStudent, selectedExamination, fetchStudents]);
+  }, [selectedStudent, selectedExamination, fetchStudents, deriveMarkFromStatus, normalizeStudent]);
 
   // ─── Render Helpers ──────────────────────────────────────────────────────
   const getStatusBadge = (status) => {
@@ -312,7 +420,7 @@ const AcademyMarksUpdating = () => {
         const entered = rows.filter((r) => !!r.status);
         const passed = entered.filter((r) => r.status === 'PASS').length;
         const failed = entered.filter((r) => r.status === 'FAIL' || r.status === 'ABSENT').length;
-        const status = passed > 0 && failed === 0 ? 'PASS' : entered.length > 0 ? 'FAIL' : '';
+        const status = entered.length > 0 && failed === 0 ? 'PASS' : entered.length > 0 ? 'FAIL' : '';
         return { total: rows.length, entered: entered.length, passed, failed, status };
       })()
     : { total: 0, entered: 0, passed: 0, failed: 0, status: '' };
@@ -645,7 +753,7 @@ const AcademyMarksUpdating = () => {
 
                         return (
                           <tr
-                            key={subject.subjectCode || `subject-${selectedStudent._id}-${subject.subjectName}`}
+                            key={subject.subjectCode || `subject-${selectedStudent._id}-${idx}`}
                             className={`hover:bg-slate-50/70 transition-colors ${isAbsent ? 'bg-rose-50/40' : ''}`}
                           >
                             <td className="px-4 py-3.5 text-center font-bold text-slate-400 text-sm">
@@ -653,8 +761,12 @@ const AcademyMarksUpdating = () => {
                             </td>
                             <td className="px-4 py-3.5">
                               <div>
-                                <span className="text-sm font-bold text-slate-800">{subject.subjectName}</span>
-                                <span className="ml-2.5 text-xs font-mono text-slate-400">{subject.subjectCode}</span>
+                                <span className="text-sm font-bold text-slate-800">
+                                  {subject.subjectName || subject.name || subject.subject || `Subject ${idx + 1}`}
+                                </span>
+                                <span className="ml-2.5 text-xs font-mono text-slate-400">
+                                  {subject.subjectCode || subject.code || `SUB${idx + 1}`}
+                                </span>
                               </div>
                             </td>
                             <td className="px-4 py-3.5 text-center">

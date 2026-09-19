@@ -17,8 +17,10 @@ export const marksService = {
     apiClient.post('/marks/students/bulk', data),
 
   // Get course subjects
-  getCourseSubjects: (courseId) =>
-    apiClient.get(`/marks/courses/${courseId}/subjects`),
+  getCourseSubjects: (courseId, examinationNumber) =>
+    apiClient.get(`/marks/courses/${courseId}/subjects`, {
+      params: examinationNumber ? { examinationNumber } : undefined,
+    }),
 
   // Generate results from marks
   generateResults: (data) => apiClient.post('/marks/generate-results', data),

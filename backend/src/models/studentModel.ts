@@ -58,6 +58,7 @@ export interface IStudent extends Document {
       totalMarks: number;
       isAbsent: boolean;
       grade: string;
+      status?: string;
       updatedBy?: mongoose.Types.ObjectId;
       updatedAt?: Date;
     }[];
@@ -222,6 +223,7 @@ const studentSchema: Schema = new Schema(
             totalMarks: { type: Number, default: 100 },
             isAbsent: { type: Boolean, default: false },
             grade: { type: String, default: '' },
+            status: { type: String, default: '' },
             updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
             updatedAt: { type: Date, default: Date.now },
           },

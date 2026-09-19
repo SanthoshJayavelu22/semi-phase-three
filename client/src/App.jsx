@@ -52,8 +52,8 @@ import { useTokenRefresh } from './hooks/useTokenRefresh';
 function App() {
   const [showMaintenance, setShowMaintenance] = useState(false);
 
-  // Proactively refresh tokens before the 15-minute access-token expiry.
-  useTokenRefresh(12 * 60 * 1000);
+  // Proactively refresh tokens before access-token expiry based on user activity & fallback timer.
+  useTokenRefresh();
 
   useEffect(() => {
     const checkServerHealth = async () => {
