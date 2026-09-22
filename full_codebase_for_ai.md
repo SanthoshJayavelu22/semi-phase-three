@@ -1,6 +1,6 @@
 # SEMI — Full Project Codebase Context
 
-> Auto-generated on 2026-09-01T11:18:07.266Z
+> Auto-generated on 2026-09-19T12:02:18.775Z
 
 This document contains the complete source code of the **SEMI** (Society for Emergency Medicine in India) project for AI context. It covers the backend (Express/TypeScript/MongoDB) and frontend (React/Vite/Tailwind) for institute onboarding, academic management, exams, results, marksheets, certificates, and revaluation workflows.
 
@@ -93,6 +93,7 @@ semi-phase-three/
 │   │   │   ├── paymentRoutes.ts
 │   │   │   ├── resultRoutes.ts
 │   │   │   ├── revaluationRoutes.ts
+│   │   │   ├── seedRoutes.ts
 │   │   │   ├── syncRoutes.ts
 │   │   │   ├── treasuryRoutes.ts
 │   │   │   └── userRoutes.ts
@@ -125,6 +126,7 @@ semi-phase-three/
 │   │   │   └── revaluationValidator.ts
 │   │   ├── index.ts
 │   │   └── seed-test-data.ts
+│   ├── _fee_check.js
 │   ├── add_auth_status.js
 │   ├── api-tests.http
 │   ├── check_db.js
@@ -132,7 +134,6 @@ semi-phase-three/
 │   ├── check_ts.js
 │   ├── Dockerfile
 │   ├── ecosystem.config.js
-│   ├── last_400_error.log
 │   ├── package.json
 │   ├── postman_collection.json
 │   ├── test_script.js
@@ -174,6 +175,8 @@ semi-phase-three/
 │   │   │   └── useTokenRefresh.js
 │   │   ├── pages
 │   │   │   ├── academy
+│   │   │   │   ├── academic-verification
+│   │   │   │   │   └── index.jsx
 │   │   │   │   ├── applications
 │   │   │   │   │   └── index.jsx
 │   │   │   │   ├── components
@@ -198,6 +201,7 @@ semi-phase-three/
 │   │   │   │   │   ├── AcademyStudentModal.jsx
 │   │   │   │   │   ├── AcademyStudents.jsx
 │   │   │   │   │   ├── AcademyStudentVerification.jsx
+│   │   │   │   │   ├── AcademyThesisVerification.jsx
 │   │   │   │   │   └── AcademyVerification.jsx
 │   │   │   │   ├── courses
 │   │   │   │   │   └── index.jsx
@@ -337,6 +341,24 @@ EXPOSE 5003
 CMD ["npm", "start"]
 
 
+```
+
+### `backend/_fee_check.js`
+
+```javascript
+const jwt = require('jsonwebtoken');
+const axios = require('axios');
+const BASE = 'http://localhost:5003/api';
+const JWT_SECRET = 'my_super_secret_jwt_key';
+const instToken = jwt.sign({ id: '6a9fe16eb0824edb901f871b' }, JWT_SECRET, { expiresIn: '1h' });
+const sid = '6aa0072f32ad1f9bca855d26';
+(async () => {
+  const headers = { Authorization: `Bearer ${instToken}` };
+  const fee = await axios.get(`${BASE}/academic/students/${sid}/exam-fee-applicability/1`, { headers }).catch(e => e.response ? { data: e.response.data } : e);
+  console.log('FEE APPLICABILITY:', JSON.stringify(fee.data?.data || fee.data, null, 2));
+  const elig = await axios.get(`${BASE}/academic/students/${sid}/eligibility?examinationNumber=1`, { headers }).catch(e => e.response ? { data: e.response.data } : e);
+  console.log('ELIGIBILITY:', JSON.stringify(elig.data?.data || elig.data, null, 2));
+})();
 ```
 
 ### `backend/add_auth_status.js`
@@ -783,70 +805,201 @@ module.exports = {
 
 ```
 
-### `backend/last_400_error.log`
-
-```
-Warning: A student with this Email Address or Medical Council Registration Number already exists in the system.
-```
-
 ### `backend/logs/combined.log`
 
 ```
-[INFO] [2026-08-04T07:15:51.614Z] Server is running on port 5003 
-[INFO] [2026-08-04T07:15:51.633Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T07:29:40.169Z] Server is running on port 5003 
-[INFO] [2026-08-04T07:29:40.183Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T07:30:04.685Z] Server is running on port 5003 
-[INFO] [2026-08-04T07:30:04.699Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T08:07:30.013Z] Server is running on port 5003 
-[INFO] [2026-08-04T08:07:30.039Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T08:07:42.052Z] Server is running on port 5003 
-[INFO] [2026-08-04T08:07:42.078Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T10:39:03.671Z] Server is running on port 5003 
-[INFO] [2026-08-04T10:39:03.693Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T10:39:13.542Z] Server is running on port 5003 
-[INFO] [2026-08-04T10:39:13.557Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T10:43:43.543Z] Server is running on port 5003 
-[INFO] [2026-08-04T10:43:43.561Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T10:44:10.408Z] Server is running on port 5003 
-[INFO] [2026-08-04T10:44:10.423Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T10:44:38.672Z] Server is running on port 5003 
-[INFO] [2026-08-04T10:44:38.687Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T10:44:47.069Z] Server is running on port 5003 
-[INFO] [2026-08-04T10:44:47.088Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T10:45:09.367Z] Server is running on port 5003 
-[INFO] [2026-08-04T10:45:09.381Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T10:45:17.621Z] Server is running on port 5003 
-[INFO] [2026-08-04T10:45:17.638Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-04T10:45:41.469Z] Server is running on port 5003 
-[INFO] [2026-08-04T10:45:41.485Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-05T10:30:41.467Z] Server is running on port 5003 
-[INFO] [2026-08-05T10:30:41.488Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-05T10:36:30.840Z] Server is running on port 5003 
-[INFO] [2026-08-05T10:36:30.859Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-05T10:37:32.120Z] Received SIGINT. Shutting down gracefully... 
-[WARN] [2026-08-05T10:37:32.148Z] APM Alert: MongoDB connection pool disconnected. 
-[INFO] [2026-08-05T10:37:32.148Z] MongoDB connection closed 
-[ERROR] [2026-08-05T10:37:32.149Z] Error during graceful shutdown: [{}]
-[INFO] [2026-08-05T10:37:44.849Z] Server is running on port 5003 
-[INFO] [2026-08-05T10:37:44.866Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-08-05T10:51:42.708Z] Server is running on port 5003 
-[INFO] [2026-08-05T10:51:42.722Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-09-01T10:16:08.681Z] Server is running on port 5003 
-[INFO] [2026-09-01T10:16:08.714Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-09-01T10:18:42.955Z] Server is running on port 5003 
-[INFO] [2026-09-01T10:18:42.974Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-09-01T10:23:49.340Z] Server is running on port 5003 
-[INFO] [2026-09-01T10:23:49.359Z] APM: Mongoose connected to MongoDB cluster. 
-[INFO] [2026-09-01T10:24:01.572Z] Server is running on port 5003 
-[INFO] [2026-09-01T10:24:01.608Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:33:56.674Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:20.691Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:28.223Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:46.297Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:37:53.358Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:38:32.385Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:38:45.282Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:38:50.701Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:43:15.168Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:43:24.639Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:44:24.489Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:45:48.310Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:45:54.871Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:48:54.734Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:49:03.397Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:50:04.062Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:50:08.977Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:54:36.225Z] Server is running on port 5003 
+[INFO] [2026-08-03T12:54:36.240Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T12:57:51.385Z] Server is running on port 5003 
+[INFO] [2026-08-03T12:57:51.403Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:00:44.351Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:00:44.363Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:00:59.764Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:00:59.777Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:10:34.693Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:10:34.707Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:24:32.312Z] Received SIGINT. Shutting down gracefully... 
+[WARN] [2026-08-03T13:24:32.350Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-08-03T13:24:32.351Z] MongoDB connection closed 
+[ERROR] [2026-08-03T13:24:32.351Z] Error during graceful shutdown: [{}]
+[INFO] [2026-08-03T13:25:16.125Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:25:16.141Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:25:31.894Z] Received SIGINT. Shutting down gracefully... 
+[WARN] [2026-08-03T13:25:31.913Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-08-03T13:25:31.914Z] MongoDB connection closed 
+[ERROR] [2026-08-03T13:25:31.915Z] Error during graceful shutdown: [{}]
+[INFO] [2026-08-03T13:28:10.209Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:28:10.225Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-03T13:31:54.291Z] Server is running on port 5003 
+[INFO] [2026-08-03T13:31:54.313Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T05:38:56.490Z] Server is running on port 5003 
+[INFO] [2026-08-04T05:38:56.512Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-04T09:25:32.547Z] Server is running on port 5003 
+[INFO] [2026-08-04T09:25:32.573Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T07:21:42.333Z] Server is running on port 5003 
+[INFO] [2026-08-05T07:21:42.387Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T07:22:00.597Z] Server is running on port 5003 
+[INFO] [2026-08-05T07:22:00.617Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T07:26:11.450Z] Server is running on port 5003 
+[INFO] [2026-08-05T07:26:11.472Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-05T07:37:49.042Z] Server is running on port 5003 
+[INFO] [2026-08-05T07:37:49.060Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-07T06:58:21.985Z] Server is running on port 5003 
+[INFO] [2026-08-07T06:58:22.020Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-07T06:58:56.747Z] Server is running on port 5003 
+[INFO] [2026-08-07T06:58:56.766Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-07T07:35:45.136Z] Server is running on port 5003 
+[INFO] [2026-08-07T07:35:45.186Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-07T07:36:01.701Z] Server is running on port 5003 
+[INFO] [2026-08-07T07:36:01.715Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-07T07:51:43.137Z] Server is running on port 5003 
+[INFO] [2026-08-07T07:51:43.155Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-07T08:06:07.051Z] Server is running on port 5003 
+[INFO] [2026-08-07T08:06:07.063Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-11T06:59:59.907Z] Server is running on port 5003 
+[INFO] [2026-08-11T06:59:59.933Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-11T11:35:56.714Z] Server is running on port 5003 
+[INFO] [2026-08-11T11:35:56.731Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-11T12:15:05.990Z] Server is running on port 5003 
+[INFO] [2026-08-11T12:15:06.006Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-12T11:42:03.991Z] Server is running on port 5003 
+[INFO] [2026-08-12T11:42:04.032Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-12T11:43:01.805Z] Server is running on port 5003 
+[INFO] [2026-08-12T11:43:01.820Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-12T13:14:56.090Z] Server is running on port 5003 
+[INFO] [2026-08-12T13:14:56.102Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-12T13:36:29.986Z] Server is running on port 5003 
+[INFO] [2026-08-12T13:36:30.002Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T10:21:14.902Z] Server is running on port 5003 
+[INFO] [2026-08-29T10:21:14.945Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T11:06:50.175Z] Server is running on port 5003 
+[INFO] [2026-08-29T11:06:50.188Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T11:06:55.440Z] Server is running on port 5003 
+[INFO] [2026-08-29T11:06:55.452Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T11:21:57.389Z] Server is running on port 5003 
+[INFO] [2026-08-29T11:21:57.402Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T11:25:14.495Z] Server is running on port 5003 
+[INFO] [2026-08-29T11:25:14.510Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T11:27:11.940Z] Server is running on port 5003 
+[INFO] [2026-08-29T11:27:11.951Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T11:27:21.102Z] Server is running on port 5003 
+[INFO] [2026-08-29T11:27:21.116Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T11:43:45.448Z] Server is running on port 5003 
+[INFO] [2026-08-29T11:43:45.461Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T12:11:20.234Z] Server is running on port 5003 
+[INFO] [2026-08-29T12:11:20.245Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-08-29T12:29:40.595Z] Server is running on port 5003 
+[INFO] [2026-08-29T12:29:40.609Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-15T06:49:45.192Z] Server is running on port 5003 
+[INFO] [2026-09-15T06:49:45.237Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-15T07:45:59.890Z] Email sent to institute: swiflare@gmail.com | Subject: Exam Application Submitted - SEMI 
+[INFO] [2026-09-15T07:46:01.734Z] Email sent to academy: swiflare@gmail.com | Subject: 🆕 New Exam Application Submitted 
+[INFO] [2026-09-15T07:46:16.616Z] Email sent to institute: swiflare@gmail.com | Subject: ✅ Exam Application Approved - SEMI 
+[INFO] [2026-09-15T07:47:19.148Z] Email sent to institute: swiflare@gmail.com | Subject: 📅 Exam Schedule Published - SEMI 
+[INFO] [2026-09-15T07:53:49.163Z] Email sent to institute: swiflare@gmail.com | Subject: 💰 Revaluation Payment Received - SEMI 
+[INFO] [2026-09-15T07:53:50.727Z] Email sent to academy: swiflare@gmail.com | Subject: 🔄 New Revaluation Request Submitted 
+[INFO] [2026-09-15T07:55:03.466Z] Email sent to institute: swiflare@gmail.com | Subject: ➡️ Revaluation Results Updated - SEMI 
+[INFO] [2026-09-15T07:55:05.288Z] Email sent to student: santhosh@gmail.com | Subject: ➡️ Revaluation Results Updated - SEMI 
+[INFO] [2026-09-15T09:50:49.440Z] Server is running on port 5003 
+[INFO] [2026-09-15T09:50:49.451Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-15T09:51:39.696Z] Server is running on port 5003 
+[INFO] [2026-09-15T09:51:39.707Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-15T09:52:23.632Z] Server is running on port 5003 
+[INFO] [2026-09-15T09:52:23.642Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-15T09:53:14.009Z] Server is running on port 5003 
+[INFO] [2026-09-15T09:53:14.022Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-15T11:45:14.110Z] Server is running on port 5003 
+[INFO] [2026-09-15T11:45:14.124Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-15T12:54:35.890Z] Email sent to institute: swiflare@gmail.com | Subject: Exam Application Submitted - SEMI 
+[INFO] [2026-09-15T12:54:37.591Z] Email sent to academy: swiflare@gmail.com | Subject: 🆕 New Exam Application Submitted 
+[INFO] [2026-09-15T12:55:49.145Z] Email sent to institute: swiflare@gmail.com | Subject: ✅ Exam Application Approved - SEMI 
+[WARN] [2026-09-15T13:22:21.833Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-09-15T13:22:23.847Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T09:22:09.948Z] Server is running on port 5003 
+[INFO] [2026-09-16T09:22:09.990Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T09:34:31.974Z] Server is running on port 5003 
+[INFO] [2026-09-16T09:34:31.990Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T09:34:38.275Z] Server is running on port 5003 
+[INFO] [2026-09-16T09:34:38.295Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T09:34:45.625Z] Server is running on port 5003 
+[INFO] [2026-09-16T09:34:45.637Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T09:34:57.014Z] Server is running on port 5003 
+[INFO] [2026-09-16T09:34:57.027Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T12:30:31.227Z] Server is running on port 5003 
+[INFO] [2026-09-16T12:30:31.251Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T12:30:52.833Z] Server is running on port 5003 
+[INFO] [2026-09-16T12:30:52.858Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T12:51:40.862Z] Server is running on port 5003 
+[INFO] [2026-09-16T12:51:40.876Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T12:52:01.578Z] Server is running on port 5003 
+[INFO] [2026-09-16T12:52:01.588Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T12:52:13.739Z] Server is running on port 5003 
+[INFO] [2026-09-16T12:52:13.753Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T12:52:24.958Z] Server is running on port 5003 
+[INFO] [2026-09-16T12:52:24.968Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T13:12:52.553Z] Server is running on port 5003 
+[INFO] [2026-09-16T13:12:52.567Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T13:25:24.001Z] Server is running on port 5003 
+[INFO] [2026-09-16T13:25:24.024Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-16T13:25:24.029Z] Initializing application and seeding mock data for Academy & Institute portals... 
+[INFO] [2026-09-16T13:25:24.035Z] 🌱 Starting comprehensive database seed for Academy and Institute portals (force=true)... 
+[INFO] [2026-09-16T13:25:24.569Z] 🎉 SEED COMPLETED: Users, Institutes, Courses, Batches, Students, Exams, Results, Revaluations seeded successfully! 
+[INFO] [2026-09-16T13:25:26.335Z] 🌱 Starting comprehensive database seed for Academy and Institute portals (force=true)... 
+[INFO] [2026-09-16T13:25:26.743Z] 🎉 SEED COMPLETED: Users, Institutes, Courses, Batches, Students, Exams, Results, Revaluations seeded successfully! 
+[INFO] [2026-09-19T05:30:25.141Z] Server is running on port 5003 
+[INFO] [2026-09-19T05:30:25.175Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-19T05:30:25.178Z] Initializing application and seeding mock data for Academy & Institute portals... 
+[INFO] [2026-09-19T05:30:25.179Z] 🌱 Starting comprehensive database seed for Academy and Institute portals (force=true)... 
+[INFO] [2026-09-19T05:30:25.671Z] 🎉 SEED COMPLETED: Users, Institutes, Courses, Batches, Students, Exams, Results, Revaluations seeded successfully! 
+[INFO] [2026-09-19T06:10:46.250Z] Server is running on port 5003 
+[INFO] [2026-09-19T06:10:46.262Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-19T06:10:46.266Z] Initializing application and seeding mock data for Academy & Institute portals... 
+[INFO] [2026-09-19T06:10:46.267Z] 🌱 Starting comprehensive database seed for Academy and Institute portals (force=true)... 
+[INFO] [2026-09-19T06:10:46.600Z] 🎉 SEED COMPLETED: Users, Institutes, Courses, Batches, Students, Exams, Results, Revaluations seeded successfully! 
+[INFO] [2026-09-19T06:10:58.844Z] Server is running on port 5003 
+[INFO] [2026-09-19T06:10:58.854Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-19T06:10:58.857Z] Initializing application and seeding mock data for Academy & Institute portals... 
+[INFO] [2026-09-19T06:10:58.859Z] 🌱 Starting comprehensive database seed for Academy and Institute portals (force=true)... 
+[INFO] [2026-09-19T06:10:59.189Z] 🎉 SEED COMPLETED: Users, Institutes, Courses, Batches, Students, Exams, Results, Revaluations seeded successfully! 
+[INFO] [2026-09-19T06:12:20.984Z] Server is running on port 5003 
+[INFO] [2026-09-19T06:12:20.994Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-19T06:12:20.998Z] Initializing application and seeding mock data for Academy & Institute portals... 
+[INFO] [2026-09-19T06:12:20.999Z] 🌱 Starting comprehensive database seed for Academy and Institute portals (force=true)... 
+[INFO] [2026-09-19T06:12:21.357Z] 🎉 SEED COMPLETED: Users, Institutes, Courses, Batches, Students, Exams, Results, Revaluations seeded successfully! 
+[WARN] [2026-09-19T07:26:52.453Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-09-19T07:26:58.732Z] APM: Mongoose connected to MongoDB cluster. 
+[WARN] [2026-09-19T09:19:39.335Z] APM Alert: MongoDB connection pool disconnected. 
+[INFO] [2026-09-19T09:19:41.534Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-19T11:08:08.188Z] Server is running on port 5003 
+[INFO] [2026-09-19T11:08:08.199Z] APM: Mongoose connected to MongoDB cluster. 
+[INFO] [2026-09-19T11:08:08.202Z] Initializing application and seeding mock data for Academy & Institute portals... 
+[INFO] [2026-09-19T11:08:08.204Z] 🌱 Starting comprehensive database seed for Academy and Institute portals (force=true)... 
+[INFO] [2026-09-19T11:08:08.587Z] 🎉 SEED COMPLETED: Users, Institutes, Courses, Batches, Students, Exams, Results, Revaluations seeded successfully! 
 
 ```
 
 ### `backend/logs/error.log`
 
 ```
-[ERROR] [2026-08-05T10:37:32.149Z] Error during graceful shutdown: [{}]
+[ERROR] [2026-08-03T13:24:32.351Z] Error during graceful shutdown: [{}]
+[ERROR] [2026-08-03T13:25:31.915Z] Error during graceful shutdown: [{}]
 
 ```
 
@@ -4983,40 +5136,1579 @@ export default getRedisClient;
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
+import logger from './logger';
 import { User } from '../models/userModel';
+import { Institute } from '../models/instituteModel';
+import { Course } from '../models/courseModel';
+import { Batch } from '../models/batchModel';
+import { Student } from '../models/studentModel';
+import { ExamApplication } from '../models/examApplicationModel';
+import { HallTicket } from '../models/hallTicketModel';
+import { Result } from '../models/resultModel';
+import { Marksheet } from '../models/marksheetModel';
+import { RevaluationRequest } from '../models/revaluationRequestModel';
+import { Remittance } from '../models/remittanceModel';
+import { FeeRecord } from '../models/feeRecordModel';
 
 dotenv.config();
 
-export const seedSuperAdmin = async () => {
+const DUMMY_DOC = 'https://res.cloudinary.com/demo/image/upload/sample.jpg';
+const DUMMY_PDF = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+
+/**
+ * Seed Super Admin and All Dummy Data for Academy and Institute portals
+ */
+export const seedAllData = async (options: { force?: boolean } = {}) => {
   try {
-    const superAdminEmail = process.env.ADMIN_EMAIL || 'superadmin@academy.com';
-    const defaultPassword = process.env.ADMIN_PASSWORD || 'SuperAdmin123!';
+    const startMsg = '🌱 Starting comprehensive database seed for Academy and Institute portals (force=' + (options.force ?? false) + ')...';
+    console.log(startMsg);
+    logger.info(startMsg);
 
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️ Running seed in production! Ensure process.env.ADMIN_PASSWORD is set.');   
-    }
+    const salt = await bcrypt.genSalt(10);
+    const defaultPasswordHash = await bcrypt.hash('Institute123!', salt);
+    const superAdminHash = await bcrypt.hash('SuperAdmin123!', salt);
+    const boardHash = await bcrypt.hash('BoardPass123!', salt);
 
-    const superAdminExists = await User.findOne({ email: superAdminEmail });
+    // ──────────────────────────────────────────────────────────────────────────
+    // 1. USERS
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Users...');
+    const usersMap: Record<string, any> = {};
 
-    if (!superAdminExists) {
-      console.log('Seeding Academy Super Admin...');
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(defaultPassword, salt);
-
-      await User.create({
+    const usersToSeed = [
+      {
+        email: 'superadmin@academy.com',
         name: 'Academy Super Admin',
-        email: superAdminEmail,
-        password: hashedPassword,
+        password: superAdminHash,
         role: 'super_admin',
         isEmailVerified: true,
+      },
+      {
+        email: 'board@academy.com',
+        name: 'Academic Board Controller',
+        password: boardHash,
+        role: 'board',
+        isEmailVerified: true,
+      },
+      {
+        email: 'institute@apollo.com',
+        name: 'Apollo Hospitals Institute of EM',
+        password: defaultPasswordHash,
+        role: 'institute',
+        isEmailVerified: true,
+      },
+      {
+        email: 'institute@fortis.com',
+        name: 'Fortis Memorial Emergency Care Institute',
+        password: defaultPasswordHash,
+        role: 'institute',
+        isEmailVerified: true,
+      },
+      {
+        email: 'pending@manipal.com',
+        name: 'Manipal Emergency Academy',
+        password: defaultPasswordHash,
+        role: 'institute',
+        isEmailVerified: true,
+      },
+      {
+        email: 'rejected@cityhealth.com',
+        name: 'City Health Emergency Training Centre',
+        password: defaultPasswordHash,
+        role: 'institute',
+        isEmailVerified: true,
+      },
+    ];
+
+    for (const u of usersToSeed) {
+      let userDoc = await User.findOne({ email: u.email });
+      if (!userDoc || options.force) {
+        if (userDoc && options.force) {
+          userDoc.password = u.password;
+          userDoc.role = u.role;
+          userDoc.isEmailVerified = true;
+          userDoc.name = u.name;
+          await userDoc.save();
+        } else {
+          userDoc = await User.create(u);
+        }
+      }
+      usersMap[u.email] = userDoc;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 2. INSTITUTES
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Institutes...');
+    const institutesMap: Record<string, any> = {};
+
+    const institutesToSeed = [
+      {
+        key: 'apollo',
+        user: usersMap['institute@apollo.com']._id,
+        orgName: 'Apollo Hospitals Institute of Emergency Medicine',
+        constitutionType: 'Trust',
+        instituteAddress: '21 Greams Lane, Thousand Lights, Chennai, Tamil Nadu - 600006',
+        registeredOfficeAddress: '19 Bishop Gardens, Raja Annamalaipuram, Chennai - 600028',
+        phoneNumber: '044-28290200',
+        emailAddress: 'institute@apollo.com',
+        commencementDate: new Date('2024-01-01'),
+        seatsRequested: 10,
+        approvedSeats: 10,
+        headName: 'Dr. K. Prathap Reddy',
+        headDesignation: 'Executive Medical Director',
+        hodName: 'Dr. Suresh Venkat',
+        bedCount: 120,
+        physicianAvailability: 'Yes',
+        physicianExperience: 18,
+        courseDirectorEMQualified: 'Yes',
+        emFacultyCount: 8,
+        teachingSpace: 'Yes',
+        nabhStatus: 'Yes',
+        facultyCommitmentLetterUrl: DUMMY_PDF,
+        documents: {
+          equipmentListUrl: DUMMY_PDF,
+          facultyListUrl: DUMMY_PDF,
+          emergencyOPDStatisticsUrl: DUMMY_PDF,
+          libraryBookListUrl: DUMMY_PDF,
+          trainingMannequinListUrl: DUMMY_PDF,
+          diagnosticEquipmentListUrl: DUMMY_PDF,
+          declarationLetterUrl: DUMMY_PDF,
+          inspectionPaymentReceiptUrl: DUMMY_PDF,
+        },
+        status: 'Approved',
+        paymentStatus: 'Completed',
+        inspectionTriggered: true,
+      },
+      {
+        key: 'fortis',
+        user: usersMap['institute@fortis.com']._id,
+        orgName: 'Fortis Memorial Emergency Care Institute',
+        constitutionType: 'Society / Trust',
+        instituteAddress: 'Sector 44, Opposite HUDA City Centre, Gurugram, Haryana - 122002',
+        registeredOfficeAddress: 'Escorts Heart Institute, Okhla Road, New Delhi - 110025',
+        phoneNumber: '0124-4962200',
+        emailAddress: 'institute@fortis.com',
+        commencementDate: new Date('2024-06-01'),
+        seatsRequested: 8,
+        approvedSeats: 8,
+        headName: 'Dr. Ritu Garg',
+        headDesignation: 'Zonal Medical Director',
+        hodName: 'Dr. Sandeep Gore',
+        bedCount: 85,
+        physicianAvailability: 'Yes',
+        physicianExperience: 14,
+        courseDirectorEMQualified: 'Yes',
+        emFacultyCount: 6,
+        teachingSpace: 'Yes',
+        nabhStatus: 'Yes',
+        facultyCommitmentLetterUrl: DUMMY_PDF,
+        documents: {
+          equipmentListUrl: DUMMY_PDF,
+          facultyListUrl: DUMMY_PDF,
+          emergencyOPDStatisticsUrl: DUMMY_PDF,
+          libraryBookListUrl: DUMMY_PDF,
+          trainingMannequinListUrl: DUMMY_PDF,
+          diagnosticEquipmentListUrl: DUMMY_PDF,
+          declarationLetterUrl: DUMMY_PDF,
+        },
+        status: 'Approved',
+        paymentStatus: 'Completed',
+        inspectionTriggered: true,
+      },
+      {
+        key: 'manipal',
+        user: usersMap['pending@manipal.com']._id,
+        orgName: 'Manipal Emergency Academy',
+        constitutionType: 'University',
+        instituteAddress: '98 HAL Airport Road, Kodihalli, Bengaluru, Karnataka - 560017',
+        registeredOfficeAddress: 'Manipal Health Enterprises, Off Old Airport Road, Bengaluru',
+        phoneNumber: '080-25024444',
+        emailAddress: 'pending@manipal.com',
+        commencementDate: new Date('2025-01-01'),
+        seatsRequested: 6,
+        approvedSeats: 0,
+        headName: 'Dr. Sudarshan Ballal',
+        headDesignation: 'Chairman',
+        hodName: 'Dr. Freston Marc Sirur',
+        bedCount: 60,
+        physicianAvailability: 'Yes',
+        physicianExperience: 11,
+        courseDirectorEMQualified: 'Yes',
+        emFacultyCount: 5,
+        teachingSpace: 'Yes',
+        nabhStatus: 'Yes',
+        facultyCommitmentLetterUrl: DUMMY_PDF,
+        documents: {
+          equipmentListUrl: DUMMY_PDF,
+          facultyListUrl: DUMMY_PDF,
+          emergencyOPDStatisticsUrl: DUMMY_PDF,
+          libraryBookListUrl: DUMMY_PDF,
+          trainingMannequinListUrl: DUMMY_PDF,
+          diagnosticEquipmentListUrl: DUMMY_PDF,
+          declarationLetterUrl: DUMMY_PDF,
+        },
+        status: 'Pending Review',
+        paymentStatus: 'Completed',
+        inspectionTriggered: false,
+      },
+      {
+        key: 'cityhealth',
+        user: usersMap['rejected@cityhealth.com']._id,
+        orgName: 'City Health Emergency Training Centre',
+        constitutionType: 'Autonomous Body',
+        instituteAddress: '42 Senapati Bapat Road, Shivaji Nagar, Pune, Maharashtra - 411016',
+        registeredOfficeAddress: 'Plot 18, MIDC Bhosari, Pune',
+        phoneNumber: '020-25651234',
+        emailAddress: 'rejected@cityhealth.com',
+        commencementDate: new Date('2024-03-01'),
+        seatsRequested: 4,
+        approvedSeats: 0,
+        headName: 'Dr. Prakash Deshpande',
+        headDesignation: 'Medical Superintendent',
+        hodName: 'Dr. Amol Kulkarni',
+        bedCount: 25,
+        physicianAvailability: 'Yes',
+        physicianExperience: 5,
+        courseDirectorEMQualified: 'No',
+        emFacultyCount: 2,
+        teachingSpace: 'No',
+        nabhStatus: 'No',
+        facultyCommitmentLetterUrl: DUMMY_PDF,
+        documents: {
+          equipmentListUrl: DUMMY_PDF,
+          facultyListUrl: DUMMY_PDF,
+          emergencyOPDStatisticsUrl: DUMMY_PDF,
+          libraryBookListUrl: DUMMY_PDF,
+          trainingMannequinListUrl: DUMMY_PDF,
+          diagnosticEquipmentListUrl: DUMMY_PDF,
+          declarationLetterUrl: DUMMY_PDF,
+        },
+        status: 'Rejected',
+        remarks: 'Infrastructure and faculty requirements not met as per SEMI accreditation norms (requires minimum 50 beds & full-time qualified EM Director).',
+        paymentStatus: 'Pending',
+        inspectionTriggered: false,
+      },
+    ];
+
+    for (const inst of institutesToSeed) {
+      const { key, ...instData } = inst;
+      let instDoc = await Institute.findOne({ user: instData.user });
+      if (!instDoc) {
+        instDoc = await Institute.create(instData as any);
+      } else if (options.force) {
+        Object.assign(instDoc, instData);
+        await instDoc.save();
+      }
+      institutesMap[key] = instDoc;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 3. COURSES (Academic Board managed)
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Courses...');
+    const coursesMap: Record<string, any> = {};
+
+    const coursesToSeed = [
+      {
+        key: 'fem',
+        name: 'Fellowship in Emergency Medicine',
+        courseCode: 'FEM',
+        courseType: 'Fellowship',
+        programCategory: 'Emergency Medicine',
+        courseDuration: '2',
+        durationType: 'Years',
+        subjects: [
+          'Core Emergency Medicine',
+          'Trauma & Resuscitation',
+          'Pediatric & Neonatal Emergencies',
+          'Critical Care & Toxicology',
+        ],
+        practicalExamName: 'Clinical OSCE & Practical Station Exam',
+        practicalExams: ['Clinical OSCE', 'Resuscitation Stations', 'Viva Voce'],
+        examinations: [
+          {
+            examinationNumber: 1,
+            examinationName: 'Part 1 - Basic Sciences & Core Emergencies',
+            monthsRequired: 12,
+            subjects: [
+              { code: 'FEM101', name: 'Core Emergency Medicine' },
+              { code: 'FEM102', name: 'Trauma & Resuscitation' },
+              { code: 'FEM103', name: 'Pediatric & Neonatal Emergencies' },
+              { code: 'FEM104', name: 'Critical Care & Toxicology' },
+            ],
+          },
+          {
+            examinationNumber: 2,
+            examinationName: 'Part 2 - Advanced Emergency Medicine & Exit OSCE',
+            monthsRequired: 24,
+            subjects: [
+              { code: 'FEM201', name: 'Advanced Emergency Medicine' },
+              { code: 'FEM202', name: 'Disaster Management & EMS' },
+            ],
+          },
+        ],
+        examinationFee: 5000,
+        reappearingExaminationFee: 3000,
+        feeApplicableForFirstAttempt: false,
+        examFeeConfig: {
+          exam_1: {
+            firstAttemptFee: 5000,
+            reappearingFee: 3000,
+            feeApplicableForFirstAttempt: false,
+          },
+          exam_2: {
+            firstAttemptFee: 5000,
+            reappearingFee: 3000,
+            feeApplicableForFirstAttempt: false,
+          },
+        },
+      },
+      {
+        key: 'mem',
+        name: 'Masters in Emergency Medicine',
+        courseCode: 'MEM',
+        courseType: 'Postgraduate',
+        programCategory: 'Emergency Medicine',
+        courseDuration: '3',
+        durationType: 'Years',
+        subjects: [
+          'Advanced Emergency Medicine',
+          'Disaster & EMS Management',
+          'Emergency Ultrasound & Imaging',
+          'ICU & Intensive Monitoring',
+        ],
+        practicalExamName: 'Advanced Simulation & High-Fidelity OSCE',
+        practicalExams: ['Simulation Station', 'Emergency Ultrasound & Echo', 'Clinical Case Presentation'],
+        examinations: [
+          {
+            examinationNumber: 1,
+            examinationName: 'MEM Part 1 Primary Examination',
+            monthsRequired: 18,
+            subjects: [
+              { code: 'MEM101', name: 'Advanced Emergency Medicine' },
+              { code: 'MEM102', name: 'Disaster & EMS Management' },
+              { code: 'MEM103', name: 'Emergency Ultrasound & Imaging' },
+              { code: 'MEM104', name: 'ICU & Intensive Monitoring' },
+            ],
+          },
+          {
+            examinationNumber: 2,
+            examinationName: 'MEM Part 2 Final Exit Examination',
+            monthsRequired: 36,
+            subjects: [
+              { code: 'MEM201', name: 'Comprehensive Emergency Medicine' },
+              { code: 'MEM202', name: 'Emergency Administration & Research' },
+            ],
+          },
+        ],
+        examinationFee: 6000,
+        reappearingExaminationFee: 3500,
+        feeApplicableForFirstAttempt: false,
+        examFeeConfig: {
+          exam_1: {
+            firstAttemptFee: 6000,
+            reappearingFee: 3500,
+            feeApplicableForFirstAttempt: false,
+          },
+        },
+      },
+      {
+        key: 'dem',
+        name: 'Diploma in Emergency Medicine',
+        courseCode: 'DEM',
+        courseType: 'Diploma',
+        programCategory: 'Emergency Medicine',
+        courseDuration: '1',
+        durationType: 'Years',
+        subjects: [
+          'Emergency Triage & Assessment',
+          'Basic Procedural Skills in EM',
+          'Common Medical Emergencies',
+        ],
+        practicalExamName: 'Core Clinical Skills & Triage Stations',
+        practicalExams: ['Triage Station', 'BLS & Airway Skills'],
+        examinations: [
+          {
+            examinationNumber: 1,
+            examinationName: 'Diploma Comprehensive Examination',
+            monthsRequired: 12,
+            subjects: [
+              { code: 'DEM101', name: 'Emergency Triage & Assessment' },
+              { code: 'DEM102', name: 'Basic Procedural Skills in EM' },
+              { code: 'DEM103', name: 'Common Medical Emergencies' },
+            ],
+          },
+        ],
+        examinationFee: 4000,
+        reappearingExaminationFee: 2500,
+        feeApplicableForFirstAttempt: false,
+        examFeeConfig: {
+          exam_1: {
+            firstAttemptFee: 4000,
+            reappearingFee: 2500,
+            feeApplicableForFirstAttempt: false,
+          },
+        },
+      },
+    ];
+
+    for (const c of coursesToSeed) {
+      const { key, ...cData } = c;
+      let courseDoc = await Course.findOne({ courseCode: cData.courseCode });
+      if (!courseDoc) {
+        courseDoc = await Course.create(cData);
+      } else if (options.force) {
+        Object.assign(courseDoc, cData);
+        await courseDoc.save();
+      }
+      coursesMap[key] = courseDoc;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 4. BATCHES
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Batches...');
+    const batchesMap: Record<string, any> = {};
+
+    const batchesToSeed = [
+      {
+        key: 'apollo_fem_2025',
+        institute: institutesMap['apollo']._id,
+        course: coursesMap['fem']._id,
+        year: 2025,
+        name: 'FEM 2025 Batch A',
+        seats: 5,
+        activeFellows: 3,
+        status: 'Active',
+      },
+      {
+        key: 'apollo_fem_2026',
+        institute: institutesMap['apollo']._id,
+        course: coursesMap['fem']._id,
+        year: 2026,
+        name: 'FEM 2026 Batch A',
+        seats: 5,
+        activeFellows: 5,
+        status: 'Active',
+      },
+      {
+        key: 'apollo_mem_2025',
+        institute: institutesMap['apollo']._id,
+        course: coursesMap['mem']._id,
+        year: 2025,
+        name: 'MEM 2025 Batch A',
+        seats: 4,
+        activeFellows: 3,
+        status: 'Active',
+      },
+      {
+        key: 'apollo_dem_2026',
+        institute: institutesMap['apollo']._id,
+        course: coursesMap['dem']._id,
+        year: 2026,
+        name: 'DEM 2026 Batch A',
+        seats: 6,
+        activeFellows: 2,
+        status: 'Active',
+      },
+      {
+        key: 'fortis_fem_2026',
+        institute: institutesMap['fortis']._id,
+        course: coursesMap['fem']._id,
+        year: 2026,
+        name: 'Fortis FEM 2026 Batch A',
+        seats: 5,
+        activeFellows: 1,
+        status: 'Active',
+      },
+    ];
+
+    for (const b of batchesToSeed) {
+      const { key, ...bData } = b;
+      let batchDoc = await Batch.findOne({ course: bData.course, name: bData.name });
+      if (!batchDoc) {
+        batchDoc = await Batch.create(bData as any);
+      } else if (options.force) {
+        Object.assign(batchDoc, bData);
+        await batchDoc.save();
+      }
+      batchesMap[key] = batchDoc;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 5. STUDENTS
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Students...');
+    const studentsMap: Record<string, any> = {};
+
+    const studentsToSeed = [
+      // Apollo FEM 2025 Batch (Senior batch, Past published results)
+      {
+        key: 'aarav',
+        enrollmentId: 'SEMI-2025-1001',
+        firstName: 'Aarav',
+        lastName: 'Sharma',
+        email: 'aarav.sharma@apollo.edu',
+        contactNumber: '9840123456',
+        homeAddress: 'Flat 4B, Emerald Heights, Anna Nagar, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2023,
+        universityName: 'The Tamil Nadu Dr. M.G.R. Medical University',
+        medicalCouncilRegistrationNumber: 'TN-MC-88291',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1995-04-12'),
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2025']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 92,
+            thesisApproved: true,
+            eligibilityStatus: 'Approved',
+            marks: [
+              { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', marksObtained: 85, totalMarks: 100, isAbsent: false, grade: 'O' },
+              { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', marksObtained: 78, totalMarks: 100, isAbsent: false, grade: 'A' },
+              { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', marksObtained: 82, totalMarks: 100, isAbsent: false, grade: 'A+' },
+              { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', marksObtained: 90, totalMarks: 100, isAbsent: false, grade: 'O' },
+            ],
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+      {
+        key: 'sneha',
+        enrollmentId: 'SEMI-2025-1002',
+        firstName: 'Sneha',
+        lastName: 'Pillai',
+        email: 'sneha.pillai@apollo.edu',
+        contactNumber: '9840234567',
+        homeAddress: '12 Kothari Road, Nungambakkam, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2023,
+        universityName: 'Kerala University of Health Sciences',
+        medicalCouncilRegistrationNumber: 'KL-MC-74120',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1996-08-23'),
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2025']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 88,
+            thesisApproved: true,
+            eligibilityStatus: 'Approved',
+            marks: [
+              { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', marksObtained: 72, totalMarks: 100, isAbsent: false, grade: 'A' },
+              { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', marksObtained: 68, totalMarks: 100, isAbsent: false, grade: 'B+' },
+              { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', marksObtained: 74, totalMarks: 100, isAbsent: false, grade: 'A' },
+              { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', marksObtained: 70, totalMarks: 100, isAbsent: false, grade: 'A' },
+            ],
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+      {
+        key: 'vikram',
+        enrollmentId: 'SEMI-2025-1003',
+        firstName: 'Vikram',
+        lastName: 'Malhotra',
+        email: 'vikram.malhotra@apollo.edu',
+        contactNumber: '9840345678',
+        homeAddress: '55 Harrington Road, Chetpet, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2022,
+        universityName: 'Maharashtra University of Health Sciences',
+        medicalCouncilRegistrationNumber: 'MMC-2022-9901',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1994-11-05'),
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2025']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 80,
+            thesisApproved: true,
+            eligibilityStatus: 'Approved',
+            marks: [
+              { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', marksObtained: 32, totalMarks: 100, isAbsent: false, grade: 'F' },
+              { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', marksObtained: 55, totalMarks: 100, isAbsent: false, grade: 'B' },
+              { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', marksObtained: 52, totalMarks: 100, isAbsent: false, grade: 'B' },
+              { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', marksObtained: 55, totalMarks: 100, isAbsent: false, grade: 'B' },
+            ],
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+
+      // Apollo FEM 2026 Batch (Current batch with Approved Exam Application & Scheduled Results)
+      {
+        key: 'ananya',
+        enrollmentId: 'SEMI-2026-2001',
+        firstName: 'Ananya',
+        lastName: 'Iyer',
+        email: 'ananya.iyer@apollo.edu',
+        contactNumber: '9840456789',
+        homeAddress: 'Flat 8C, Ceebros Boulevard, OMR, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2024,
+        universityName: 'The Tamil Nadu Dr. M.G.R. Medical University',
+        medicalCouncilRegistrationNumber: 'TN-MC-90182',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1997-02-14'),
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2026']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 95,
+            thesisApproved: true,
+            eligibilityStatus: 'Approved',
+            marks: [
+              { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', marksObtained: 88, totalMarks: 100, isAbsent: false, grade: 'O' },
+              { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', marksObtained: 84, totalMarks: 100, isAbsent: false, grade: 'A+' },
+              { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', marksObtained: 80, totalMarks: 100, isAbsent: false, grade: 'A+' },
+              { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', marksObtained: 86, totalMarks: 100, isAbsent: false, grade: 'O' },
+            ],
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+      {
+        key: 'rohan',
+        enrollmentId: 'SEMI-2026-2002',
+        firstName: 'Rohan',
+        lastName: 'Deshmukh',
+        email: 'rohan.deshmukh@apollo.edu',
+        contactNumber: '9840567890',
+        homeAddress: 'Plot 22, VGP Layout, Palavakkam, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2024,
+        universityName: 'Maharashtra University of Health Sciences',
+        medicalCouncilRegistrationNumber: 'MMC-2024-4152',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1996-12-19'),
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2026']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 91,
+            thesisApproved: true,
+            eligibilityStatus: 'Approved',
+            marks: [
+              { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', marksObtained: 76, totalMarks: 100, isAbsent: false, grade: 'A' },
+              { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', marksObtained: 79, totalMarks: 100, isAbsent: false, grade: 'A' },
+              { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', marksObtained: 82, totalMarks: 100, isAbsent: false, grade: 'A+' },
+              { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', marksObtained: 75, totalMarks: 100, isAbsent: false, grade: 'A' },
+            ],
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+      {
+        key: 'meera',
+        enrollmentId: 'SEMI-2026-2003',
+        firstName: 'Meera',
+        lastName: 'Nambiar',
+        email: 'meera.nambiar@apollo.edu',
+        contactNumber: '9840678901',
+        homeAddress: '31 Besant Avenue, Adyar, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2024,
+        universityName: 'Kerala University of Health Sciences',
+        medicalCouncilRegistrationNumber: 'KL-MC-81093',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1998-05-30'),
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2026']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 86,
+            thesisApproved: true,
+            eligibilityStatus: 'Approved',
+            marks: [
+              { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', marksObtained: 74, totalMarks: 100, isAbsent: false, grade: 'A' },
+              { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', marksObtained: null, totalMarks: 100, isAbsent: false, grade: '' },
+              { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', marksObtained: null, totalMarks: 100, isAbsent: false, grade: '' },
+              { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', marksObtained: null, totalMarks: 100, isAbsent: false, grade: '' },
+            ],
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+      {
+        key: 'kabir',
+        enrollmentId: 'SEMI-2026-2004',
+        firstName: 'Kabir',
+        lastName: 'Khan',
+        email: 'kabir.khan@apollo.edu',
+        contactNumber: '9840789012',
+        homeAddress: '18 TTK Road, Alwarpet, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2023,
+        universityName: 'Rajiv Gandhi University of Health Sciences',
+        medicalCouncilRegistrationNumber: 'KMC-2023-5591',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1995-09-10'),
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2026']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 78,
+            thesisApproved: true,
+            eligibilityStatus: 'Approved',
+            marks: [],
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+      {
+        key: 'pooja',
+        enrollmentId: 'SEMI-2026-2005',
+        firstName: 'Pooja',
+        lastName: 'Joshi',
+        email: 'pooja.joshi@apollo.edu',
+        contactNumber: '9840890123',
+        homeAddress: '7 G.N. Chetty Road, T. Nagar, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2024,
+        universityName: 'Gujarat University',
+        medicalCouncilRegistrationNumber: 'GMC-2024-3329',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1997-07-22'),
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2026']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: false,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 65,
+            thesisApproved: false,
+            eligibilityStatus: 'Pending',
+            marks: [],
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+
+      // Apollo MEM 2025 Batch (Students for Academic Verification)
+      {
+        key: 'aditya',
+        enrollmentId: 'SEMI-2025-3001',
+        firstName: 'Aditya',
+        lastName: 'Rao',
+        email: 'aditya.rao@apollo.edu',
+        contactNumber: '9840901234',
+        homeAddress: '64 Gandhi Mandapam Road, Kotturpuram, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2023,
+        universityName: 'Rajiv Gandhi University of Health Sciences',
+        medicalCouncilRegistrationNumber: 'KMC-2023-7188',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1996-01-18'),
+        course: coursesMap['mem']._id,
+        batch: batchesMap['apollo_mem_2025']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Pending Verification',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 90,
+            thesisDocumentUrl: DUMMY_PDF,
+            thesisApproved: false,
+            eligibilityStatus: 'Pending',
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+      {
+        key: 'divya',
+        enrollmentId: 'SEMI-2025-3002',
+        firstName: 'Divya',
+        lastName: 'Krishnan',
+        email: 'divya.krishnan@apollo.edu',
+        contactNumber: '9840012345',
+        homeAddress: '88 Luz Church Road, Mylapore, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2023,
+        universityName: 'The Tamil Nadu Dr. M.G.R. Medical University',
+        medicalCouncilRegistrationNumber: 'TN-MC-85419',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1997-10-08'),
+        course: coursesMap['mem']._id,
+        batch: batchesMap['apollo_mem_2025']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Pending Verification',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 89,
+            thesisDocumentUrl: DUMMY_PDF,
+            thesisApproved: false,
+            eligibilityStatus: 'Pending',
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+      {
+        key: 'siddharth',
+        enrollmentId: 'SEMI-2025-3003',
+        firstName: 'Siddharth',
+        lastName: 'Verma',
+        email: 'siddharth.verma@apollo.edu',
+        contactNumber: '9840112233',
+        homeAddress: '14 Santhome High Road, Santhome, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2022,
+        universityName: 'Delhi University (MAMC)',
+        medicalCouncilRegistrationNumber: 'DMC-2022-6721',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1995-03-25'),
+        course: coursesMap['mem']._id,
+        batch: batchesMap['apollo_mem_2025']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Correction Required',
+        verificationRemarks: 'Please re-upload clear medical council registration certificate with visible registration seal.',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 82,
+            thesisApproved: false,
+            eligibilityStatus: 'Pending',
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+
+      // Apollo DEM 2026 Batch (For Exam Application flow)
+      {
+        key: 'ruchi',
+        enrollmentId: 'SEMI-2026-4001',
+        firstName: 'Ruchi',
+        lastName: 'Gupta',
+        email: 'ruchi.gupta@apollo.edu',
+        contactNumber: '9840223344',
+        homeAddress: '25 Sterling Road, Nungambakkam, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2024,
+        universityName: 'Manipal Academy of Higher Education',
+        medicalCouncilRegistrationNumber: 'KMC-2024-9128',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1998-09-12'),
+        course: coursesMap['dem']._id,
+        batch: batchesMap['apollo_dem_2026']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 90,
+            thesisApproved: true,
+            eligibilityStatus: 'Pending',
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+      {
+        key: 'varun',
+        enrollmentId: 'SEMI-2026-4002',
+        firstName: 'Varun',
+        lastName: 'Reddy',
+        email: 'varun.reddy@apollo.edu',
+        contactNumber: '9840334455',
+        homeAddress: '72 Chamiers Road, Nandanam, Chennai',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2024,
+        universityName: 'NTR University of Health Sciences',
+        medicalCouncilRegistrationNumber: 'APMC-2024-5412',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1997-06-17'),
+        course: coursesMap['dem']._id,
+        batch: batchesMap['apollo_dem_2026']._id,
+        institute: institutesMap['apollo']._id,
+        courseDirector: 'Dr. Suresh Venkat',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 88,
+            thesisApproved: true,
+            eligibilityStatus: 'Pending',
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+
+      // Fortis FEM 2026 Batch
+      {
+        key: 'ishita',
+        enrollmentId: 'SEMI-2026-5001',
+        firstName: 'Ishita',
+        lastName: 'Sen',
+        email: 'ishita.sen@fortis.edu',
+        contactNumber: '9811223344',
+        homeAddress: 'A-21 Sushant Lok Phase 1, Gurugram',
+        qualification: 'MBBS',
+        mbbsQualification: 'MBBS Degree',
+        yearOfPassing: 2023,
+        universityName: 'West Bengal University of Health Sciences',
+        medicalCouncilRegistrationNumber: 'WBMC-2023-8821',
+        isForeignGraduate: false,
+        dateOfBirth: new Date('1996-04-05'),
+        course: coursesMap['fem']._id,
+        batch: batchesMap['fortis_fem_2026']._id,
+        institute: institutesMap['fortis']._id,
+        courseDirector: 'Dr. Sandeep Gore',
+        verificationStatus: 'Approved',
+        remittedToAcademy: true,
+        examinations: [
+          {
+            examinationNumber: 1,
+            attendancePercentage: 93,
+            thesisApproved: true,
+            eligibilityStatus: 'Approved',
+          },
+        ],
+        documents: {
+          passportPhotoUrl: DUMMY_DOC,
+          mbbsCertificateUrl: DUMMY_PDF,
+          medicalCouncilRegistrationCertificateUrl: DUMMY_PDF,
+          semiMembershipFormUrl: DUMMY_PDF,
+        },
+      },
+    ];
+
+    for (const s of studentsToSeed) {
+      const { key, ...sData } = s;
+      let studentDoc = await Student.findOne({ enrollmentId: sData.enrollmentId });
+      if (!studentDoc) {
+        studentDoc = await Student.create(sData as any);
+      } else if (options.force) {
+        Object.assign(studentDoc, sData);
+        await studentDoc.save();
+      }
+      studentsMap[key] = studentDoc;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 6. EXAM APPLICATIONS
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Exam Applications...');
+
+    // 1. Pending Exam Application (DEM 2026 - awaiting Academy review on /academy/eligibility)
+    const existingExam1 = await ExamApplication.findOne({
+      batch: batchesMap['apollo_dem_2026']._id,
+      examinationNumber: 1,
+    });
+    if (!existingExam1 || options.force) {
+      if (existingExam1 && options.force) await existingExam1.deleteOne();
+      await ExamApplication.create({
+        institute: institutesMap['apollo']._id,
+        course: coursesMap['dem']._id,
+        batch: batchesMap['apollo_dem_2026']._id,
+        examinationNumber: 1,
+        students: [studentsMap['ruchi']._id, studentsMap['varun']._id],
+        subjects: ['Emergency Triage & Assessment', 'Basic Procedural Skills in EM', 'Common Medical Emergencies'],
+        status: 'Pending',
+        hallTicketsGenerated: false,
+      });
+    }
+
+    // 2. Approved Exam Application (FEM 2026 - ready to Publish Schedule on /academy/eligibility)
+    const existingExam2 = await ExamApplication.findOne({
+      batch: batchesMap['apollo_fem_2026']._id,
+      examinationNumber: 1,
+    });
+    if (!existingExam2 || options.force) {
+      if (existingExam2 && options.force) await existingExam2.deleteOne();
+      await ExamApplication.create({
+        institute: institutesMap['apollo']._id,
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2026']._id,
+        examinationNumber: 1,
+        students: [
+          studentsMap['ananya']._id,
+          studentsMap['rohan']._id,
+          studentsMap['meera']._id,
+          studentsMap['kabir']._id,
+        ],
+        subjects: [
+          'Core Emergency Medicine',
+          'Trauma & Resuscitation',
+          'Pediatric & Neonatal Emergencies',
+          'Critical Care & Toxicology',
+        ],
+        status: 'Approved',
+        scheduledDate: new Date('2026-10-15'),
+        remarks: 'Eligibility verified and approved for exam schedule publication.',
+        hallTicketsGenerated: false,
+      });
+    }
+
+    // 3. SchedulePublished Exam Application (FEM 2025 - has hall tickets, schedule active)
+    let examApp3 = await ExamApplication.findOne({
+      batch: batchesMap['apollo_fem_2025']._id,
+      examinationNumber: 1,
+    });
+    if (!examApp3 || options.force) {
+      if (examApp3 && options.force) await examApp3.deleteOne();
+      examApp3 = await ExamApplication.create({
+        institute: institutesMap['apollo']._id,
+        course: coursesMap['fem']._id,
+        batch: batchesMap['apollo_fem_2025']._id,
+        examinationNumber: 1,
+        students: [
+          studentsMap['aarav']._id,
+          studentsMap['sneha']._id,
+          studentsMap['vikram']._id,
+        ],
+        subjects: [
+          'Core Emergency Medicine',
+          'Trauma & Resuscitation',
+          'Pediatric & Neonatal Emergencies',
+          'Critical Care & Toxicology',
+        ],
+        status: 'SchedulePublished',
+        scheduledDate: new Date('2026-05-15'),
+        remarks: 'Exam schedule published.',
+        examVenue: 'Apollo Hospitals Main Auditorium, Greams Road, Chennai',
+        examCenter: 'SEMI Examination Center - South Zone 1',
+        reportingTime: '08:30 AM',
+        schedulePublishedAt: new Date('2026-05-01'),
+        subjectSchedules: [
+          { subject: 'Core Emergency Medicine', date: new Date('2026-05-15'), time: '09:30 AM - 12:30 PM' },
+          { subject: 'Trauma & Resuscitation', date: new Date('2026-05-16'), time: '09:30 AM - 12:30 PM' },
+          { subject: 'Pediatric & Neonatal Emergencies', date: new Date('2026-05-17'), time: '09:30 AM - 12:30 PM' },
+          { subject: 'Critical Care & Toxicology', date: new Date('2026-05-18'), time: '09:30 AM - 12:30 PM' },
+        ],
+        hallTicketsGenerated: true,
+        hallTicketsGeneratedAt: new Date('2026-05-01'),
+      });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 7. HALL TICKETS
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Hall Tickets...');
+    const hallTicketStudents = [studentsMap['aarav'], studentsMap['sneha'], studentsMap['vikram']];
+    for (const htStudent of hallTicketStudents) {
+      const existingTicket = await HallTicket.findOne({ student: htStudent._id, 'metadata.version': '1.0' });
+      if (!existingTicket || options.force) {
+        if (existingTicket && options.force) await existingTicket.deleteOne();
+        await HallTicket.create({
+          ticketId: `HT-${htStudent.enrollmentId}-2025-S1`,
+          hallTicketNumber: `HT-${htStudent.enrollmentId}-2025-S1`,
+          examApplication: examApp3._id,
+          student: htStudent._id,
+          enrollmentId: htStudent.enrollmentId,
+          studentName: `${htStudent.firstName} ${htStudent.lastName}`,
+          contactNumber: htStudent.contactNumber,
+          instituteName: institutesMap['apollo'].orgName,
+          courseName: coursesMap['fem'].name,
+          batchName: batchesMap['apollo_fem_2025'].name,
+          batchYear: 2025,
+          subjects: [
+            'Core Emergency Medicine',
+            'Trauma & Resuscitation',
+            'Pediatric & Neonatal Emergencies',
+            'Critical Care & Toxicology',
+          ],
+          examVenue: 'Apollo Hospitals Main Auditorium, Greams Road, Chennai',
+          examCenter: 'SEMI Examination Center - South Zone 1',
+          reportingTime: '08:30 AM',
+          status: 'published',
+          metadata: {
+            generatedAt: new Date('2026-05-01'),
+            generatedBy: 'Academic Board',
+            version: '1.0',
+          },
+        });
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 8. RESULTS & MARKSHEETS
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Results & Marksheets...');
+
+    const resultsToSeed = [
+      // 1. Dr. Aarav Sharma (Past published, PASS, 83.75%)
+      {
+        student: studentsMap['aarav']._id,
+        academicYear: '2025',
+        examination: 1,
+        subjects: [
+          { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', internalMarks: 25, externalMarks: 60, totalMarks: 85, grade: 'O', credits: 4, gradePoints: 10, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', internalMarks: 23, externalMarks: 55, totalMarks: 78, grade: 'A', credits: 4, gradePoints: 8, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', internalMarks: 24, externalMarks: 58, totalMarks: 82, grade: 'A+', credits: 4, gradePoints: 9, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', internalMarks: 25, externalMarks: 65, totalMarks: 90, grade: 'O', credits: 4, gradePoints: 10, isRevaluationApplied: false, isRevaluationCompleted: false },
+        ],
+        totalMarks: 335,
+        totalCredits: 16,
+        percentage: 83.75,
+        cgpa: 8.8,
+        sgpa: 8.8,
+        division: 'First',
+        resultStatus: 'PASS',
+        isPublished: true,
+        publishedDate: new Date('2026-06-15T10:00:00.000Z'),
+        isRevaluationActive: true,
+        revaluationDeadline: new Date('2026-06-25T10:00:00.000Z'),
+      },
+
+      // 2. Dr. Sneha Pillai (Past published, PASS, 71.0%, Revaluation Applied)
+      {
+        student: studentsMap['sneha']._id,
+        academicYear: '2025',
+        examination: 1,
+        subjects: [
+          { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', internalMarks: 22, externalMarks: 50, totalMarks: 72, grade: 'A', credits: 4, gradePoints: 8, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', internalMarks: 20, externalMarks: 48, totalMarks: 68, grade: 'B+', credits: 4, gradePoints: 7, isRevaluationApplied: true, isRevaluationCompleted: false },
+          { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', internalMarks: 24, externalMarks: 50, totalMarks: 74, grade: 'A', credits: 4, gradePoints: 8, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', internalMarks: 21, externalMarks: 49, totalMarks: 70, grade: 'A', credits: 4, gradePoints: 8, isRevaluationApplied: false, isRevaluationCompleted: false },
+        ],
+        totalMarks: 284,
+        totalCredits: 16,
+        percentage: 71.0,
+        cgpa: 7.5,
+        sgpa: 7.5,
+        division: 'First',
+        resultStatus: 'PASS',
+        isPublished: true,
+        publishedDate: new Date('2026-06-15T10:00:00.000Z'),
+        isRevaluationActive: true,
+        revaluationDeadline: new Date('2026-06-25T10:00:00.000Z'),
+      },
+
+      // 3. Dr. Vikram Malhotra (Past published, FAIL, 48.5%, Revaluation Under Review)
+      {
+        student: studentsMap['vikram']._id,
+        academicYear: '2025',
+        examination: 1,
+        subjects: [
+          { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', internalMarks: 10, externalMarks: 22, totalMarks: 32, grade: 'F', credits: 4, gradePoints: 0, isRevaluationApplied: true, isRevaluationCompleted: false },
+          { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', internalMarks: 18, externalMarks: 37, totalMarks: 55, grade: 'B', credits: 4, gradePoints: 6, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', internalMarks: 17, externalMarks: 35, totalMarks: 52, grade: 'B', credits: 4, gradePoints: 6, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', internalMarks: 18, externalMarks: 37, totalMarks: 55, grade: 'B', credits: 4, gradePoints: 6, isRevaluationApplied: false, isRevaluationCompleted: false },
+        ],
+        totalMarks: 194,
+        totalCredits: 16,
+        percentage: 48.5,
+        cgpa: 4.5,
+        sgpa: 4.5,
+        division: 'Fail',
+        resultStatus: 'FAIL',
+        isPublished: true,
+        publishedDate: new Date('2026-06-15T10:00:00.000Z'),
+        isRevaluationActive: true,
+        revaluationDeadline: new Date('2026-06-25T10:00:00.000Z'),
+      },
+
+      // 4. Dr. Ananya Iyer (FUTURE SCHEDULED RESULT - 7 days ahead at 6:00 PM)
+      {
+        student: studentsMap['ananya']._id,
+        academicYear: '2026',
+        examination: 1,
+        subjects: [
+          { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', internalMarks: 26, externalMarks: 62, totalMarks: 88, grade: 'O', credits: 4, gradePoints: 10, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', internalMarks: 24, externalMarks: 60, totalMarks: 84, grade: 'A+', credits: 4, gradePoints: 9, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', internalMarks: 22, externalMarks: 58, totalMarks: 80, grade: 'A+', credits: 4, gradePoints: 9, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', internalMarks: 25, externalMarks: 61, totalMarks: 86, grade: 'O', credits: 4, gradePoints: 10, isRevaluationApplied: false, isRevaluationCompleted: false },
+        ],
+        totalMarks: 338,
+        totalCredits: 16,
+        percentage: 84.5,
+        cgpa: 9.0,
+        sgpa: 9.0,
+        division: 'First',
+        resultStatus: 'PASS',
+        isPublished: true,
+        publishedDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days in future!
+        isRevaluationActive: false,
+        revaluationDeadline: new Date(Date.now() + 17 * 24 * 60 * 60 * 1000),
+      },
+
+      // 5. Dr. Rohan Deshmukh (FUTURE SCHEDULED RESULT - 7 days ahead at 6:00 PM)
+      {
+        student: studentsMap['rohan']._id,
+        academicYear: '2026',
+        examination: 1,
+        subjects: [
+          { subjectCode: 'FEM101', subjectName: 'Core Emergency Medicine', internalMarks: 22, externalMarks: 54, totalMarks: 76, grade: 'A', credits: 4, gradePoints: 8, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM102', subjectName: 'Trauma & Resuscitation', internalMarks: 23, externalMarks: 56, totalMarks: 79, grade: 'A', credits: 4, gradePoints: 8, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM103', subjectName: 'Pediatric & Neonatal Emergencies', internalMarks: 24, externalMarks: 58, totalMarks: 82, grade: 'A+', credits: 4, gradePoints: 9, isRevaluationApplied: false, isRevaluationCompleted: false },
+          { subjectCode: 'FEM104', subjectName: 'Critical Care & Toxicology', internalMarks: 22, externalMarks: 53, totalMarks: 75, grade: 'A', credits: 4, gradePoints: 8, isRevaluationApplied: false, isRevaluationCompleted: false },
+        ],
+        totalMarks: 312,
+        totalCredits: 16,
+        percentage: 78.0,
+        cgpa: 8.25,
+        sgpa: 8.25,
+        division: 'First',
+        resultStatus: 'PASS',
+        isPublished: true,
+        publishedDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days in future!
+        isRevaluationActive: false,
+        revaluationDeadline: new Date(Date.now() + 17 * 24 * 60 * 60 * 1000),
+      },
+    ];
+
+    const resultsMap: Record<string, any> = {};
+
+    for (const resData of resultsToSeed) {
+      let resultDoc = await Result.findOne({
+        student: resData.student,
+        academicYear: resData.academicYear,
+        examination: resData.examination,
       });
 
-      console.log('Academy Super Admin seeded successfully! 🎉');
-    } else {
-      console.log('Academy Super Admin already exists. Skipping seed.');
+      if (!resultDoc) {
+        resultDoc = await Result.create(resData as any);
+      } else if (options.force) {
+        Object.assign(resultDoc, resData);
+        await resultDoc.save();
+      }
+
+      resultsMap[String(resData.student)] = resultDoc;
+
+      // Seed Marksheet for published results in past
+      if (resData.publishedDate && resData.publishedDate <= new Date()) {
+        const studentObj = await Student.findById(resData.student);
+        const marksheetNumber = `MS-${studentObj?.enrollmentId}-${resData.academicYear}-S${resData.examination}`;
+        let marksheetDoc = await Marksheet.findOne({ marksheetNumber });
+        if (!marksheetDoc || options.force) {
+          if (marksheetDoc && options.force) await marksheetDoc.deleteOne();
+          await Marksheet.create({
+            student: resData.student,
+            academicYear: resData.academicYear,
+            examination: resData.examination,
+            result: resultDoc._id,
+            marksheetNumber,
+            marksheetPDF: DUMMY_PDF,
+            isFinal: true,
+            version: 1,
+            downloadedCount: 1,
+            lastDownloaded: new Date(),
+          });
+        }
+      }
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 9. REVALUATION REQUESTS
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Revaluation Requests...');
+
+    // Request 1: Dr. Sneha Pillai (Pending)
+    const snehaResult = resultsMap[String(studentsMap['sneha']._id)];
+    if (snehaResult) {
+      let rev1 = await RevaluationRequest.findOne({ requestId: 'REV-2026-001' });
+      if (!rev1 || options.force) {
+        if (rev1 && options.force) await rev1.deleteOne();
+        rev1 = await RevaluationRequest.create({
+          requestId: 'REV-2026-001',
+          institute: institutesMap['apollo']._id,
+          student: studentsMap['sneha']._id,
+          result: snehaResult._id,
+          academicYear: '2025',
+          examination: 1,
+          subjects: [
+            {
+              subjectCode: 'FEM102',
+              subjectName: 'Trauma & Resuscitation',
+              originalMarks: 68,
+              originalGrade: 'B+',
+              internalMarks: 20,
+              externalMarks: 48,
+              revaluationReason: 'Marks obtained are lower than expected based on answer scheme and clinical scenario performance.',
+              evaluated: false,
+            },
+          ],
+          feePerSubject: 1000,
+          totalFee: 1000,
+          paymentStatus: 'PAID',
+          paymentId: 'pay_dummy_sneha_1001',
+          paymentOrderId: 'order_dummy_sneha_1001',
+          status: 'PENDING',
+          submittedDate: new Date('2026-06-20'),
+          finalResult: 'PENDING',
+        });
+      }
+    }
+
+    // Request 2: Dr. Vikram Malhotra (Under Review)
+    const vikramResult = resultsMap[String(studentsMap['vikram']._id)];
+    if (vikramResult) {
+      let rev2 = await RevaluationRequest.findOne({ requestId: 'REV-2026-002' });
+      if (!rev2 || options.force) {
+        if (rev2 && options.force) await rev2.deleteOne();
+        rev2 = await RevaluationRequest.create({
+          requestId: 'REV-2026-002',
+          institute: institutesMap['apollo']._id,
+          student: studentsMap['vikram']._id,
+          result: vikramResult._id,
+          academicYear: '2025',
+          examination: 1,
+          subjects: [
+            {
+              subjectCode: 'FEM101',
+              subjectName: 'Core Emergency Medicine',
+              originalMarks: 32,
+              originalGrade: 'F',
+              internalMarks: 10,
+              externalMarks: 22,
+              revaluationReason: 'Requesting re-totalling and re-evaluation of Section B questions.',
+              evaluated: false,
+            },
+          ],
+          feePerSubject: 1000,
+          totalFee: 1000,
+          paymentStatus: 'PAID',
+          paymentId: 'pay_dummy_vikram_1002',
+          paymentOrderId: 'order_dummy_vikram_1002',
+          status: 'UNDER_REVIEW',
+          submittedDate: new Date('2026-06-21'),
+          finalResult: 'PENDING',
+        });
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 10. REMITTANCES & FEE RECORDS
+    // ──────────────────────────────────────────────────────────────────────────
+    console.log('  -> Seeding Remittances & Fee Records...');
+
+    const existingRemittance = await Remittance.findOne({ utrNumber: 'UTR-APOLLO-2026-8899' });
+    if (!existingRemittance || options.force) {
+      if (existingRemittance && options.force) await existingRemittance.deleteOne();
+      await Remittance.create({
+        institute: institutesMap['apollo']._id,
+        totalAmount: 75000,
+        paymentPurpose: 'Annual Fellowship Accreditation & Student Remittance 2025-26',
+        remarks: 'Remittance for 3 enrolled fellows (Aarav, Sneha, Vikram)',
+        utrNumber: 'UTR-APOLLO-2026-8899',
+        paymentMode: 'NEFT Online Transfer',
+        paymentDate: new Date('2025-02-15'),
+        paymentReceiptUrl: DUMMY_PDF,
+        students: [
+          studentsMap['aarav']._id,
+          studentsMap['sneha']._id,
+          studentsMap['vikram']._id,
+        ],
+      });
+    }
+
+    const feeRecordsToSeed = [
+      {
+        student: studentsMap['aarav']._id,
+        amount: 25000,
+        paymentMode: 'Net Banking',
+        utrNumber: 'UTR-FEE-1001',
+        paymentDate: new Date('2025-01-10'),
+        paymentPurpose: 'Course Admission & Tuition Fee',
+      },
+      {
+        student: studentsMap['sneha']._id,
+        amount: 25000,
+        paymentMode: 'Net Banking',
+        utrNumber: 'UTR-FEE-1002',
+        paymentDate: new Date('2025-01-11'),
+        paymentPurpose: 'Course Admission & Tuition Fee',
+      },
+      {
+        student: studentsMap['ananya']._id,
+        amount: 25000,
+        paymentMode: 'Net Banking',
+        utrNumber: 'UTR-FEE-2001',
+        paymentDate: new Date('2026-01-10'),
+        paymentPurpose: 'Course Admission & Tuition Fee',
+      },
+    ];
+
+    for (const fr of feeRecordsToSeed) {
+      const exists = await FeeRecord.findOne({ student: fr.student, utrNumber: fr.utrNumber });
+      if (!exists || options.force) {
+        if (exists && options.force) await exists.deleteOne();
+        await FeeRecord.create(fr);
+      }
+    }
+
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════════════════');
+    console.log('🎉 SEED COMPLETED SUCCESSFULLY!');
+    console.log('═══════════════════════════════════════════════════════════════════');
+    console.log('ACADEMY PORTAL LOGIN:');
+    console.log('  URL:      http://localhost:5173/academy/login');
+    console.log('  Email:    superadmin@academy.com');
+    console.log('  Password: SuperAdmin123!');
+    console.log('  (Or Board: board@academy.com / BoardPass123!)');
+    console.log('');
+    console.log('INSTITUTE PORTAL LOGIN (APPROVED & ACTIVE):');
+    console.log('  URL:      http://localhost:5173/institute/login');
+    console.log('  Email:    institute@apollo.com');
+    console.log('  Password: Institute123!');
+    console.log('  Institute: Apollo Hospitals Institute of Emergency Medicine');
+    console.log('');
+    console.log('INSTITUTE PORTAL (PENDING REVIEW):');
+    console.log('  Email:    pending@manipal.com');
+    console.log('  Password: Institute123!');
+    console.log('');
+    console.log('PUBLIC RESULT LOOKUP:');
+    console.log('  URL:           http://localhost:5173/results');
+    console.log('  Enrollment ID: SEMI-2025-1001');
+    console.log('  DOB:           1995-04-12');
+    console.log('═══════════════════════════════════════════════════════════════════');
+
+    const summary = {
+      users: usersToSeed.length,
+      institutes: institutesToSeed.length,
+      courses: coursesToSeed.length,
+      batches: batchesToSeed.length,
+      students: studentsToSeed.length,
+      examApplications: 3,
+      hallTickets: hallTicketStudents.length,
+      results: resultsToSeed.length,
+      revaluationRequests: 2,
+    };
+    logger.info('🎉 SEED COMPLETED: Users, Institutes, Courses, Batches, Students, Exams, Results, Revaluations seeded successfully!');
+    return summary;
   } catch (error: any) {
-    console.error(`Error seeding Super Admin: ${error.message}`);
+    console.error(`❌ Error during seeding: ${error.message}`, error);
+    logger.error(`❌ Error during seeding: ${error.message}`);
+    throw error;
+  }
+};
+
+/**
+ * Super Admin seed wrapper called on initApp()
+ */
+export const seedSuperAdmin = async () => {
+  try {
+    await seedAllData({ force: true });
+  } catch (err: any) {
+    console.error('seedSuperAdmin wrapper error:', err.message);
+    logger.error('seedSuperAdmin wrapper error: ' + err.message);
   }
 };
 
@@ -5026,7 +6718,7 @@ if (require.main === module) {
     try {
       await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/my_database');
       console.log('MongoDB Connected for seeding.');
-      await seedSuperAdmin();
+      await seedAllData({ force: true });
       await mongoose.disconnect();
       console.log('MongoDB Disconnected after seeding.');
       process.exit(0);
@@ -5071,44 +6763,36 @@ import { Institute } from '../models/instituteModel';
 import { Result } from '../models/resultModel';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { getFeeCategory, getFeeCategoryLabel } from '../utils/feeCategories';
-import { resolveFeeConfiguration, checkStudentReappearance } from '../services/examFeeService';
-import path from 'path';
+import { resolveFeeConfiguration, checkStudentReappearance, getExamFeeConfigEntry, setExamFeeConfigEntry } from '../services/examFeeService';
 import razorpayInstance, { isRazorpayConfigured, keyId, keySecret } from '../config/razorpay';
 import crypto from 'crypto';
-const getFileUrl = (filePath: string) => {
-  if (!filePath) return '';
-  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-    return filePath;
-  }
-  const filename = path.basename(filePath);
-  const baseUrl = (process.env.BASE_URL || 'http://localhost:5003').replace(/\/$/, '');
-  return `${baseUrl}/api/uploads/${filename}`;
-};
+import { getFileUrl } from '../utils/fileHelpers';
 
 // ==========================================
 // VALIDATION SCHEMAS
 // ==========================================
 
-const semesterSubjectSchema = z.object({
+const examinationSubjectSchema = z.object({
   code: z.string().optional().default(''),
   name: z.string().min(1, 'Subject Name is required'),
 });
 
-const semesterPracticalSchema = z.object({
+const examinationPracticalSchema = z.object({
   code: z.string().optional().default(''),
   name: z.string().min(1, 'Practical Exam Name is required'),
 });
 
-const courseSemesterSchema = z.object({
-  semesterNumber: z.coerce.number(),
-  semesterName: z.string().optional().default(''),
+const courseExaminationSchema = z.object({
+  examinationNumber: z.coerce.number().min(1, 'Examination number is required').max(10, 'A course can have at most 10 examinations'),
+  examinationName: z.string().optional().default(''),
+  monthsRequired: z.coerce.number().min(0).optional().default(0),
   subjects: z.preprocess(
     (val) => (Array.isArray(val) ? val.filter((s: any) => s && typeof s.name === 'string' && s.name.trim().length > 0) : []),
-    z.array(semesterSubjectSchema).optional().default([])
+    z.array(examinationSubjectSchema).optional().default([])
   ),
   practicalExams: z.preprocess(
     (val) => (Array.isArray(val) ? val.filter((p: any) => p && typeof p.name === 'string' && p.name.trim().length > 0) : []),
-    z.array(semesterPracticalSchema).optional().default([])
+    z.array(examinationPracticalSchema).optional().default([])
   ),
 });
 
@@ -5122,7 +6806,7 @@ const courseCreateSchema = z.object({
   subjects: z.array(z.string()).optional(),
   practicalExamName: z.string().optional(),
   practicalExams: z.array(z.string()).optional(),
-  semesters: z.array(courseSemesterSchema).optional(),
+  examinations: z.array(courseExaminationSchema).optional(),
   status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
   examinationFee: z.coerce.number().min(0).optional(),
   reappearingExaminationFee: z.coerce.number().min(0).optional(),
@@ -5142,7 +6826,7 @@ const courseUpdateSchema = z.object({
   subjects: z.array(z.string()).optional(),
   practicalExamName: z.string().optional(),
   practicalExams: z.array(z.string()).optional(),
-  semesters: z.array(courseSemesterSchema).optional(),
+  examinations: z.array(courseExaminationSchema).optional(),
   status: z.enum(['Active', 'Inactive', 'Pending']).optional(),
   examinationFee: z.coerce.number().min(0).optional(),
   reappearingExaminationFee: z.coerce.number().min(0).optional(),
@@ -5220,7 +6904,7 @@ const studentUpdateSchema = z.object({
 });
 
 const feeRecordSchema = z.object({
-  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination Number is required').max(2),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   paymentMode: z.string().min(1, 'Payment Mode is required'),
   utrNumber: z.string().optional(),
@@ -5233,7 +6917,7 @@ const feeRecordSchema = z.object({
 
 const reimbursableFeeSchema = z.object({
   courseId: z.string().min(1, 'Course ID is required'),
-  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination Number is required').max(2),
   firstAttemptFee: z.coerce.number().min(0, 'First attempt fee cannot be negative').optional().default(0),
   reappearingFee: z.coerce.number().min(0, 'Reappearing fee cannot be negative').optional().default(0),
   feeApplicableForFirstAttempt: z.preprocess(
@@ -5275,10 +6959,10 @@ export const createCourse = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 400, message: 'A course with this name already exists in the centralized catalog.' });
     }
 
-    if (validatedData.semesters && Array.isArray(validatedData.semesters)) {
+    if (validatedData.examinations && Array.isArray(validatedData.examinations)) {
       if (!validatedData.subjects || validatedData.subjects.length === 0) {
         const flatSubs: string[] = [];
-        validatedData.semesters.forEach(s => {
+        validatedData.examinations.forEach(s => {
           (s.subjects || []).forEach(sub => {
             if (sub.name) {
               flatSubs.push(sub.code ? `${sub.code}: ${sub.name}` : sub.name);
@@ -5289,7 +6973,7 @@ export const createCourse = async (req: Request, res: Response) => {
       }
       if (!validatedData.practicalExams || validatedData.practicalExams.length === 0) {
         const flatPracs: string[] = [];
-        validatedData.semesters.forEach(s => {
+        validatedData.examinations.forEach(s => {
           (s.practicalExams || []).forEach(prac => {
             if (prac.name) {
               flatPracs.push(prac.code ? `${prac.code}: ${prac.name}` : prac.name);
@@ -5404,10 +7088,10 @@ export const updateCourse = async (req: Request, res: Response) => {
       }
     }
 
-    if (validatedData.semesters && Array.isArray(validatedData.semesters)) {
+    if (validatedData.examinations && Array.isArray(validatedData.examinations)) {
       if (!validatedData.subjects || validatedData.subjects.length === 0) {
         const flatSubs: string[] = [];
-        validatedData.semesters.forEach(s => {
+        validatedData.examinations.forEach(s => {
           (s.subjects || []).forEach(sub => {
             if (sub.name) {
               flatSubs.push(sub.code ? `${sub.code}: ${sub.name}` : sub.name);
@@ -5418,7 +7102,7 @@ export const updateCourse = async (req: Request, res: Response) => {
       }
       if (!validatedData.practicalExams || validatedData.practicalExams.length === 0) {
         const flatPracs: string[] = [];
-        validatedData.semesters.forEach(s => {
+        validatedData.examinations.forEach(s => {
           (s.practicalExams || []).forEach(prac => {
             if (prac.name) {
               flatPracs.push(prac.code ? `${prac.code}: ${prac.name}` : prac.name);
@@ -5860,15 +7544,20 @@ export const addStudent = async (req: Request, res: Response) => {
       }
     }
 
-    const numYears = parseInt(course.courseDuration || '1') || 1;
-    const totalSemesters = course.durationType === 'Years' ? numYears * 2 : 1; 
-    
-    const semesters = Array.from({ length: totalSemesters }, (_, i) => ({
-      semesterNumber: i + 1,
-      attendancePercentage: 0,
-      thesisApproved: false,
-      eligibilityStatus: 'Pending' as const,
-    }));
+    const examinations = [
+      {
+        examinationNumber: 1,
+        attendancePercentage: 0,
+        thesisApproved: false,
+        eligibilityStatus: 'Pending' as const,
+      },
+      {
+        examinationNumber: 2,
+        attendancePercentage: 0,
+        thesisApproved: false,
+        eligibilityStatus: 'Pending' as const,
+      },
+    ];
 
     const student = await Student.create({
       enrollmentId,
@@ -5902,7 +7591,7 @@ export const addStudent = async (req: Request, res: Response) => {
         hodSignatureUrl: files['hodSignature'] ? getFileUrl(files['hodSignature'][0].path) : undefined,
       },
       remittedToAcademy: false,
-      semesters,
+      examinations,
     });
 
     // Update batch active fellows count
@@ -5969,9 +7658,9 @@ export const recordStudentFee = async (req: Request, res: Response) => {
       const course = student.course || await Course.findById(
         (student as any).courseId || (student as any).course
       );
-      const status = await checkStudentReappearance(String(student._id), validatedData.semesterNumber);
+      const status = await checkStudentReappearance(String(student._id), validatedData.examinationNumber);
       const feeConfig = course
-        ? resolveFeeConfiguration(course, validatedData.semesterNumber)
+        ? resolveFeeConfiguration(course, validatedData.examinationNumber)
         : { firstAttemptFee: 0, reappearingFee: 0, feeApplicableForFirstAttempt: false };
 
       const feeApplicable = status.isReappearing
@@ -5984,15 +7673,15 @@ export const recordStudentFee = async (req: Request, res: Response) => {
           res,
           statusCode: 422,
           message: status.isReappearing
-            ? 'Exam fee has been waived for reappearing students for this course/semester. Payment cannot be recorded.'
-            : 'Exam fee is waived for first-attempt students for this course/semester. Payment cannot be recorded.',
+            ? 'Exam fee has been waived for reappearing students for this course/examination. Payment cannot be recorded.'
+            : 'Exam fee is waived for first-attempt students for this course/examination. Payment cannot be recorded.',
         });
       }
     }
 
     const feeRecord = await FeeRecord.create({
       student: student._id,
-      semesterNumber: validatedData.semesterNumber,
+      examinationNumber: validatedData.examinationNumber,
       amount: validatedData.amount,
       paymentMode: validatedData.paymentMode || 'Razorpay Online',
       utrNumber: validatedData.razorpayPaymentId || validatedData.utrNumber,
@@ -6185,7 +7874,7 @@ export const recordRemittance = async (req: Request, res: Response) => {
 // ==========================================
 
 const studentMetricsUpdateSchema = z.object({
-  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination Number is required').max(2),
   attendancePercentage: z.coerce.number().min(0).max(100, 'Attendance must be between 0 and 100').optional(),
   thesisApproved: z.preprocess(
     (val) => val === 'true' || val === true || val === '1',
@@ -6199,7 +7888,7 @@ const studentMetricsUpdateSchema = z.object({
 
 export const listStudents = async (req: Request, res: Response) => {
   try {
-    const { courseId, batchId, search, isEligible, semesterNumber, verificationStatus, instituteId } = req.query;
+    const { courseId, batchId, search, isEligible, examinationNumber, verificationStatus, instituteId } = req.query;
     const query: any = {};
 
     if (req.user.role === 'institute') {
@@ -6232,22 +7921,22 @@ export const listStudents = async (req: Request, res: Response) => {
       ];
     }
 
-    // We can't query nested array conditions perfectly with just isEligible if we don't have semesterNumber
+    // We can't query nested array conditions perfectly with just isEligible if we don't have examinationNumber
     // but if we do have it:
-    if (semesterNumber) {
-      const semNum = parseInt(semesterNumber as string);
+    if (examinationNumber) {
+      const examNum = parseInt(examinationNumber as string);
       if (isEligible === 'true') {
-        query.semesters = {
+        query.examinations = {
           $elemMatch: {
-            semesterNumber: semNum,
+            examinationNumber: examNum,
             attendancePercentage: { $gte: 75 },
             thesisApproved: true
           }
         };
       } else if (isEligible === 'false') {
-        query.semesters = {
+        query.examinations = {
           $elemMatch: {
-            semesterNumber: semNum,
+            examinationNumber: examNum,
             $or: [
               { attendancePercentage: { $lt: 75 } },
               { thesisApproved: false },
@@ -6265,25 +7954,26 @@ export const listStudents = async (req: Request, res: Response) => {
 
     const formattedStudents = students.map((student) => {
       const sObj: any = student.toObject();
-      const sSemesters = sObj.semesters || [];
-      const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+      const sExaminations = sObj.examinations || [];
+      const examWithData = [...sExaminations].reverse().find((e: any) => (e.attendancePercentage && e.attendancePercentage > 0) || e.thesisApproved || e.eligibilityStatus === 'Approved') || sExaminations[0] || null;
 
       const attendancePct = (sObj.attendancePercentage !== undefined && sObj.attendancePercentage !== null && sObj.attendancePercentage > 0)
         ? sObj.attendancePercentage
-        : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+        : (examWithData && examWithData.attendancePercentage !== undefined ? examWithData.attendancePercentage : 0);
 
-      const isThesisApproved = Boolean(sObj.thesisApproved || sSemesters.some((sem: any) => sem.thesisApproved));
-      const isThesisUploaded = Boolean(sSemesters.some((sem: any) => sem.thesisDocumentUrl));
+      const isThesisApproved = Boolean(sObj.thesisApproved || sExaminations.some((sem: any) => sem.thesisApproved));
+      const isThesisUploaded = Boolean(sExaminations.some((sem: any) => sem.thesisDocumentUrl));
       const isRemitted = Boolean(sObj.remittedToAcademy || sObj.razorpayPaymentId);
+      const isAnyExamApproved = sExaminations.some((sem: any) => sem.eligibilityStatus === 'Approved');
 
       let isStudentEligible = false;
-      if (semesterNumber) {
-        const sem = sSemesters.find((s: any) => s.semesterNumber === parseInt(semesterNumber as string));
+      if (examinationNumber) {
+        const sem = sExaminations.find((s: any) => s.examinationNumber === parseInt(examinationNumber as string));
         if (sem) {
-          isStudentEligible = sem.attendancePercentage >= 75 && sem.thesisApproved;
+          isStudentEligible = sem.eligibilityStatus === 'Approved' || (sem.attendancePercentage >= 75 && sem.thesisApproved);
         }
       } else {
-        isStudentEligible = isRemitted && attendancePct >= 75 && (isThesisApproved || isThesisUploaded);
+        isStudentEligible = isAnyExamApproved || (isRemitted && attendancePct >= 75 && (isThesisApproved || isThesisUploaded));
       }
 
       return {
@@ -6299,7 +7989,7 @@ export const listStudents = async (req: Request, res: Response) => {
     return sendSuccess({
       req,
       res,
-      message: 'Students list retrieved successfully',
+      message: 'Students retrieved successfully',
       data: formattedStudents,
     });
   } catch (error: any) {
@@ -6309,8 +7999,8 @@ export const listStudents = async (req: Request, res: Response) => {
 
 export const updateAcademicMetrics = async (req: Request, res: Response) => {
   try {
-    const { studentId } = req.params;
     const validatedData = studentMetricsUpdateSchema.parse(req.body);
+    const { studentId } = req.params;
     const query: any = { _id: studentId };
 
     if (req.user.role === 'institute') {
@@ -6326,41 +8016,46 @@ export const updateAcademicMetrics = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized' });
     }
 
-    const semesterIndex = student.semesters.findIndex(s => s.semesterNumber === validatedData.semesterNumber);
-    if (semesterIndex === -1) {
-      return sendError({ req, res, statusCode: 404, message: 'Semester not found for this student' });
+    const examinationIndex = student.examinations.findIndex(s => s.examinationNumber === validatedData.examinationNumber);
+    if (examinationIndex === -1) {
+      return sendError({ req, res, statusCode: 404, message: 'Examination not found for this student' });
     }
 
     if (validatedData.clearAttendance) {
-      student.semesters[semesterIndex].attendancePercentage = 0;
+      student.examinations[examinationIndex].attendancePercentage = 0;
     } else if (validatedData.attendancePercentage !== undefined) {
-      student.semesters[semesterIndex].attendancePercentage = validatedData.attendancePercentage;
+      student.examinations[examinationIndex].attendancePercentage = validatedData.attendancePercentage;
     }
     
     if (validatedData.clearThesis) {
-      student.semesters[semesterIndex].thesisApproved = false;
-      student.semesters[semesterIndex].thesisDocumentUrl = undefined;
+      student.examinations[examinationIndex].thesisApproved = false;
+      student.examinations[examinationIndex].thesisDocumentUrl = undefined;
     } else if (validatedData.thesisApproved !== undefined) {
-      student.semesters[semesterIndex].thesisApproved = validatedData.thesisApproved;
+      student.examinations[examinationIndex].thesisApproved = validatedData.thesisApproved;
     }
 
     if (!validatedData.clearThesis && req.files) {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       if (files['thesisDocument'] && files['thesisDocument'].length > 0) {
-        student.semesters[semesterIndex].thesisDocumentUrl = getFileUrl(files['thesisDocument'][0].path);
+        student.examinations[examinationIndex].thesisDocumentUrl = getFileUrl(files['thesisDocument'][0].path);
       }
     }
 
     if (validatedData.eligibilityStatus) {
-      student.semesters[semesterIndex].eligibilityStatus = validatedData.eligibilityStatus;
+      student.examinations[examinationIndex].eligibilityStatus = validatedData.eligibilityStatus;
       if (validatedData.rejectionNotes) {
-        (student.semesters[semesterIndex] as any).rejectionNotes = validatedData.rejectionNotes;
+        (student.examinations[examinationIndex] as any).rejectionNotes = validatedData.rejectionNotes;
       }
     }
 
+    // Keep student-level aggregations in sync with examination metrics
+    student.thesisApproved = student.examinations.some(e => e.thesisApproved);
+    student.attendancePercentage = Math.max(...student.examinations.map(e => e.attendancePercentage || 0));
+
     await student.save();
 
-    const isStudentEligible = student.semesters[semesterIndex].attendancePercentage >= 75 && student.semesters[semesterIndex].thesisApproved;
+    const isStudentEligible = student.examinations[examinationIndex].eligibilityStatus === 'Approved' ||
+      (student.examinations[examinationIndex].attendancePercentage >= 75 && student.examinations[examinationIndex].thesisApproved);
 
     return sendSuccess({
       req,
@@ -6380,11 +8075,11 @@ export const updateAcademicMetrics = async (req: Request, res: Response) => {
 export const evaluateEligibility = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semesterNumber } = req.query;
+    const { examinationNumber } = req.query;
     const query: any = { _id: studentId };
 
-    if (!semesterNumber) {
-      return sendError({ req, res, statusCode: 400, message: 'Semester Number is required to evaluate eligibility' });
+    if (!examinationNumber) {
+      return sendError({ req, res, statusCode: 400, message: 'Examination Number is required to evaluate eligibility' });
     }
 
     if (req.user.role === 'institute') {
@@ -6402,28 +8097,29 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found or unauthorized' });
     }
 
-    const semNum = parseInt(semesterNumber as string);
-    const semesterRecord = student.semesters.find(s => s.semesterNumber === semNum);
+    const examNum = parseInt(examinationNumber as string);
+    const examRecord = student.examinations.find(s => s.examinationNumber === examNum);
     
-    if (!semesterRecord) {
-      return sendError({ req, res, statusCode: 404, message: 'Semester record not found for this student' });
+    if (!examRecord) {
+      return sendError({ req, res, statusCode: 404, message: 'Examination record not found for this student' });
     }
 
-    // Check fee record for this student and semester
-    // ── NEW: Fee is only required when applicable (reappearing students).
-    //    First-attempt students are waived unless the course opts in.
-    const feeRecord = await FeeRecord.findOne({ student: student._id, semesterNumber: semNum, paymentPurpose: 'Examination fee' });
+    // Check fee record for this student and examination
+    const feeRecord = await FeeRecord.findOne({ student: student._id, examinationNumber: examNum, paymentPurpose: 'Examination fee' });
     const courseDoc = student.course as any;
     const courseForFee = await Course.findById(courseDoc?._id || courseDoc);
-    const perSemesterFee = courseForFee?.examFeeConfig?.[`semester_${semNum}`];
-    const feeApplicableForFirstAttempt =
-      perSemesterFee?.feeApplicableForFirstAttempt ??
-      courseForFee?.feeApplicableForFirstAttempt ??
-      false;
+
+    // Fee eligibility check only applies when a fee is actually set for this
+    // course/examination or the student is reappearing:
+    // - reappearing students pay when a reappearing fee is configured (> 0);
+    // - first-attempt students pay only when the course opts in with a fee > 0.
+    const feeConfig = courseForFee
+      ? resolveFeeConfiguration(courseForFee, examNum)
+      : { firstAttemptFee: 0, reappearingFee: 0, feeApplicableForFirstAttempt: false };
 
     const priorResults = await Result.find({
       student: student._id,
-      semester: semNum,
+      examination: examNum,
       isPublished: true,
     }).sort({ createdAt: -1 });
     const latestResult = priorResults[0];
@@ -6433,35 +8129,37 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
       latestResult.resultStatus === 'REVALUATION_PENDING'
     );
 
-    const feeRequired = isReappearing || feeApplicableForFirstAttempt;
+    const feeRequired = isReappearing
+      ? feeConfig.reappearingFee > 0
+      : feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0;
     const feeStatus = {
       status: !feeRequired ? 'Waived' : feeRecord ? 'Paid' : 'Pending',
       isValid: !feeRequired || !!feeRecord,
       isReappearing,
       feeApplicable: feeRequired,
       description: !feeRequired
-        ? 'Exam fee is waived for this student (first attempt).'
+        ? isReappearing
+          ? 'Exam fee is waived for this student (no reappearing fee is set for this examination).'
+          : 'Exam fee is waived for this student (first attempt).'
         : feeRecord
-          ? 'Exam fee payment has been verified for this semester.'
-          : isReappearing
-            ? 'Exam fee payment is required (reappearing student) but has not been recorded.'
-            : 'Exam fee payment is missing for this semester.',
+          ? 'Exam fee payment has been verified for this examination.'
+          : 'Exam fee payment is required but has not been recorded.',
     };
 
     const checklist = {
       feeStatus,
       attendance: {
-        value: semesterRecord.attendancePercentage,
+        value: examRecord.attendancePercentage,
         threshold: 75,
-        isValid: semesterRecord.attendancePercentage >= 75,
-        description: semesterRecord.attendancePercentage >= 75
-          ? `Attendance is ${semesterRecord.attendancePercentage}%, which meets the minimum 75% requirement.`
-          : `Attendance is ${semesterRecord.attendancePercentage}%, which is below the minimum 75% requirement.`,
+        isValid: examRecord.attendancePercentage >= 75,
+        description: examRecord.attendancePercentage >= 75
+          ? `Attendance is ${examRecord.attendancePercentage}%, which meets the minimum 75% requirement.`
+          : `Attendance is ${examRecord.attendancePercentage}%, which is below the minimum 75% requirement.`,
       },
       thesisApproval: {
-        status: semesterRecord.thesisApproved ? 'Approved' : 'Pending',
-        isValid: semesterRecord.thesisApproved,
-        description: semesterRecord.thesisApproved
+        status: examRecord.thesisApproved ? 'Approved' : 'Pending',
+        isValid: examRecord.thesisApproved,
+        description: examRecord.thesisApproved
           ? 'Thesis evaluation has been approved by the board.'
           : 'Thesis submission is pending approval or has not been approved.',
       },
@@ -6478,7 +8176,8 @@ export const evaluateEligibility = async (req: Request, res: Response) => {
       },
     };
 
-    const isEligible = checklist.feeStatus.isValid && checklist.attendance.isValid && checklist.thesisApproval.isValid && checklist.courseCertificates.isValid;
+    const isEligible = examRecord.eligibilityStatus === 'Approved' || 
+      (checklist.feeStatus.isValid && checklist.attendance.isValid && checklist.thesisApproval.isValid && checklist.courseCertificates.isValid);
 
     return sendSuccess({
       req,
@@ -6533,7 +8232,7 @@ export const getRemittances = async (req: Request, res: Response) => {
 export const getStudentById = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semesterNumber } = req.query;
+    const { examinationNumber } = req.query;
     const query: any = { _id: studentId };
 
     if (req.user.role === 'institute') {
@@ -6554,8 +8253,8 @@ export const getStudentById = async (req: Request, res: Response) => {
     }
 
     let isStudentEligible = false;
-    if (semesterNumber) {
-      const sem = student.semesters.find(s => s.semesterNumber === parseInt(semesterNumber as string));
+    if (examinationNumber) {
+      const sem = student.examinations.find(s => s.examinationNumber === parseInt(examinationNumber as string));
       if (sem) {
         isStudentEligible = sem.attendancePercentage >= 75 && sem.thesisApproved;
       }
@@ -6664,8 +8363,8 @@ export const updateStudent = async (req: Request, res: Response) => {
 
     await student.save();
 
-    const latestSemester = student.semesters?.[student.semesters.length - 1];
-    const isStudentEligible = latestSemester ? (latestSemester.attendancePercentage >= 75 && latestSemester.thesisApproved) : false;
+    const latestExamination = student.examinations?.[student.examinations.length - 1];
+    const isStudentEligible = latestExamination ? (latestExamination.attendancePercentage >= 75 && latestExamination.thesisApproved) : false;
 
     // Fetch updated student with populate
     const updatedStudent = await Student.findById(student._id)
@@ -6929,12 +8628,12 @@ export const verifyAcademicPayment = async (req: Request, res: Response) => {
 export const getExamFeeConfigurationByCourse = async (req: Request, res: Response) => {
   try {
     const courseId = String(req.params.courseId);
-    const semesterNumber = parseInt(String(req.params.semesterNumber));
+    const examinationNumber = parseInt(String(req.params.examinationNumber));
 
     const course = await Course.findById(courseId);
     if (!course) return sendError({ req, res, statusCode: 404, message: 'Course not found' });
 
-    const perSemester = course.examFeeConfig?.[`semester_${semesterNumber}`];
+    const perExam = getExamFeeConfigEntry(course, examinationNumber);
 
     return sendSuccess({
       req,
@@ -6942,15 +8641,15 @@ export const getExamFeeConfigurationByCourse = async (req: Request, res: Respons
       message: 'Exam fee configuration retrieved successfully',
       data: {
         courseId,
-        semesterNumber,
-        firstAttemptFee: perSemester?.firstAttemptFee ?? course.examinationFee ?? 0,
+        examinationNumber,
+        firstAttemptFee: perExam?.firstAttemptFee ?? course.examinationFee ?? 0,
         reappearingFee:
-          perSemester?.reappearingFee ??
+          perExam?.reappearingFee ??
           course.reappearingExaminationFee ??
           course.examinationFee ??
           0,
         feeApplicableForFirstAttempt:
-          perSemester?.feeApplicableForFirstAttempt ??
+          perExam?.feeApplicableForFirstAttempt ??
           course.feeApplicableForFirstAttempt ??
           false,
       },
@@ -6969,7 +8668,7 @@ export const updateExamFeeConfiguration = async (req: Request, res: Response) =>
 
     if (!course.examFeeConfig) course.examFeeConfig = {} as any;
 
-    (course.examFeeConfig as any)[`semester_${validatedData.semesterNumber}`] = {
+    setExamFeeConfigEntry(course, validatedData.examinationNumber, {
       // Respect an explicit 0 (fee removed) so the Academy can waive the
       // reappearing fee as well.
       firstAttemptFee: validatedData.firstAttemptFee != null ? validatedData.firstAttemptFee : 0,
@@ -6982,7 +8681,7 @@ export const updateExamFeeConfiguration = async (req: Request, res: Response) =>
       feeApplicableForFirstAttempt: validatedData.feeApplicableForFirstAttempt,
       updatedBy: req.user._id,
       updatedAt: new Date(),
-    };
+    });
 
     await course.save();
 
@@ -6999,8 +8698,94 @@ export const updateExamFeeConfiguration = async (req: Request, res: Response) =>
 };
 
 // ==========================================
-// STUDENT ENROLLMENT VERIFICATION (ACADEMIC DEPARTMENT)
+// REAPPEARING (ARREAR) STUDENTS
 // ==========================================
+
+export const getReappearingStudents = async (req: Request, res: Response) => {
+  try {
+    const { courseId, batchId, examination } = req.query;
+
+    if (!courseId || !batchId || !examination) {
+      return sendError({ req, res, statusCode: 400, message: 'Course, batch, and examination are required' });
+    }
+
+    const query: any = { course: courseId, batch: batchId };
+
+    if (req.user.role === 'institute') {
+      const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
+      if (!institute) {
+        return sendError({ req, res, statusCode: 403, message: 'Access Denied: Your institute is not approved.' });
+      }
+      query.institute = institute._id;
+    }
+
+    const students = await Student.find(query)
+      .select('firstName lastName enrollmentId course batch')
+      .populate('course', 'name');
+
+    const studentIds = students.map(s => s._id);
+    const examinationNumber = parseInt(String(examination), 10);
+
+    const results = await Result.find({
+      student: { $in: studentIds },
+      examination: examinationNumber,
+      isPublished: true,
+      resultStatus: { $in: ['FAIL', 'SUPPLEMENTARY'] },
+    }).sort({ createdAt: -1 });
+
+    const resultMap = new Map<string, any>();
+    results.forEach(r => resultMap.set(r.student.toString(), r));
+
+    const feeRecords = await FeeRecord.find({
+      student: { $in: studentIds },
+      examinationNumber,
+      paymentPurpose: 'Examination fee',
+    });
+
+    const paidStudentIds = new Set<string>(feeRecords.map(f => String((f as any).student || '')));
+
+    const reappearingStudents = students
+      .map(s => {
+        const result = resultMap.get(s._id.toString());
+        if (!result) return null;
+
+        const failedSubjects = (result?.subjects || [])
+          .filter((sub: any) => ['F', 'RA', 'ABSENT', 'WH'].includes(sub.grade) || (sub.totalMarks !== undefined && sub.totalMarks < 40))
+          .map((sub: any) => ({
+            subjectCode: sub.subjectCode,
+            subjectName: sub.subjectName,
+            originalMarks: sub.totalMarks || 0,
+            originalGrade: sub.grade,
+          }));
+
+        if (result.resultStatus === 'PASS' && failedSubjects.length === 0) {
+          return null;
+        }
+
+        return {
+          studentId: s._id,
+          name: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
+          enrollmentId: s.enrollmentId,
+          courseId: s.course?._id || courseId,
+          batchId: batchId,
+          examination: examinationNumber,
+          failedSubjects,
+          resultId: result?._id,
+          hasPayment: paidStudentIds.has(s._id.toString()),
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => !!s && s.failedSubjects.length > 0);
+
+    return sendSuccess({
+      req,
+      res,
+      message: 'Reappearing students retrieved successfully',
+      data: reappearingStudents,
+    });
+  } catch (error: any) {
+    return sendError({ req, res, statusCode: 500, message: error.message });
+  }
+};
 
 export const verifyStudentEnrollment = async (req: Request, res: Response) => {
   try {
@@ -7978,7 +9763,7 @@ export const generateProvisionalCertificate = async (req: Request, res: Response
       certificateNumber: certNumber,
       type: 'PROVISIONAL',
       academicYear: result.academicYear,
-      semester: result.semester,
+      examination: result.examination,
       result: resultId,
       certificatePDF: pdfUrl,
       issuedDate: new Date(),
@@ -8047,7 +9832,7 @@ export const getAllCertificates = async (req: Request, res: Response) => {
       limit: parseInt(limit as string),
       populate: [
         { path: 'student', select: 'firstName lastName enrollmentId email' },
-        { path: 'result', select: 'academicYear semester totalMarks percentage' },
+        { path: 'result', select: 'academicYear examination totalMarks percentage' },
       ],
       sort: { createdAt: -1 } as any,
     };
@@ -8064,7 +9849,7 @@ export const getCertificateById = async (req: Request, res: Response) => {
   try {
     const certificate = await Certificate.findById(req.params.id)
       .populate('student', 'firstName lastName enrollmentId email')
-      .populate('result', 'academicYear semester totalMarks percentage cgpa division')
+      .populate('result', 'academicYear examination totalMarks percentage cgpa division')
       .populate('verifiedBy', 'name email');
 
     if (!certificate) {
@@ -8183,7 +9968,7 @@ export const getStudentCertificates = async (req: Request, res: Response) => {
     const { studentId } = req.params;
 
     const certificates = await Certificate.find({ student: studentId, isRevoked: false })
-      .populate('result', 'academicYear semester totalMarks percentage cgpa division')
+      .populate('result', 'academicYear examination totalMarks percentage cgpa division')
       .sort({ issuedDate: -1 });
 
     if (!certificates || certificates.length === 0) {
@@ -8237,17 +10022,9 @@ import notificationService from '../services/notificationService';
 import { sendSuccess, sendError } from '../utils/responseFormatter';
 import { emitEvent } from '../config/socket';
 import { classifyStudentsForExamFee, checkStudentReappearance, resolveFeeConfiguration } from '../services/examFeeService';
+import { getFileUrl } from '../utils/fileHelpers';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const getFileUrl = (filePath: string) => {
-  if (filePath.startsWith('http')) return filePath;
-  const normalized = filePath.replace(/\\/g, '/');
-  const uploadsIndex = normalized.indexOf('uploads/');
-  return uploadsIndex !== -1
-    ? `${process.env.BASE_URL || 'http://localhost:5003'}/${normalized.substring(uploadsIndex)}`
-    : filePath;
-};
 
 /** Resolve the institute document for the logged-in institute user */
 const resolveInstitute = async (userId: string) =>
@@ -8274,8 +10051,8 @@ const jsonStringArray = z.preprocess(parseJsonArray, z.array(z.string().min(1)))
 
 const examApplySchema = z.object({
   courseId:   z.string().min(1, 'Course ID is required'),
-  batchId:    z.string().optional(),
-  semesterNumber: z.coerce.number().min(1, 'Semester Number is required'),
+  batchId:    z.string().min(1, 'Batch ID is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination Number is required').max(2),
   studentIds: z.preprocess(parseJsonArray, z.array(z.string().min(1)).min(1, 'At least one student must be selected')),
   utrNumber:  z.string().optional(),
   subjects:   z.preprocess(parseJsonArray, z.array(z.string().min(1)).min(1, 'At least one subject is required')),
@@ -8331,29 +10108,19 @@ export const applyForExam = async (req: Request, res: Response) => {
     const course = await Course.findOne({ _id: validatedData.courseId });
     if (!course) return sendError({ req, res, statusCode: 404, message: 'Specified Course does not exist.' });
 
-    // Auto-resolve batchId if not provided
-    let batchId = validatedData.batchId;
-    if (!batchId) {
-      // Get batch from the first student
-      const firstStudent = await Student.findOne({ _id: { $in: validatedData.studentIds }, course: course._id });
-      if (firstStudent && firstStudent.batch) {
-        batchId = firstStudent.batch.toString();
-      }
-    }
-    if (!batchId) return sendError({ req, res, statusCode: 400, message: 'Could not determine the batch. Please ensure students have a batch assigned.' });
+    const batch = await Batch.findOne({ _id: validatedData.batchId, course: course._id });
+    if (!batch) return sendError({ req, res, statusCode: 404, message: 'Specified Batch does not exist for this course.' });
 
-    const batch = await Batch.findOne({ _id: batchId, course: course._id });
-    if (!batch) return sendError({ req, res, statusCode: 404, message: 'Specified Batch does not exist.' });
-
-    // Validate students
+    // Validate students belong to this institute, course, AND batch
     const students = await Student.find({
       _id: { $in: validatedData.studentIds },
       institute: institute._id,
       course: course._id,
+      batch: batch._id,
     });
 
     if (students.length !== validatedData.studentIds.length) {
-      return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to the specified course.' });
+      return sendError({ req, res, statusCode: 400, message: 'One or more students do not exist or do not belong to the specified batch.' });
     }
 
     const unapprovedStudents = students.filter((s: any) => s.verificationStatus && s.verificationStatus !== 'Approved');
@@ -8389,28 +10156,33 @@ export const applyForExam = async (req: Request, res: Response) => {
     // ── NEW: Classify students (first-attempt vs reappearing) & resolve fee ──
     const feeSummary = await classifyStudentsForExamFee(
       validatedData.studentIds,
-      validatedData.semesterNumber,
+      validatedData.examinationNumber,
       course
     );
 
     // Fetch fee records for examination fees
     const feeRecords = await FeeRecord.find({
       student: { $in: validatedData.studentIds },
-      semesterNumber: validatedData.semesterNumber,
+      examinationNumber: validatedData.examinationNumber,
       paymentPurpose: 'Examination fee'
     });
     const paidStudentIds = new Set(feeRecords.map((f: any) => f.student.toString()));
 
-    // Reappearing students who have a payable fee must have paid it;
-    // first-attempt students are fee-waived by default so no payment required.
+    // Students who owe a fee must have paid it:
+    // - reappearing students always pay when a reappearing fee is configured;
+    // - first-attempt students pay only when the course opts to charge them.
+    const { feeConfig } = feeSummary;
     const feeRequiredSet = new Set(
-      (feeSummary.examFeeApplicable ? feeSummary.reappearingStudents : [])
+      feeConfig.reappearingFee > 0 ? feeSummary.reappearingStudents : []
     );
+    if (feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0) {
+      feeSummary.firstAttemptStudents.forEach((id) => feeRequiredSet.add(id));
+    }
 
     // Eligibility check
     const ineligible = students.filter(s => {
-      const sem = s.semesters.find((sm: any) => sm.semesterNumber === validatedData.semesterNumber);
-      if (!sem) return true; // ineligible if no semester record
+      const sem = s.examinations.find((sm: any) => sm.examinationNumber === validatedData.examinationNumber);
+      if (!sem) return true; // ineligible if no examination record
 
       const feeSatisfied = !feeRequiredSet.has(s._id.toString()) || paidStudentIds.has(s._id.toString());
       return !(sem.attendancePercentage >= 75 && sem.thesisApproved && feeSatisfied);
@@ -8420,26 +10192,37 @@ export const applyForExam = async (req: Request, res: Response) => {
       return sendError({
         req, res, statusCode: 400,
         message: 'Cannot apply for exam. One or more selected students are ineligible.',
-        errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or applicable exam fee) for this semester' })),
+        errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or applicable exam fee) for this examination' })),
       });
     }
 
-    // Duplicate check
-    const existing = await ExamApplication.findOne({
+    // Duplicate check per batch & examination number
+    const existingBatchApp = await ExamApplication.findOne({
+      institute: institute._id,
+      course: course._id,
       batch: batch._id,
-      semesterNumber: validatedData.semesterNumber,
+      examinationNumber: validatedData.examinationNumber,
+      status: { $in: ['Pending', 'Approved', 'SchedulePublished'] },
+    });
+    if (existingBatchApp) {
+      return sendError({ req, res, statusCode: 400, message: `An active exam application already exists for this batch (${batch.name}) and Examination ${validatedData.examinationNumber}.` });
+    }
+
+    // Duplicate check per student
+    const existingStudentApp = await ExamApplication.findOne({
+      examinationNumber: validatedData.examinationNumber,
       students: { $in: validatedData.studentIds },
       status: { $in: ['Pending', 'Approved', 'SchedulePublished'] },
     });
-    if (existing) {
-      return sendError({ req, res, statusCode: 400, message: 'An exam application already exists for one or more selected students in this batch and semester.' });
+    if (existingStudentApp) {
+      return sendError({ req, res, statusCode: 400, message: 'One or more selected students already have an active exam application for this examination.' });
     }
 
     const application = await ExamApplication.create({
       institute: institute._id,
       course: course._id,
       batch: batch._id,
-      semesterNumber: validatedData.semesterNumber,
+      examinationNumber: validatedData.examinationNumber,
       students: validatedData.studentIds,
       subjects: validatedData.subjects,
       status: 'Pending',
@@ -8462,7 +10245,7 @@ export const applyForExam = async (req: Request, res: Response) => {
         instituteName: institute.orgName,
         instituteEmail: user?.email || institute.emailAddress,
         courseName: course.name,
-        semesterNumber: validatedData.semesterNumber,
+        examinationNumber: validatedData.examinationNumber,
         subjects: validatedData.subjects,
         totalFee: 0,
         paymentId: validatedData.utrNumber || 'N/A',
@@ -8499,7 +10282,7 @@ export const listExamApplications = async (req: Request, res: Response) => {
     const applications = await ExamApplication.find(query)
       .populate('institute', 'orgName')
       .populate('course', 'name')
-      .populate('batch', 'year')
+      .populate('batch', 'name year')
       .populate('students', 'firstName lastName enrollmentId email')
       .sort({ createdAt: -1 });
 
@@ -8516,7 +10299,7 @@ export const getExamApplicationById = async (req: Request, res: Response) => {
     const application = await ExamApplication.findById(req.params.id)
       .populate('institute', 'orgName instituteAddress')
       .populate('course', 'name')
-      .populate('batch', 'year')
+      .populate('batch', 'name year')
       .populate('students', 'firstName lastName enrollmentId email attendancePercentage thesisApproved remittedToAcademy examAttempts');
 
     if (!application) return sendError({ req, res, statusCode: 404, message: 'Exam application not found' });
@@ -8562,7 +10345,7 @@ export const updateExamApplication = async (req: Request, res: Response) => {
       }
       const feeRecords = await FeeRecord.find({
         student: { $in: validatedData.studentIds },
-        semesterNumber: application.semesterNumber,
+        examinationNumber: application.examinationNumber,
         paymentPurpose: 'Examination fee'
       });
       const paidStudentIds = new Set(feeRecords.map((f: any) => f.student.toString()));
@@ -8571,15 +10354,19 @@ export const updateExamApplication = async (req: Request, res: Response) => {
       const course = await Course.findById(application.course);
       const feeSummary = await classifyStudentsForExamFee(
         validatedData.studentIds,
-        application.semesterNumber,
+        application.examinationNumber,
         course
       );
+      const { feeConfig } = feeSummary;
       const feeRequiredSet = new Set(
-        (feeSummary.examFeeApplicable ? feeSummary.reappearingStudents : [])
+        feeConfig.reappearingFee > 0 ? feeSummary.reappearingStudents : []
       );
+      if (feeConfig.feeApplicableForFirstAttempt && feeConfig.firstAttemptFee > 0) {
+        feeSummary.firstAttemptStudents.forEach((id) => feeRequiredSet.add(id));
+      }
 
       const ineligible = students.filter(s => {
-        const sem = s.semesters.find((sm: any) => sm.semesterNumber === application.semesterNumber);
+        const sem = s.examinations.find((sm: any) => sm.examinationNumber === application.examinationNumber);
         if (!sem) return true;
         const feeSatisfied = !feeRequiredSet.has(s._id.toString()) || paidStudentIds.has(s._id.toString());
         return !(sem.attendancePercentage >= 75 && sem.thesisApproved && feeSatisfied);
@@ -8589,7 +10376,7 @@ export const updateExamApplication = async (req: Request, res: Response) => {
         return sendError({
           req, res, statusCode: 400,
           message: 'One or more updated students are ineligible.',
-          errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or applicable exam fee) for this semester' })),
+          errors: ineligible.map(s => ({ studentId: s._id, name: `${s.firstName} ${s.lastName}`, reason: 'Ineligible student criteria not met (attendance, thesis, or applicable exam fee) for this examination' })),
         });
       }
       application.students = validatedData.studentIds.map((id: string) => id as any);
@@ -8664,6 +10451,22 @@ export const reviewExamApplication = async (req: Request, res: Response) => {
 
     await application.save();
 
+    // Synchronize Student.examinations[].eligibilityStatus for each candidate in this batch application
+    if (application.students && application.students.length > 0) {
+      const studentEligibilityStatus = validatedData.status === 'Approved' ? 'Approved' : 'Rejected';
+      await Student.updateMany(
+        {
+          _id: { $in: application.students },
+          'examinations.examinationNumber': application.examinationNumber,
+        },
+        {
+          $set: {
+            'examinations.$.eligibilityStatus': studentEligibilityStatus,
+          },
+        }
+      );
+    }
+
     // Notify institute when the application is approved
     if (validatedData.status === 'Approved') {
       try {
@@ -8677,7 +10480,7 @@ export const reviewExamApplication = async (req: Request, res: Response) => {
             instituteName: instituteDoc.orgName,
             instituteEmail: instituteUser?.email || instituteDoc.emailAddress,
             courseName: courseDoc?.name || 'N/A',
-            semesterNumber: application.semesterNumber,
+            examinationNumber: application.examinationNumber,
             examDate: application.scheduledDate || new Date(),
             remarks: validatedData.remarks || 'Approved by Academic Board',
           });
@@ -8703,7 +10506,7 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
     const application = await ExamApplication.findById(req.params.id)
       .populate('institute', 'orgName')
       .populate('course', 'name')
-      .populate('batch', 'year');
+      .populate('batch', 'name year');
 
     if (!application) return sendError({ req, res, statusCode: 404, message: 'Exam application not found' });
 
@@ -8749,7 +10552,7 @@ export const publishExamSchedule = async (req: Request, res: Response) => {
           instituteName: instituteDoc.orgName,
           instituteEmail: instituteUser?.email || instituteDoc.emailAddress,
           courseName: (application as any).course?.name || 'N/A',
-          semesterNumber: application.semesterNumber,
+          examinationNumber: application.examinationNumber,
           examVenue: application.examVenue,
           examCenter: application.examCenter,
           examDate: application.scheduledDate || new Date(),
@@ -8792,7 +10595,7 @@ export const generateHallTickets = async (req: Request, res: Response) => {
     const application = await ExamApplication.findById(req.params.id)
       .populate('institute', 'orgName instituteAddress')
       .populate('course', 'name subjects')
-      .populate('batch', 'year')
+      .populate('batch', 'name year')
       .populate('students', 'firstName lastName enrollmentId contactNumber documents');
 
     if (!application) return sendError({ req, res, statusCode: 404, message: 'Exam application not found' });
@@ -8908,7 +10711,7 @@ export const generateHallTickets = async (req: Request, res: Response) => {
           subjectSchedules,
           subjects,
           courseName: courseDoc.name,
-          semesterNumber: application.semesterNumber,
+          examinationNumber: application.examinationNumber,
           // NEW: Practical details
           practicalExam: {
             name:     practicalExam.name,
@@ -8961,7 +10764,7 @@ export const listHallTickets = async (req: Request, res: Response) => {
 export const checkExamFeeApplicability = async (req: Request, res: Response) => {
   try {
     const studentId = String(req.params.studentId);
-    const semesterNumber = parseInt(String(req.params.semesterNumber));
+    const examinationNumber = parseInt(String(req.params.examinationNumber));
 
     const student = await Student.findById(studentId).populate('course');
     if (!student) return sendError({ req, res, statusCode: 404, message: 'Student not found' });
@@ -8970,10 +10773,10 @@ export const checkExamFeeApplicability = async (req: Request, res: Response) => 
       (student as any).courseId || (student as any).course
     );
 
-    const status = await checkStudentReappearance(studentId, semesterNumber);
+    const status = await checkStudentReappearance(studentId, examinationNumber);
 
     const feeConfig = course
-      ? resolveFeeConfiguration(course, semesterNumber)
+      ? resolveFeeConfiguration(course, examinationNumber)
       : { firstAttemptFee: 0, reappearingFee: 0, feeApplicableForFirstAttempt: false };
 
     // First attempt: fee applies only when the course opts in AND fee > 0.
@@ -8997,7 +10800,7 @@ export const checkExamFeeApplicability = async (req: Request, res: Response) => 
       message: 'Exam fee applicability checked',
       data: {
         studentId,
-        semesterNumber,
+        examinationNumber,
         isReappearing: status.isReappearing,
         attemptCount: status.attemptCount,
         previousResult: status.previousResult,
@@ -9017,12 +10820,12 @@ export const checkExamFeeApplicability = async (req: Request, res: Response) => 
 export const getExamFeeConfiguration = async (req: Request, res: Response) => {
   try {
     const courseId = String(req.params.courseId);
-    const semesterNumber = parseInt(String(req.params.semesterNumber));
+    const examinationNumber = parseInt(String(req.params.examinationNumber));
 
     const course = await Course.findById(courseId);
     if (!course) return sendError({ req, res, statusCode: 404, message: 'Course not found' });
 
-    const feeConfig = resolveFeeConfiguration(course, semesterNumber);
+    const feeConfig = resolveFeeConfiguration(course, examinationNumber);
 
     return sendSuccess({
       req,
@@ -9030,7 +10833,7 @@ export const getExamFeeConfiguration = async (req: Request, res: Response) => {
       message: 'Exam fee configuration retrieved successfully',
       data: {
         courseId,
-        semesterNumber,
+        examinationNumber,
         firstAttemptFee: feeConfig.firstAttemptFee,
         reappearingFee: feeConfig.reappearingFee,
         feeApplicableForFirstAttempt: feeConfig.feeApplicableForFirstAttempt,
@@ -9300,21 +11103,7 @@ import { z } from 'zod';
 import sendEmail from '../utils/sendEmail';
 import razorpayInstance, { keyId } from '../config/razorpay';
 import crypto from 'crypto';
-import path from 'path'; 
-
-const getFileUrl = (filePath: string) => {
-  if (!filePath) return '';
-  // Cloudinary (or any external/absolute) URLs are returned as-is so the stored
-  // link points directly at the CDN and works from any environment.
-  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-    return filePath;
-  }
-  // Local uploads are stored as an origin-agnostic relative path so the
-  // frontend can resolve them against whichever backend origin it is talking to
-  // (localhost in dev, the production domain in prod).
-  const filename = path.basename(filePath).replace(/\\/g, '/');
-  return `/api/uploads/${filename}`;
-};
+import { getFileUrl } from '../utils/fileHelpers';
 
 const instituteSchema = z.object({
   orgName: z.string().min(1, 'Organization Name is required'),
@@ -10122,7 +11911,7 @@ import { emitEvent } from '../config/socket';
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 
 const updateMarksSchema = z.object({
-  semesterNumber: z.coerce.number().min(1, 'Semester number is required'),
+  examinationNumber: z.coerce.number().min(1, 'Examination number is required').max(2),
   subjects: z
     .array(
       z.object({
@@ -10131,13 +11920,14 @@ const updateMarksSchema = z.object({
         marksObtained: z.union([z.coerce.number(), z.null()]).optional(),
         isAbsent: z.boolean().default(false),
         totalMarks: z.coerce.number().default(100),
+        status: z.string().optional(),
       })
     )
     .min(1, 'At least one subject is required'),
 });
 
 const bulkUpdateMarksSchema = z.object({
-  semesterNumber: z.coerce.number().min(1),
+  examinationNumber: z.coerce.number().min(1).max(2),
   students: z
     .array(
       z.object({
@@ -10150,6 +11940,7 @@ const bulkUpdateMarksSchema = z.object({
               marksObtained: z.union([z.coerce.number(), z.null()]).optional(),
               isAbsent: z.boolean().default(false),
               totalMarks: z.coerce.number().default(100),
+              status: z.string().optional(),
             })
           )
           .min(1),
@@ -10191,60 +11982,212 @@ const getInstituteId = async (userId: string) => {
   return institute?._id || null;
 };
 
-const buildDefaultMarks = (courseSubjects: string[]) => {
-  return courseSubjects.map((sub) => ({
-    subjectCode: sub.substring(0, 6).toUpperCase(),
-    subjectName: sub,
-    marksObtained: null,
-    totalMarks: 100,
-    isAbsent: false,
-    grade: '',
-  }));
+const formatMarkWithStatus = (m: any) => {
+  const markObj = m && typeof m.toObject === 'function' ? m.toObject() : { ...m };
+  let status = (markObj.status || '').toUpperCase();
+  const isAbsent = markObj.isAbsent === true || markObj.grade === 'ABSENT' || status === 'ABSENT';
+  if (!status) {
+    if (isAbsent) {
+      status = 'ABSENT';
+    } else if (markObj.grade === 'F' || markObj.marksObtained === 0) {
+      status = 'FAIL';
+    } else if (markObj.marksObtained !== null && markObj.marksObtained !== undefined) {
+      status = markObj.marksObtained >= 50 ? 'PASS' : 'FAIL';
+    } else if (markObj.grade && markObj.grade !== '') {
+      status = ['O', 'A+', 'A', 'B+', 'B', 'C', 'D'].includes(markObj.grade) ? 'PASS' : '';
+    }
+  }
+  const subjectCode = markObj.subjectCode || markObj.code || '';
+  const subjectName = markObj.subjectName || markObj.name || markObj.subject || '';
+  return {
+    ...markObj,
+    subjectCode,
+    subjectName,
+    status,
+    isAbsent,
+  };
 };
 
-const getSubjectsForCourse = async (courseId: any) => {
+const getCourseSubjectsList = async (
+  courseIdOrDoc: any,
+  examinationNumber: number = 1
+): Promise<{ code: string; name: string }[]> => {
   try {
-    const course = await Course.findById(courseId);
-    return course?.subjects?.length ? course.subjects : [];
-  } catch {
+    const courseId = courseIdOrDoc?._id || courseIdOrDoc;
+    let course =
+      courseIdOrDoc && (courseIdOrDoc.examinations || courseIdOrDoc.subjects)
+        ? courseIdOrDoc
+        : null;
+
+    if (!course && courseId) {
+      course = await Course.findById(courseId);
+    }
+    if (!course) return [];
+
+    const examNum = Number(examinationNumber) || 1;
+
+    // 1. Check course.examinations for this specific examinationNumber
+    const exam = (course.examinations || []).find(
+      (e: any) => Number(e.examinationNumber) === examNum
+    );
+    if (exam && exam.subjects && exam.subjects.length > 0) {
+      const validSubs = exam.subjects
+        .filter((s: any) => s && (s.name || s.subjectName))
+        .map((s: any, idx: number) => ({
+          code: s.code || s.subjectCode || `SUB${idx + 1}`,
+          name: (s.name || s.subjectName || '').trim(),
+        }));
+      if (validSubs.length > 0) return validSubs;
+    }
+
+    // 2. Check if any examination in course.examinations has subjects
+    for (const otherExam of course.examinations || []) {
+      if (otherExam && otherExam.subjects && otherExam.subjects.length > 0) {
+        const validSubs = otherExam.subjects
+          .filter((s: any) => s && (s.name || s.subjectName))
+          .map((s: any, idx: number) => ({
+            code: s.code || s.subjectCode || `SUB${idx + 1}`,
+            name: (s.name || s.subjectName || '').trim(),
+          }));
+        if (validSubs.length > 0) return validSubs;
+      }
+    }
+
+    // 3. Check course.subjects
+    if (course.subjects && course.subjects.length > 0) {
+      return course.subjects.map((sub: any, idx: number) => {
+        if (typeof sub === 'string') {
+          const parts = sub.split(':');
+          if (parts.length > 1 && parts[0].trim().length <= 10) {
+            return {
+              code: parts[0].trim(),
+              name: parts.slice(1).join(':').trim(),
+            };
+          }
+          const cleanSub = sub.trim();
+          const cleanCode = cleanSub.replace(/[^A-Za-z0-9]/g, '').substring(0, 6).toUpperCase();
+          return {
+            code: `${cleanCode || 'SUB'}${idx + 1}`,
+            name: cleanSub,
+          };
+        }
+        return {
+          code: sub.code || sub.subjectCode || `SUB${idx + 1}`,
+          name: sub.name || sub.subjectName || `Subject ${idx + 1}`,
+        };
+      });
+    }
+
+    return [];
+  } catch (err) {
+    console.error('Error in getCourseSubjectsList:', err);
     return [];
   }
 };
 
-const resolveMergedMarks = async (studentId: any, semesterNumber: number, existingMarks: any[]) => {
-  try {
-    const resultDoc = await Result.findOne({ student: studentId, semester: semesterNumber });
-    if (!resultDoc || !resultDoc.subjects || resultDoc.subjects.length === 0) {
-      return existingMarks;
-    }
-    const merged = [...existingMarks];
-    resultDoc.subjects.forEach((resSubj: any) => {
-      const idx = merged.findIndex(
-        (m: any) =>
-          (m.subjectCode && resSubj.subjectCode && m.subjectCode.toLowerCase() === resSubj.subjectCode.toLowerCase()) ||
-          (m.subjectName && resSubj.subjectName && m.subjectName.toLowerCase() === resSubj.subjectName.toLowerCase())
-      );
-      if (idx !== -1) {
-        merged[idx] = {
-          ...merged[idx],
-          marksObtained: resSubj.totalMarks ?? merged[idx].marksObtained,
-          grade: resSubj.grade || merged[idx].grade,
-          isAbsent: resSubj.grade === 'ABSENT'
-        };
-      } else {
-        merged.push({
-          subjectCode: resSubj.subjectCode,
-          subjectName: resSubj.subjectName,
-          marksObtained: resSubj.totalMarks,
-          totalMarks: 100,
-          isAbsent: resSubj.grade === 'ABSENT',
-          grade: resSubj.grade
-        });
+const buildDefaultMarks = (courseSubjectsList: { code: string; name: string }[]) => {
+  return (courseSubjectsList || []).map((sub, idx) => ({
+    subjectCode: sub.code || `SUB${idx + 1}`,
+    subjectName: sub.name || `Subject ${idx + 1}`,
+    marksObtained: null,
+    totalMarks: 100,
+    isAbsent: false,
+    grade: '',
+    status: '',
+  }));
+};
+
+const enrichMarksWithCourseSubjects = (
+  existingMarks: any[],
+  courseSubjects: { code: string; name: string }[]
+) => {
+  if (!existingMarks || existingMarks.length === 0) {
+    return buildDefaultMarks(courseSubjects);
+  }
+
+  return existingMarks.map((m: any, idx: number) => {
+    const formatted = formatMarkWithStatus(m);
+    let subjectCode = formatted.subjectCode;
+    let subjectName = formatted.subjectName;
+
+    // If subjectName or subjectCode is missing, look it up from courseSubjects
+    if (!subjectName || !subjectCode) {
+      const match =
+        courseSubjects.find(
+          (cs) =>
+            (subjectCode && cs.code.toLowerCase() === subjectCode.toLowerCase()) ||
+            (subjectName && cs.name.toLowerCase() === subjectName.toLowerCase())
+        ) || courseSubjects[idx];
+
+      if (match) {
+        if (!subjectCode) subjectCode = match.code;
+        if (!subjectName) subjectName = match.name;
       }
-    });
-    return merged;
-  } catch {
-    return existingMarks;
+    }
+
+    return {
+      ...formatted,
+      subjectCode: subjectCode || `SUB${idx + 1}`,
+      subjectName: subjectName || `Subject ${idx + 1}`,
+    };
+  });
+};
+
+const resolveMergedMarks = async (
+  studentId: any,
+  examinationNumber: number,
+  existingMarks: any[],
+  courseSubjects: { code: string; name: string }[] = []
+) => {
+  try {
+    const resultDoc = await Result.findOne({ student: studentId, examination: examinationNumber });
+    let merged = [...(existingMarks || [])];
+
+    if (resultDoc && resultDoc.subjects && resultDoc.subjects.length > 0) {
+      resultDoc.subjects.forEach((resSubj: any) => {
+        const subCode = resSubj.subjectCode || resSubj.code || '';
+        const subName = resSubj.subjectName || resSubj.name || '';
+        const idx = merged.findIndex(
+          (m: any) =>
+            (m.subjectCode && subCode && m.subjectCode.toLowerCase() === subCode.toLowerCase()) ||
+            (m.subjectName && subName && m.subjectName.toLowerCase() === subName.toLowerCase())
+        );
+        const isAbsent = resSubj.grade === 'ABSENT';
+        const markVal = resSubj.totalMarks;
+        const status = isAbsent
+          ? 'ABSENT'
+          : resSubj.grade === 'F' || (markVal !== null && markVal !== undefined && markVal < 50)
+            ? 'FAIL'
+            : 'PASS';
+
+        if (idx !== -1) {
+          merged[idx] = {
+            ...merged[idx],
+            subjectCode: merged[idx].subjectCode || subCode,
+            subjectName: merged[idx].subjectName || subName,
+            marksObtained: markVal ?? merged[idx].marksObtained,
+            grade: resSubj.grade || merged[idx].grade,
+            isAbsent,
+            status: status || merged[idx].status,
+          };
+        } else {
+          merged.push({
+            subjectCode: subCode,
+            subjectName: subName,
+            marksObtained: markVal,
+            totalMarks: 100,
+            isAbsent,
+            grade: resSubj.grade,
+            status,
+          });
+        }
+      });
+    }
+
+    return enrichMarksWithCourseSubjects(merged, courseSubjects);
+  } catch (err) {
+    console.error('Error in resolveMergedMarks:', err);
+    return enrichMarksWithCourseSubjects(existingMarks || [], courseSubjects);
   }
 };
 
@@ -10252,7 +12195,7 @@ const resolveMergedMarks = async (studentId: any, semesterNumber: number, existi
 
 export const getStudentsWithMarks = async (req: Request, res: Response) => {
   try {
-    const { courseId, batchId, instituteId, search, semesterNumber } = req.query;
+    const { courseId, batchId, instituteId, search, examinationNumber } = req.query;
     const query: any = {};
 
     // Institute access control
@@ -10277,21 +12220,25 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
     }
 
     const students = await Student.find(query)
-      .populate('course', 'name subjects')
+      .populate('course', 'name subjects examinations')
       .populate('batch', 'year name')
       .populate('institute', 'orgName')
       .sort({ createdAt: -1 });
 
     const formattedStudents = await Promise.all(
       students.map(async (student) => {
-        const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
+        const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
+        const examinationRecord = student.examinations.find((s) => s.examinationNumber === examNum);
+        const courseSubjects = await getCourseSubjectsList(student.course, examNum);
 
-        const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
+        const baseMarks =
+          examinationRecord?.marks && examinationRecord.marks.length > 0
+            ? enrichMarksWithCourseSubjects(examinationRecord.marks, courseSubjects)
+            : buildDefaultMarks(courseSubjects);
 
-        const baseMarks = semesterRecord ? (semesterRecord.marks || []) : buildDefaultMarks(await getSubjectsForCourse(student.course));
-        const mergedMarks = await resolveMergedMarks(student._id, semNum, baseMarks);
+        const mergedMarks = await resolveMergedMarks(student._id, examNum, baseMarks, courseSubjects);
 
-        if (semesterRecord) {
+        if (examinationRecord) {
           return {
             id: student._id,
             _id: student._id,
@@ -10304,10 +12251,10 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
             course: student.course,
             batch: student.batch,
             institute: student.institute,
-            semesterNumber: semNum,
-            attendancePercentage: semesterRecord.attendancePercentage || 0,
-            thesisApproved: semesterRecord.thesisApproved || false,
-            eligibilityStatus: semesterRecord.eligibilityStatus || 'Pending',
+            examinationNumber: examNum,
+            attendancePercentage: examinationRecord.attendancePercentage || 0,
+            thesisApproved: examinationRecord.thesisApproved || false,
+            eligibilityStatus: examinationRecord.eligibilityStatus || 'Pending',
             marks: mergedMarks,
             documents: student.documents || {},
             remittedToAcademy: student.remittedToAcademy || false,
@@ -10326,7 +12273,7 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
           course: student.course,
           batch: student.batch,
           institute: student.institute,
-          semesterNumber: semNum,
+          examinationNumber: examNum,
           attendancePercentage: 0,
           thesisApproved: false,
           eligibilityStatus: 'Pending',
@@ -10353,7 +12300,7 @@ export const getStudentsWithMarks = async (req: Request, res: Response) => {
 export const getStudentMarks = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semesterNumber } = req.query;
+    const { examinationNumber } = req.query;
 
     const query: any = { _id: studentId };
 
@@ -10366,23 +12313,23 @@ export const getStudentMarks = async (req: Request, res: Response) => {
     }
 
     const student = await Student.findOne(query)
-      .populate('course', 'name subjects')
+      .populate('course', 'name subjects examinations')
       .populate('batch', 'year name');
 
     if (!student) {
       return sendError({ req, res, statusCode: 404, message: 'Student not found' });
     }
 
-    const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
-    const semesterRecord = student.semesters.find((s) => s.semesterNumber === semNum);
+    const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
+    const examinationRecord = student.examinations.find((s) => s.examinationNumber === examNum);
+    const courseSubjects = await getCourseSubjectsList(student.course, examNum);
 
-    let rawMarks = semesterRecord?.marks || [];
-    if (!semesterRecord) {
-      const courseSubjects = await getSubjectsForCourse(student.course);
-      rawMarks = buildDefaultMarks(courseSubjects);
-    }
+    const baseMarks =
+      examinationRecord?.marks && examinationRecord.marks.length > 0
+        ? enrichMarksWithCourseSubjects(examinationRecord.marks, courseSubjects)
+        : buildDefaultMarks(courseSubjects);
 
-    const marks = await resolveMergedMarks(student._id, semNum, rawMarks);
+    const marks = await resolveMergedMarks(student._id, examNum, baseMarks, courseSubjects);
 
     return sendSuccess({
       req,
@@ -10400,10 +12347,10 @@ export const getStudentMarks = async (req: Request, res: Response) => {
         course: student.course,
         batch: student.batch,
         institute: student.institute,
-        semesterNumber: semNum,
-        attendancePercentage: semesterRecord?.attendancePercentage || 0,
-        thesisApproved: semesterRecord?.thesisApproved || false,
-        eligibilityStatus: semesterRecord?.eligibilityStatus || 'Pending',
+        examinationNumber: examNum,
+        attendancePercentage: examinationRecord?.attendancePercentage || 0,
+        thesisApproved: examinationRecord?.thesisApproved || false,
+        eligibilityStatus: examinationRecord?.eligibilityStatus || 'Pending',
         marks,
         documents: student.documents || {},
         remittedToAcademy: student.remittedToAcademy || false,
@@ -10436,50 +12383,85 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Student not found' });
     }
 
-    const semNum = validatedData.semesterNumber;
-    let semesterIndex = student.semesters.findIndex((s) => s.semesterNumber === semNum);
+    const examNum = validatedData.examinationNumber;
+    const courseSubjects = await getCourseSubjectsList(student.course, examNum);
+    let examinationIndex = student.examinations.findIndex((s) => s.examinationNumber === examNum);
 
-    if (semesterIndex === -1) {
-      student.semesters.push({
-        semesterNumber: semNum,
+    if (examinationIndex === -1) {
+      student.examinations.push({
+        examinationNumber: examNum,
         attendancePercentage: 0,
         thesisApproved: false,
         eligibilityStatus: 'Pending',
         marks: [],
       });
-      semesterIndex = student.semesters.length - 1;
+      examinationIndex = student.examinations.length - 1;
     }
 
-    const semester = student.semesters[semesterIndex];
-    if (!semester.marks) {
-      semester.marks = [];
+    const examination = student.examinations[examinationIndex];
+    if (!examination.marks) {
+      examination.marks = [];
     }
 
     for (const subject of validatedData.subjects) {
+      let status = (subject.status || '').toUpperCase();
+      const isAbsent = subject.isAbsent || status === 'ABSENT';
+      let marksObtained = isAbsent ? null : subject.marksObtained ?? null;
+
+      let subjectCode = subject.subjectCode?.trim() || '';
+      let subjectName = subject.subjectName?.trim() || '';
+
+      if (!subjectName || !subjectCode) {
+        const match = courseSubjects.find(
+          (cs) =>
+            (subjectCode && cs.code.toLowerCase() === subjectCode.toLowerCase()) ||
+            (subjectName && cs.name.toLowerCase() === subjectName.toLowerCase())
+        );
+        if (match) {
+          if (!subjectCode) subjectCode = match.code;
+          if (!subjectName) subjectName = match.name;
+        }
+      }
+
+      if (!status) {
+        if (isAbsent) {
+          status = 'ABSENT';
+        } else if (marksObtained !== null && marksObtained !== undefined) {
+          status = marksObtained >= 50 ? 'PASS' : 'FAIL';
+        }
+      } else if (!isAbsent) {
+        if (status === 'PASS' && (marksObtained === null || marksObtained === undefined || marksObtained < 50)) {
+          marksObtained = 100;
+        } else if (status === 'FAIL' && (marksObtained === null || marksObtained === undefined || marksObtained >= 50)) {
+          marksObtained = 0;
+        }
+      }
+
       const marksData = {
-        subjectCode: subject.subjectCode,
-        subjectName: subject.subjectName,
-        marksObtained: subject.isAbsent ? null : subject.marksObtained ?? null,
+        subjectCode: subjectCode || `SUB-${Date.now()}`,
+        subjectName: subjectName || 'Subject',
+        marksObtained,
         totalMarks: subject.totalMarks || 100,
-        isAbsent: subject.isAbsent || false,
-        grade: subject.isAbsent ? 'ABSENT' : calculateGrade(subject.marksObtained ?? null, subject.totalMarks || 100),
+        isAbsent,
+        grade: isAbsent ? 'ABSENT' : calculateGrade(marksObtained, subject.totalMarks || 100),
+        status,
         updatedBy: req.user._id,
         updatedAt: new Date(),
       };
 
-      const existingIndex = semester.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
+      const existingIndex = examination.marks.findIndex((m) => m.subjectCode === subjectCode);
       if (existingIndex !== -1) {
-        semester.marks[existingIndex] = marksData;
+        examination.marks[existingIndex] = marksData;
       } else {
-        semester.marks.push(marksData);
+        examination.marks.push(marksData);
       }
     }
 
-    // Mark semesters array as modified so Mongoose persists nested updates
-    student.markModified('semesters');
+    // Mark examinations array as modified so Mongoose persists nested updates
+    student.markModified('examinations');
     await student.save({ validateModifiedOnly: true });
 
-    emitEvent('MARKS_UPDATED', { studentId: student._id, semesterNumber: semNum });
+    emitEvent('MARKS_UPDATED', { studentId: student._id, examinationNumber: examNum });
 
     return sendSuccess({
       req,
@@ -10490,11 +12472,11 @@ export const updateStudentMarks = async (req: Request, res: Response) => {
         _id: student._id,
         enrollmentId: student.enrollmentId,
         fullName: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
-        semesterNumber: semNum,
-        marks: semester.marks,
-        attendancePercentage: semester.attendancePercentage || 0,
-        thesisApproved: semester.thesisApproved || false,
-        eligibilityStatus: semester.eligibilityStatus || 'Pending',
+        examinationNumber: examNum,
+        marks: enrichMarksWithCourseSubjects(examination.marks || [], courseSubjects),
+        attendancePercentage: examination.attendancePercentage || 0,
+        thesisApproved: examination.thesisApproved || false,
+        eligibilityStatus: examination.eligibilityStatus || 'Pending',
       },
     });
   } catch (error: any) {
@@ -10512,59 +12494,107 @@ export const bulkUpdateMarks = async (req: Request, res: Response) => {
     const validatedData = bulkUpdateMarksSchema.parse(req.body);
     const results: any[] = [];
     const errors: any[] = [];
+    const examNum = validatedData.examinationNumber;
 
     for (const studentData of validatedData.students) {
       try {
-        const student = await Student.findById(studentData.studentId);
+        const query: any = { _id: studentData.studentId };
+
+        if (req.user.role === 'institute') {
+          const instituteIdForUser = await getInstituteId(req.user._id);
+          if (!instituteIdForUser) {
+            errors.push({ studentId: studentData.studentId, error: 'Access Denied' });
+            continue;
+          }
+          query.institute = instituteIdForUser;
+        }
+
+        const student = await Student.findOne(query);
         if (!student) {
           errors.push({ studentId: studentData.studentId, error: 'Student not found' });
           continue;
         }
 
-        const semNum = validatedData.semesterNumber;
-        let semesterIndex = student.semesters.findIndex((s) => s.semesterNumber === semNum);
+        let examinationIndex = student.examinations.findIndex((s) => s.examinationNumber === examNum);
 
-        if (semesterIndex === -1) {
-          student.semesters.push({
-            semesterNumber: semNum,
+        if (examinationIndex === -1) {
+          student.examinations.push({
+            examinationNumber: examNum,
             attendancePercentage: 0,
             thesisApproved: false,
             eligibilityStatus: 'Pending',
             marks: [],
           });
-          semesterIndex = student.semesters.length - 1;
+          examinationIndex = student.examinations.length - 1;
         }
 
-        const semester = student.semesters[semesterIndex];
-        if (!semester.marks) {
-          semester.marks = [];
+        const examination = student.examinations[examinationIndex];
+        if (!examination.marks) {
+          examination.marks = [];
         }
+
+        const courseSubjects = await getCourseSubjectsList(student.course, examNum);
 
         for (const subject of studentData.subjects) {
+          let status = (subject.status || '').toUpperCase();
+          const isAbsent = subject.isAbsent || status === 'ABSENT';
+          let marksObtained = isAbsent ? null : subject.marksObtained ?? null;
+
+          let subjectCode = subject.subjectCode?.trim() || '';
+          let subjectName = subject.subjectName?.trim() || '';
+
+          if (!subjectName || !subjectCode) {
+            const match = courseSubjects.find(
+              (cs) =>
+                (subjectCode && cs.code.toLowerCase() === subjectCode.toLowerCase()) ||
+                (subjectName && cs.name.toLowerCase() === subjectName.toLowerCase())
+            );
+            if (match) {
+              if (!subjectCode) subjectCode = match.code;
+              if (!subjectName) subjectName = match.name;
+            }
+          }
+
+          if (!status) {
+            if (isAbsent) {
+              status = 'ABSENT';
+            } else if (marksObtained !== null && marksObtained !== undefined) {
+              status = marksObtained >= 50 ? 'PASS' : 'FAIL';
+            }
+          } else if (!isAbsent) {
+            if (status === 'PASS' && (marksObtained === null || marksObtained === undefined || marksObtained < 50)) {
+              marksObtained = 100;
+            } else if (status === 'FAIL' && (marksObtained === null || marksObtained === undefined || marksObtained >= 50)) {
+              marksObtained = 0;
+            }
+          }
+
           const marksData = {
-            subjectCode: subject.subjectCode,
-            subjectName: subject.subjectName,
-            marksObtained: subject.isAbsent ? null : subject.marksObtained ?? null,
+            subjectCode: subjectCode || `SUB-${Date.now()}`,
+            subjectName: subjectName || 'Subject',
+            marksObtained,
             totalMarks: subject.totalMarks || 100,
-            isAbsent: subject.isAbsent || false,
-            grade: subject.isAbsent ? 'ABSENT' : calculateGrade(subject.marksObtained ?? null, subject.totalMarks || 100),
+            isAbsent,
+            grade: isAbsent ? 'ABSENT' : calculateGrade(marksObtained, subject.totalMarks || 100),
+            status,
             updatedBy: req.user._id,
             updatedAt: new Date(),
           };
 
-          const existingIndex = semester.marks.findIndex((m) => m.subjectCode === subject.subjectCode);
+          const existingIndex = examination.marks.findIndex((m) => m.subjectCode === subjectCode);
           if (existingIndex !== -1) {
-            semester.marks[existingIndex] = marksData;
+            examination.marks[existingIndex] = marksData;
           } else {
-            semester.marks.push(marksData);
+            examination.marks.push(marksData);
           }
         }
 
-        // Mark semesters array as modified so Mongoose persists nested updates
-        student.markModified('semesters');
+        // Mark examinations array as modified so Mongoose persists nested updates
+        student.markModified('examinations');
         await student.save({ validateModifiedOnly: true });
+
+        emitEvent('MARKS_UPDATED', { studentId: student._id, examinationNumber: examNum });
         results.push({
-          studentId: studentData.studentId,
           name: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
           status: 'success',
         });
@@ -10592,16 +12622,16 @@ export const bulkUpdateMarks = async (req: Request, res: Response) => {
 export const getCourseSubjects = async (req: Request, res: Response) => {
   try {
     const { courseId } = req.params;
+    const { examinationNumber } = req.query;
+    const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
 
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return sendError({ req, res, statusCode: 404, message: 'Course not found' });
-    }
+    const subjects = await getCourseSubjectsList(courseId, examNum);
 
-    const subjects = course.subjects || [];
-    const subjectList = subjects.map((name: string, index: number) => ({
-      code: `${name.substring(0, 6).toUpperCase()}${index + 1}`,
-      name,
+    const subjectList = subjects.map((sub, index) => ({
+      code: sub.code || `SUB${index + 1}`,
+      name: sub.name || `Subject ${index + 1}`,
+      subjectCode: sub.code || `SUB${index + 1}`,
+      subjectName: sub.name || `Subject ${index + 1}`,
     }));
 
     return sendSuccess({
@@ -10618,7 +12648,7 @@ export const getCourseSubjects = async (req: Request, res: Response) => {
 // ─── Result Generation from Marks ────────────────────────────────────────────
 
 const generateResultsFromMarksSchema = z.object({
-  semesterNumber: z.coerce.number().min(1),
+  examinationNumber: z.coerce.number().min(1).max(2),
   batchId: z.string().min(1),
   courseId: z.string().min(1),
   academicYear: z.string().min(1),
@@ -10656,22 +12686,22 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
 
     for (const student of students) {
       try {
-        // Find the semester record
-        const semesterRecord = student.semesters.find(
-          (s: any) => s.semesterNumber === validatedData.semesterNumber
+        // Find the examination record
+        const examinationRecord = student.examinations.find(
+          (s: any) => s.examinationNumber === validatedData.examinationNumber
         );
 
-        if (!semesterRecord || !semesterRecord.marks || semesterRecord.marks.length === 0) {
+        if (!examinationRecord || !examinationRecord.marks || examinationRecord.marks.length === 0) {
           errors.push({
             studentId: student._id,
             name: `${student.firstName} ${student.lastName}`,
-            reason: 'No marks found for this semester',
+            reason: 'No marks found for this examination',
           });
           continue;
         }
 
         // Check if all subjects have marks or are marked absent
-        const allMarked = semesterRecord.marks.every(
+        const allMarked = examinationRecord.marks.every(
           (m: any) => m.isAbsent === true || m.marksObtained !== null
         );
 
@@ -10685,7 +12715,7 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
         }
 
         // Build result subjects
-        const subjects = semesterRecord.marks.map((m: any) => {
+        const subjects = examinationRecord.marks.map((m: any) => {
           const marksObtained = m.isAbsent ? 0 : (m.marksObtained || 0);
           const totalMarks = m.totalMarks || 100;
           const grade = m.isAbsent ? 'ABSENT' : calculateGrade(marksObtained, totalMarks);
@@ -10733,7 +12763,7 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
         const existingResult = await Result.findOne({
           student: student._id,
           academicYear: validatedData.academicYear,
-          semester: validatedData.semesterNumber,
+          examination: validatedData.examinationNumber,
         });
 
         if (existingResult) {
@@ -10760,7 +12790,7 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
           const newResult = await Result.create({
             student: student._id,
             academicYear: validatedData.academicYear,
-            semester: validatedData.semesterNumber,
+            examination: validatedData.examinationNumber,
             subjects: subjects as any,
             totalMarks,
             totalCredits,
@@ -10809,14 +12839,72 @@ export const generateResultsFromMarks = async (req: Request, res: Response) => {
   }
 };
 
+// ─── Publish Results Helper ──────────────────────────────────────────────────
+
+export const parsePublishDateTime = (dateInput: string | Date, timeStr?: string): Date => {
+  let year: number;
+  let monthIndex: number;
+  let day: number;
+
+  if (dateInput instanceof Date) {
+    year = dateInput.getFullYear();
+    monthIndex = dateInput.getMonth();
+    day = dateInput.getDate();
+  } else {
+    const cleanDate = dateInput.includes('T') ? dateInput.split('T')[0] : dateInput;
+    const parts = cleanDate.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      year = parts[0];
+      monthIndex = parts[1] - 1;
+      day = parts[2];
+    } else {
+      const d = new Date(dateInput);
+      year = d.getFullYear();
+      monthIndex = d.getMonth();
+      day = d.getDate();
+    }
+  }
+
+  let hours = 0;
+  let minutes = 0;
+
+  if (timeStr) {
+    const trimmed = timeStr.trim();
+    // 24-hour format: "HH:MM" or "HH:MM:SS"
+    const match24 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (match24) {
+      hours = parseInt(match24[1], 10);
+      minutes = parseInt(match24[2], 10);
+    } else {
+      // 12-hour format: "6 PM", "06:00 PM", "6:30am", "6:00"
+      const match12 = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+      if (match12) {
+        let h = parseInt(match12[1], 10);
+        const m = match12[2] ? parseInt(match12[2], 10) : 0;
+        const ampm = match12[3] ? match12[3].toUpperCase() : null;
+
+        if (ampm === 'PM' && h < 12) {
+          h += 12;
+        } else if (ampm === 'AM' && h === 12) {
+          h = 0;
+        }
+        hours = h;
+        minutes = m;
+      }
+    }
+  }
+
+  return new Date(year, monthIndex, day, hours, minutes, 0, 0);
+};
+
 // ─── Publish Results ──────────────────────────────────────────────────────────
 
 const publishResultsSchema = z.object({
-  semesterNumber: z.coerce.number().min(1),
+  examinationNumber: z.coerce.number().min(1).max(2),
   batchId: z.string().min(1),
   courseId: z.string().min(1),
   academicYear: z.string().min(1),
-  publishDate: z.string().transform((val) => new Date(val)),
+  publishDate: z.string().min(1),
   publishTime: z.string().min(1),
   selectedStudentIds: z.array(z.string()).optional(),
   sendNotifications: z.boolean().default(false),
@@ -10826,6 +12914,14 @@ export const publishResults = async (req: Request, res: Response) => {
   try {
     const validatedData = publishResultsSchema.parse(req.body);
     const userId = req.user._id;
+
+    const scheduledDate = parsePublishDateTime(validatedData.publishDate, validatedData.publishTime);
+    if (isNaN(scheduledDate.getTime())) {
+      return sendError({ req, res, statusCode: 400, message: 'Invalid publication date or time provided.' });
+    }
+
+    const now = new Date();
+    const isFuture = scheduledDate.getTime() > now.getTime();
 
     // Resolve student IDs for this batch/course (Result model stores student ref only)
     const studentQuery: any = {
@@ -10846,7 +12942,7 @@ export const publishResults = async (req: Request, res: Response) => {
 
     const results = await Result.find({
       student: { $in: studentIds },
-      semester: validatedData.semesterNumber,
+      examination: validatedData.examinationNumber,
       academicYear: validatedData.academicYear,
     }).populate('student');
 
@@ -10859,23 +12955,28 @@ export const publishResults = async (req: Request, res: Response) => {
     const publishedResults: any[] = [];
 
     for (const result of results) {
+      // If already live-published in the past, skip
       if (result.isPublished) {
-        skippedCount++;
-        continue;
+        const isAlreadyLive = result.publishedDate && new Date(result.publishedDate) <= now;
+        if (isAlreadyLive) {
+          skippedCount++;
+          continue;
+        }
+        // If it was scheduled for future, allow updating/rescheduling to new date/time
       }
 
       result.isPublished = true;
-      result.publishedDate = validatedData.publishDate;
+      result.publishedDate = scheduledDate;
 
-      const deadline = new Date(validatedData.publishDate);
+      const deadline = new Date(scheduledDate);
       deadline.setDate(deadline.getDate() + 10);
       result.revaluationDeadline = deadline;
-      result.isRevaluationActive = true;
+      result.isRevaluationActive = !isFuture;
 
       result.auditHistory.push({
         action: 'PUBLISHED',
         performedBy: userId,
-        timestamp: new Date(),
+        timestamp: now,
       });
 
       await result.save();
@@ -10883,29 +12984,35 @@ export const publishResults = async (req: Request, res: Response) => {
       publishedResults.push(result);
     }
 
-    // Generate certificates for passed students
-    if (validatedData.sendNotifications) {
+    // Generate certificates for passed students if live publishing immediately
+    if (validatedData.sendNotifications && !isFuture) {
       for (const result of publishedResults) {
         if (result.resultStatus === 'PASS') {
-          // Generate provisional certificate
-          // This would call the certificate generation service
           console.log(`[MOCK] Generating provisional certificate for student: ${result.student}`);
         }
       }
     }
 
+    const statusText = isFuture ? 'Scheduled' : 'Published';
+    const message = isFuture
+      ? `Successfully scheduled ${publishedCount} results for publication on ${scheduledDate.toLocaleDateString()} at ${validatedData.publishTime}. Results will automatically become visible to institutes and students at that time.`
+      : `Published ${publishedCount} results successfully (${skippedCount} already published).`;
+
     return sendSuccess({
       req,
       res,
-      message: `Published ${publishedCount} results, ${skippedCount} already published`,
+      message,
       data: {
+        status: statusText,
+        isScheduled: isFuture,
         publishedCount,
         skippedCount,
         totalResults: results.length,
         publishedResults,
-        publishDate: validatedData.publishDate,
+        publishDate: scheduledDate,
         publishTime: validatedData.publishTime,
-        notificationsSent: validatedData.sendNotifications,
+        scheduledDate,
+        notificationsSent: validatedData.sendNotifications && !isFuture,
       },
     });
   } catch (error: any) {
@@ -10920,13 +13027,13 @@ export const publishResults = async (req: Request, res: Response) => {
 
 export const getPublicationStatus = async (req: Request, res: Response) => {
   try {
-    const { batchId, courseId, semesterNumber } = req.query;
+    const { batchId, courseId, examinationNumber } = req.query;
 
     const query: any = {};
     if (batchId) query.batch = batchId;
     if (courseId) query.course = courseId;
 
-    const semNum = semesterNumber ? parseInt(semesterNumber as string, 10) : 1;
+    const examNum = examinationNumber ? parseInt(examinationNumber as string, 10) : 1;
 
     // Get all students with marks status
     const students = await Student.find(query)
@@ -10935,48 +13042,66 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
 
     const studentIds = students.map((s) => s._id);
 
-    // Which students already have a Result for this semester
+    // Which students already have a Result for this examination
     const existingResults = await Result.find({
       student: { $in: studentIds },
-      semester: semNum,
-    }).select('student isPublished');
+      examination: examNum,
+    }).select('student isPublished publishedDate');
 
     const resultMap = new Map();
     for (const r of existingResults) {
       resultMap.set(String(r.student), r);
     }
 
+    const now = new Date();
+
     const statusData = students.map((student) => {
-      const semesterRecord = student.semesters.find(
-        (s: any) => s.semesterNumber === semNum
+      const examinationRecord = student.examinations.find(
+        (s: any) => s.examinationNumber === examNum
       );
 
-      const hasMarks = semesterRecord?.marks && semesterRecord.marks.length > 0;
-      const allMarked = semesterRecord?.marks
-        ? semesterRecord.marks.every(
-            (m: any) => m.isAbsent === true || m.marksObtained !== null
-          )
-        : false;
+      const isMarkRecorded = (m: any) =>
+        m &&
+        (m.isAbsent === true ||
+          (typeof m.status === 'string' && m.status.trim() !== '') ||
+          (typeof m.grade === 'string' && m.grade.trim() !== '' && m.grade !== 'NOT RECORDED') ||
+          (m.marksObtained !== null && m.marksObtained !== undefined));
+
+      const marks = examinationRecord?.marks || [];
+      const totalMarksCount = marks.length;
+      const recordedMarksCount = marks.filter(isMarkRecorded).length;
+
+      const hasAnyMarks = recordedMarksCount > 0;
+      const allMarked = totalMarksCount > 0 && recordedMarksCount === totalMarksCount;
 
       const resultRecord = resultMap.get(String(student._id));
       const resultExists = !!resultRecord;
-      const isPublished = resultExists && resultRecord.isPublished;
+      const isPublished = resultExists && !!resultRecord.isPublished;
+      const isScheduled = isPublished && resultRecord.publishedDate && new Date(resultRecord.publishedDate) > now;
+      const isLivePublished = isPublished && !isScheduled;
+
+      let status = 'No Marks';
+      if (isScheduled) {
+        status = 'Scheduled';
+      } else if (isLivePublished) {
+        status = 'Published';
+      } else if (hasAnyMarks && allMarked) {
+        status = 'Ready';
+      } else if (hasAnyMarks) {
+        status = 'Partial';
+      }
 
       return {
         studentId: student._id,
         name: `${student.firstName} ${student.lastName}`,
         enrollmentId: student.enrollmentId,
-        hasMarks: hasMarks || false,
-        allMarked: hasMarks ? allMarked : false,
+        hasMarks: hasAnyMarks,
+        allMarked,
         resultExists,
         isPublished,
-        status: isPublished
-          ? 'Published'
-          : hasMarks && allMarked
-            ? 'Ready'
-            : hasMarks
-              ? 'Partial'
-              : 'No Marks',
+        isScheduled,
+        publishedDate: resultRecord?.publishedDate || null,
+        status,
         student,
       };
     });
@@ -10986,13 +13111,14 @@ export const getPublicationStatus = async (req: Request, res: Response) => {
     const partial = statusData.filter((s) => s.status === 'Partial').length;
     const noMarks = statusData.filter((s) => s.status === 'No Marks').length;
     const published = statusData.filter((s) => s.status === 'Published').length;
+    const scheduled = statusData.filter((s) => s.status === 'Scheduled').length;
 
     return sendSuccess({
       req,
       res,
       message: 'Publication status retrieved successfully',
       data: {
-        summary: { total, ready, partial, noMarks, published },
+        summary: { total, ready, partial, noMarks, published, scheduled },
         students: statusData,
       },
     });
@@ -11042,7 +13168,7 @@ export const generateMarksheet = async (req: Request, res: Response) => {
     const marksheet = await Marksheet.create({
       student: student._id,
       academicYear: result.academicYear,
-      semester: result.semester,
+      examination: result.examination,
       result: resultId,
       marksheetNumber,
       marksheetPDF: pdfUrl,
@@ -11058,19 +13184,19 @@ export const generateMarksheet = async (req: Request, res: Response) => {
 
 export const getAllMarksheets = async (req: Request, res: Response) => {
   try {
-    const { page = '1', limit = '20', studentId, academicYear, semester } = req.query;
+    const { page = '1', limit = '20', studentId, academicYear, examination } = req.query;
 
     const query: any = {};
     if (studentId) query.student = studentId;
     if (academicYear) query.academicYear = academicYear;
-    if (semester) query.semester = parseInt(semester as string);
+    if (examination) query.examination = parseInt(examination as string);
 
     const options = {
       page: parseInt(page as string),
       limit: parseInt(limit as string),
       populate: [
         { path: 'student', select: 'firstName lastName enrollmentId email' },
-        { path: 'result', select: 'academicYear semester totalMarks percentage' },
+        { path: 'result', select: 'academicYear examination totalMarks percentage' },
       ],
       sort: { createdAt: -1 } as any,
     };
@@ -11087,7 +13213,7 @@ export const getMarksheetById = async (req: Request, res: Response) => {
   try {
     const marksheet = await Marksheet.findById(req.params.id)
       .populate('student', 'firstName lastName enrollmentId email')
-      .populate('result', 'academicYear semester subjects totalMarks percentage cgpa sgpa division');
+      .populate('result', 'academicYear examination subjects totalMarks percentage cgpa sgpa division');
 
     if (!marksheet) {
       return sendError({ req, res, statusCode: 404, message: 'Marksheet not found' });
@@ -11196,8 +13322,8 @@ export const getStudentMarksheets = async (req: Request, res: Response) => {
     const { studentId } = req.params;
 
     const marksheets = await Marksheet.find({ student: studentId })
-      .populate('result', 'academicYear semester subjects totalMarks percentage cgpa sgpa division')
-      .sort({ academicYear: -1, semester: -1 });
+      .populate('result', 'academicYear examination subjects totalMarks percentage cgpa sgpa division')
+      .sort({ academicYear: -1, examination: -1 });
 
     if (!marksheets || marksheets.length === 0) {
       return sendError({ req, res, statusCode: 404, message: 'No marksheets found for this student' });
@@ -11302,11 +13428,11 @@ import { createResultSchema, updateResultSchema, bulkUploadSchema } from '../val
 
 export const getAllResults = async (req: Request, res: Response) => {
   try {
-    const { page = '1', limit = '20', academicYear, semester, resultStatus, isPublished, studentId, search } = req.query;
+    const { page = '1', limit = '20', academicYear, examination, resultStatus, isPublished, studentId, search } = req.query;
 
     const query: any = {};
 
-    // Institute users should only see results for their own students
+    // Institute users should only see results for their own students and ONLY published results where publishedDate <= now
     if (req.user.role === 'institute') {
       const institute = await Institute.findOne({ user: req.user._id, status: 'Approved' });
       if (!institute) {
@@ -11314,10 +13440,12 @@ export const getAllResults = async (req: Request, res: Response) => {
       }
       const studentIds = await Student.find({ institute: institute._id }).distinct('_id');
       query.student = { $in: studentIds };
+      query.isPublished = true;
+      query.publishedDate = { $lte: new Date() };
     }
 
     if (academicYear) query.academicYear = academicYear;
-    if (semester) query.semester = parseInt(semester as string);
+    if (examination) query.examination = parseInt(examination as string);
     if (resultStatus) query.resultStatus = resultStatus;
     if (isPublished !== undefined) query.isPublished = isPublished === 'true';
     if (studentId) query.student = studentId;
@@ -11370,6 +13498,14 @@ export const getResultById = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Result not found' });
     }
 
+    // Institute users cannot access unpublished or future-scheduled results
+    if (req.user.role === 'institute') {
+      const now = new Date();
+      if (!result.isPublished || (result.publishedDate && new Date(result.publishedDate) > now)) {
+        return sendError({ req, res, statusCode: 404, message: 'Result not found or not yet published' });
+      }
+    }
+
     return sendSuccess({ req, res, message: 'Result retrieved successfully', data: result });
   } catch (error: any) {
     return sendError({ req, res, statusCode: 500, message: error.message });
@@ -11409,12 +13545,22 @@ export const getResultByStudent = async (req: Request, res: Response) => {
       }
     }
 
-    const results = await Result.find({ student: student._id })
+    const now = new Date();
+    const results = await Result.find({
+      student: student._id,
+      isPublished: true,
+      publishedDate: { $lte: now },
+    })
       .populate('student', 'firstName lastName enrollmentId email')
-      .sort({ academicYear: -1, semester: -1 });
+      .sort({ academicYear: -1, examination: -1 });
 
     if (!results || results.length === 0) {
-      return sendError({ req, res, statusCode: 404, message: 'No results found for this student' });
+      return sendError({
+        req,
+        res,
+        statusCode: 404,
+        message: 'No published results found for this student. Results may be scheduled for publication at a later time.',
+      });
     }
 
     return sendSuccess({
@@ -11441,7 +13587,7 @@ export const createResult = async (req: Request, res: Response) => {
     const existingResult = await Result.findOne({
       student: validatedData.student,
       academicYear: validatedData.academicYear,
-      semester: validatedData.semester,
+      examination: validatedData.examination,
     });
 
     if (existingResult) {
@@ -11449,7 +13595,7 @@ export const createResult = async (req: Request, res: Response) => {
         req,
         res,
         statusCode: 400,
-        message: 'Result already exists for this student in the given academic year and semester',
+        message: 'Result already exists for this student in the given academic year and examination',
       });
     }
 
@@ -11481,7 +13627,7 @@ export const createResult = async (req: Request, res: Response) => {
       await pdfGeneratorService.generateMarksheetPDF({
         result: populatedResult,
         student,
-        marksheetNumber: `MS-${(student as any).enrollmentId}-${populatedResult.academicYear}-S${populatedResult.semester}`,
+        marksheetNumber: `MS-${(student as any).enrollmentId}-${populatedResult.academicYear}-S${populatedResult.examination}`,
       });
     }
 
@@ -11539,7 +13685,7 @@ export const updateResult = async (req: Request, res: Response) => {
         await pdfGeneratorService.generateMarksheetPDF({
           result: populated,
           student,
-          marksheetNumber: `MS-${(student as any).enrollmentId}-${populated.academicYear}-S${populated.semester}`,
+          marksheetNumber: `MS-${(student as any).enrollmentId}-${populated.academicYear}-S${populated.examination}`,
         });
       }
     }
@@ -11622,7 +13768,7 @@ export const publishResult = async (req: Request, res: Response) => {
       if (student) {
         if (!student.examAttempts) student.examAttempts = [];
         const attemptIndex = student.examAttempts.findIndex(
-          (e) => e.semesterNumber === result.semester
+          (e) => e.examinationNumber === result.examination
         );
 
         if (attemptIndex !== -1) {
@@ -11631,7 +13777,7 @@ export const publishResult = async (req: Request, res: Response) => {
           student.examAttempts[attemptIndex].lastExamDate = new Date();
         } else {
           student.examAttempts.push({
-            semesterNumber: result.semester,
+            examinationNumber: result.examination,
             attemptCount: 1,
             lastResultStatus: result.resultStatus,
             lastExamDate: new Date(),
@@ -11655,7 +13801,7 @@ export const publishResult = async (req: Request, res: Response) => {
           studentName: `${student.firstName} ${student.lastName}`.trim(),
           studentEmail: student.email,
           courseName: (student as any).course?.name || 'N/A',
-          semesterNumber: result.semester,
+          examinationNumber: result.examination,
           resultStatus: result.resultStatus,
         });
       }
@@ -11671,12 +13817,12 @@ export const publishResult = async (req: Request, res: Response) => {
 
 export const searchResults = async (req: Request, res: Response) => {
   try {
-    const { q, academicYear, semester, department, resultStatus, fromDate, toDate } = req.query;
+    const { q, academicYear, examination, department, resultStatus, fromDate, toDate } = req.query;
 
     const searchResultsData = await resultService.advancedSearch({
       query: q,
       academicYear,
-      semester,
+      examination,
       department,
       resultStatus,
       fromDate,
@@ -11691,9 +13837,9 @@ export const searchResults = async (req: Request, res: Response) => {
 
 export const getResultStatistics = async (req: Request, res: Response) => {
   try {
-    const { academicYear, semester } = req.query;
+    const { academicYear, examination } = req.query;
 
-    const statistics = await resultService.getResultStatistics({ academicYear, semester });
+    const statistics = await resultService.getResultStatistics({ academicYear, examination });
 
     return sendSuccess({ req, res, message: 'Statistics retrieved successfully', data: statistics });
   } catch (error: any) {
@@ -11724,13 +13870,13 @@ export const bulkUploadResults = async (req: Request, res: Response) => {
 // Schema for file-based bulk upload
 const fileBulkUploadSchema = z.object({
   academicYear: z.string().min(1, 'Academic year is required'),
-  semester: z.coerce.number().int().min(1).max(8, 'Semester must be between 1 and 8'),
+  examination: z.coerce.number().int().min(1).max(8, 'Examination must be between 1 and 8'),
   format: z.enum(['docx', 'pdf', 'xlsx', 'csv']),
 });
 
 export const bulkUploadFromFile = async (req: Request, res: Response) => {
   try {
-    const { academicYear, semester, format } = fileBulkUploadSchema.parse(req.body);
+    const { academicYear, examination, format } = fileBulkUploadSchema.parse(req.body);
     const file = req.file;
 
     if (!file) {
@@ -11798,7 +13944,7 @@ export const bulkUploadFromFile = async (req: Request, res: Response) => {
       resultsToUpload.push({
         student: studentId,
         academicYear: academicYear || result.academicYear || '2024-25',
-        semester: semester || result.semester || 1,
+        examination: examination || result.examination || 1,
         subjects,
       });
     }
@@ -11867,6 +14013,14 @@ export const downloadMarksheet = async (req: Request, res: Response) => {
       return sendError({ req, res, statusCode: 404, message: 'Marksheet not found' });
     }
 
+    if (req.user?.role === 'institute') {
+      const resultDoc = await Result.findById(resultId);
+      const now = new Date();
+      if (!resultDoc || !resultDoc.isPublished || (resultDoc.publishedDate && new Date(resultDoc.publishedDate) > now)) {
+        return sendError({ req, res, statusCode: 403, message: 'Marksheet is not available until the scheduled publication time.' });
+      }
+    }
+
     marksheet.downloadedCount += 1;
     marksheet.lastDownloaded = new Date();
     await marksheet.save();
@@ -11890,12 +14044,17 @@ export const getStudentResultHistory = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
 
-    const results = await Result.find({ student: studentId, isPublished: true })
-      .select('academicYear semester totalMarks percentage cgpa division resultStatus')
-      .sort({ academicYear: -1, semester: -1 });
+    const now = new Date();
+    const results = await Result.find({
+      student: studentId,
+      isPublished: true,
+      publishedDate: { $lte: now },
+    })
+      .select('academicYear examination totalMarks percentage cgpa division resultStatus')
+      .sort({ academicYear: -1, examination: -1 });
 
     if (!results || results.length === 0) {
-      return sendError({ req, res, statusCode: 404, message: 'No results found for this student' });
+      return sendError({ req, res, statusCode: 404, message: 'No published results found for this student' });
     }
 
     return sendSuccess({ req, res, message: 'Student result history retrieved successfully', data: results });
@@ -11933,10 +14092,10 @@ import {
 // ─── Create Razorpay Order for Revaluation Fee ──────────────────────────────
 export const createRevaluationRazorpayOrder = async (req: Request, res: Response) => {
   try {
-    const { studentId, semester, totalFee, requestId, subjects } = req.body;
+    const { studentId, examination, totalFee, requestId, subjects } = req.body;
 
-    if (!studentId || !semester || !totalFee) {
-      return sendError({ req, res, statusCode: 400, message: 'Student ID, semester, and total fee are required' });
+    if (!studentId || !examination || !totalFee) {
+      return sendError({ req, res, statusCode: 400, message: 'Student ID, examination, and total fee are required' });
     }
 
     const institute = await Institute.findOne({ user: req.user._id });
@@ -11953,11 +14112,11 @@ export const createRevaluationRazorpayOrder = async (req: Request, res: Response
     const existingFee = await FeeRecord.findOne({
       student: studentId,
       paymentPurpose: 'Revaluation fee',
-      semesterNumber: semester,
+      examinationNumber: examination,
     });
 
     if (existingFee) {
-      return sendError({ req, res, statusCode: 400, message: 'Revaluation fee already paid for this semester' });
+      return sendError({ req, res, statusCode: 400, message: 'Revaluation fee already paid for this examination' });
     }
 
     const amountInPaise = Math.round(Number(totalFee) * 100);
@@ -11966,10 +14125,10 @@ export const createRevaluationRazorpayOrder = async (req: Request, res: Response
       const options = {
         amount: amountInPaise,
         currency: 'INR',
-        receipt: `reval_${student.enrollmentId}_${semester}_${Date.now()}`,
+        receipt: `reval_${student.enrollmentId}_${examination}_${Date.now()}`,
         notes: {
           studentId: studentId.toString(),
-          semester: semester.toString(),
+          examination: examination.toString(),
           requestId: requestId || 'pending',
           purpose: 'Revaluation fee',
           subjectCodes: subjects ? subjects.map((s: any) => s.subjectCode).join(',') : '',
@@ -12021,7 +14180,7 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
       razorpay_order_id,
       razorpay_signature,
       studentId,
-      semester,
+      examination,
       subjects,
       academicYear,
       instituteId,
@@ -12050,6 +14209,19 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
       }
     }
 
+    // Check if result exists and verify student is a failed student
+    const result = await Result.findById(resultId);
+    if (!result) {
+      return sendError({ req, res, statusCode: 404, message: 'Result not found' });
+    }
+    const hasFailedStatus = result.resultStatus === 'FAIL' || result.resultStatus === 'SUPPLEMENTARY';
+    const failedSubjects = (result.subjects || []).filter((s: any) => 
+      ['F', 'RA', 'WH'].includes(s.grade) || ((s.totalMarks || 0) < 40 && s.grade !== 'ABSENT')
+    );
+    if (result.resultStatus === 'PASS' && failedSubjects.length === 0) {
+      return sendError({ req, res, statusCode: 400, message: 'Only failed students can apply for revaluation' });
+    }
+
     // Check if payment already processed
     const existingRequest = await RevaluationRequest.findOne({
       student: studentId,
@@ -12064,7 +14236,7 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
     // Create fee record
     const feeRecord = await FeeRecord.create({
       student: studentId,
-      semesterNumber: semester,
+      examinationNumber: examination,
       amount: totalFee,
       paymentMode: 'Razorpay Online',
       utrNumber: razorpay_payment_id,
@@ -12082,7 +14254,7 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
       result: resultId,
       institute: instituteId,
       academicYear: academicYear,
-      semester: semester,
+      examination: examination,
       subjects: subjects,
       feePerSubject: feePerSubject || 500,
       totalFee: totalFee,
@@ -12123,7 +14295,7 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
         studentName: student ? `${student.firstName} ${student.lastName}`.trim() : 'N/A',
         studentEmail: student?.email || 'N/A',
         courseName: (student as any)?.course?.name || 'N/A',
-        semesterNumber: semester,
+        examinationNumber: examination,
         subjects: (Array.isArray(subjects) ? subjects : []).map((s: any) =>
           s?.subjectName || s?.subjectCode || String(s)
         ),
@@ -12156,12 +14328,12 @@ export const verifyRevaluationRazorpayPayment = async (req: Request, res: Respon
 export const getRevaluationPaymentStatus = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semester } = req.query;
+    const { examination } = req.query;
 
     const feeRecord = await FeeRecord.findOne({
       student: studentId,
       paymentPurpose: 'Revaluation fee',
-      semesterNumber: semester ? parseInt(semester as string) : undefined,
+      examinationNumber: examination ? parseInt(examination as string) : undefined,
     }).sort({ createdAt: -1 });
 
     return sendSuccess({
@@ -12188,7 +14360,7 @@ export const verifyRevaluationOrderStatus = async (req: Request, res: Response) 
   try {
     const orderId = req.params.orderId as string;
     const studentId = req.query.studentId as string;
-    const semester = req.query.semester as string;
+    const examination = req.query.examination as string;
 
     // Check if fee already exists
     const existingFee = await FeeRecord.findOne({
@@ -12229,7 +14401,7 @@ export const verifyRevaluationOrderStatus = async (req: Request, res: Response) 
           // Create fee record if not exists
           const feeRecord = await FeeRecord.create({
             student: studentId,
-            semesterNumber: semester ? parseInt(semester as string) : undefined,
+            examinationNumber: examination ? parseInt(examination as string) : undefined,
             amount: payment.amount / 100,
             paymentMode: 'Razorpay Online',
             utrNumber: payment.id,
@@ -12324,7 +14496,7 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
     const feeRecord = await FeeRecord.findOne({
       student: validatedData.student,
       paymentPurpose: 'Revaluation fee',
-      semesterNumber: validatedData.semester,
+      examinationNumber: validatedData.examination,
     }).sort({ createdAt: -1 });
 
     if (!feeRecord) {
@@ -12375,10 +14547,10 @@ export const createRevaluationRequest = async (req: Request, res: Response) => {
 // ─── Get Eligible Students for Revaluation (Institute) ──────────────────────
 export const getEligibleStudents = async (req: Request, res: Response) => {
   try {
-    const { courseId, batchId, semester } = req.query;
+    const { courseId, batchId, examination } = req.query;
 
-    if (!courseId || !batchId || !semester) {
-      return sendError({ req, res, statusCode: 400, message: 'Course, batch, and semester are required' });
+    if (!courseId || !batchId || !examination) {
+      return sendError({ req, res, statusCode: 400, message: 'Course, batch, and examination are required' });
     }
 
     const institute = await Institute.findOne({ user: req.user._id });
@@ -12393,7 +14565,7 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
     };
     const students = await Student.find(studentFilter).populate('course', 'name');
 
-    const semNum = parseInt(semester as string);
+    const examNum = parseInt(examination as string);
     if (students.length === 0) {
       return sendSuccess({ req, res, message: 'Eligible students retrieved successfully', data: [] });
     }
@@ -12403,18 +14575,18 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
     const [results, feeRecords, existingRequests] = await Promise.all([
       Result.find({
         student: { $in: studentIds },
-        semester: semNum,
+        examination: examNum,
         isPublished: true,
         isRevaluationActive: true,
       }).lean(),
       FeeRecord.find({
         student: { $in: studentIds },
         paymentPurpose: 'Revaluation fee',
-        semesterNumber: semNum,
+        examinationNumber: examNum,
       }).lean(),
       RevaluationRequest.find({
         student: { $in: studentIds },
-        semester: semNum,
+        examination: examNum,
         status: { $nin: ['REJECTED', 'CANCELLED'] },
       }).lean(),
     ]);
@@ -12435,7 +14607,6 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
         continue;
       }
 
-
       // Check if request already exists
       const existingRequest = await RevaluationRequest.findOne({
         student: student._id,
@@ -12445,24 +14616,43 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
 
       if (existingRequest) continue;
 
+      // Only failed students can apply for revaluation. Pass students should not be shown.
+      const hasFailedStatus = result.resultStatus === 'FAIL' || result.resultStatus === 'SUPPLEMENTARY';
+      const failedSubjects = (result.subjects || []).filter((s: any) => 
+        ['F', 'RA', 'WH'].includes(s.grade) || ((s.totalMarks || 0) < 40 && s.grade !== 'ABSENT')
+      );
+      const isFailedStudent = hasFailedStatus || failedSubjects.length > 0;
+      const isPassStudent = result.resultStatus === 'PASS' && failedSubjects.length === 0;
+
+      if (isPassStudent || !isFailedStudent) {
+        // Skip pass students completely
+        continue;
+      }
+
       const allSubjects = result.subjects.map((subject: any) => {
         const isAbsent = subject.grade === 'ABSENT';
         const marks = subject.totalMarks || 0;
+        const isSubjectPassed = !isAbsent && marks >= 40 && !['F', 'RA', 'WH'].includes(subject.grade);
+        const isSubjectFailed = !isAbsent && !isSubjectPassed;
         return {
           subjectCode: subject.subjectCode,
           subjectName: subject.subjectName,
           originalMarks: marks,
-          originalGrade: subject.grade || 'F',
+          originalGrade: subject.grade || (isSubjectPassed ? 'P' : 'F'),
           internalMarks: subject.internalMarks || 0,
           externalMarks: subject.externalMarks || 0,
           isAbsent,
-          isEligible: !isAbsent,
+          isPassed: isSubjectPassed,
+          isFailed: isSubjectFailed,
+          // Only failed subjects are eligible for revaluation (absent must reappear, passed cannot be revalued)
+          isEligible: isSubjectFailed,
           revaluationReason: '',
         };
       });
 
       const eligibleSubjects = allSubjects.filter((subject: any) => subject.isEligible);
 
+      // If no eligible failed subjects (e.g. absent in all subjects, so can only reappear), skip
       if (eligibleSubjects.length === 0) continue;
 
       const feePerSubject = Number(process.env.REVALUATION_FEE_PER_SUBJECT_INR) || 500;
@@ -12475,7 +14665,8 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
         course: student.course,
         instituteId: institute._id,
         resultId: result._id,
-        semester: semNum,
+        resultStatus: result.resultStatus || 'FAIL',
+        examination: examNum,
         academicYear: result.academicYear,
         subjects: eligibleSubjects,
         allSubjects,
@@ -12501,10 +14692,10 @@ export const getEligibleStudents = async (req: Request, res: Response) => {
 export const getSingleStudentEligibility = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const { semester } = req.query;
+    const { examination } = req.query;
 
-    if (!semester) {
-      return sendError({ req, res, statusCode: 400, message: 'Semester is required' });
+    if (!examination) {
+      return sendError({ req, res, statusCode: 400, message: 'Examination is required' });
     }
 
     const institute = await Institute.findOne({ user: req.user._id });
@@ -12517,26 +14708,42 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
       return sendError({ req, res, statusCode: 404, message: 'Student not found' });
     }
 
-    const semNum = parseInt(semester as string);
+    const examNum = parseInt(examination as string);
     const result = await Result.findOne({
       student: student._id,
-      semester: semNum,
+      examination: examNum,
       isPublished: true,
     });
 
     if (!result) {
-      return sendError({ req, res, statusCode: 404, message: 'Published result not found for this semester' });
+      return sendError({ req, res, statusCode: 404, message: 'Published result not found for this examination' });
     }
 
     if (!result.isRevaluationActive || (result.revaluationDeadline && new Date() > result.revaluationDeadline)) {
       return sendError({ req, res, statusCode: 400, message: 'Revaluation period has expired for this result' });
     }
 
+    // Only failed students can apply for revaluation
+    const hasFailedStatus = result.resultStatus === 'FAIL' || result.resultStatus === 'SUPPLEMENTARY';
+    const failedSubjects = (result.subjects || []).filter((s: any) => 
+      ['F', 'RA', 'WH'].includes(s.grade) || ((s.totalMarks || 0) < 40 && s.grade !== 'ABSENT')
+    );
+    const isPassStudent = result.resultStatus === 'PASS' && failedSubjects.length === 0;
+
+    if (isPassStudent || (!hasFailedStatus && failedSubjects.length === 0)) {
+      return sendError({
+        req,
+        res,
+        statusCode: 400,
+        message: 'Student has passed this examination. Revaluation is only available for failed students.',
+      });
+    }
+
     // Check if already paid
     const existingPayment = await FeeRecord.findOne({
       student: student._id,
       paymentPurpose: 'Revaluation fee',
-      semesterNumber: semNum,
+      examinationNumber: examNum,
     });
 
     // Check if request already exists
@@ -12553,15 +14760,20 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
     const allSubjects = result.subjects.map((subject: any) => {
       const isAbsent = subject.grade === 'ABSENT';
       const marks = subject.totalMarks || 0;
+      const isSubjectPassed = !isAbsent && marks >= 40 && !['F', 'RA', 'WH'].includes(subject.grade);
+      const isSubjectFailed = !isAbsent && !isSubjectPassed;
       return {
         subjectCode: subject.subjectCode,
         subjectName: subject.subjectName,
         originalMarks: marks,
-        originalGrade: subject.grade || 'F',
+        originalGrade: subject.grade || (isSubjectPassed ? 'P' : 'F'),
         internalMarks: subject.internalMarks || 0,
         externalMarks: subject.externalMarks || 0,
         isAbsent,
-        isEligible: !isAbsent,
+        isPassed: isSubjectPassed,
+        isFailed: isSubjectFailed,
+        // Only failed subjects are eligible for revaluation
+        isEligible: isSubjectFailed,
         revaluationReason: '',
       };
     });
@@ -12569,7 +14781,7 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
     const eligibleSubjects = allSubjects.filter((subject: any) => subject.isEligible);
 
     if (eligibleSubjects.length === 0) {
-      return sendError({ req, res, statusCode: 400, message: 'No eligible subjects found for revaluation' });
+      return sendError({ req, res, statusCode: 400, message: 'No eligible failed subjects found for revaluation' });
     }
 
     const feePerSubject = Number(process.env.REVALUATION_FEE_PER_SUBJECT_INR) || 500;
@@ -12586,7 +14798,7 @@ export const getSingleStudentEligibility = async (req: Request, res: Response) =
         course: student.course,
         instituteId: institute._id,
         resultId: result._id,
-        semester: semNum,
+        examination: examNum,
         academicYear: result.academicYear,
         subjects: eligibleSubjects,
         allSubjects,
@@ -12611,7 +14823,7 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
       status,
       institute,
       academicYear,
-      semester,
+      examination,
       courseId,
       batchId,
       studentId,
@@ -12635,7 +14847,7 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
 
     if (status) query.status = status;
     if (academicYear) query.academicYear = academicYear;
-    if (semester) query.semester = parseInt(semester as string);
+    if (examination) query.examination = parseInt(examination as string);
     if (studentId) query.student = studentId;
 
     // Course, batch and search filtering via student lookup
@@ -12680,7 +14892,7 @@ export const getAllRevaluationRequests = async (req: Request, res: Response) => 
       populate: [
         { path: 'student', select: 'firstName lastName enrollmentId email course batch' },
         { path: 'institute', select: 'orgName' },
-        { path: 'result', select: 'academicYear semester totalMarks percentage resultStatus' },
+        { path: 'result', select: 'academicYear examination totalMarks percentage resultStatus' },
         { path: 'assignedEvaluator', select: 'name email' },
         { path: 'revaluationResults', select: 'subjectCode subjectName originalMarks revisedTotalMarks marksChange reviewStatus isFinal revisedGrade' },
       ],
@@ -12700,7 +14912,7 @@ export const getRevaluationRequestById = async (req: Request, res: Response) => 
     const request = await RevaluationRequest.findById(req.params.id)
       .populate('student', 'firstName lastName enrollmentId email course batch')
       .populate('institute', 'orgName')
-      .populate('result', 'academicYear semester totalMarks percentage subjects resultStatus')
+      .populate('result', 'academicYear examination totalMarks percentage subjects resultStatus')
       .populate('assignedEvaluator', 'name email')
       .populate('revaluationResults');
 
@@ -13020,7 +15232,7 @@ export const approveRevaluationResult = async (req: Request, res: Response) => {
         studentName: student ? `${student.firstName} ${student.lastName}`.trim() : 'N/A',
         studentEmail: student?.email || 'N/A',
         courseName: (student as any)?.course?.name || 'N/A',
-        semesterNumber: request.semester,
+        examinationNumber: request.examination,
         revaluationResults: revalResults.map((r: any) => ({
           subjectName: r.subjectName,
           originalMarks: r.originalMarks,
@@ -13077,11 +15289,11 @@ export const getInstituteSummary = async (req: Request, res: Response) => {
 // ─── Academy Revaluation Summary ─────────────────────────────────────────────
 export const getAcademySummary = async (req: Request, res: Response) => {
   try {
-    const { academicYear, semester } = req.query;
+    const { academicYear, examination } = req.query;
 
     const query: any = {};
     if (academicYear) query.academicYear = academicYear;
-    if (semester) query.semester = parseInt(semester as string);
+    if (examination) query.examination = parseInt(examination as string);
 
     const requests = await RevaluationRequest.find(query);
 
@@ -13142,9 +15354,9 @@ export const getAcademySummary = async (req: Request, res: Response) => {
 
 export const getRevaluationStatistics = async (req: Request, res: Response) => {
   try {
-    const { academicYear, semester } = req.query;
+    const { academicYear, examination } = req.query;
 
-    const statistics = await revaluationService.getRevaluationStatistics({ academicYear, semester });
+    const statistics = await revaluationService.getRevaluationStatistics({ academicYear, examination });
 
     return sendSuccess({ req, res, message: 'Revaluation statistics retrieved successfully', data: statistics });
   } catch (error: any) {
@@ -13279,7 +15491,7 @@ export const getTreasurySummary = async (req: Request, res: Response) => {
         payerName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A',
         studentName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A',
         studentEnrollmentId: student?.enrollmentId || 'N/A',
-        semesterNumber: record.semesterNumber,
+        examinationNumber: record.examinationNumber,
         isFeeRecord: true,
         isRemittance: false,
         isOnboarding: false,
@@ -13373,7 +15585,7 @@ export const getTreasurySummary = async (req: Request, res: Response) => {
         payerName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'Fellow Candidate',
         studentName: student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A',
         studentEnrollmentId: student?.enrollmentId || 'N/A',
-        semesterNumber: rev.semester,
+        examinationNumber: rev.examination,
         subjectsCount: rev.subjects?.length || 0,
         isFeeRecord: false,
         isRemittance: false,
@@ -13630,9 +15842,10 @@ if (process.env.SENTRY_DSN && Sentry) {
   }
 }
 
-// Connect to database and seed Super Admin
+// Connect to database and seed Super Admin & Dummy Data for Academy and Institute
 const initApp = async () => {
   await connectDB();
+  logger.info('Initializing application and seeding mock data for Academy & Institute portals...');
   await seedSuperAdmin();
   await Batch.syncIndexes().catch((err: any) => console.log('Batch index sync:', err.message));
 };
@@ -14046,76 +16259,32 @@ export const passwordResetLimiter = createRateLimiter({
 ### `backend/src/middlewares/uploadMiddleware.ts`
 
 ```typescript
-import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 
 dotenv.config();
 
-let storage;
-
-const isCloudinaryConfigured = 
-  process.env.CLOUDINARY_CLOUD_NAME && 
-  !process.env.CLOUDINARY_CLOUD_NAME.includes('your_cloudinary') &&
-  process.env.CLOUDINARY_API_KEY && 
-  !process.env.CLOUDINARY_API_KEY.includes('your_cloudinary') &&
-  process.env.CLOUDINARY_API_SECRET &&
-  !process.env.CLOUDINARY_API_SECRET.includes('your_cloudinary');
-
-if (isCloudinaryConfigured) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
-
-  storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: (req, file) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      const base = path
-        .basename(file.originalname, ext)
-        .replace(/[^a-zA-Z0-9_-]/g, '-')
-        .replace(/-+/g, '-')
-        .slice(0, 40) || 'file';
-      return {
-        folder: 'semi_institutes',
-        resource_type: 'auto',
-        // NOTE: public_id must NOT include the file extension — Cloudinary
-        // appends the format itself. Passing an extension here produces
-        // double-extension URLs (e.g. ".../semi_institutes/file.pdf.pdf").
-        public_id: `${base}-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
-      };
-    },
-  });
-  console.log('Using Cloudinary for file uploads.');
-} else {
-  // Local fallback
-  const uploadDir = path.join(__dirname, '../../uploads');
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
-
-  storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      const base = path
-        .basename(file.originalname, ext)
-        .replace(/[^a-zA-Z0-9_-]/g, '-')
-        .replace(/-+/g, '-')
-        .slice(0, 40) || 'file';
-      cb(null, `${base}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
-    }
-  });
-  console.log('Cloudinary not configured. Using local disk storage for file uploads.');
+const uploadDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
 }
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const base = path
+      .basename(file.originalname, ext)
+      .replace(/[^a-zA-Z0-9_-]/g, '-')
+      .replace(/-+/g, '-')
+      .slice(0, 40) || 'file';
+    cb(null, `${base}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  }
+});
 
 const memoryStorage = multer.memoryStorage();
 
@@ -14181,8 +16350,6 @@ export const uploadMemory = multer({
   },
   fileFilter
 });
-
-export { cloudinary };
 
 ```
 
@@ -14314,7 +16481,7 @@ export interface ICertificate extends Document {
   certificateNumber: string;
   type: 'PROVISIONAL' | 'CONSOLIDATED' | 'DUPLICATE' | 'TRANSFER';
   academicYear: string;
-  semester?: number;
+  examination?: number;
   result?: Types.ObjectId;
   certificatePDF: string;
   isVerified: boolean;
@@ -14351,10 +16518,10 @@ const certificateSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    semester: {
+    examination: {
       type: Number,
       min: 1,
-      max: 8,
+      max: 2,
     },
     result: {
       type: Schema.Types.ObjectId,
@@ -14423,21 +16590,22 @@ export const Certificate = mongoose.model<ICertificate>('Certificate', certifica
 ```typescript
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface ISemesterSubject {
+export interface IExaminationSubject {
   code?: string;
   name: string;
 }
 
-export interface ISemesterPractical {
+export interface IExaminationPractical {
   code?: string;
   name: string;
 }
 
-export interface ISemesterCourse {
-  semesterNumber: number;
-  semesterName?: string;
-  subjects?: ISemesterSubject[];
-  practicalExams?: ISemesterPractical[];
+export interface IExaminationCourse {
+  examinationNumber: number;
+  examinationName?: string;
+  monthsRequired?: number;
+  subjects?: IExaminationSubject[];
+  practicalExams?: IExaminationPractical[];
 }
 
 export interface IExamFeeConfig {
@@ -14459,10 +16627,10 @@ export interface ICourse extends Document {
   subjects?: string[];
   practicalExamName?: string;
   practicalExams?: string[];
-  semesters?: ISemesterCourse[];
+  examinations?: IExaminationCourse[];
   status?: 'Active' | 'Inactive' | 'Pending';
   examFeeConfig?: {
-    [semesterKey: string]: IExamFeeConfig;
+    [examKey: string]: IExamFeeConfig;
   };
   examinationFee?: number;
   reappearingExaminationFee?: number;
@@ -14516,11 +16684,12 @@ const courseSchema: Schema = new Schema(
       type: [String],
       default: [],
     },
-    semesters: {
+    examinations: {
       type: [
         {
-          semesterNumber: { type: Number, required: true },
-          semesterName: { type: String, default: '' },
+          examinationNumber: { type: Number, required: true },
+          examinationName: { type: String, default: '' },
+          monthsRequired: { type: Number, default: 0 },
           subjects: [
             {
               code: { type: String, default: '' },
@@ -14589,7 +16758,7 @@ export interface IExamApplication extends Document {
   institute: mongoose.Types.ObjectId;
   course: mongoose.Types.ObjectId;
   batch: mongoose.Types.ObjectId;
-  semesterNumber: number;
+  examinationNumber: number;
   students: mongoose.Types.ObjectId[];
   subjects: string[];
 
@@ -14650,9 +16819,10 @@ const examApplicationSchema: Schema = new Schema(
       ref: 'Batch',
       required: true,
     },
-    semesterNumber: {
+    examinationNumber: {
       type: Number,
       required: true,
+      enum: [1, 2],
     },
     students: [
       {
@@ -14722,6 +16892,10 @@ const examApplicationSchema: Schema = new Schema(
   { timestamps: true }
 );
 
+// Batch-level compound indexes for efficient lookups and querying
+examApplicationSchema.index({ institute: 1, course: 1, batch: 1, examinationNumber: 1 });
+examApplicationSchema.index({ batch: 1, examinationNumber: 1, status: 1 });
+
 export const ExamApplication = mongoose.model<IExamApplication>('ExamApplication', examApplicationSchema);
 
 ```
@@ -14733,7 +16907,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IFeeRecord extends Document {
   student: mongoose.Types.ObjectId;
-  semesterNumber?: number;
+  examinationNumber?: number;
   amount: number;
   paymentMode: string;
   utrNumber?: string;
@@ -14752,9 +16926,10 @@ const feeRecordSchema: Schema = new Schema(
       ref: 'Student',
       required: true,
     },
-    semesterNumber: {
+    examinationNumber: {
       type: Number,
       required: false,
+      enum: [1, 2],
     },
     amount: {
       type: Number,
@@ -15291,7 +17466,7 @@ export interface IMarksheetVersion {
 export interface IMarksheet extends Document {
   student: Types.ObjectId;
   academicYear: string;
-  semester: number;
+  examination: number;
   result: Types.ObjectId;
   marksheetNumber: string;
   marksheetPDF: string;
@@ -15314,11 +17489,11 @@ const marksheetSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    semester: {
+    examination: {
       type: Number,
       required: true,
       min: 1,
-      max: 8,
+      max: 2,
     },
     result: {
       type: Schema.Types.ObjectId,
@@ -15365,7 +17540,7 @@ const marksheetSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-marksheetSchema.index({ student: 1, academicYear: 1, semester: 1 });
+marksheetSchema.index({ student: 1, academicYear: 1, examination: 1 });
 
 export const Marksheet = mongoose.model<IMarksheet>('Marksheet', marksheetSchema);
 
@@ -15485,7 +17660,7 @@ export interface IAuditEntry {
 export interface IResult extends Document {
   student: Types.ObjectId;
   academicYear: string;
-  semester: number;
+  examination: number;
   subjects: ISubjectResult[];
   totalMarks: number;
   totalCredits: number;
@@ -15513,11 +17688,11 @@ const resultSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    semester: {
+    examination: {
       type: Number,
       required: true,
       min: 1,
-      max: 8,
+      max: 2,
     },
     subjects: [
       {
@@ -15579,7 +17754,7 @@ const resultSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-resultSchema.index({ student: 1, academicYear: 1, semester: 1 });
+resultSchema.index({ student: 1, academicYear: 1, examination: 1 });
 resultSchema.index({ 'subjects.subjectCode': 1 });
 resultSchema.index({ resultStatus: 1 });
 resultSchema.index({ isPublished: 1 });
@@ -15626,7 +17801,7 @@ export interface IRevaluationRequest extends Document {
   student: Types.ObjectId;
   result: Types.ObjectId;
   academicYear: string;
-  semester: number;
+  examination: number;
   subjects: IRevaluationSubject[];
   feePerSubject: number;
   totalFee: number;
@@ -15673,11 +17848,11 @@ const revaluationRequestSchema: Schema = new Schema(
       type: String,
       required: true,
     },
-    semester: {
+    examination: {
       type: Number,
       required: true,
       min: 1,
-      max: 8,
+      max: 2,
     },
     subjects: [
       {
@@ -15914,8 +18089,8 @@ export interface IStudent extends Document {
   verifiedAt?: Date;
   correctionRequestedAt?: Date;
   correctionResubmittedAt?: Date;
-  semesters: {
-    semesterNumber: number;
+  examinations: {
+    examinationNumber: number;
     attendancePercentage: number;
     thesisDocumentUrl?: string;
     thesisApproved: boolean;
@@ -15927,12 +18102,13 @@ export interface IStudent extends Document {
       totalMarks: number;
       isAbsent: boolean;
       grade: string;
+      status?: string;
       updatedBy?: mongoose.Types.ObjectId;
       updatedAt?: Date;
     }[];
   }[];
   examAttempts?: {
-    semesterNumber: number;
+    examinationNumber: number;
     attemptCount: number;
     lastResultStatus?: string;
     lastExamDate?: Date;
@@ -16072,9 +18248,9 @@ const studentSchema: Schema = new Schema(
     correctionResubmittedAt: {
       type: Date,
     },
-    semesters: [
+    examinations: [
       {
-        semesterNumber: { type: Number, required: true },
+        examinationNumber: { type: Number, required: true, enum: [1, 2] },
         attendancePercentage: { type: Number, required: true, default: 0, min: 0, max: 100 },
         thesisDocumentUrl: { type: String },
         thesisApproved: { type: Boolean, required: true, default: false },
@@ -16091,6 +18267,7 @@ const studentSchema: Schema = new Schema(
             totalMarks: { type: Number, default: 100 },
             isAbsent: { type: Boolean, default: false },
             grade: { type: String, default: '' },
+            status: { type: String, default: '' },
             updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
             updatedAt: { type: Date, default: Date.now },
           },
@@ -16099,7 +18276,7 @@ const studentSchema: Schema = new Schema(
     ],
     examAttempts: [
       {
-        semesterNumber: { type: Number, required: true },
+        examinationNumber: { type: Number, required: true, enum: [1, 2] },
         attemptCount: { type: Number, default: 0 },
         lastResultStatus: { type: String },
         lastExamDate: { type: Date },
@@ -16119,7 +18296,7 @@ studentSchema.index({ institute: 1, batch: 1 });
 studentSchema.index({ isEligible: 1 });
 studentSchema.index({ email: 1 });
 studentSchema.index({ verificationStatus: 1 });
-studentSchema.index({ 'semesters.eligibilityStatus': 1 });
+studentSchema.index({ 'examinations.eligibilityStatus': 1 });
 
 
 export const Student = mongoose.model<IStudent>('Student', studentSchema);
@@ -16258,6 +18435,7 @@ import {
   verifyAcademicPayment,
   getExamFeeConfigurationByCourse,
   updateExamFeeConfiguration,
+  getReappearingStudents,
 } from '../controllers/academicController';
 
 const router = express.Router();
@@ -16275,8 +18453,11 @@ router.get('/payment/verify-order/:orderId', protect, authorize('institute'), ve
 // ==========================================
 // EXAM FEE CONFIGURATION (Academy / Board)
 // ==========================================
-router.get('/fee-configuration/:courseId/:semesterNumber', protect, authorize('admin', 'board', 'super_admin', 'institute'), getExamFeeConfigurationByCourse);
+router.get('/fee-configuration/:courseId/:examinationNumber', protect, authorize('admin', 'board', 'super_admin', 'institute'), getExamFeeConfigurationByCourse);
 router.put('/fee-configuration', protect, authorize('admin', 'board', 'super_admin'), updateExamFeeConfiguration);
+
+// Reappearing (arreaar) students for a course/batch/examination
+router.get('/students/reappearing', protect, authorize('institute', 'admin', 'board', 'super_admin'), getReappearingStudents);
 
 router.get('/courses', protect, getCourses);
 router.get('/courses/:courseId', protect, getCourseById);
@@ -16539,11 +18720,11 @@ const router = express.Router();
 // Supports filters: ?status=Pending&courseId=&batchId=
 router.get('/', protect, listExamApplications);
 
-// GET exam fee applicability for a student & semester
-router.get('/fee-check/:studentId/:semesterNumber', protect, checkExamFeeApplicability);
+// GET exam fee applicability for a student & examination
+router.get('/fee-check/:studentId/:examinationNumber', protect, checkExamFeeApplicability);
 
-// GET exam fee configuration for a course & semester
-router.get('/fee-configuration/:courseId/:semesterNumber', protect, getExamFeeConfiguration);
+// GET exam fee configuration for a course & examination
+router.get('/fee-configuration/:courseId/:examinationNumber', protect, getExamFeeConfiguration);
 
 // GET single application by ID
 router.get('/:id', protect, getExamApplicationById);
@@ -16938,7 +19119,7 @@ router.get('/debug/create-dummy', async (req, res) => {
           semiMembershipFormUrl: 'http://example.com/membership.pdf',
         },
         remittedToAcademy: false,
-        semesters: [{ semesterNumber: 1, attendancePercentage: 0, thesisApproved: false, eligibilityStatus: 'Pending' }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 0, thesisApproved: false, eligibilityStatus: 'Pending' }],
       });
     } else {
       student.dateOfBirth = new Date('2026-07-21');
@@ -16963,7 +19144,7 @@ router.get('/debug/create-dummy', async (req, res) => {
       await Result.create({
         student: student._id,
         academicYear: '2026',
-        semester: 1,
+        examination: 1,
         isPublished: false,
         subjects: []
       });
@@ -17043,6 +19224,34 @@ export default router;
 
 ```
 
+### `backend/src/routes/seedRoutes.ts`
+
+```typescript
+import { Router, Request, Response } from 'express';
+import { seedAllData } from '../config/seed';
+import { sendSuccess, sendError } from '../utils/responseFormatter';
+
+const router = Router();
+
+router.all('/', async (req: Request, res: Response) => {
+  try {
+    const force = req.query.force === 'true' || req.body?.force === true;
+    const summary = await seedAllData({ force });
+    return sendSuccess({
+      req,
+      res,
+      message: 'All dummy data for Academy and Institute seeded successfully! 🎉',
+      data: summary,
+    });
+  } catch (err: any) {
+    return sendError({ req, res, statusCode: 500, message: err.message });
+  }
+});
+
+export default router;
+
+```
+
 ### `backend/src/routes/syncRoutes.ts`
 
 ```typescript
@@ -17107,6 +19316,7 @@ import marksRoutes from '../marksRoutes';
 import hallTicketRoutes from '../hallTicketRoutes';
 import syncRoutes from '../syncRoutes';
 import treasuryRoutes from '../treasuryRoutes';
+import seedRoutes from '../seedRoutes';
 
 const router = Router();
 
@@ -17124,6 +19334,7 @@ router.use('/marks', marksRoutes);
 router.use('/hall-tickets', hallTicketRoutes);
 router.use('/sync', syncRoutes);
 router.use('/treasury', treasuryRoutes);
+router.use('/seed', seedRoutes);
 router.use('/', paymentRoutes);
 
 export default router;
@@ -17229,7 +19440,7 @@ const seedTestData = async () => {
       institute: institute._id,
     });
 
-    console.log('Creating 5 test Students with semester data...');
+    console.log('Creating 5 test Students with examination data...');
     const studentsData = [
       {
         enrollmentId: 'SEMI-2026-1001',
@@ -17237,7 +19448,7 @@ const seedTestData = async () => {
         lastName: 'Sharma',
         email: 'aarav.sharma@example.com',
         utrNumber: 'UTR111111',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 85, thesisApproved: true }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 85, thesisApproved: true }],
         remittedToAcademy: true,
       },
       {
@@ -17246,7 +19457,7 @@ const seedTestData = async () => {
         lastName: 'Patel',
         email: 'neha.patel@example.com',
         utrNumber: 'UTR222222',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 68, thesisApproved: true }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 68, thesisApproved: true }],
         remittedToAcademy: true,
       },
       {
@@ -17255,7 +19466,7 @@ const seedTestData = async () => {
         lastName: 'Verma',
         email: 'rahul.verma@example.com',
         utrNumber: 'UTR333333',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 92, thesisApproved: false }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 92, thesisApproved: false }],
         remittedToAcademy: true,
       },
       {
@@ -17264,7 +19475,7 @@ const seedTestData = async () => {
         lastName: 'Nair',
         email: 'priya.nair@example.com',
         utrNumber: 'UTR444444',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 88, thesisApproved: true }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 88, thesisApproved: true }],
         remittedToAcademy: false,
       },
       {
@@ -17273,13 +19484,13 @@ const seedTestData = async () => {
         lastName: 'Malhotra',
         email: 'karan.malhotra@example.com',
         utrNumber: 'UTR555555',
-        semesters: [{ semesterNumber: 1, attendancePercentage: 62, thesisApproved: false }],
+        examinations: [{ examinationNumber: 1, attendancePercentage: 62, thesisApproved: false }],
         remittedToAcademy: false,
       },
     ];
 
     for (const s of studentsData) {
-      const { remittedToAcademy, semesters, ...rest } = s;
+      const { remittedToAcademy, examinations, ...rest } = s;
       await Student.create({
         ...rest,
         homeAddress: '456 Residency Road, Mumbai',
@@ -17295,7 +19506,7 @@ const seedTestData = async () => {
         batch: batch._id,
         institute: institute._id,
         courseDirector: 'Dr. Rajesh Khanna',
-        semesters,
+        examinations,
         remittedToAcademy,
         documents: {
           passportPhotoUrl: 'http://example.com/photo.jpg',
@@ -17602,19 +19813,19 @@ import { Result } from '../models/resultModel';
 import { Student } from '../models/studentModel';
 
 /**
- * A student is considered "reappearing" for a semester when the most recent
+ * A student is considered "reappearing" for an examination when the most recent
  * published result carries a non-PASS status (FAIL / SUPPLEMENTARY /
- * REVALUATION_PENDING), i.e. they must sit the same semester again.
+ * REVALUATION_PENDING), i.e. they must sit the same examination again.
  *
  * First attempt (not reappearing) = no prior result, OR a PASS status.
  */
 export const checkStudentReappearance = async (
   studentId: string,
-  semesterNumber: number
+  examinationNumber: number
 ) => {
   const results = await Result.find({
     student: studentId,
-    semester: semesterNumber,
+    examination: examinationNumber,
     isPublished: true,
   }).sort({ createdAt: -1 });
 
@@ -17637,8 +19848,41 @@ export const checkStudentReappearance = async (
 };
 
 /**
- * Resolve the applicable fee for a course/semester and whether a fee applies
- * at all. Fee configuration can be supplied per-course/per-semester (via the
+ * Safely read a per-examination fee config entry from a course.
+ *
+ * `examFeeConfig` is a Mongoose Map (schema `type: Map`), which only supports
+ * `.get()`/`.set()`. Bracket access does NOT work on mongoose Map instances and
+ * silently returns `undefined`. This helper supports both mongoose Maps and
+ * legacy plain-object hydration so reads never silently fall back to defaults.
+ */
+export const getExamFeeConfigEntry = (course: any, examinationNumber: number) => {
+  const map = course?.examFeeConfig;
+  if (!map) return undefined;
+  const key = `exam_${examinationNumber}`;
+  return typeof map.get === 'function' ? map.get(key) : map[key];
+};
+
+/**
+ * Safely write a per-examination fee config entry onto a course.
+ *
+ * Uses the mongoose Map `.set()` API (which persists on save) and falls back to
+ * plain-object assignment for legacy documents that were never hydrated as a
+ * Map.
+ */
+export const setExamFeeConfigEntry = (course: any, examinationNumber: number, value: any) => {
+  const key = `exam_${examinationNumber}`;
+  if (course.examFeeConfig && typeof course.examFeeConfig.set === 'function') {
+    course.examFeeConfig.set(key, value);
+  } else {
+    if (!course.examFeeConfig) course.examFeeConfig = {};
+    (course.examFeeConfig as any)[key] = value;
+  }
+  return course;
+};
+
+/**
+ * Resolve the applicable fee for a course/examination and whether a fee applies
+ * at all. Fee configuration can be supplied per-course/per-examination (via the
  * `examFeeConfig` Map), otherwise falls back to the course-level fields.
  *
  * First-attempt fee defaults to 0 (waived) unless the course opts in via
@@ -17646,27 +19890,27 @@ export const checkStudentReappearance = async (
  */
 export const resolveFeeConfiguration = (
   course: any,
-  semesterNumber: number
+  examinationNumber: number
 ) => {
   let firstAttemptFee = 0;
   let reappearingFee = 0;
   let feeApplicableForFirstAttempt = false;
 
-  const perSemester = course?.examFeeConfig?.[`semester_${semesterNumber}`];
-  if (perSemester) {
+  const perExam = getExamFeeConfigEntry(course, examinationNumber);
+  if (perExam) {
     // Use nullish coalescing so an explicit 0 (fee removed) is respected.
     firstAttemptFee =
-      perSemester.firstAttemptFee !== undefined && perSemester.firstAttemptFee !== null
-        ? Number(perSemester.firstAttemptFee) || 0
+      perExam.firstAttemptFee !== undefined && perExam.firstAttemptFee !== null
+        ? Number(perExam.firstAttemptFee) || 0
         : Number(course?.examinationFee) || 0;
     reappearingFee =
-      perSemester.reappearingFee !== undefined && perSemester.reappearingFee !== null
-        ? Number(perSemester.reappearingFee) || 0
+      perExam.reappearingFee !== undefined && perExam.reappearingFee !== null
+        ? Number(perExam.reappearingFee) || 0
         : Number(course?.reappearingExaminationFee) ||
           Number(course?.examinationFee) ||
           0;
     feeApplicableForFirstAttempt =
-      Boolean(perSemester.feeApplicableForFirstAttempt);
+      Boolean(perExam.feeApplicableForFirstAttempt);
   } else {
     firstAttemptFee = Number(course?.examinationFee) || 0;
     reappearingFee =
@@ -17689,21 +19933,21 @@ export const resolveFeeConfiguration = (
 
 /**
  * Classify a list of students into first-attempt vs reappearing for a given
- * semester, and compute the total applicable exam fee.
+ * examination, and compute the total applicable exam fee.
  *
  * Returns per-student classification plus summary fee fields suitable for
  * persisting onto an ExamApplication.
  */
 export const classifyStudentsForExamFee = async (
   studentIds: string[],
-  semesterNumber: number,
+  examinationNumber: number,
   course: any
 ) => {
   const reappearingStudents: string[] = [];
   const firstAttemptStudents: string[] = [];
 
   for (const studentId of studentIds) {
-    const status = await checkStudentReappearance(studentId, semesterNumber);
+    const status = await checkStudentReappearance(studentId, examinationNumber);
     if (status.isReappearing) {
       reappearingStudents.push(studentId);
     } else {
@@ -17711,7 +19955,7 @@ export const classifyStudentsForExamFee = async (
     }
   }
 
-  const feeConfig = resolveFeeConfiguration(course, semesterNumber);
+  const feeConfig = resolveFeeConfiguration(course, examinationNumber);
 
   const examFeeApplicable = reappearingStudents.length > 0
     ? feeConfig.reappearingFee > 0
@@ -17756,7 +20000,7 @@ export interface ParsedSubject {
 export interface ParsedResultData {
   studentId: string;
   academicYear: string;
-  semester: number;
+  examination: number;
   subjects: ParsedSubject[];
 }
 
@@ -17819,15 +20063,15 @@ class FileParserService {
         continue;
       }
 
-      if (line.match(/^(Academic Year|Year|Semester):/i)) {
+      if (line.match(/^(Academic Year|Year|Examination|Semester):/i)) {
         const parts = line.split(/[:,]\s*/);
         if (parts.length === 2) {
           const key = parts[0].toLowerCase();
           const value = parts[1];
           if (key.includes('year')) {
             currentStudent.academicYear = value;
-          } else if (key.includes('semester')) {
-            currentStudent.semester = parseInt(value) || 1;
+          } else if (key.includes('examination') || key.includes('semester')) {
+            currentStudent.examination = parseInt(value) || 1;
           }
         }
         continue;
@@ -17909,7 +20153,7 @@ class FileParserService {
       const studentData: ParsedResultData = {
         studentId: String(studentId),
         academicYear: firstRow['Academic Year'] || firstRow['Year'] || '2024-25',
-        semester: parseInt(firstRow['Semester']) || 1,
+        examination: parseInt(firstRow['Examination'] || firstRow['Semester']) || 1,
         subjects: [],
       };
 
@@ -18211,7 +20455,7 @@ class MarksheetService {
         const marksheet = await Marksheet.create({
           student: (result.student as any)._id,
           academicYear: result.academicYear,
-          semester: result.semester,
+          examination: result.examination,
           result: resultId,
           marksheetNumber,
           marksheetPDF: pdfUrl,
@@ -18246,7 +20490,7 @@ export interface EmailTemplateData {
   studentName?: string;
   studentEmail?: string;
   courseName?: string;
-  semesterNumber?: number;
+  examinationNumber?: number;
   examVenue?: string;
   examCenter?: string;
   examDate?: Date | string;
@@ -18276,7 +20520,7 @@ class NotificationService {
    * Send exam application confirmation to institute and notification to academy
    */
   async notifyExamApplicationSubmitted(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, courseName, semesterNumber, subjects, totalFee, paymentId, studentsCount } = data;
+    const { instituteName, instituteEmail, courseName, examinationNumber, subjects, totalFee, paymentId, studentsCount } = data;
 
     // 1. Institute confirmation
     await this.sendInstituteEmail({
@@ -18300,7 +20544,7 @@ class NotificationService {
         ...data,
         instituteName,
         courseName,
-        semesterNumber,
+        examinationNumber,
         subjects: subjects?.join(', ') || 'N/A',
         totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
         paymentId: paymentId || 'N/A',
@@ -18314,7 +20558,7 @@ class NotificationService {
    * Send exam application approval notification to institute
    */
   async notifyExamApplicationApproved(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, courseName, semesterNumber, examDate, remarks } = data;
+    const { instituteName, instituteEmail, courseName, examinationNumber, examDate, remarks } = data;
 
     await this.sendInstituteEmail({
       to: instituteEmail,
@@ -18338,7 +20582,7 @@ class NotificationService {
    * Send exam schedule published notification to institute
    */
   async notifyExamSchedulePublished(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, courseName, semesterNumber, examVenue, examCenter, examDate, reportingTime, subjects } = data;
+    const { instituteName, instituteEmail, courseName, examinationNumber, examVenue, examCenter, examDate, reportingTime, subjects } = data;
 
     await this.sendInstituteEmail({
       to: instituteEmail,
@@ -18365,7 +20609,7 @@ class NotificationService {
    * Send exam result published notification to institute (and student if email known)
    */
   async notifyResultsPublished(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, studentName, studentEmail, courseName, semesterNumber, resultStatus } = data;
+    const { instituteName, instituteEmail, studentName, studentEmail, courseName, examinationNumber, resultStatus } = data;
 
     await this.sendInstituteEmail({
       to: instituteEmail,
@@ -18397,7 +20641,7 @@ class NotificationService {
    * Send revaluation fee payment confirmation to institute and notification to academy
    */
   async notifyRevaluationPaymentSubmitted(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, studentName, studentEmail, courseName, semesterNumber, subjects, totalFee, paymentId } = data;
+    const { instituteName, instituteEmail, studentName, studentEmail, courseName, examinationNumber, subjects, totalFee, paymentId } = data;
 
     await this.sendInstituteEmail({
       to: instituteEmail,
@@ -18421,7 +20665,7 @@ class NotificationService {
         studentName: studentName || 'N/A',
         studentEmail: studentEmail || 'N/A',
         courseName: courseName || 'N/A',
-        semesterNumber: semesterNumber || 'N/A',
+        examinationNumber: examinationNumber || 'N/A',
         subjectsList: subjects?.join(', ') || 'N/A',
         totalFee: totalFee != null ? `₹${totalFee.toLocaleString('en-IN')}` : 'N/A',
         paymentId: paymentId || 'N/A',
@@ -18434,7 +20678,7 @@ class NotificationService {
    * Send revaluation result update notification to institute (and student if email known)
    */
   async notifyRevaluationResultUpdated(data: EmailTemplateData): Promise<void> {
-    const { instituteName, instituteEmail, studentName, studentEmail, courseName, semesterNumber, revaluationResults } = data;
+    const { instituteName, instituteEmail, studentName, studentEmail, courseName, examinationNumber, revaluationResults } = data;
 
     const changes = revaluationResults || [];
     const totalChange = changes.reduce((sum, r) => sum + (r.marksChange || 0), 0);
@@ -18540,7 +20784,7 @@ class NotificationService {
           <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #0369a1;">Application Summary:</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Students:</strong> ${data.studentsCount || data.students?.length || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
@@ -18560,7 +20804,7 @@ class NotificationService {
             <p style="font-weight: 600; color: #0369a1;">Application Details:</p>
             <p><strong>Institute:</strong> ${data.instituteName}</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Students:</strong> ${data.studentsCount || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjects || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
@@ -18581,7 +20825,7 @@ class NotificationService {
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #166534;">Application Details:</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Scheduled Date:</strong> ${data.examDate || 'TBD'}</p>
             <p><strong>Remarks:</strong> ${data.remarks || 'No additional remarks.'}</p>
           </div>
@@ -18594,7 +20838,7 @@ class NotificationService {
         title = '📅 Exam Schedule Published';
         greeting = `Dear ${data.instituteName},`;
         body = `
-          <p>The Academic Board has published the exam schedule for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}).</p>
+          <p>The Academic Board has published the exam schedule for <strong>${data.courseName}</strong> (Examination ${data.examinationNumber}).</p>
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #166534;">Exam Schedule:</p>
             <p><strong>Venue:</strong> ${data.venue || 'TBD'}</p>
@@ -18612,7 +20856,7 @@ class NotificationService {
         title = '📊 Results Published';
         greeting = `Dear ${data.instituteName},`;
         body = `
-          <p>Results have been published for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}).</p>
+          <p>Results have been published for <strong>${data.courseName}</strong> (Examination ${data.examinationNumber}).</p>
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p><strong>Student:</strong> ${data.studentName || 'Multiple Students'}</p>
             <p><strong>Status:</strong> <span style="color: ${data.resultStatus === 'PASS' ? '#16a34a' : '#dc2626'};">${data.resultStatus || 'Published'}</span></p>
@@ -18630,7 +20874,7 @@ class NotificationService {
             <p style="font-weight: 600; color: #0369a1;">Payment Details:</p>
             <p><strong>Student:</strong> ${data.studentName || 'N/A'}</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
             <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
@@ -18650,7 +20894,7 @@ class NotificationService {
             <p><strong>Student:</strong> ${data.studentName || 'N/A'}</p>
             <p><strong>Email:</strong> ${data.studentEmail || 'N/A'}</p>
             <p><strong>Course:</strong> ${data.courseName || 'N/A'}</p>
-            <p><strong>Semester:</strong> ${data.semesterNumber || 'N/A'}</p>
+            <p><strong>Examination:</strong> ${data.examinationNumber || 'N/A'}</p>
             <p><strong>Subjects:</strong> ${data.subjectsList || 'N/A'}</p>
             <p><strong>Total Fee:</strong> ${data.totalFee || 'N/A'}</p>
             <p><strong>Payment ID:</strong> ${data.paymentId || 'N/A'}</p>
@@ -18680,7 +20924,7 @@ class NotificationService {
         title = '📊 Your Examination Results';
         greeting = `Dear ${data.studentName || 'Student'},`;
         body = `
-          <p>Your results for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}) are now available.</p>
+          <p>Your results for <strong>${data.courseName}</strong> (Examination ${data.examinationNumber}) are now available.</p>
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #166534;">Status: ${data.resultStatus || 'Published'}</p>
           </div>
@@ -18692,7 +20936,7 @@ class NotificationService {
         title = `${data.changeEmoji || '📋'} Revaluation Results Updated`;
         greeting = `Dear ${data.studentName || 'Student'},`;
         body = `
-          <p>Your revaluation request for <strong>${data.courseName}</strong> (Semester ${data.semesterNumber}) has been processed.</p>
+          <p>Your revaluation request for <strong>${data.courseName}</strong> (Examination ${data.examinationNumber}) has been processed.</p>
           <div style="background: #f0f9ff; border: 1px solid #7dd3fc; border-radius: 12px; padding: 16px; margin: 16px 0;">
             <p style="font-weight: 600; color: #0369a1;">Changes:</p>
             <pre style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 14px; white-space: pre-wrap;">${data.changesSummary || 'N/A'}</pre>
@@ -18725,7 +20969,7 @@ Your exam application has been successfully submitted to the Academic Board.
 
 Application Summary:
 - Course: ${data.courseName || 'N/A'}
-- Semester: ${data.semesterNumber || 'N/A'}
+- Examination: ${data.examinationNumber || 'N/A'}
 - Students: ${data.studentsCount || 'N/A'}
 - Subjects: ${data.subjectsList || data.subjects?.join(', ') || 'N/A'}
 - Total Fee: ${data.totalFee || 'N/A'}
@@ -18744,7 +20988,7 @@ Exam Schedule Published
 
 Dear ${data.instituteName},
 
-The Academic Board has published the exam schedule for ${data.courseName} (Semester ${data.semesterNumber}).
+The Academic Board has published the exam schedule for ${data.courseName} (Examination ${data.examinationNumber}).
 
 Exam Schedule:
 - Venue: ${data.venue || 'TBD'}
@@ -19024,7 +21268,11 @@ class ResultService {
   }
 
   async advancedSearch(filters: any) {
-    const query: any = { isPublished: true };
+    const now = new Date();
+    const query: any = {
+      isPublished: true,
+      publishedDate: { $lte: now },
+    };
 
     if (filters.query) {
       const students = await Student.find({
@@ -19038,13 +21286,15 @@ class ResultService {
     }
 
     if (filters.academicYear) query.academicYear = filters.academicYear;
-    if (filters.semester) query.semester = parseInt(filters.semester);
+    if (filters.examination) query.examination = parseInt(filters.examination);
     if (filters.resultStatus) query.resultStatus = filters.resultStatus;
 
     if (filters.fromDate || filters.toDate) {
-      query.publishedDate = {};
       if (filters.fromDate) query.publishedDate.$gte = new Date(filters.fromDate);
-      if (filters.toDate) query.publishedDate.$lte = new Date(filters.toDate);
+      if (filters.toDate) {
+        const to = new Date(filters.toDate);
+        query.publishedDate.$lte = to < now ? to : now;
+      }
     }
 
     if (filters.department) {
@@ -19063,9 +21313,13 @@ class ResultService {
   }
 
   async getResultStatistics(filters: any) {
-    const query: any = { isPublished: true };
+    const now = new Date();
+    const query: any = {
+      isPublished: true,
+      publishedDate: { $lte: now },
+    };
     if (filters.academicYear) query.academicYear = filters.academicYear;
-    if (filters.semester) query.semester = parseInt(filters.semester);
+    if (filters.examination) query.examination = parseInt(filters.examination);
 
     const results = await Result.find(query);
 
@@ -19116,7 +21370,7 @@ class ResultService {
         const existingResult = await Result.findOne({
           student: resultData.student,
           academicYear: resultData.academicYear,
-          semester: resultData.semester,
+          examination: resultData.examination,
         });
 
         if (existingResult) continue;
@@ -19363,31 +21617,31 @@ class RevaluationService {
     try {
       const studentDoc = await Student.findById(result.student);
       if (studentDoc) {
-        let semRecord = studentDoc.semesters.find((s: any) => s.semesterNumber === result.semester);
-        if (!semRecord) {
-          studentDoc.semesters.push({
-            semesterNumber: result.semester,
+        let examRecord = studentDoc.examinations.find((e: any) => e.examinationNumber === result.examination);
+        if (!examRecord) {
+          studentDoc.examinations.push({
+            examinationNumber: result.examination as 1 | 2,
             attendancePercentage: 80,
             thesisApproved: false,
             eligibilityStatus: 'Approved',
             marks: []
           });
-          semRecord = studentDoc.semesters[studentDoc.semesters.length - 1];
+          examRecord = studentDoc.examinations[studentDoc.examinations.length - 1];
         }
 
-        if (!semRecord.marks) {
-          semRecord.marks = [];
+        if (!examRecord.marks) {
+          examRecord.marks = [];
         }
 
-        const semMarks = semRecord.marks;
+        const examMarks = examRecord.marks;
         result.subjects.forEach((resSubj: any) => {
-          const mIdx = semMarks.findIndex((m: any) => m.subjectCode === resSubj.subjectCode);
+          const mIdx = examMarks.findIndex((m: any) => m.subjectCode === resSubj.subjectCode);
           if (mIdx !== -1) {
-            semMarks[mIdx].marksObtained = resSubj.totalMarks;
-            semMarks[mIdx].grade = resSubj.grade;
-            semMarks[mIdx].totalMarks = 100;
+            examMarks[mIdx].marksObtained = resSubj.totalMarks;
+            examMarks[mIdx].grade = resSubj.grade;
+            examMarks[mIdx].totalMarks = 100;
           } else {
-            semMarks.push({
+            examMarks.push({
               subjectCode: resSubj.subjectCode,
               subjectName: resSubj.subjectName,
               marksObtained: resSubj.totalMarks,
@@ -19472,7 +21726,7 @@ class RevaluationService {
   async getRevaluationStatistics(filters: any) {
     const query: any = {};
     if (filters.academicYear) query.academicYear = filters.academicYear;
-    if (filters.semester) query.semester = parseInt(filters.semester);
+    if (filters.examination) query.examination = parseInt(filters.examination);
 
     const requests = await RevaluationRequest.find(query);
 
@@ -19701,8 +21955,9 @@ export const getFileUrl = (filePath: string): string => {
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
     return filePath;
   }
+  const baseUrl = (process.env.BASE_URL || 'http://localhost:5003').replace(/\/$/, '');
   const filename = path.basename(filePath).replace(/\\/g, '/');
-  return `/api/uploads/${filename}`;
+  return `${baseUrl}/api/uploads/${filename}`;
 };
 
 ```
@@ -19750,7 +22005,7 @@ interface SuccessResponseParams {
   req?: Request;
   res: Response;
   message?: string;
-  data?: any;
+  data?: any; 
   statusCode?: number;
 }
 
@@ -19977,7 +22232,7 @@ export const issueCertificateSchema = z.object({
   student: z.string().min(1, 'Student ID is required'),
   type: z.enum(['PROVISIONAL', 'CONSOLIDATED', 'DUPLICATE', 'TRANSFER']),
   academicYear: z.string().min(1, 'Academic year is required'),
-  semester: z.coerce.number().int().min(1).max(8).optional(),
+  examination: z.coerce.number().int().min(1).max(2).optional(),
   result: z.string().optional(),
   certificatePDF: z.string().optional(),
   expiryDate: z.string().optional(),
@@ -20000,7 +22255,7 @@ import { z } from 'zod';
 export const createResultSchema = z.object({
   student: z.string().min(1, 'Student ID is required'),
   academicYear: z.string().min(1, 'Academic year is required'),
-  semester: z.coerce.number().int().min(1, 'Semester must be at least 1').max(8, 'Semester must be at most 8'),
+  examination: z.coerce.number().int().min(1, 'Examination must be at least 1').max(2, 'Examination must be at most 2'),
   subjects: z
     .array(
       z.object({
@@ -20020,7 +22275,7 @@ export const createResultSchema = z.object({
 export const updateResultSchema = z.object({
   student: z.string().min(1).optional(),
   academicYear: z.string().min(1).optional(),
-  semester: z.coerce.number().int().min(1).max(8).optional(),
+  examination: z.coerce.number().int().min(1).max(2).optional(),
   subjects: z
     .array(
       z.object({
@@ -20044,7 +22299,7 @@ export const bulkUploadSchema = z.object({
       z.object({
         student: z.string().min(1, 'Student ID is required'),
         academicYear: z.string().min(1, 'Academic year is required'),
-        semester: z.coerce.number().int().min(1).max(8),
+        examination: z.coerce.number().int().min(1).max(2),
         subjects: z
           .array(
             z.object({
@@ -20073,7 +22328,7 @@ export const createRevaluationSchema = z.object({
   result: z.string().min(1, 'Result ID is required'),
   institute: z.string().min(1, 'Institute ID is required'),
   academicYear: z.string().min(1, 'Academic year is required'),
-  semester: z.coerce.number().int().min(1, 'Semester must be at least 1').max(8, 'Semester must be at most 8'),
+  examination: z.coerce.number().int().min(1, 'Examination must be at least 1').max(2, 'Examination must be at most 2'),
   subjects: z
     .array(
       z.object({
@@ -20520,7 +22775,7 @@ console.log('Done fixing React imports!');
     <link rel="icon" type="image/png" href="/src/assets/semi logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Society for Emergency Medicine India (SEMI) Portals." />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://semi-phase-three.swiflare.com https://backend.semi.org.in http://localhost:5000 http://localhost:5003; connect-src 'self' https://semi-phase-three.swiflare.com wss://semi-phase-three.swiflare.com https://backend.semi.org.in wss://backend.semi.org.in http://localhost:5000 http://localhost:5003 https://lumberjack.razorpay.com https://api.razorpay.com; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://cdn.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://semi-phase-three.swiflare.com https://backend.semi.org.in http://localhost:5000 http://localhost:5003; connect-src 'self' https://semi-phase-three.swiflare.com wss://semi-phase-three.swiflare.com https://backend.semi.org.in wss://backend.semi.org.in http://localhost:5000 http://localhost:5003 https://lumberjack.razorpay.com https://api.razorpay.com; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https: http://localhost:5000 http://localhost:5003; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://cdn.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
@@ -20693,6 +22948,7 @@ const AcademyCoursesPage       = lazy(() => import('./pages/academy/courses/inde
 const AcademyStudentsPage     = lazy(() => import('./pages/academy/students/index'));
 const AcademyEligibilityPage  = lazy(() => import('./pages/academy/eligibility/index'));
 const AcademyVerificationPage = lazy(() => import('./pages/academy/verification/index'));
+const AcademyAcademicVerificationPage = lazy(() => import('./pages/academy/academic-verification/index'));
 const AcademyMarksUpdatingPage = lazy(() => import('./pages/academy/marks/index'));
 const AcademyPublishResultsPage = lazy(() => import('./pages/academy/publish-results/index'));
 const AcademyPublishDetailsPage = lazy(() => import('./pages/academy/publish-details/index'));
@@ -20720,8 +22976,8 @@ import { useTokenRefresh } from './hooks/useTokenRefresh';
 function App() {
   const [showMaintenance, setShowMaintenance] = useState(false);
 
-  // Proactively refresh tokens before the 15-minute access-token expiry.
-  useTokenRefresh(12 * 60 * 1000);
+  // Proactively refresh tokens before access-token expiry based on user activity & fallback timer.
+  useTokenRefresh();
 
   useEffect(() => {
     const checkServerHealth = async () => {
@@ -20826,6 +23082,7 @@ function App() {
           <Route path="students"     element={<L><AcademyStudentsPage /></L>} />
           <Route path="eligibility"  element={<L><AcademyEligibilityPage /></L>} />
           <Route path="verification" element={<L><AcademyVerificationPage /></L>} />
+          <Route path="academic-verification" element={<L><AcademyAcademicVerificationPage /></L>} />
           <Route path="marks" element={<L><AcademyMarksUpdatingPage /></L>} />
           <Route path="publish-results"  element={<L><AcademyPublishResultsPage /></L>} />
           <Route path="publish-details"  element={<L><AcademyPublishDetailsPage /></L>} />
@@ -21288,7 +23545,7 @@ export const PaymentStatusChecker = ({
           ? {
               params: {
                 studentId: pendingState.additionalData.studentId,
-                semester: pendingState.additionalData.semester,
+                examination: pendingState.additionalData.examination,
                 purpose: pendingState.additionalData.purpose,
               },
             }
@@ -21737,8 +23994,8 @@ export const academicService = {
   submitRemittance: (data) => apiClient.post('/academic/remittance', data),
 
   // ─── EXAM FEE CONFIGURATION (Academy / Board) ──────────────────────────────
-  getFeeConfiguration: (courseId, semesterNumber) =>
-    apiClient.get(`/academic/fee-configuration/${courseId}/${semesterNumber}`),
+  getFeeConfiguration: (courseId, examinationNumber) =>
+    apiClient.get(`/academic/fee-configuration/${courseId}/${examinationNumber}`),
 
   updateFeeConfiguration: (data) =>
     apiClient.put('/academic/fee-configuration', data),
@@ -21918,7 +24175,7 @@ const clearStoredSession = () => {
 };
 
 // Hard-redirect to the correct portal login page
-const redirectToLogin = () => {
+export const redirectToLogin = () => {
   if (typeof window === 'undefined') return;
   window.location.href = window.location.pathname.startsWith('/institute')
     ? '/institute/login'
@@ -21943,10 +24200,23 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // A request retried with a freshly refreshed token that STILL 401s means the
-    // user account no longer exists (deleted / DB re-seeded) or the token is dead.
+    // If a request fails with 401 even after a successful retry, the refresh
+    // token is likely invalid or the user session has been terminated server-side.
+    // In this case, it's safer to clear the session and redirect to login.
     if (error.response?.status === 401 && originalRequest?._retry) {
+      console.log("Token refresh succeeded, but the new token was also rejected. Session is invalid. Logging out.");
       clearStoredSession();
+      // Optional: redirect to login page
+      // redirectToLogin(); 
+      return Promise.reject(error);
+    }
+
+    // If the request to refresh the token itself fails with a 401,
+    // it means the refresh token is invalid. This requires a logout.
+    if (error.response?.status === 401 && originalRequest?.url?.includes('/auth/refresh-token')) {
+      console.log("Refresh token is invalid. Logging out.");
+      clearStoredSession();
+      // redirectToLogin();
       return Promise.reject(error);
     }
 
@@ -22179,11 +24449,11 @@ export const examService = {
   downloadHallTicket: (id, hid) => apiClient.get(`/exams/${id}/hall-tickets/${hid}/download`),
 
   // ─── Exam Fee Applicability & Configuration ─────────────────────────────────
-  checkExamFeeApplicability: (studentId, semesterNumber) =>
-    apiClient.get(`/exams/fee-check/${studentId}/${semesterNumber}`),
+  checkExamFeeApplicability: (studentId, examinationNumber) =>
+    apiClient.get(`/exams/fee-check/${studentId}/${examinationNumber}`),
 
-  getFeeConfiguration: (courseId, semesterNumber) =>
-    apiClient.get(`/exams/fee-configuration/${courseId}/${semesterNumber}`),
+  getFeeConfiguration: (courseId, examinationNumber) =>
+    apiClient.get(`/exams/fee-configuration/${courseId}/${examinationNumber}`),
 };
 
 export default examService;
@@ -22394,8 +24664,8 @@ export const marksService = {
   getStudentsWithMarks: (params) => apiClient.get('/marks/students', { params }),
 
   // Get a single student's marks
-  getStudentMarks: (studentId, semesterNumber) =>
-    apiClient.get(`/marks/students/${studentId}`, { params: { semesterNumber } }),
+  getStudentMarks: (studentId, examinationNumber) =>
+    apiClient.get(`/marks/students/${studentId}`, { params: { examinationNumber } }),
 
   // Update a single student's marks
   updateStudentMarks: (studentId, data) =>
@@ -22406,8 +24676,10 @@ export const marksService = {
     apiClient.post('/marks/students/bulk', data),
 
   // Get course subjects
-  getCourseSubjects: (courseId) =>
-    apiClient.get(`/marks/courses/${courseId}/subjects`),
+  getCourseSubjects: (courseId, examinationNumber) =>
+    apiClient.get(`/marks/courses/${courseId}/subjects`, {
+      params: examinationNumber ? { examinationNumber } : undefined,
+    }),
 
   // Generate results from marks
   generateResults: (data) => apiClient.post('/marks/generate-results', data),
@@ -22499,10 +24771,10 @@ export const revaluationService = {
   // ─── Razorpay Payment ──────────────────────────────────────────────────────
   createRazorpayOrder: (data) => apiClient.post('/revaluation/payment/create-order', data),
   verifyRazorpayPayment: (data) => apiClient.post('/revaluation/payment/verify', data),
-  getPaymentStatus: (studentId, semester) =>
-    apiClient.get(`/revaluation/payment/status/${studentId}`, { params: { semester } }),
-  verifyOrderStatus: (orderId, studentId, semester) =>
-    apiClient.get(`/revaluation/payment/verify-order/${orderId}`, { params: { studentId, semester } }),
+  getPaymentStatus: (studentId, examination) =>
+    apiClient.get(`/revaluation/payment/status/${studentId}`, { params: { examination } }),
+  verifyOrderStatus: (orderId, studentId, examination) =>
+    apiClient.get(`/revaluation/payment/verify-order/${orderId}`, { params: { studentId, examination } }),
 
   // ─── Institute Specific ─────────────────────────────────────────────────────
   getInstituteSummary: () => apiClient.get('/revaluation/institute/summary'),
@@ -22512,6 +24784,10 @@ export const revaluationService = {
 
   // ─── Academy Specific ──────────────────────────────────────────────────────
   getAcademySummary: (params) => apiClient.get('/revaluation/academy/summary', { params }),
+
+  // ─── Reappearing / Arrear Students ─────────────────────────────────────────
+  getReappearingStudents: (params) =>
+    apiClient.get('/academic/students/reappearing', { params }),
 
   // ─── Revaluation Result Routes ─────────────────────────────────────────────
   getRevaluationResults: (id) => apiClient.get(`/revaluation/requests/${id}/results`),
@@ -22707,34 +24983,47 @@ export default useLoading;
 
 ```javascript
 import { useEffect, useRef, useCallback } from 'react';
-import { getRefreshToken, setTokens } from '../api/apiClient';
+import { getRefreshToken, getAccessToken, setTokens } from '../api/apiClient';
 import authService from '../api/auth';
 
-export const useTokenRefresh = (intervalMs = 12 * 60 * 1000) => {
-  const intervalRef = useRef(null);
-  // Use a Promise-based lock instead of a simple boolean to correctly
-  // serialise concurrent refresh calls from multiple tab-focus events or
-  // interval ticks that fire while a refresh is already in-flight.
-  const refreshPromiseRef = useRef(null);
+// Refresh the token if it has less than this much time left (e.g., 5 minutes)
+const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; 
 
-  const refreshTokens = useCallback(async () => {
-    // If a refresh is already in-flight return that same promise so callers
-    // share the result instead of triggering a second request.
-    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+export const useTokenRefresh = () => {
+  const refreshTimeoutRef = useRef(null);
+  const refreshPromiseRef = useRef(null);
+  const lastRefreshAttemptRef = useRef(0);
+
+  const refreshTokens = useCallback(async (isUserInitiated = false) => {
+    // If a refresh is already in-flight, return that same promise.
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current;
+    }
+    
+    // For user-initiated events, throttle to avoid spamming the refresh endpoint.
+    const now = Date.now();
+    if (isUserInitiated && now - lastRefreshAttemptRef.current < 60 * 1000) {
+      // Don't refresh more than once per minute for user activity
+      return;
+    }
 
     const doRefresh = async () => {
       try {
         const refreshToken = getRefreshToken();
-        if (!refreshToken) return;
+        if (!refreshToken) {
+          return; // No token to refresh, nothing to do.
+        }
 
+        lastRefreshAttemptRef.current = Date.now();
         const response = await authService.refreshToken(refreshToken);
         const data = response.data?.data || response.data;
 
         if (data?.accessToken) {
           setTokens(data.accessToken, data.refreshToken);
         }
-      } catch {
-        // Ignore — response interceptor handles auth errors cleanly
+      } catch (error) {
+        // Errors here are handled by the response interceptor. We don't want to force logout here.
+        console.warn('Proactive token refresh failed:', error);
       } finally {
         refreshPromiseRef.current = null;
       }
@@ -22745,22 +25034,52 @@ export const useTokenRefresh = (intervalMs = 12 * 60 * 1000) => {
   }, []);
 
   useEffect(() => {
-    intervalRef.current = setInterval(refreshTokens, intervalMs);
+    // The primary mechanism: refresh on user activity if the token is nearing expiry.
+    const handleUserActivity = () => {
+      const accessToken = getAccessToken();
+      if (!accessToken) return;
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        refreshTokens();
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        const expiresAt = payload.exp * 1000;
+        
+        if (expiresAt - Date.now() < REFRESH_THRESHOLD_MS) {
+          refreshTokens(true); // Pass true to indicate a user-initiated refresh
+        }
+      } catch {
+        // Token is malformed, let the API interceptor handle it on the next request.
       }
     };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Throttle the event handler to avoid performance issues.
+    let activityTimeout;
+    const throttledActivityHandler = () => {
+      if (activityTimeout) return;
+      activityTimeout = setTimeout(() => {
+        handleUserActivity();
+        activityTimeout = null;
+      }, 1000); // Check at most once per second
+    };
+
+    // Add event listeners for common user activities.
+    window.addEventListener('mousemove', throttledActivityHandler);
+    window.addEventListener('keydown', throttledActivityHandler);
+    window.addEventListener('click', throttledActivityHandler);
+    window.addEventListener('focus', throttledActivityHandler);
+    window.addEventListener('visibilitychange', throttledActivityHandler);
+
+    // Fallback: an interval timer to periodically check/refresh in case the user is completely idle.
+    refreshTimeoutRef.current = setInterval(() => refreshTokens(false), 10 * 60 * 1000); // every 10 minutes
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('mousemove', throttledActivityHandler);
+      window.removeEventListener('keydown', throttledActivityHandler);
+      window.removeEventListener('click', throttledActivityHandler);
+      window.removeEventListener('focus', throttledActivityHandler);
+      window.removeEventListener('visibilitychange', throttledActivityHandler);
+      if (refreshTimeoutRef.current) clearInterval(refreshTimeoutRef.current);
     };
-  }, [intervalMs, refreshTokens]);
+  }, [refreshTokens]);
 
   return { refreshTokens };
 };
@@ -23152,7 +25471,7 @@ export default function AcademyLayout() {
       if (Array.isArray(appsData)) {
         const formatted = appsData.map(app => {
           const statusMapped = app.status
-            ? app.status.toLowerCase().replace(' ', '_')
+            ? app.status.toLowerCase().trim().replace(/\s+/g, '_')
             : 'pending_review';
           return {
             id: app._id,
@@ -23231,15 +25550,14 @@ export default function AcademyLayout() {
       
       if (Array.isArray(studentsData)) {
         const formatted = studentsData.map(s => {
-          const sSemesters = s.semesters || [];
-          const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+          const sExaminations = s.examinations || [];
 
           const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
             ? s.attendancePercentage
-            : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+            : (sExaminations.length > 0 ? Math.max(...sExaminations.map(sem => sem.attendancePercentage || 0)) : 0);
 
-          const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
-          const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+          const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(exam => exam.thesisApproved));
+          const isThesisUploaded = Boolean(sExaminations.some(exam => exam.thesisDocumentUrl));
           const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
 
           const hasNbls = !!s.documents?.nblsCertificateUrl;
@@ -23248,9 +25566,14 @@ export default function AcademyLayout() {
           const hasNuls = !!s.documents?.nulsCertificateUrl;
           const isCourseCertsOk = hasNbls || hasNcls || hasNtls || hasNuls;
 
+          const isAnyExamApproved = sExaminations.some(exam => exam.eligibilityStatus === 'Approved');
+
           let eligibility = 'Pending';
           let reason = '';
-          if (!isRemitted) {
+          if (isAnyExamApproved || s.eligibilityStatus === 'Approved') {
+            eligibility = 'Approved';
+            reason = 'Certified and approved by Academic Board.';
+          } else if (!isRemitted) {
             eligibility = 'Rejected';
             reason = 'Academy fee remittance is pending.';
           } else if (attendancePct < 75) {
@@ -23283,7 +25606,7 @@ export default function AcademyLayout() {
             batchId: s.batch?._id || s.batch,
             status: isRemitted ? 'Completed' : 'Active',
             institute: s.institute?.orgName || 'N/A',
-            semesters: sSemesters,
+            examinations: sExaminations,
             eligibilityStatus: eligibility,
             rejectionReason: reason,
             attendancePercentage: attendancePct,
@@ -23453,12 +25776,12 @@ export default function AcademyLayout() {
   const dynamicMetrics = useMemo(() => {
     let pending = 0, approved = 0, rejected = 0;
     allApplications.forEach(app => {
-      const s = app.status;
-      if (s === 'pending_review' || s === 'pending_evaluation' || s === 'submitted') pending++;
-      else if (s === 'approved' || s === 'active_erp') approved++;
+      const s = (app.status || '').toLowerCase().trim().replace(/\s+/g, '_');
+      if (s === 'approved' || s === 'active_erp') approved++;
       else if (s === 'rejected') rejected++;
+      else pending++;
     });
-    return { pending, approved, rejected, total: pending + approved + rejected };
+    return { pending, approved, rejected, total: allApplications.length };
   }, [allApplications]);
 
   const filteredApplications = useMemo(() =>
@@ -23499,22 +25822,21 @@ export default function AcademyLayout() {
     setIsStudentModalOpen(true);
   }, []);
 
-  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus, reason = '') => {
+  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, examinationNumber, eligibilityStatus, reason = '') => {
     try {
       const student = students.find(s => s.enrollmentNo === enrollmentNo);
       if (student && (student._id || student.id)) {
         const targetId = student._id || student.id;
 
-        // Pass semesterNumber (required by backend) and set eligibilityStatus directly
         const payload = {
-          semesterNumber: parseInt(semesterNumber),
+          examinationNumber: parseInt(examinationNumber),
           eligibilityStatus,
         };
         if (reason) payload.rejectionNotes = reason;
 
         await academicService.updateAcademicMetrics(targetId, payload);
         await fetchBoardData();
-        setSuccessMsg(`Eligibility status for ${enrollmentNo} (Sem ${semesterNumber}) updated to ${eligibilityStatus}.`);
+        setSuccessMsg(`Eligibility status for ${enrollmentNo} (Exam ${examinationNumber}) updated to ${eligibilityStatus}.`);
       }
     } catch (err) {
       setErrorMsg(err.parsedMessage || err.message || 'Failed to update student eligibility.');
@@ -23649,6 +25971,7 @@ export default function AcademyLayout() {
     filteredStudents,
     rawStudents: activeStudents,
     allApplications,
+    dynamicMetrics,
     metrics: dynamicMetrics,
     searchQuery, setSearchQuery,
     studentSearchQuery, setStudentSearchQuery,
@@ -23952,20 +26275,24 @@ const AcademyPortal = () => {
       const studentsData = extractData(studentsRes) || [];
       if (Array.isArray(studentsData)) {
         const formatted = studentsData.map(s => {
-          const sSemesters = s.semesters || [];
-          const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
+          const sExaminations = s.examinations || [];
 
           const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
             ? s.attendancePercentage
-            : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+            : (sExaminations.length > 0 ? Math.max(...sExaminations.map(sem => sem.attendancePercentage || 0)) : 0);
 
-          const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
-          const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
+          const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(exam => exam.thesisApproved));
+          const isThesisUploaded = Boolean(sExaminations.some(exam => exam.thesisDocumentUrl));
           const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
+
+          const isAnyExamApproved = sExaminations.some(exam => exam.eligibilityStatus === 'Approved');
 
           let eligibility = 'Pending';
           let reason = '';
-          if (!isRemitted) {
+          if (isAnyExamApproved || s.eligibilityStatus === 'Approved') {
+            eligibility = 'Approved';
+            reason = 'Certified and approved by Academic Board.';
+          } else if (!isRemitted) {
             eligibility = 'Rejected';
             reason = 'Academy fee remittance is pending.';
           } else if (attendancePct < 75) {
@@ -24016,7 +26343,13 @@ const AcademyPortal = () => {
             utrNumber: s.utrNumber,
             homeAddress: s.homeAddress,
             contactNumber: s.contactNumber,
-            semesters: sSemesters
+            verificationStatus: s.verificationStatus || 'Pending Verification',
+            verificationRemarks: s.verificationRemarks || '',
+            verifiedAt: s.verifiedAt,
+            verifiedBy: s.verifiedBy,
+            correctionRequestedAt: s.correctionRequestedAt,
+            correctionResubmittedAt: s.correctionResubmittedAt,
+            examinations: sExaminations
           };
         });
         setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
@@ -24148,18 +26481,18 @@ const AcademyPortal = () => {
     setIsStudentModalOpen(true);
   }, []);
 
-  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, semesterNumber, eligibilityStatus) => {
+  const handleVerifyStudentEligibility = useCallback(async (enrollmentNo, examinationNumber, eligibilityStatus) => {
     try {
       const student = students.find(s => s.enrollmentNo === enrollmentNo);
       if (student && (student._id || student.id)) {
         const targetId = student._id || student.id;
         
         await academicService.updateAcademicMetrics(targetId, {
-          semesterNumber: semesterNumber,
+          examinationNumber: examinationNumber,
           eligibilityStatus: eligibilityStatus
         });
         await fetchBoardData();
-        setSuccessMsg(`Eligibility status for student ${enrollmentNo} (Sem ${semesterNumber}) updated successfully.`);
+        setSuccessMsg(`Eligibility status for student ${enrollmentNo} (Exam ${examinationNumber}) updated successfully.`);
       }
     } catch (err) {
       setErrorMsg(err.parsedMessage || err.message || 'Failed to update student eligibility.');
@@ -24460,6 +26793,36 @@ const AcademyPortal = () => {
 export default AcademyPortal;
 ```
 
+### `client/src/pages/academy/academic-verification/index.jsx`
+
+```jsx
+import { useOutletContext } from 'react-router-dom';
+import AcademyThesisVerification from '../components/AcademyThesisVerification';
+
+/**
+ * Academy Thesis, Documents & Attendance Verification Page (/academy/academic-verification)
+ * Allows the Academic Department to review and verify each student's thesis submission,
+ * uploaded documents, and attendance before certifying them eligible for board examinations.
+ */
+export default function AcademyAcademicVerificationPage() {
+  const {
+    students = [],
+    fetchBoardData,
+    setErrorMsg,
+    setSuccessMsg,
+  } = useOutletContext() || {};
+
+  return (
+    <AcademyThesisVerification
+      students={students}
+      fetchBoardData={fetchBoardData}
+      setErrorMsg={setErrorMsg}
+      setSuccessMsg={setSuccessMsg}
+    />
+  );
+}
+```
+
 ### `client/src/pages/academy/applications/index.jsx`
 
 ```jsx
@@ -24700,32 +27063,57 @@ export default AcademyApplications;
 ```jsx
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
-  Search, Eye, Edit, Trash2, BookOpen, X, Save, AlertCircle, Loader2, Plus, 
-  CheckCircle2, Layers, Award, Sparkles, GraduationCap 
+  Search, Eye, Edit, Trash2, BookOpen, X, Save, Loader2, Plus, 
+  Layers, GraduationCap 
 } from 'lucide-react';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import Pagination from '../../../Components/Pagination';
 
-// Helper to calculate required semester count based on course duration and durationType
-const getSemesterCount = (duration, durationType) => {
+// Helper to calculate required examination count based on course duration and durationType
+const getExaminationCount = (duration, durationType) => {
   const durVal = parseInt(duration, 10) || 1;
-  if (durationType === 'Years') return Math.max(1, durVal * 2);
-  if (durationType === 'Months') return Math.max(1, Math.ceil(durVal / 6));
-  return 1;
+  if (durationType === 'Years') return Math.min(2, Math.max(1, durVal * 2));
+  if (durationType === 'Months') return Math.min(2, Math.max(1, Math.ceil(durVal / 6)));
+  return Math.min(2, 1);
 };
 
-// Helper to sync semesters array length while preserving existing data
-const syncSemesters = (existingSemesters = [], targetCount) => {
+// Compute global course duration (in months, and a friendly label) from per-exam
+// monthsRequired values. Returns { months, display }.
+const computeDurationFromExams = (examinations = []) => {
+  const totalMonths = examinations.reduce((sum, e) => sum + (parseInt(e.monthsRequired, 10) || 0), 0);
+  if (totalMonths <= 0) return { months: 0, display: 'Not set' };
+  if (totalMonths % 12 === 0) {
+    return { months: totalMonths, display: `${totalMonths / 12} Year${totalMonths / 12 > 1 ? 's' : ''}` };
+  }
+  return { months: totalMonths, display: `${totalMonths} Months` };
+};
+
+// Display total duration for a course, preferring derived value from exams
+const courseDurationDisplay = (course) => {
+  if (course.examinations && course.examinations.length > 0) {
+    return computeDurationFromExams(course.examinations).display;
+  }
+  if (course.courseDuration) {
+    if (course.durationType === 'Years' && parseInt(course.courseDuration, 10) === 1) return '1 Year';
+    if (course.durationType === 'Years') return `${course.courseDuration} Years`;
+    return `${course.courseDuration} ${course.durationType || 'Months'}`;
+  }
+  return 'Not set';
+};
+
+// Helper to sync examinations array length while preserving existing data
+const syncExaminations = (existingExaminations = [], targetCount) => {
   const count = Math.max(1, targetCount || 1);
   const result = [];
   for (let i = 1; i <= count; i++) {
-    const existing = (existingSemesters || []).find(s => s.semesterNumber === i);
+    const existing = (existingExaminations || []).find(e => e.examinationNumber === i);
     if (existing) {
       result.push({
-        semesterNumber: i,
-        semesterName: existing.semesterName || `Semester ${i}`,
+        examinationNumber: i,
+        examinationName: existing.examinationName || `Examination ${i}`,
+        monthsRequired: existing.monthsRequired || '',
         subjects: existing.subjects && existing.subjects.length > 0 
           ? existing.subjects.map(s => typeof s === 'string' ? { code: '', name: s } : { code: s.code || '', name: s.name || '' })
           : [{ code: '', name: '' }],
@@ -24735,8 +27123,9 @@ const syncSemesters = (existingSemesters = [], targetCount) => {
       });
     } else {
       result.push({
-        semesterNumber: i,
-        semesterName: `Semester ${i}`,
+        examinationNumber: i,
+        examinationName: `Examination ${i}`,
+        monthsRequired: '',
         subjects: [{ code: '', name: '' }],
         practicalExams: [{ code: '', name: '' }],
       });
@@ -24749,7 +27138,7 @@ export default function AcademyCoursesManagement() {
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [courseSearch, setCourseSearch] = useState('');
-  const [activeCreateSemTab, setActiveCreateSemTab] = useState(1);
+  const [activeCreateExamTab, setActiveCreateExamTab] = useState(1);
   const [isCreateLoading, setIsCreateLoading] = useState(false);
 
   const [courseForm, setCourseForm] = useState({
@@ -24759,18 +27148,16 @@ export default function AcademyCoursesManagement() {
     programCategory: 'Emergency Medicine',
     courseDuration: '2',
     durationType: 'Years',
-    semesters: [
-      { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: 'EM-101', name: 'Basic Emergency Care' }], practicalExams: [{ code: 'PRAC-101', name: 'Airway Management OSCE' }] },
-      { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: 'EM-201', name: 'Advanced Trauma Care' }], practicalExams: [{ code: 'PRAC-201', name: 'Trauma Resuscitation OSCE' }] },
-      { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: 'EM-301', name: 'Cardiovascular Emergencies' }], practicalExams: [{ code: 'PRAC-301', name: 'ACLS Practical Station' }] },
-      { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: 'EM-401', name: 'Critical Care & Toxicology' }], practicalExams: [{ code: 'PRAC-401', name: 'Final Clinical OSCE' }] }
+    examinations: [
+      { examinationNumber: 1, examinationName: 'Examination 1', monthsRequired: '', subjects: [{ code: 'EM-101', name: 'Basic Emergency Care' }], practicalExams: [{ code: 'PRAC-101', name: 'Airway Management OSCE' }] },
+      { examinationNumber: 2, examinationName: 'Examination 2', monthsRequired: '', subjects: [{ code: 'EM-201', name: 'Advanced Trauma Care' }], practicalExams: [{ code: 'PRAC-201', name: 'Trauma Resuscitation OSCE' }] }
     ],
     status: 'Active'
   });
 
   // Modal states
   const [editingCourse, setEditingCourse] = useState(null);
-  const [activeEditSemTab, setActiveEditSemTab] = useState(1);
+  const [activeEditExamTab, setActiveEditExamTab] = useState(1);
   const [editForm, setEditForm] = useState({
     name: '',
     courseCode: '',
@@ -24778,7 +27165,7 @@ export default function AcademyCoursesManagement() {
     programCategory: 'Emergency Medicine',
     courseDuration: '2',
     durationType: 'Years',
-    semesters: [],
+    examinations: [],
     status: 'Active'
   });
   const [isEditLoading, setIsEditLoading] = useState(false);
@@ -24789,25 +27176,6 @@ export default function AcademyCoursesManagement() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-
-  // Auto-sync semesters array when creation form duration changes
-  useEffect(() => {
-    const targetCount = getSemesterCount(courseForm.courseDuration, courseForm.durationType);
-    const updatedSemesters = syncSemesters(courseForm.semesters, targetCount);
-    if (JSON.stringify(updatedSemesters) !== JSON.stringify(courseForm.semesters)) {
-      setCourseForm(prev => ({ ...prev, semesters: updatedSemesters }));
-    }
-  }, [courseForm.courseDuration, courseForm.durationType]);
-
-  // Auto-sync edit modal semesters when duration changes
-  useEffect(() => {
-    if (!editingCourse) return;
-    const targetCount = getSemesterCount(editForm.courseDuration, editForm.durationType);
-    const updatedSemesters = syncSemesters(editForm.semesters, targetCount);
-    if (JSON.stringify(updatedSemesters) !== JSON.stringify(editForm.semesters)) {
-      setEditForm(prev => ({ ...prev, semesters: updatedSemesters }));
-    }
-  }, [editForm.courseDuration, editForm.durationType, editingCourse]);
 
   // Fetch all courses
   const fetchCourses = useCallback(async () => {
@@ -24850,76 +27218,117 @@ export default function AcademyCoursesManagement() {
 
   const totalPages = Math.ceil(filteredCourses.length / itemsPerPage) || 1;
 
-  // ─── Semester Subject & Practical Management Helpers ──────────────────────
-  const handleSemesterSubjectChange = (isEdit, semNum, subjectIdx, field, val) => {
+  // ─── Examination Subject & Practical Management Helpers ──────────────────────
+  const handleExaminationSubjectChange = (isEdit, examNum, subjectIdx, field, val) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        const newSubs = [...(s.subjects || [])];
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        const newSubs = [...(e.subjects || [])];
         newSubs[subjectIdx] = { ...newSubs[subjectIdx], [field]: val };
-        return { ...s, subjects: newSubs };
+        return { ...e, subjects: newSubs };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const addSemesterSubject = (isEdit, semNum) => {
+  const addExaminationSubject = (isEdit, examNum) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        return { ...s, subjects: [...(s.subjects || []), { code: '', name: '' }] };
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        return { ...e, subjects: [...(e.subjects || []), { code: '', name: '' }] };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const removeSemesterSubject = (isEdit, semNum, subjectIdx) => {
+  const removeExaminationSubject = (isEdit, examNum, subjectIdx) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        const newSubs = s.subjects.filter((_, idx) => idx !== subjectIdx);
-        return { ...s, subjects: newSubs.length > 0 ? newSubs : [{ code: '', name: '' }] };
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        const newSubs = e.subjects.filter((_, idx) => idx !== subjectIdx);
+        return { ...e, subjects: newSubs.length > 0 ? newSubs : [{ code: '', name: '' }] };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const handleSemesterPracticalChange = (isEdit, semNum, pracIdx, field, val) => {
+  const handleExaminationPracticalChange = (isEdit, examNum, pracIdx, field, val) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        const newPracs = [...(s.practicalExams || [])];
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        const newPracs = [...(e.practicalExams || [])];
         newPracs[pracIdx] = { ...newPracs[pracIdx], [field]: val };
-        return { ...s, practicalExams: newPracs };
+        return { ...e, practicalExams: newPracs };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const addSemesterPractical = (isEdit, semNum) => {
+  const addExaminationPractical = (isEdit, examNum) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        return { ...s, practicalExams: [...(s.practicalExams || []), { code: '', name: '' }] };
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        return { ...e, practicalExams: [...(e.practicalExams || []), { code: '', name: '' }] };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
     });
   };
 
-  const removeSemesterPractical = (isEdit, semNum, pracIdx) => {
+  const removeExaminationPractical = (isEdit, examNum, pracIdx) => {
     const updater = isEdit ? setEditForm : setCourseForm;
     updater(prev => {
-      const semList = (prev.semesters || []).map(s => {
-        if (s.semesterNumber !== semNum) return s;
-        const newPracs = s.practicalExams.filter((_, idx) => idx !== pracIdx);
-        return { ...s, practicalExams: newPracs.length > 0 ? newPracs : [{ code: '', name: '' }] };
+      const examList = (prev.examinations || []).map(e => {
+        if (e.examinationNumber !== examNum) return e;
+        const newPracs = e.practicalExams.filter((_, idx) => idx !== pracIdx);
+        return { ...e, practicalExams: newPracs.length > 0 ? newPracs : [{ code: '', name: '' }] };
       });
-      return { ...prev, semesters: semList };
+      return { ...prev, examinations: examList };
+    });
+  };
+
+  // Add a new examination to create/edit form while preserving existing data
+  const addExamination = (isEdit) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const examList = (prev.examinations || []).map(e => ({ ...e }));
+      const nextNum = examList.length > 0
+        ? Math.max(...examList.map(e => e.examinationNumber)) + 1
+        : 1;
+      examList.push({
+        examinationNumber: nextNum,
+        examinationName: `Examination ${nextNum}`,
+        monthsRequired: '',
+        subjects: [{ code: '', name: '' }],
+        practicalExams: [{ code: '', name: '' }],
+      });
+      return { ...prev, examinations: examList };
+    });
+  };
+
+  // Remove an examination (keeps at least 1, renumberes remaining exams)
+  const removeExamination = (isEdit, examNum) => {
+    const updater = isEdit ? setEditForm : setCourseForm;
+    updater(prev => {
+      const examList = (prev.examinations || []).filter(e => e.examinationNumber !== examNum);
+      if (examList.length === 0) {
+        examList.push({
+          examinationNumber: 1,
+          examinationName: 'Examination 1',
+          monthsRequired: '',
+          subjects: [{ code: '', name: '' }],
+          practicalExams: [{ code: '', name: '' }],
+        });
+      }
+      const renumbered = examList
+        .slice()
+        .sort((a, b) => a.examinationNumber - b.examinationNumber)
+        .map((e, idx) => ({ ...e, examinationNumber: idx + 1 }));
+      return { ...prev, examinations: renumbered };
     });
   };
 
@@ -24931,13 +27340,16 @@ export default function AcademyCoursesManagement() {
       return;
     }
 
-    // Clean semesters
-    const cleanedSemesters = (courseForm.semesters || []).map(sem => ({
-      semesterNumber: sem.semesterNumber,
-      semesterName: sem.semesterName || `Semester ${sem.semesterNumber}`,
-      subjects: (sem.subjects || []).filter(s => s.name && s.name.trim().length > 0),
-      practicalExams: (sem.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
+    // Clean examinations
+    const cleanedExaminations = (courseForm.examinations || []).map(exam => ({
+      examinationNumber: exam.examinationNumber,
+      examinationName: exam.examinationName || `Examination ${exam.examinationNumber}`,
+      monthsRequired: exam.monthsRequired || '',
+      subjects: (exam.subjects || []).filter(s => s.name && s.name.trim().length > 0),
+      practicalExams: (exam.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
     }));
+
+    const derivedDuration = computeDurationFromExams(cleanedExaminations);
 
     setIsCreateLoading(true);
     try {
@@ -24951,9 +27363,9 @@ export default function AcademyCoursesManagement() {
         courseCode: (courseForm.courseCode || '').trim().toUpperCase(),
         courseType: courseForm.courseType,
         programCategory: courseForm.programCategory,
-        courseDuration: courseForm.courseDuration,
-        durationType: courseForm.durationType,
-        semesters: cleanedSemesters,
+        courseDuration: derivedDuration.months > 0 ? String(derivedDuration.months) : '0',
+        durationType: 'Months',
+        examinations: cleanedExaminations,
         status: 'Active'
       };
 
@@ -24971,9 +27383,7 @@ export default function AcademyCoursesManagement() {
         courseCode: '',
         courseType: 'Fellowship',
         programCategory: 'Emergency Medicine',
-        courseDuration: '2',
-        durationType: 'Years',
-        semesters: syncSemesters([], 4),
+        examinations: syncExaminations([], 2),
         status: 'Active'
       });
 
@@ -24993,15 +27403,13 @@ export default function AcademyCoursesManagement() {
   // ─── Edit Modal ────────────────────────────────────────────────────────────
   const openEditModal = (c) => {
     setEditingCourse(c);
-    setActiveEditSemTab(1);
+    setActiveEditExamTab(1);
     setEditForm({
       name: c.name || '',
       courseCode: c.courseCode || '',
       courseType: c.courseType || 'Fellowship',
       programCategory: c.programCategory || 'Emergency Medicine',
-      courseDuration: c.courseDuration || '2',
-      durationType: c.durationType || 'Years',
-      semesters: c.semesters && c.semesters.length > 0 ? c.semesters : syncSemesters([], getSemesterCount(c.courseDuration, c.durationType)),
+      examinations: c.examinations && c.examinations.length > 0 ? c.examinations : syncExaminations([], 2),
       status: c.status || 'Active'
     });
   };
@@ -25013,11 +27421,12 @@ export default function AcademyCoursesManagement() {
       return;
     }
 
-    const cleanedSemesters = (editForm.semesters || []).map(sem => ({
-      semesterNumber: sem.semesterNumber,
-      semesterName: sem.semesterName || `Semester ${sem.semesterNumber}`,
-      subjects: (sem.subjects || []).filter(s => s.name && s.name.trim().length > 0),
-      practicalExams: (sem.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
+    const cleanedExaminations = (editForm.examinations || []).map(exam => ({
+      examinationNumber: exam.examinationNumber,
+      examinationName: exam.examinationName || `Examination ${exam.examinationNumber}`,
+      monthsRequired: exam.monthsRequired || '',
+      subjects: (exam.subjects || []).filter(s => s.name && s.name.trim().length > 0),
+      practicalExams: (exam.practicalExams || []).filter(p => p.name && p.name.trim().length > 0),
     }));
 
     setIsEditLoading(true);
@@ -25026,14 +27435,16 @@ export default function AcademyCoursesManagement() {
                     localStorage.getItem('semi_access_token') || 
                     localStorage.getItem('semi_token');
 
+      const derivedDuration = computeDurationFromExams(cleanedExaminations);
+
       await academicService.updateCourse(editingCourse._id, {
         name: editForm.name.trim(),
         courseCode: (editForm.courseCode || '').trim().toUpperCase(),
         courseType: editForm.courseType,
         programCategory: editForm.programCategory,
-        courseDuration: editForm.courseDuration,
-        durationType: editForm.durationType,
-        semesters: cleanedSemesters,
+        courseDuration: derivedDuration.months > 0 ? String(derivedDuration.months) : '0',
+        durationType: 'Months',
+        examinations: cleanedExaminations,
         status: editForm.status
       }, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -25100,28 +27511,45 @@ export default function AcademyCoursesManagement() {
     });
   };
 
-  // ─── Render Semester Editor Component ───────────────────────────────────────
-  const renderSemesterEditor = (formState, activeTab, setActiveTab, isEdit) => {
-    const sems = formState.semesters || [];
-    const activeSem = sems.find(s => s.semesterNumber === activeTab) || sems[0] || { semesterNumber: 1, subjects: [], practicalExams: [] };
+  // ─── Render Examination Editor Component ─────────────────────────────────────
+  const renderExaminationEditor = (formState, activeTab, setActiveTab, isEdit) => {
+    const exams = formState.examinations || [];
+    const activeExam = exams.find(e => e.examinationNumber === activeTab) || exams[0] || { examinationNumber: 1, monthsRequired: '', subjects: [], practicalExams: [] };
 
     return (
       <div className="space-y-4 pt-4 border-t border-slate-200">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
             <h4 className="text-xs font-black uppercase tracking-wider text-indigo-600 flex items-center gap-2">
-              <Layers className="w-4 h-4" /> Semester Breakdown & Curriculum ({sems.length} Semesters)
+              <Layers className="w-4 h-4" /> Examination Breakdown & Curriculum ({exams.length} Examinations)
             </h4>
-            <p className="text-[11px] text-slate-500">Define theory subjects and practical OSCE modules for each semester</p>
+            <p className="text-[11px] text-slate-500">Set each examination's duration in months, then define theory subjects and practical OSCE modules</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => removeExamination(isEdit, activeExam?.examinationNumber)}
+              disabled={exams.length <= 1}
+              className="text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Remove Exam
+            </button>
+            <button
+              type="button"
+              onClick={() => addExamination(isEdit)}
+              className="text-[11px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Exam
+            </button>
           </div>
         </div>
 
-        {/* Semester Tab Buttons */}
+        {/* Examination Tab Buttons */}
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {sems.map((sem) => {
-            const num = sem.semesterNumber;
-            const subCount = (sem.subjects || []).filter(s => s.name?.trim()).length;
-            const pracCount = (sem.practicalExams || []).filter(p => p.name?.trim()).length;
+          {exams.map((exam) => {
+            const num = exam.examinationNumber;
+            const subCount = (exam.subjects || []).filter(s => s.name?.trim()).length;
+            const pracCount = (exam.practicalExams || []).filter(p => p.name?.trim()).length;
             const isTabActive = activeTab === num;
 
             return (
@@ -25135,7 +27563,7 @@ export default function AcademyCoursesManagement() {
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                 }`}
               >
-                <span>Semester {num}</span>
+                <span>Examination {num}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${
                   isTabActive ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-200 text-slate-600'
                 }`}>
@@ -25146,22 +27574,49 @@ export default function AcademyCoursesManagement() {
           })}
         </div>
 
-        {/* Active Semester Editor Card */}
-        {activeSem && (
+        {/* Active Examination Editor Card */}
+        {activeExam && (
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-6">
             
+            {/* Examination Duration (months) */}
+            <div className="space-y-2">
+              <div>
+                <span className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                  Duration of Examination {activeExam.examinationNumber} (in Months)
+                </span>
+                <p className="text-[10px] text-slate-500">How long students study before sitting this examination</p>
+              </div>
+              <input
+                type="number"
+                min="1"
+                placeholder="e.g. 6"
+                value={activeExam.monthsRequired || ''}
+                onChange={(e) => {
+                  const updater = isEdit ? setEditForm : setCourseForm;
+                  updater(prev => {
+                    const examList = (prev.examinations || []).map(ex => {
+                      if (ex.examinationNumber !== activeExam.examinationNumber) return ex;
+                      return { ...ex, monthsRequired: e.target.value };
+                    });
+                    return { ...prev, examinations: examList };
+                  });
+                }}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
+              />
+            </div>
+
             {/* 1. Subjects Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs font-black uppercase text-slate-800 tracking-wider">
-                    Theory Subjects for Semester {activeSem.semesterNumber}
+                    Theory Subjects for Examination {activeExam.examinationNumber}
                   </span>
                   <p className="text-[10px] text-slate-500">Add subject codes and official SEMI subject titles</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => addSemesterSubject(isEdit, activeSem.semesterNumber)}
+                  onClick={() => addExaminationSubject(isEdit, activeExam.examinationNumber)}
                   className="text-[11px] bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Subject
@@ -25169,14 +27624,14 @@ export default function AcademyCoursesManagement() {
               </div>
 
               <div className="space-y-2">
-                {(activeSem.subjects || []).map((sub, sIdx) => (
+                {(activeExam.subjects || []).map((sub, sIdx) => (
                   <div key={sIdx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
                     <div className="sm:col-span-3">
                       <input
                         type="text"
                         placeholder="Subject Code (e.g. EM-101)"
                         value={sub.code || ''}
-                        onChange={(e) => handleSemesterSubjectChange(isEdit, activeSem.semesterNumber, sIdx, 'code', e.target.value)}
+                        onChange={(e) => handleExaminationSubjectChange(isEdit, activeExam.examinationNumber, sIdx, 'code', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-mono font-bold"
                       />
                     </div>
@@ -25185,14 +27640,14 @@ export default function AcademyCoursesManagement() {
                         type="text"
                         placeholder="Subject Name (e.g. Resuscitation & Shock Management)"
                         value={sub.name || ''}
-                        onChange={(e) => handleSemesterSubjectChange(isEdit, activeSem.semesterNumber, sIdx, 'name', e.target.value)}
+                        onChange={(e) => handleExaminationSubjectChange(isEdit, activeExam.examinationNumber, sIdx, 'name', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
                       />
                     </div>
                     <div className="sm:col-span-1 flex justify-end">
                       <button
                         type="button"
-                        onClick={() => removeSemesterSubject(isEdit, activeSem.semesterNumber, sIdx)}
+                        onClick={() => removeExaminationSubject(isEdit, activeExam.examinationNumber, sIdx)}
                         className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
                         title="Remove Subject"
                       >
@@ -25209,13 +27664,13 @@ export default function AcademyCoursesManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs font-black uppercase text-slate-800 tracking-wider">
-                    Practical & OSCE Stations for Semester {activeSem.semesterNumber}
+                    Practical & OSCE Stations for Examination {activeExam.examinationNumber}
                   </span>
                   <p className="text-[10px] text-slate-500">Add practical examination modules, stations and codes</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => addSemesterPractical(isEdit, activeSem.semesterNumber)}
+                  onClick={() => addExaminationPractical(isEdit, activeExam.examinationNumber)}
                   className="text-[11px] bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1.5 rounded-lg font-bold transition-colors uppercase tracking-wider flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Practical Exam
@@ -25223,14 +27678,14 @@ export default function AcademyCoursesManagement() {
               </div>
 
               <div className="space-y-2">
-                {(activeSem.practicalExams || []).map((prac, pIdx) => (
+                {(activeExam.practicalExams || []).map((prac, pIdx) => (
                   <div key={pIdx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
                     <div className="sm:col-span-3">
                       <input
                         type="text"
                         placeholder="Practical Code (e.g. PRAC-101)"
                         value={prac.code || ''}
-                        onChange={(e) => handleSemesterPracticalChange(isEdit, activeSem.semesterNumber, pIdx, 'code', e.target.value)}
+                        onChange={(e) => handleExaminationPracticalChange(isEdit, activeExam.examinationNumber, pIdx, 'code', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-purple-500 text-xs font-mono font-bold"
                       />
                     </div>
@@ -25239,14 +27694,14 @@ export default function AcademyCoursesManagement() {
                         type="text"
                         placeholder="Practical Station Name (e.g. Clinical OSCE Station: Airway & Vascular Access)"
                         value={prac.name || ''}
-                        onChange={(e) => handleSemesterPracticalChange(isEdit, activeSem.semesterNumber, pIdx, 'name', e.target.value)}
+                        onChange={(e) => handleExaminationPracticalChange(isEdit, activeExam.examinationNumber, pIdx, 'name', e.target.value)}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-purple-500 text-xs font-semibold"
                       />
                     </div>
                     <div className="sm:col-span-1 flex justify-end">
                       <button
                         type="button"
-                        onClick={() => removeSemesterPractical(isEdit, activeSem.semesterNumber, pIdx)}
+                        onClick={() => removeExaminationPractical(isEdit, activeExam.examinationNumber, pIdx)}
                         className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
                         title="Remove Practical Exam"
                       >
@@ -25296,7 +27751,7 @@ export default function AcademyCoursesManagement() {
             <h3 className="text-base font-black text-slate-900 uppercase tracking-wider">
               Create New Standardized Course
             </h3>
-            <p className="text-xs text-slate-500">Define course code, category, duration, semester subjects & practical exams</p>
+            <p className="text-xs text-slate-500">Define course code, category, per-examination duration, examination subjects & practical exams</p>
           </div>
           <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-3 py-1 rounded-full border border-indigo-100">
             Admin Controlled
@@ -25355,36 +27810,10 @@ export default function AcademyCoursesManagement() {
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-semibold"
               />
             </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Course Duration *</label>
-              <input
-                type="number"
-                min="1"
-                required
-                placeholder="e.g. 2"
-                value={courseForm.courseDuration}
-                onChange={(e) => setCourseForm({ ...courseForm, courseDuration: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-semibold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Duration Type *</label>
-              <select
-                value={courseForm.durationType}
-                onChange={(e) => setCourseForm({ ...courseForm, durationType: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 transition-all text-xs font-bold"
-              >
-                <option value="Years">Years</option>
-                <option value="Months">Months</option>
-                <option value="Weeks">Weeks</option>
-              </select>
-            </div>
           </div>
 
-          {/* Dynamic Semester, Subject & Practical Exams Editor */}
-          {renderSemesterEditor(courseForm, activeCreateSemTab, setActiveCreateSemTab, false)}
+          {/* Dynamic Examination, Subject & Practical Exams Editor */}
+          {renderExaminationEditor(courseForm, activeCreateExamTab, setActiveCreateExamTab, false)}
 
           <div className="flex justify-end pt-4">
             <button
@@ -25441,7 +27870,7 @@ export default function AcademyCoursesManagement() {
                 <th className="px-5 py-4 font-bold">Course Title</th>
                 <th className="px-5 py-4 font-bold">Program Type</th>
                 <th className="px-5 py-4 font-bold">Duration</th>
-                <th className="px-5 py-4 font-bold">Semesters</th>
+                <th className="px-5 py-4 font-bold">Examinations</th>
                 <th className="px-5 py-4 font-bold">Active Batches</th>
                 <th className="px-5 py-4 font-bold">Status</th>
                 <th className="px-5 py-4 font-bold text-center">Actions</th>
@@ -25452,7 +27881,7 @@ export default function AcademyCoursesManagement() {
                 paginatedCourses.map((c, idx) => {
                   const globalIdx = (currentPage - 1) * itemsPerPage + idx;
                   const isActive = c.status === 'Active';
-                  const semCount = c.semesters?.length || getSemesterCount(c.courseDuration, c.durationType);
+                  const examCount = c.examinations?.length || getExaminationCount(c.courseDuration, c.durationType);
                   const batchCount = c.batchesCount || 0;
 
                   return (
@@ -25469,10 +27898,12 @@ export default function AcademyCoursesManagement() {
                           {c.courseType || 'Fellowship'}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-slate-600">{c.courseDuration} {c.durationType}</td>
+                      <td className="px-5 py-4 text-slate-600">
+                        {courseDurationDisplay(c)}
+                      </td>
                       <td className="px-5 py-4">
                         <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
-                          {semCount} Semesters
+                          {examCount} Examinations
                         </span>
                       </td>
                       <td className="px-5 py-4">
@@ -25614,18 +28045,6 @@ export default function AcademyCoursesManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Duration</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={editForm.courseDuration}
-                    onChange={(e) => setEditForm({ ...editForm, courseDuration: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:bg-white focus:border-indigo-500 text-xs font-semibold"
-                  />
-                </div>
-
-                <div>
                   <label className="block text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2">Status</label>
                   <select
                     value={editForm.status}
@@ -25638,7 +28057,7 @@ export default function AcademyCoursesManagement() {
                 </div>
               </div>
 
-              {renderSemesterEditor(editForm, activeEditSemTab, setActiveEditSemTab, true)}
+              {renderExaminationEditor(editForm, activeEditExamTab, setActiveEditExamTab, true)}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
@@ -25691,26 +28110,31 @@ export default function AcademyCoursesManagement() {
                   <span className="font-bold text-slate-800">{viewingCourse.programCategory}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Duration</span>
-                  <span className="font-bold text-slate-800">{viewingCourse.courseDuration} {viewingCourse.durationType}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Duration</span>
+                  <span className="font-bold text-slate-800">{courseDurationDisplay(viewingCourse)}</span>
                 </div>
               </div>
 
-              {/* Semesters list */}
+              {/* Examinations list */}
               <div className="space-y-4">
-                <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Semester-wise Curriculum</h4>
-                {(viewingCourse.semesters || []).map((sem) => (
-                  <div key={sem.semesterNumber} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Examination-wise Curriculum</h4>
+                {(viewingCourse.examinations || []).map((exam) => (
+                  <div key={exam.examinationNumber} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
                     <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                       <span className="font-black text-indigo-700 text-xs uppercase">
-                        Semester {sem.semesterNumber}: {sem.semesterName || `Semester ${sem.semesterNumber}`}
+                        Examination {exam.examinationNumber}: {exam.examinationName || `Examination ${exam.examinationNumber}`}
                       </span>
+                      {exam.monthsRequired && (
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {exam.monthsRequired} months required
+                        </span>
+                      )}
                     </div>
 
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Theory Subjects:</span>
                       <div className="flex flex-wrap gap-2">
-                        {(sem.subjects || []).map((s, sIdx) => (
+                        {(exam.subjects || []).map((s, sIdx) => (
                           <span key={sIdx} className="bg-indigo-50 text-indigo-800 border border-indigo-100 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
                             {s.code && <strong className="font-mono mr-1 text-indigo-600">[{s.code}]</strong>}
                             {s.name}
@@ -25722,7 +28146,7 @@ export default function AcademyCoursesManagement() {
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Practical Exams:</span>
                       <div className="flex flex-wrap gap-2">
-                        {(sem.practicalExams || []).map((p, pIdx) => (
+                        {(exam.practicalExams || []).map((p, pIdx) => (
                           <span key={pIdx} className="bg-purple-50 text-purple-800 border border-purple-100 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
                             {p.code && <strong className="font-mono mr-1 text-purple-600">[{p.code}]</strong>}
                             {p.name}
@@ -25788,8 +28212,22 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const AcademyDashboard = ({ dynamicMetrics = {}, setActiveTab, allApplications = [] }) => {
+const AcademyDashboard = ({ dynamicMetrics: propMetrics = {}, setActiveTab, allApplications = [] }) => {
   const navigate = useNavigate();
+
+  const dynamicMetrics = React.useMemo(() => {
+    if (propMetrics && (propMetrics.total > 0 || propMetrics.approved > 0 || propMetrics.pending > 0 || propMetrics.rejected > 0)) {
+      return propMetrics;
+    }
+    let pending = 0, approved = 0, rejected = 0;
+    (allApplications || []).forEach(app => {
+      const s = (app.status || '').toLowerCase().trim().replace(/\s+/g, '_');
+      if (s === 'approved' || s === 'active_erp') approved++;
+      else if (s === 'rejected') rejected++;
+      else pending++;
+    });
+    return { pending, approved, rejected, total: allApplications.length };
+  }, [propMetrics, allApplications]);
 
   // Quick navigation helper (supports both prop tab setter and router navigation)
   const handleNavigate = (path, tabName) => {
@@ -25826,7 +28264,7 @@ const AcademyDashboard = ({ dynamicMetrics = {}, setActiveTab, allApplications =
             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-blue-600/20 flex items-center gap-2 cursor-pointer"
           >
             <Building2 className="w-4 h-4" />
-            Applications ({dynamicMetrics?.pending || 0})
+            Applications ({dynamicMetrics?.total || allApplications?.length || 0})
           </button>
           <button
             onClick={() => handleNavigate('/academy/remittance', 'remittance')}
@@ -26216,27 +28654,47 @@ const AcademyEligibility = ({
   const [pubPracticalExam, setPubPracticalExam] = useState({ name: '', venue: '', date: '', time: '', subjects: [] });
   const [pubLoading, setPubLoading] = useState(false);
 
+  const [batchFilter, setBatchFilter] = useState('All');
+
+  const availableBatches = useMemo(() => {
+    const bMap = new Map();
+    examApplications.forEach(app => {
+      const b = app.batch;
+      if (b && (b._id || b.id)) {
+        const id = String(b._id || b.id);
+        const name = b.name || (b.year ? `Batch ${b.year}` : 'Batch');
+        bMap.set(id, name);
+      }
+    });
+    return Array.from(bMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [examApplications]);
+
   // Filter lists
   const filteredList = useMemo(() => {
     return examApplications.filter(app => {
+      const batchName = app.batch?.name || (app.batch?.year ? `Batch ${app.batch.year}` : '');
       const matchSearch = 
         (app.institute?.orgName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (app.course?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (app.semesterNumber ? `Semester ${app.semesterNumber}` : '').toLowerCase().includes(searchQuery.toLowerCase());
+        batchName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (app.examinationNumber ? `Examination ${app.examinationNumber}` : '').toLowerCase().includes(searchQuery.toLowerCase());
       
       const appStatus = app.status || 'Pending';
       const matchFilter = statusFilter === 'All' || appStatus === statusFilter;
 
-      return matchSearch && matchFilter;
+      const appBatchId = app.batch?._id || app.batch?.id || app.batch;
+      const matchBatch = batchFilter === 'All' || String(appBatchId) === String(batchFilter);
+
+      return matchSearch && matchFilter && matchBatch;
     });
-  }, [examApplications, searchQuery, statusFilter]);
+  }, [examApplications, searchQuery, statusFilter, batchFilter]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, batchFilter]);
 
   const totalPages = Math.ceil(filteredList.length / itemsPerPage);
   const paginatedList = useMemo(() => {
@@ -26301,15 +28759,15 @@ const AcademyEligibility = ({
        setPubSubjectSchedules(courseSubjects.map(subject => ({ subject, date: '', time: '' })));
     }
 
-    // Auto-fetch practical exam names from course / semester if available
-    const semNum = app.semesterNumber || 1;
-    const targetSem = app.course?.semesters?.find(s => s.semesterNumber === semNum) || app.course?.semesters?.[0];
+    // Auto-fetch practical exam names from course / examination if available
+    const examNum = app.examinationNumber || 1;
+    const targetExam = app.course?.examinations?.find(s => s.examinationNumber === examNum) || app.course?.examinations?.[0];
     
     let autoPracticalName = '';
     let autoSubjectsList = [];
 
-    if (targetSem && targetSem.practicalExams && targetSem.practicalExams.length > 0) {
-      const pracNames = targetSem.practicalExams
+    if (targetExam && targetExam.practicalExams && targetExam.practicalExams.length > 0) {
+      const pracNames = targetExam.practicalExams
         .map(p => typeof p === 'string' ? p : (p.code ? `[${p.code}] ${p.name}` : p.name))
         .filter(Boolean);
       autoPracticalName = pracNames.join(', ');
@@ -26397,6 +28855,20 @@ const AcademyEligibility = ({
             />
           </div>
 
+          {/* Batch Filter Dropdown */}
+          {availableBatches.length > 0 && (
+            <select
+              value={batchFilter}
+              onChange={(e) => setBatchFilter(e.target.value)}
+              className="px-3 py-2.5 bg-slate-50 border border-gray-200 hover:border-gray-300 focus:border-blue-500 rounded-xl text-xs font-bold text-gray-800 focus:outline-none transition-all cursor-pointer"
+            >
+              <option value="All">All Batches</option>
+              {availableBatches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
+
           {/* Filters */}
           <div className="flex gap-2">
             <button
@@ -26452,7 +28924,8 @@ const AcademyEligibility = ({
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest w-12 text-center">#</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Institute</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Course</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Semester</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Batch</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Examination</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Students</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Exam Date</th>
@@ -26474,7 +28947,8 @@ const AcademyEligibility = ({
                       </td>
                       <td className="px-6 py-4 font-extrabold text-slate-900">{app.institute?.orgName || 'N/A'}</td>
                       <td className="px-6 py-4 text-slate-500 font-semibold">{app.course?.name || 'MBBS'}</td>
-                      <td className="px-6 py-4 font-extrabold text-slate-900">{app.semesterNumber ? `Semester ${app.semesterNumber}` : 'N/A'}</td>
+                      <td className="px-6 py-4 font-bold text-indigo-700">{app.batch?.name || (app.batch?.year ? `Batch ${app.batch.year}` : 'N/A')}</td>
+                      <td className="px-6 py-4 font-extrabold text-slate-900">{app.examinationNumber ? `Examination ${app.examinationNumber}` : 'N/A'}</td>
                       <td className="px-6 py-4 text-center font-extrabold text-slate-900">{app.students?.length || 0}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] uppercase tracking-wider font-black border ${
@@ -26530,7 +29004,7 @@ const AcademyEligibility = ({
                 })
               ) : (
                 <tr>
-                  <td colSpan="8" className="px-6 py-16 text-center text-gray-400 font-medium">
+                  <td colSpan="9" className="px-6 py-16 text-center text-gray-400 font-medium">
                     <ClipboardList className="w-10 h-10 mx-auto text-gray-300 mb-4 stroke-1 animate-pulse" />
                     <p className="text-sm font-bold text-slate-500">No exam applications requests found</p>
                     <p className="text-[10px] text-slate-400 mt-1">Adjust filters or search parameters and try again</p>
@@ -26593,34 +29067,40 @@ const AcademyEligibility = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2.5">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold block mt-0.5">{reviewingApp.semesterNumber ? `Semester ${reviewingApp.semesterNumber}` : 'N/A'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Batch</span>
+                    <span className="text-indigo-700 font-extrabold block mt-0.5">
+                      {reviewingApp.batch?.name || (reviewingApp.batch?.year ? `Batch ${reviewingApp.batch.year}` : 'N/A')}
+                    </span>
                   </div>
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrolled Candidates</span>
-                    <span className="text-indigo-600 font-mono font-black block text-xs mt-0.5">{reviewingApp.students?.length || 0} Students</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold block mt-0.5">{reviewingApp.examinationNumber ? `Examination ${reviewingApp.examinationNumber}` : 'N/A'}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2.5">
                   <div>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrolled Candidates</span>
+                    <span className="text-indigo-600 font-mono font-black block text-xs mt-0.5">{reviewingApp.students?.length || 0} Students</span>
+                  </div>
+                  <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">UTR Number</span>
                     <span className="text-slate-800 font-mono font-bold block text-xs mt-0.5">{reviewingApp.utrNumber || 'N/A'}</span>
                   </div>
-                  <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Exam Fee Receipt</span>
-                    {reviewingApp.examFeeReceiptUrl ? (
-                      <a 
-                        href={getUploadUrl(reviewingApp.examFeeReceiptUrl)}
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="text-blue-600 hover:text-blue-700 font-bold block text-xs mt-0.5 underline"
-                      >
-                        View Receipt
-                      </a>
-                    ) : (
-                      <span className="text-slate-400 font-semibold block text-xs mt-0.5">Not Provided</span>
-                    )}
-                  </div>
+                </div>
+                <div className="border-t border-slate-200/50 pt-2.5">
+                  <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Exam Fee Receipt</span>
+                  {reviewingApp.examFeeReceiptUrl ? (
+                    <a 
+                      href={getUploadUrl(reviewingApp.examFeeReceiptUrl)}
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="text-blue-600 hover:text-blue-700 font-bold block text-xs mt-0.5 underline"
+                    >
+                      View Receipt
+                    </a>
+                  ) : (
+                    <span className="text-slate-400 font-semibold block text-xs mt-0.5">Not Provided</span>
+                  )}
                 </div>
               </div>
 
@@ -26749,13 +29229,17 @@ const AcademyEligibility = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-200/50 pt-2">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">{publishingApp.semesterNumber ? `Semester ${publishingApp.semesterNumber}` : 'N/A'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Batch</span>
+                    <span className="text-indigo-700 font-extrabold">{publishingApp.batch?.name || (publishingApp.batch?.year ? `Batch ${publishingApp.batch.year}` : 'N/A')}</span>
                   </div>
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Students</span>
-                    <span className="text-indigo-600 font-black">{publishingApp.students?.length || 0}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">{publishingApp.examinationNumber ? `Examination ${publishingApp.examinationNumber}` : 'N/A'}</span>
                   </div>
+                </div>
+                <div className="border-t border-slate-200/50 pt-2">
+                  <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Enrolled Candidates</span>
+                  <span className="text-indigo-600 font-black">{publishingApp.students?.length || 0} Students</span>
                 </div>
               </div>
 
@@ -26851,7 +29335,7 @@ const AcademyEligibility = ({
                       type="text"
                       value={pubPracticalExam.name}
                       onChange={(e) => setPubPracticalExam({ ...pubPracticalExam, name: e.target.value })}
-                      placeholder="Auto-fetched based on semester practicals"
+                      placeholder="Auto-fetched based on examination practicals"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 text-xs focus:outline-none focus:bg-white focus:border-indigo-500 transition-all"
                     />
                   </div>
@@ -26944,7 +29428,7 @@ import Toast from '../../../Components/Toast';
 const AcademyFeeConfiguration = () => {
   const [courses, setCourses] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState(1);
+  const [selectedExamination, setSelectedExamination] = useState(1);
   const [config, setConfig] = useState({
     firstAttemptFee: 0,
     reappearingFee: 0,
@@ -26966,11 +29450,11 @@ const AcademyFeeConfiguration = () => {
     fetchCourses();
   }, []);
 
-  const fetchConfiguration = async (courseId, semester) => {
+  const fetchConfiguration = async (courseId, examination) => {
     if (!courseId) return;
     setLoading(true);
     try {
-      const res = await academicService.getFeeConfiguration(courseId, semester);
+      const res = await academicService.getFeeConfiguration(courseId, examination);
       const data = res?.data?.data || res?.data || res;
       if (data) {
         setConfig({
@@ -26987,14 +29471,14 @@ const AcademyFeeConfiguration = () => {
   };
 
   useEffect(() => {
-    if (selectedCourseId && selectedSemester) {
-      fetchConfiguration(selectedCourseId, selectedSemester);
+    if (selectedCourseId && selectedExamination) {
+      fetchConfiguration(selectedCourseId, selectedExamination);
     }
-  }, [selectedCourseId, selectedSemester]);
+  }, [selectedCourseId, selectedExamination]);
 
   const handleCourseChange = (courseId) => {
     setSelectedCourseId(courseId);
-    setSelectedSemester(1);
+    setSelectedExamination(1);
   };
 
   const firstAttemptCharged = config.feeApplicableForFirstAttempt && config.firstAttemptFee > 0;
@@ -27008,7 +29492,7 @@ const AcademyFeeConfiguration = () => {
     try {
       await academicService.updateFeeConfiguration({
         courseId: selectedCourseId,
-        semesterNumber: selectedSemester,
+        examinationNumber: selectedExamination,
         ...config,
       });
       setToast({ message: 'Exam fee configuration saved successfully!', type: 'success' });
@@ -27052,15 +29536,15 @@ const AcademyFeeConfiguration = () => {
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase font-black tracking-wider text-gray-500 mb-1.5">Semester</label>
+            <label className="block text-[10px] uppercase font-black tracking-wider text-gray-500 mb-1.5">Examination</label>
             <select
-              value={selectedSemester}
-              onChange={(e) => setSelectedSemester(parseInt(e.target.value))}
+              value={selectedExamination}
+              onChange={(e) => setSelectedExamination(parseInt(e.target.value))}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
             >
-              {[1, 2, 3, 4, 5, 6].map((sem) => (
-                <option key={sem} value={sem}>
-                  Semester {sem}
+              {[1, 2].map((exam) => (
+                <option key={exam} value={exam}>
+                  Examination {exam}
                 </option>
               ))}
             </select>
@@ -27301,12 +29785,15 @@ const AcademyInspectorModal = ({
   }, [isVerifyingPayment]);
 
   const [approvedQuota, setApprovedQuota] = useState(() => {
-    return parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5;
+    return String(parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5);
   });
+
+  const [isApproving, setIsApproving] = useState(false);
 
   useEffect(() => {
     if (selectedApp) {
-      setApprovedQuota(parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5);
+      setApprovedQuota(String(parseInt(selectedApp?.form?.seatsRequested || selectedApp?.approvedSeats, 10) || 5));
+      setIsApproving(false);
     }
   }, [selectedApp]);
 
@@ -27632,7 +30119,18 @@ const AcademyInspectorModal = ({
                   min="1"
                   max="100"
                   value={approvedQuota}
-                  onChange={(e) => setApprovedQuota(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '' || raw === '-') {
+                      setApprovedQuota(raw);
+                      return;
+                    }
+                    const num = parseInt(raw, 10);
+                    if (!isNaN(num)) {
+                      setApprovedQuota(String(num));
+                    }
+                  }}
+                  onFocus={(e) => e.target.select()}
                   className="w-16 px-2 py-1 bg-white border border-indigo-300 rounded-lg text-xs font-black text-indigo-900 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <span className="text-[10px] font-bold text-indigo-500">Seats/Batch</span>
@@ -27653,17 +30151,34 @@ const AcademyInspectorModal = ({
                   Reject
                 </button>
                 <button
-                  onClick={() => handleApprove(approvedQuota)}
-                  disabled={!isPaymentComplete}
+                  onClick={() => {
+                    const num = parseInt(approvedQuota, 10);
+                    if (!approvedQuota || approvedQuota.trim() === '' || isNaN(num) || num <= 0) {
+                      alert('Please enter a valid batch quota limit (must be greater than 0).');
+                      return;
+                    }
+                    setIsApproving(true);
+                    handleApprove(num);
+                  }}
+                  disabled={!isPaymentComplete || isApproving}
                   className={`px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
-                    isPaymentComplete
+                    isPaymentComplete && !isApproving
                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 cursor-pointer'
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   }`}
                   title={!isPaymentComplete ? 'Payment must be completed before approval' : ''}
                 >
-                  <ShieldCheck className="w-4 h-4" />
-                  Approve ({approvedQuota} Seats Limit)
+                  {isApproving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Approving...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      Approve ({approvedQuota || '?'} Seats Limit)
+                    </>
+                  )}
                 </button>
               </>
             )}
@@ -27829,21 +30344,20 @@ import {
   FileSpreadsheet,
   Plus,
   Loader2,
-  TrendingUp,
-  TrendingDown,
-  Minus,
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import marksService from '../../../api/marks';
 import Pagination from '../../../Components/Pagination';
 
+const STATUS_CYCLE = ['', 'PASS', 'FAIL', 'ABSENT'];
+
 const AcademyMarksUpdating = () => {
   // ─── State ──────────────────────────────────────────────────────────────────
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [selectedSemester, setSelectedSemester] = useState(1);
+  const [selectedExamination, setSelectedExamination] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('All');
   const [selectedCourse, setSelectedCourse] = useState('All');
@@ -27851,11 +30365,60 @@ const AcademyMarksUpdating = () => {
   const [toast, setToast] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableSemesters] = useState([1, 2, 3, 4, 5, 6]);
-  const [editingCell, setEditingCell] = useState(null); // { subjectCode, field }
-  const [editValue, setEditValue] = useState('');
+  const [availableExaminations] = useState([1, 2]);
   const [studentListPage, setStudentListPage] = useState(1);
   const studentsPerPage = 10;
+
+  // ─── Status & Normalization Helpers ────────────────────────────────────────
+  const deriveStatusFromMark = useCallback((m) => {
+    if (!m) return '';
+    if (m.status && typeof m.status === 'string' && m.status.trim() !== '') {
+      return m.status.toUpperCase();
+    }
+    if (m.isAbsent === true || m.grade === 'ABSENT') return 'ABSENT';
+    if (m.grade === 'F' || m.marksObtained === 0) return 'FAIL';
+    if (m.marksObtained !== null && m.marksObtained !== undefined && m.marksObtained !== '') {
+      return Number(m.marksObtained) >= 50 ? 'PASS' : 'FAIL';
+    }
+    if (m.grade && typeof m.grade === 'string' && m.grade.trim() !== '') {
+      return ['O', 'A+', 'A', 'B+', 'B', 'C', 'D'].includes(m.grade) ? 'PASS' : '';
+    }
+    return '';
+  }, []);
+
+  const deriveMarkFromStatus = useCallback((status) => {
+    if (status === 'ABSENT') return null;
+    if (status === 'PASS') return 100;
+    if (status === 'FAIL') return 0;
+    return null;
+  }, []);
+
+  const normalizeStudent = useCallback(
+    (student) => {
+      if (!student) return null;
+      const marks = (student.marks || []).map((m, idx) => {
+        const status = deriveStatusFromMark(m);
+        const subjectCode = m.subjectCode || m.code || `SUB${idx + 1}`;
+        const subjectName = m.subjectName || m.name || m.subject || `Subject ${idx + 1}`;
+        return {
+          ...m,
+          subjectCode,
+          subjectName,
+          status,
+          isAbsent: status === 'ABSENT' || m.isAbsent === true,
+          marksObtained:
+            m.marksObtained !== null && m.marksObtained !== undefined
+              ? m.marksObtained
+              : deriveMarkFromStatus(status),
+        };
+      });
+      return {
+        ...student,
+        marks,
+      };
+    },
+    [deriveStatusFromMark, deriveMarkFromStatus]
+  );
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const fetchStudents = useCallback(async () => {
@@ -27866,41 +30429,72 @@ const AcademyMarksUpdating = () => {
       if (selectedCourse !== 'All') params.courseId = selectedCourse;
       if (selectedInstitute !== 'All') params.instituteId = selectedInstitute;
       if (searchQuery) params.search = searchQuery;
-      if (selectedSemester) params.semesterNumber = selectedSemester;
+      if (selectedExamination) params.examinationNumber = selectedExamination;
 
       const res = await marksService.getStudentsWithMarks(params);
       const data = res.data?.data || res.data || [];
-      setStudents(data);
+      const normalizedData = data.map(normalizeStudent);
+      setStudents(normalizedData);
+      setSelectedStudent((prev) => {
+        if (!prev?._id) return prev;
+        const fresh = normalizedData.find((s) => s._id === prev._id);
+        return fresh ? fresh : prev;
+      });
     } catch (err) {
       console.error('Error fetching students:', err);
       setToast({ message: err.parsedMessage || 'Failed to load students.', type: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [selectedBatch, selectedCourse, selectedInstitute, searchQuery, selectedSemester]);
+  }, [selectedBatch, selectedCourse, selectedInstitute, searchQuery, selectedExamination, normalizeStudent]);
 
   useEffect(() => {
     const id = setTimeout(() => fetchStudents(), 0);
     return () => clearTimeout(id);
   }, [fetchStudents]);
 
-  // Refresh selected student's marks when semester changes
+  // Refresh selected student's marks when examination changes
   useEffect(() => {
     if (!selectedStudent?._id) return;
     let cancelled = false;
     marksService
-      .getStudentMarks(selectedStudent._id, selectedSemester)
-      .then((res) => {
+      .getStudentMarks(selectedStudent._id, selectedExamination)
+      .then(async (res) => {
         if (cancelled) return;
         const data = res.data?.data || res.data;
-        if (data) setSelectedStudent(data);
+        if (data) {
+          let normalized = normalizeStudent(data);
+          const courseId = data.course?._id || data.course;
+          if ((!normalized.marks || normalized.marks.length === 0) && courseId) {
+            try {
+              const subjRes = await marksService.getCourseSubjects(courseId, selectedExamination);
+              const subjects = subjRes.data?.data || [];
+              if (subjects.length > 0 && !cancelled) {
+                const seeded = subjects.map((s, idx) => ({
+                  subjectCode: s.code || s.subjectCode || `SUB${idx + 1}`,
+                  subjectName: s.name || s.subjectName || `Subject ${idx + 1}`,
+                  marksObtained: null,
+                  totalMarks: 100,
+                  isAbsent: false,
+                  grade: '',
+                  status: '',
+                }));
+                normalized = { ...normalized, marks: seeded };
+              }
+            } catch {
+              // ignore
+            }
+          }
+          if (!cancelled) {
+            setSelectedStudent(normalized);
+          }
+        }
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSemester]);
+  }, [selectedExamination, normalizeStudent, selectedStudent?._id]);
 
   // ─── Derived Data ──────────────────────────────────────────────────────────
   const batchOptions = useMemo(() => {
@@ -27950,9 +30544,11 @@ const AcademyMarksUpdating = () => {
     });
   }, [students, searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setStudentListPage(1);
   }, [searchQuery, selectedBatch, selectedCourse, selectedInstitute]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const totalStudentPages = Math.ceil(filteredStudents.length / studentsPerPage);
   const paginatedStudents = useMemo(
@@ -27961,80 +30557,103 @@ const AcademyMarksUpdating = () => {
   );
 
   // ─── Student Selection ─────────────────────────────────────────────────────
-  const handleSelectStudent = useCallback(async (student) => {
-    setSelectedStudent(student);
-    setEditingCell(null);
-    setEditValue('');
+  const handleSelectStudent = useCallback(
+    async (student) => {
+      const normalized = normalizeStudent(student);
+      setSelectedStudent(normalized);
 
-    if (student.course?._id) {
-      try {
-        const res = await marksService.getCourseSubjects(student.course._id);
-        const subjects = res.data?.data || [];
-        // Seed marks from course subjects if the student has none saved yet
-        if (subjects.length > 0 && (!student.marks || student.marks.length === 0)) {
-          const seeded = subjects.map((s) => ({
-            subjectCode: s.code,
-            subjectName: s.name,
-            marksObtained: null,
-            totalMarks: 100,
-            isAbsent: null,
-            grade: '',
-          }));
-          setSelectedStudent({ ...student, marks: seeded });
+      const courseId = student.course?._id || student.course;
+      if (courseId) {
+        try {
+          const res = await marksService.getCourseSubjects(courseId, selectedExamination);
+          const subjects = res.data?.data || [];
+          if (subjects.length > 0) {
+            setSelectedStudent((prev) => {
+              if (!prev || prev._id !== student._id) return prev;
+              const currentMarks = prev.marks || [];
+              if (currentMarks.length === 0) {
+                const seeded = subjects.map((s, idx) => ({
+                  subjectCode: s.code || s.subjectCode || `SUB${idx + 1}`,
+                  subjectName: s.name || s.subjectName || `Subject ${idx + 1}`,
+                  marksObtained: null,
+                  totalMarks: 100,
+                  isAbsent: false,
+                  grade: '',
+                  status: '',
+                }));
+                return { ...prev, marks: seeded };
+              }
+              // If current marks are missing subjectName or subjectCode, enrich them:
+              const enriched = currentMarks.map((m, idx) => {
+                const subCode = m.subjectCode || m.code;
+                const subName = m.subjectName || m.name;
+                const match =
+                  subjects.find(
+                    (s) =>
+                      (subCode && s.code && s.code.toLowerCase() === subCode.toLowerCase()) ||
+                      (subName && s.name && s.name.toLowerCase() === subName.toLowerCase())
+                  ) || subjects[idx];
+
+                return {
+                  ...m,
+                  subjectCode: subCode || match?.code || match?.subjectCode || `SUB${idx + 1}`,
+                  subjectName: subName || match?.name || match?.subjectName || `Subject ${idx + 1}`,
+                };
+              });
+              return { ...prev, marks: enriched };
+            });
+          }
+        } catch (err) {
+          console.error('Error fetching course subjects:', err);
         }
-      } catch (err) {
-        console.error('Error fetching course subjects:', err);
       }
-    }
-  }, []);
-
-  // ─── Marks Handlers ──────────────────────────────────────────────────────
-  const handleMarksChange = useCallback(
-    (subjectCode, value) => {
-      if (!selectedStudent) return;
-
-      const updatedMarks = selectedStudent.marks.map((m) => {
-        if (m.subjectCode !== subjectCode) return m;
-        const numVal = value === '' || value === null ? null : parseFloat(value);
-        return { ...m, marksObtained: numVal, isAbsent: numVal === null ? null : false };
-      });
-
-      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
     },
-    [selectedStudent]
+    [normalizeStudent, selectedExamination]
   );
 
-  const handleStatusToggle = useCallback(
-    (subjectCode) => {
+  // ─── Result Handlers ──────────────────────────────────────────────────────
+  const handleStatusChange = useCallback(
+    (subjectCode, status) => {
       if (!selectedStudent) return;
-
-      const updatedMarks = selectedStudent.marks.map((m) => {
+      const marks = (selectedStudent.marks || []).map((m) => {
         if (m.subjectCode !== subjectCode) return m;
-        let newIsAbsent;
-        if (m.isAbsent === true) newIsAbsent = null;
-        else if (m.isAbsent === false) newIsAbsent = true;
-        else newIsAbsent = false;
-        return { ...m, isAbsent: newIsAbsent, marksObtained: newIsAbsent === true ? null : m.marksObtained };
+        return {
+          ...m,
+          status,
+          isAbsent: status === 'ABSENT',
+          marksObtained: deriveMarkFromStatus(status),
+        };
       });
-
-      setSelectedStudent({ ...selectedStudent, marks: updatedMarks });
+      setSelectedStudent({ ...selectedStudent, marks });
     },
-    [selectedStudent]
+    [selectedStudent, deriveMarkFromStatus]
+  );
+
+  const handleCycleStatus = useCallback(
+    (subjectCode, current) => {
+      const idx = STATUS_CYCLE.indexOf(current);
+      const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+      handleStatusChange(subjectCode, next);
+    },
+    [handleStatusChange]
   );
 
   const handleAddSubject = useCallback(() => {
     if (!selectedStudent) return;
+    const currentMarks = selectedStudent.marks || [];
+    const nextIdx = currentMarks.length + 1;
     const newSubject = {
-      subjectCode: `SUB-${Date.now()}`,
-      subjectName: 'New Subject',
+      subjectCode: `SUB-${nextIdx}`,
+      subjectName: `Subject ${nextIdx}`,
       marksObtained: null,
       totalMarks: 100,
-      isAbsent: null,
+      isAbsent: false,
       grade: '',
+      status: '',
     };
     setSelectedStudent({
       ...selectedStudent,
-      marks: [...(selectedStudent.marks || []), newSubject],
+      marks: [...currentMarks, newSubject],
     });
   }, [selectedStudent]);
 
@@ -28059,25 +30678,7 @@ const AcademyMarksUpdating = () => {
     [selectedStudent]
   );
 
-  // ─── Start Editing ──────────────────────────────────────────────────────
-  const startEditing = useCallback((subjectCode, field, currentValue) => {
-    setEditingCell({ subjectCode, field });
-    setEditValue(currentValue !== null && currentValue !== undefined ? String(currentValue) : '');
-  }, []);
-
-  const finishEditing = useCallback(() => {
-    if (!editingCell) return;
-    const { subjectCode, field } = editingCell;
-
-    if (field === 'marksObtained') {
-      handleMarksChange(subjectCode, editValue === '' ? null : editValue);
-    }
-
-    setEditingCell(null);
-    setEditValue('');
-  }, [editingCell, editValue, handleMarksChange]);
-
-  // ─── Save Marks ────────────────────────────────────────────────────────────
+  // ─── Save Results ────────────────────────────────────────────────────────
   const handleSaveMarks = useCallback(async () => {
     const studentId = selectedStudent?._id || selectedStudent?.id;
     if (!selectedStudent || !studentId) {
@@ -28091,12 +30692,10 @@ const AcademyMarksUpdating = () => {
       return;
     }
 
-    const emptySubjects = marks.filter(
-      (m) => !m.isAbsent && (m.marksObtained === null || m.marksObtained === undefined || m.marksObtained === '')
-    );
+    const emptySubjects = marks.filter((m) => !m.status);
     if (emptySubjects.length > 0) {
       setToast({
-        message: `Cannot save — ${emptySubjects.length} subject(s) have no marks entered.`,
+        message: `Cannot save — ${emptySubjects.length} subject(s) have no result recorded.`,
         type: 'warning',
       });
       return;
@@ -28105,90 +30704,54 @@ const AcademyMarksUpdating = () => {
     setIsSubmitting(true);
     try {
       const payload = {
-        semesterNumber: Number(selectedSemester),
-        subjects: marks.map((m) => {
-          const isAbs = m.isAbsent === true;
-          let val = null;
-          if (!isAbs && m.marksObtained !== null && m.marksObtained !== undefined && m.marksObtained !== '') {
-            val = Number(m.marksObtained);
-          }
-          return {
-            subjectCode: m.subjectCode,
-            subjectName: m.subjectName,
-            marksObtained: val,
-            isAbsent: isAbs,
-            totalMarks: Number(m.totalMarks) || 100,
-          };
-        }),
+        examinationNumber: Number(selectedExamination),
+        subjects: marks.map((m, idx) => ({
+          subjectCode: m.subjectCode || m.code || `SUB-${idx + 1}`,
+          subjectName: m.subjectName || m.name || m.subject || `Subject ${idx + 1}`,
+          marksObtained: deriveMarkFromStatus(m.status),
+          isAbsent: m.status === 'ABSENT',
+          totalMarks: Number(m.totalMarks) || 100,
+          status: m.status,
+        })),
       };
 
       await marksService.updateStudentMarks(studentId, payload);
 
       await fetchStudents();
 
-      const updatedRes = await marksService.getStudentMarks(studentId, selectedSemester);
+      const updatedRes = await marksService.getStudentMarks(studentId, selectedExamination);
       const updatedData = updatedRes.data?.data || updatedRes.data;
       if (updatedData) {
-        setSelectedStudent(updatedData);
+        setSelectedStudent(normalizeStudent(updatedData));
       }
 
-      setToast({ message: 'Marks saved successfully!', type: 'success' });
+      setToast({ message: 'Results saved successfully!', type: 'success' });
     } catch (err) {
-      console.error('Error saving marks:', err);
-      setToast({ message: err.parsedMessage || err.response?.data?.message || 'Failed to save marks.', type: 'error' });
+      console.error('Error saving results:', err);
+      setToast({ message: err.parsedMessage || err.response?.data?.message || 'Failed to save results.', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedStudent, selectedSemester, fetchStudents]);
+  }, [selectedStudent, selectedExamination, fetchStudents, deriveMarkFromStatus, normalizeStudent]);
 
   // ─── Render Helpers ──────────────────────────────────────────────────────
-  const getGrade = (marks, total = 100) => {
-    if (marks === null || marks === undefined) return '';
-    const percentage = (marks / total) * 100;
-    if (percentage >= 90) return 'O';
-    if (percentage >= 80) return 'A+';
-    if (percentage >= 70) return 'A';
-    if (percentage >= 60) return 'B+';
-    if (percentage >= 50) return 'B';
-    if (percentage >= 40) return 'C';
-    if (percentage >= 35) return 'D';
-    return 'F';
-  };
-
-  const getGradeColor = (grade) => {
-    const map = {
-      O: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      'A+': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      A: 'bg-blue-100 text-blue-800 border-blue-200',
-      'B+': 'bg-blue-100 text-blue-800 border-blue-200',
-      B: 'bg-amber-100 text-amber-800 border-amber-200',
-      C: 'bg-amber-100 text-amber-800 border-amber-200',
-      D: 'bg-rose-100 text-rose-800 border-rose-200',
-      F: 'bg-rose-100 text-rose-800 border-rose-200',
-      ABSENT: 'bg-rose-100 text-rose-800 border-rose-200',
-    };
-    return map[grade] || 'bg-slate-100 text-slate-600 border-slate-200';
-  };
-
-  const getStatusIcon = (marks) => {
-    if (marks === null || marks === undefined) return <XCircle className="w-5 h-5 text-rose-500" />;
-    if (marks >= 80) return <TrendingUp className="w-5 h-5 text-emerald-600" />;
-    if (marks >= 60) return <Minus className="w-5 h-5 text-amber-500" />;
-    return <TrendingDown className="w-5 h-5 text-rose-500" />;
-  };
-
-  const calculateOverall = (marks) => {
-    if (!marks || marks.length === 0) return { obtained: 0, total: 0, percentage: 0, count: 0 };
-    const validMarks = marks.filter((m) => !m.isAbsent && m.marksObtained !== null);
-    const obtained = validMarks.reduce((sum, m) => sum + (m.marksObtained || 0), 0);
-    const total = validMarks.reduce((sum, m) => sum + (m.totalMarks || 100), 0);
-    const count = validMarks.length;
-    return { obtained, total, percentage: total > 0 ? Math.round((obtained / total) * 100) : 0, count };
+  const getStatusBadge = (status) => {
+    if (status === 'PASS') return 'bg-emerald-100 text-emerald-700 border-emerald-300';
+    if (status === 'FAIL') return 'bg-rose-100 text-rose-700 border-rose-300';
+    if (status === 'ABSENT') return 'bg-slate-200 text-slate-600 border-slate-300';
+    return 'bg-slate-100 text-slate-500 border-slate-300';
   };
 
   const overall = selectedStudent
-    ? calculateOverall(selectedStudent.marks)
-    : { obtained: 0, total: 0, percentage: 0, count: 0 };
+    ? (() => {
+        const rows = selectedStudent.marks || [];
+        const entered = rows.filter((r) => !!r.status);
+        const passed = entered.filter((r) => r.status === 'PASS').length;
+        const failed = entered.filter((r) => r.status === 'FAIL' || r.status === 'ABSENT').length;
+        const status = entered.length > 0 && failed === 0 ? 'PASS' : entered.length > 0 ? 'FAIL' : '';
+        return { total: rows.length, entered: entered.length, passed, failed, status };
+      })()
+    : { total: 0, entered: 0, passed: 0, failed: 0, status: '' };
 
   return (
     <div className="space-y-5 animate-in fade-in duration-300 text-left font-sans">
@@ -28201,7 +30764,7 @@ const AcademyMarksUpdating = () => {
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Marks Management</h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Enter and manage student examination marks •{' '}
+              Record and manage student examination results •{' '}
               <span className="font-bold text-blue-600">{students.length}</span> students
             </p>
           </div>
@@ -28289,23 +30852,23 @@ const AcademyMarksUpdating = () => {
             </div>
           </div>
 
-          {/* Semester Selector */}
+          {/* Examination Selector */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
             <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-2.5">
-              Select Semester
+              Select Examination
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {availableSemesters.map((sem) => (
+              {availableExaminations.map((exam) => (
                 <button
-                  key={sem}
-                  onClick={() => setSelectedSemester(sem)}
+                  key={exam}
+                  onClick={() => setSelectedExamination(exam)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    selectedSemester === sem
+                    selectedExamination === exam
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  Sem {sem}
+                  Exam {exam}
                 </button>
               ))}
             </div>
@@ -28327,8 +30890,20 @@ const AcademyMarksUpdating = () => {
               ) : (
                 paginatedStudents.map((student) => {
                   const isSelected = selectedStudent?._id === student._id;
-                  const hasMarks = student.marks && student.marks.length > 0;
-                  const allEntered = student.marks?.every((m) => m.isAbsent === true || m.marksObtained !== null);
+                  const currentStudent = isSelected && selectedStudent ? selectedStudent : student;
+                  const marks = currentStudent.marks || [];
+                  const totalSubjects = marks.length;
+                  const enteredCount = marks.filter(
+                    (m) =>
+                      m?.isAbsent === true ||
+                      (typeof m?.status === 'string' && m.status.trim() !== '') ||
+                      (typeof m?.resultStatus === 'string' && m.resultStatus.trim() !== '') ||
+                      (m?.marksObtained !== null && m?.marksObtained !== undefined && m?.marksObtained !== '') ||
+                      (typeof m?.grade === 'string' && m.grade.trim() !== '' && m.grade !== 'NOT RECORDED')
+                  ).length;
+
+                  const isComplete = totalSubjects > 0 && enteredCount === totalSubjects;
+                  const isPartial = enteredCount > 0 && enteredCount < totalSubjects;
 
                   return (
                     <button
@@ -28354,17 +30929,17 @@ const AcademyMarksUpdating = () => {
                             <span className="text-xs font-medium text-slate-500">{student.batch?.year || 'N/A'}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            {hasMarks && allEntered ? (
+                            {isComplete ? (
                               <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
                                 ✓ Complete
                               </span>
-                            ) : hasMarks ? (
+                            ) : isPartial ? (
                               <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
                                 ⚠ Partial
                               </span>
                             ) : (
                               <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
-                                ✗ No Marks
+                                ✗ Not Recorded
                               </span>
                             )}
                             <span className="text-xs text-slate-400">•</span>
@@ -28411,7 +30986,7 @@ const AcademyMarksUpdating = () => {
                         <span className="text-slate-300">|</span>
                         <span className="flex items-center gap-1.5 text-slate-600 font-medium">
                           <Calendar className="w-3.5 h-3.5" />
-                          Semester {selectedSemester}
+                          Examination {selectedExamination}
                         </span>
                       </div>
                     </div>
@@ -28421,33 +30996,37 @@ const AcademyMarksUpdating = () => {
                     <span className="text-xs font-bold text-slate-700">Overall:</span>
                     <span
                       className={`text-lg font-black ${
-                        overall.percentage >= 75
+                        overall.status === 'PASS'
                           ? 'text-emerald-600'
-                          : overall.percentage >= 60
-                            ? 'text-amber-600'
-                            : 'text-rose-600'
+                          : overall.status === 'FAIL'
+                            ? 'text-rose-600'
+                            : 'text-slate-400'
                       }`}
                     >
-                      {overall.count > 0 ? `${overall.percentage}%` : 'N/A'}
+                      {overall.status === 'PASS' ? 'PASS' : overall.status === 'FAIL' ? 'FAIL' : 'N/A'}
                     </span>
-                    {overall.count > 0 && (
-                      <span className="text-xs text-slate-500">
-                        ({overall.obtained}/{overall.total})
-                      </span>
+                    {overall.entered > 0 && (
+                      <span className="text-xs text-slate-500">({overall.passed} passed, {overall.failed} failed)</span>
                     )}
                   </div>
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-100">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 pt-4 border-t border-slate-100">
                   <div className="bg-slate-50 rounded-xl p-3 text-center">
                     <span className="text-xs uppercase font-bold text-slate-500">Subjects</span>
                     <p className="text-lg font-black text-slate-800">{selectedStudent.marks?.length || 0}</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 text-center">
-                    <span className="text-xs uppercase font-bold text-slate-500">Scored</span>
-                    <p className="text-lg font-black text-slate-800">
-                      {overall.obtained}/{overall.total}
+                    <span className="text-xs uppercase font-bold text-slate-500">Passed</span>
+                    <p className="text-lg font-black text-emerald-600">
+                      {overall.passed}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 text-center">
+                    <span className="text-xs uppercase font-bold text-slate-500">Failed</span>
+                    <p className="text-lg font-black text-rose-600">
+                      {overall.failed}
                     </p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3 text-center">
@@ -28478,7 +31057,7 @@ const AcademyMarksUpdating = () => {
                 <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
                   <div className="flex items-center gap-2.5">
                     <BookOpen className="w-4 h-4 text-blue-600" />
-                    <h4 className="text-sm font-bold text-slate-700">Marks Entry - Semester {selectedSemester}</h4>
+                    <h4 className="text-sm font-bold text-slate-700">Result Entry - Examination {selectedExamination}</h4>
                     <span className="text-xs text-slate-400">|</span>
                     <span className="text-xs font-medium text-slate-500">
                       {selectedStudent.marks?.length || 0} subjects
@@ -28504,13 +31083,7 @@ const AcademyMarksUpdating = () => {
                         </th>
                         <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider">Subject</th>
                         <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-44 text-center">
-                          Marks Obtained
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-28 text-center">
-                          Status
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-24 text-center">
-                          Grade
+                          Result
                         </th>
                         <th className="px-4 py-3 text-xs font-black uppercase text-slate-600 tracking-wider w-20 text-center">
                           Action
@@ -28519,23 +31092,12 @@ const AcademyMarksUpdating = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
                       {(selectedStudent.marks || []).map((subject, idx) => {
-                        const grade = subject.isAbsent === true
-                          ? 'ABSENT'
-                          : getGrade(subject.marksObtained, subject.totalMarks || 100);
-                        const isEditing = editingCell?.subjectCode === subject.subjectCode;
-                        const isAbsent = subject.isAbsent === true;
-                        const isUnmarked = subject.isAbsent === null || subject.isAbsent === undefined;
-
-                        // Status badge colors: Present = Green (emerald), Absent = Red (rose), Unmarked = Gray
-                        const statusColor = isAbsent
-                          ? 'bg-rose-100 border-rose-300 text-rose-700 hover:bg-rose-200'
-                          : isUnmarked
-                            ? 'bg-slate-100 border-slate-300 text-slate-500 hover:bg-slate-200'
-                            : 'bg-emerald-100 border-emerald-300 text-emerald-700 hover:bg-emerald-200';
+                        const status = subject.status || '';
+                        const isAbsent = status === 'ABSENT';
 
                         return (
                           <tr
-                            key={subject.subjectCode || `subject-${selectedStudent._id}-${subject.subjectName}`}
+                            key={subject.subjectCode || `subject-${selectedStudent._id}-${idx}`}
                             className={`hover:bg-slate-50/70 transition-colors ${isAbsent ? 'bg-rose-50/40' : ''}`}
                           >
                             <td className="px-4 py-3.5 text-center font-bold text-slate-400 text-sm">
@@ -28543,78 +31105,24 @@ const AcademyMarksUpdating = () => {
                             </td>
                             <td className="px-4 py-3.5">
                               <div>
-                                <span className="text-sm font-bold text-slate-800">{subject.subjectName}</span>
-                                <span className="ml-2.5 text-xs font-mono text-slate-400">{subject.subjectCode}</span>
+                                <span className="text-sm font-bold text-slate-800">
+                                  {subject.subjectName || subject.name || subject.subject || `Subject ${idx + 1}`}
+                                </span>
+                                <span className="ml-2.5 text-xs font-mono text-slate-400">
+                                  {subject.subjectCode || subject.code || `SUB${idx + 1}`}
+                                </span>
                               </div>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              {isEditing && editingCell?.field === 'marksObtained' ? (
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max={subject.totalMarks || 100}
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onBlur={finishEditing}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') finishEditing();
-                                    }}
-                                    autoFocus
-                                    className="w-20 px-2.5 py-1.5 border-2 border-blue-500 rounded-xl text-center text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/20"
-                                  />
-                                  <span className="text-xs text-slate-400 font-bold">/ {subject.totalMarks || 100}</span>
-                                </div>
-                              ) : (
-                                <div
-                                  className={`flex items-center gap-2.5 cursor-pointer group ${isAbsent ? 'opacity-60' : ''}`}
-                                  onClick={() =>
-                                    !isAbsent && startEditing(subject.subjectCode, 'marksObtained', subject.marksObtained)
-                                  }
-                                >
-                                  <span
-                                    className={`text-sm font-bold ${
-                                      isAbsent ? 'text-slate-400' : 'text-slate-800'
-                                    }`}
-                                  >
-                                    {isAbsent || subject.marksObtained === null ? '—' : subject.marksObtained}
-                                  </span>
-                                  <span className="text-xs text-slate-400 font-bold">/ {subject.totalMarks || 100}</span>
-                                  {!isAbsent && (
-                                    <span className="text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      (click to edit)
-                                    </span>
-                                  )}
-                                </div>
-                              )}
                             </td>
                             <td className="px-4 py-3.5 text-center">
                               <button
-                                onClick={() => handleStatusToggle(subject.subjectCode)}
-                                title="Click to cycle: NOT MARKED → PRESENT → ABSENT"
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${statusColor}`}
+                                onClick={() => handleCycleStatus(subject.subjectCode, status)}
+                                title="Click to cycle: NOT RECORDED → PASS → FAIL → ABSENT"
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${getStatusBadge(status)}`}
                               >
-                                {isAbsent ? 'ABSENT' : isUnmarked ? 'NOT MARKED' : 'PRESENT'}
+                                {status === 'PASS' && <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />}
+                                {status === 'FAIL' && <XCircle className="w-3.5 h-3.5 inline mr-1 text-rose-600" />}
+                                {isAbsent ? 'ABSENT' : status || 'NOT RECORDED'}
                               </button>
-                            </td>
-                            <td className="px-4 py-3.5 text-center">
-                              {subject.isAbsent ? (
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${getGradeColor('ABSENT')}`}
-                                >
-                                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                                  ABSENT
-                                </span>
-                              ) : grade ? (
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${getGradeColor(grade)}`}
-                                >
-                                  {getStatusIcon(subject.marksObtained)}
-                                  {grade}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-slate-400 font-medium">—</span>
-                              )}
                             </td>
                             <td className="px-4 py-3.5 text-center">
                               <button
@@ -28630,10 +31138,10 @@ const AcademyMarksUpdating = () => {
                       })}
                       {(selectedStudent.marks || []).length === 0 && (
                         <tr>
-                          <td colSpan="6" className="px-5 py-12 text-center">
+                          <td colSpan="4" className="px-5 py-12 text-center">
                             <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                             <p className="text-base font-medium text-slate-500">No subjects added yet.</p>
-                            <p className="text-sm text-slate-400 mt-1">Click "Add Subject" to begin entering marks.</p>
+                            <p className="text-sm text-slate-400 mt-1">Click "Add Subject" to begin recording results.</p>
                           </td>
                         </tr>
                       )}
@@ -28644,24 +31152,21 @@ const AcademyMarksUpdating = () => {
                           <td colSpan="2" className="px-4 py-3.5 font-black text-sm text-slate-700">
                             Total / Overall
                           </td>
-                          <td className="px-4 py-3.5 text-center font-black text-lg text-slate-800">
-                            {overall.obtained} / {overall.total}
-                          </td>
-                          <td className="px-4 py-3.5 text-center">
+                          <td colSpan="2" className="px-4 py-3.5 text-center">
                             <span
                               className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-black border ${
-                                overall.percentage >= 75
+                                overall.status === 'PASS'
                                   ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
-                                  : overall.percentage >= 60
-                                    ? 'bg-amber-100 border-amber-200 text-amber-700'
-                                    : 'bg-rose-100 border-rose-200 text-rose-700'
+                                  : overall.status === 'FAIL'
+                                    ? 'bg-rose-100 border-rose-200 text-rose-700'
+                                    : 'bg-slate-100 border-slate-300 text-slate-500'
                               }`}
                             >
-                              {getStatusIcon(overall.percentage)}
-                              {overall.count > 0 ? `${overall.percentage}%` : 'N/A'}
+                              {overall.status === 'PASS' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                              {overall.status === 'FAIL' && <XCircle className="w-4 h-4 text-rose-600" />}
+                              {overall.status ? overall.status : 'NOT RECORDED'}
                             </span>
                           </td>
-                          <td colSpan="2" className="px-4 py-3.5 text-center"></td>
                         </tr>
                       </tfoot>
                     )}
@@ -28674,8 +31179,9 @@ const AcademyMarksUpdating = () => {
                 <div className="flex items-center gap-2.5 text-xs text-slate-600">
                   <AlertCircle className="w-4 h-4 text-amber-500" />
                   <span className="font-medium">
-                    <span className="font-bold text-emerald-700">PRESENT</span> = Green •
-                    <span className="font-bold text-rose-700 ml-1">ABSENT</span> = Red
+                    <span className="font-bold text-emerald-700">PASS</span> = Green •
+                    <span className="font-bold text-rose-700 ml-1">FAIL / ABSENT</span> = Red •
+                    Click the result to cycle through options
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -28685,7 +31191,7 @@ const AcademyMarksUpdating = () => {
                     className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md cursor-pointer active:scale-95"
                   >
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Submit Marks
+                    Submit Results
                   </button>
                 </div>
               </div>
@@ -28837,10 +31343,11 @@ const AcademyPublishResults = () => {
   const [selectedInstitute, setSelectedInstitute] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
   const [publishDate, setPublishDate] = useState('');
   const [publishTime, setPublishTime] = useState('');
+  const [publishMinute, setPublishMinute] = useState('00');
   const [publishAMPM, setPublishAMPM] = useState('AM');
   const [includeAllStudents, setIncludeAllStudents] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState([]);
@@ -28890,29 +31397,29 @@ const AcademyPublishResults = () => {
 
   // ─── Fetch Publication Status ───────────────────────────────────────────────
   const fetchPublicationStatus = useCallback(async () => {
-    if (!selectedBatch || !selectedCourse || !selectedSemester) return;
+    if (!selectedBatch || !selectedCourse || !selectedExamination) return;
 
     try {
       const res = await marksService.getPublicationStatus({
         batchId: selectedBatch,
         courseId: selectedCourse,
-        semesterNumber: selectedSemester,
+        examinationNumber: selectedExamination,
       });
       const data = res.data?.data || res.data;
       setPublicationStatus(data);
     } catch {
       setToast({ message: 'Failed to load publication status', type: 'error' });
     }
-  }, [selectedBatch, selectedCourse, selectedSemester]);
+  }, [selectedBatch, selectedCourse, selectedExamination]);
 
   useEffect(() => {
-    if (selectedBatch && selectedCourse && selectedSemester) {
+    if (selectedBatch && selectedCourse && selectedExamination) {
       const timer = setTimeout(() => {
         fetchPublicationStatus();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [selectedBatch, selectedCourse, selectedSemester, fetchPublicationStatus]);
+    }, [selectedBatch, selectedCourse, selectedExamination, fetchPublicationStatus]);
 
   // ─── Derived Data ──────────────────────────────────────────────────────────
   const filteredBatches = useMemo(() => {
@@ -28924,8 +31431,8 @@ const AcademyPublishResults = () => {
   }, [batches, selectedCourse]);
 
   const statusSummary = useMemo(() => {
-    if (!publicationStatus) return { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0 };
-    return publicationStatus.summary || { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0 };
+    if (!publicationStatus) return { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0, scheduled: 0 };
+    return publicationStatus.summary || { total: 0, ready: 0, partial: 0, noMarks: 0, published: 0, scheduled: 0 };
   }, [publicationStatus]);
 
   const studentList = useMemo(() => {
@@ -28965,7 +31472,7 @@ const AcademyPublishResults = () => {
 
         try {
           const payload = {
-            semesterNumber: parseInt(selectedSemester),
+            examinationNumber: parseInt(selectedExamination),
             batchId: selectedBatch,
             courseId: selectedCourse,
             academicYear: selectedAcademicYear || new Date().getFullYear().toString(),
@@ -29007,7 +31514,7 @@ const AcademyPublishResults = () => {
 
     setConfirmConfig({
       title: 'Publish Results',
-      message: `Are you sure you want to publish results for ${readyToPublish} student(s)?\n\n• Date: ${new Date(publishDate).toLocaleDateString()}\n• Time: ${publishTime} ${publishAMPM}\n• Notifications: ${sendNotifications ? 'Yes' : 'No'}`,
+      message: `Are you sure you want to publish results for ${readyToPublish} student(s)?\n\n• Date: ${new Date(publishDate).toLocaleDateString()}\n• Time: ${publishTime}:${publishMinute} ${publishAMPM}\n• Notifications: ${sendNotifications ? 'Yes' : 'No'}`,
       type: 'success',
       confirmText: 'Publish Now',
       onConfirm: async () => {
@@ -29016,12 +31523,12 @@ const AcademyPublishResults = () => {
 
         try {
           const payload = {
-            semesterNumber: parseInt(selectedSemester),
+            examinationNumber: parseInt(selectedExamination),
             batchId: selectedBatch,
             courseId: selectedCourse,
             academicYear: selectedAcademicYear || new Date().getFullYear().toString(),
             publishDate,
-            publishTime: `${publishTime} ${publishAMPM}`,
+            publishTime: `${publishTime}:${publishMinute} ${publishAMPM}`,
             selectedStudentIds: !includeAllStudents ? selectedStudents : undefined,
             sendNotifications,
           };
@@ -29032,8 +31539,11 @@ const AcademyPublishResults = () => {
           setPublishResult(data);
           setStep(3);
 
+          const isScheduled = data.isScheduled || data.status === 'Scheduled';
           setToast({
-            message: `✅ Published ${data.publishedCount} results successfully!`,
+            message: isScheduled
+              ? `🗓️ Successfully scheduled ${data.publishedCount} results for ${data.publishTime}!`
+              : `✅ Published ${data.publishedCount} results successfully!`,
             type: 'success',
           });
 
@@ -29054,10 +31564,11 @@ const AcademyPublishResults = () => {
     setSelectedInstitute('');
     setSelectedCourse('');
     setSelectedBatch('');
-    setSelectedSemester('');
+    setSelectedExamination('');
     setSelectedAcademicYear('');
     setPublishDate('');
     setPublishTime('');
+    setPublishMinute('00');
     setSelectedStudents([]);
     setIncludeAllStudents(true);
     setCurrentPage(1);
@@ -29087,6 +31598,7 @@ const AcademyPublishResults = () => {
       Partial: { label: '⚠️ Partial', color: 'bg-amber-100 text-amber-700 border-amber-200' },
       'No Marks': { label: '❌ No Marks', color: 'bg-rose-100 text-rose-700 border-rose-200' },
       Published: { label: '📄 Published', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+      Scheduled: { label: '⏰ Scheduled', color: 'bg-purple-100 text-purple-700 border-purple-200' },
     };
     return map[status] || map['No Marks'];
   };
@@ -29095,6 +31607,7 @@ const AcademyPublishResults = () => {
     if (status === 'Ready') return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
     if (status === 'Partial') return <AlertCircle className="w-4 h-4 text-amber-600" />;
     if (status === 'Published') return <CheckCircle2 className="w-4 h-4 text-blue-600" />;
+    if (status === 'Scheduled') return <Clock className="w-4 h-4 text-purple-600" />;
     return <X className="w-4 h-4 text-rose-600" />;
   };
 
@@ -29166,20 +31679,20 @@ const AcademyPublishResults = () => {
           </div>
         </div>
 
-        {/* Semester */}
+        {/* Examination */}
         <div>
           <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
-            Semester <span className="text-rose-500">*</span>
+            Examination <span className="text-rose-500">*</span>
           </label>
           <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(e.target.value)}
+            value={selectedExamination}
+            onChange={(e) => setSelectedExamination(e.target.value)}
             disabled={!selectedBatch}
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50"
           >
-            <option value="">Select Semester</option>
-            {[1, 2, 3, 4, 5, 6].map((sem) => (
-              <option key={sem} value={sem}>Semester {sem}</option>
+            <option value="">Select Examination</option>
+            {[1, 2].map((exam) => (
+              <option key={exam} value={exam}>Examination {exam}</option>
             ))}
           </select>
         </div>
@@ -29211,7 +31724,7 @@ const AcademyPublishResults = () => {
           </button>
           <button
             onClick={fetchPublicationStatus}
-            disabled={!selectedBatch || !selectedCourse || !selectedSemester}
+            disabled={!selectedBatch || !selectedCourse || !selectedExamination}
             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -29240,6 +31753,12 @@ const AcademyPublishResults = () => {
               <X className="w-4 h-4 text-rose-600" />
               <span className="text-sm font-bold text-rose-700">No Marks: {statusSummary.noMarks}</span>
             </div>
+            {statusSummary.scheduled > 0 && (
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-bold text-purple-700">Scheduled: {statusSummary.scheduled}</span>
+              </div>
+            )}
             {statusSummary.published > 0 && (
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-blue-600" />
@@ -29453,7 +31972,7 @@ const AcademyPublishResults = () => {
                   type="number"
                   min="1"
                   max="12"
-                  placeholder="10"
+                  placeholder="6"
                   value={publishTime}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
@@ -29463,13 +31982,31 @@ const AcademyPublishResults = () => {
                       setPublishTime('');
                     }
                   }}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
+                  className="w-full pl-10 pr-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
                 />
               </div>
               <select
+                value={publishMinute}
+                onChange={(e) => setPublishMinute(e.target.value)}
+                className="px-2 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value="00">:00</option>
+                <option value="05">:05</option>
+                <option value="10">:10</option>
+                <option value="15">:15</option>
+                <option value="20">:20</option>
+                <option value="25">:25</option>
+                <option value="30">:30</option>
+                <option value="35">:35</option>
+                <option value="40">:40</option>
+                <option value="45">:45</option>
+                <option value="50">:50</option>
+                <option value="55">:55</option>
+              </select>
+              <select
                 value={publishAMPM}
                 onChange={(e) => setPublishAMPM(e.target.value)}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+                className="px-3 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
               >
                 <option value="AM">AM</option>
                 <option value="PM">PM</option>
@@ -29553,58 +32090,68 @@ const AcademyPublishResults = () => {
   );
 
   // ─── Step 3: Publication Complete ──────────────────────────────────────────
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center">
-        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-        </div>
-        <h3 className="text-xl font-black text-emerald-800">🎉 Results Published Successfully!</h3>
-        <p className="text-sm text-emerald-700 font-medium mt-2">
-          {publishResult?.publishedCount} results published, {publishResult?.skippedCount} already published
-        </p>
-        <div className="mt-3 flex items-center justify-center gap-4 text-xs text-emerald-700">
-          <span>📅 {publishDate ? new Date(publishDate).toLocaleDateString() : 'N/A'}</span>
-          <span>⏰ {publishTime} {publishAMPM}</span>
-          <span>📧 {sendNotifications ? 'Notifications Sent' : 'No Notifications'}</span>
-        </div>
-      </div>
+  const renderStep3 = () => {
+    const isScheduled = publishResult?.isScheduled || publishResult?.status === 'Scheduled';
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-          <span className="text-[10px] uppercase font-black text-slate-400 block">Published</span>
-          <span className="text-2xl font-black text-emerald-600">{publishResult?.publishedCount || 0}</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-          <span className="text-[10px] uppercase font-black text-slate-400 block">Skipped</span>
-          <span className="text-2xl font-black text-amber-600">{publishResult?.skippedCount || 0}</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-          <span className="text-[10px] uppercase font-black text-slate-400 block">Total</span>
-          <span className="text-2xl font-black text-slate-800">{publishResult?.totalResults || 0}</span>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-          <span className="text-[10px] uppercase font-black text-slate-400 block">Notifications</span>
-          <span className="text-2xl font-black text-blue-600">{sendNotifications ? '✅ Sent' : '⏸️ Off'}</span>
-        </div>
-      </div>
-
-
-
-      {/* Generated Results Preview */}
-      {publishResult?.publishedResults?.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-slate-200 bg-slate-50/50">
-            <h4 className="text-sm font-bold text-slate-700">Published Results</h4>
+    return (
+      <div className="space-y-6">
+        <div className={`p-6 text-center rounded-2xl border ${
+          isScheduled ? 'bg-purple-50 border-purple-200' : 'bg-emerald-50 border-emerald-200'
+        }`}>
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
+            isScheduled ? 'bg-purple-100 text-purple-600' : 'bg-emerald-100 text-emerald-600'
+          }`}>
+            {isScheduled ? <Clock className="w-10 h-10" /> : <CheckCircle2 className="w-10 h-10" />}
           </div>
+          <h3 className={`text-xl font-black ${isScheduled ? 'text-purple-800' : 'text-emerald-800'}`}>
+            {isScheduled ? '🗓️ Results Scheduled Successfully!' : '🎉 Results Published Successfully!'}
+          </h3>
+          <p className={`text-sm font-medium mt-2 ${isScheduled ? 'text-purple-700' : 'text-emerald-700'}`}>
+            {isScheduled
+              ? `${publishResult?.publishedCount} results scheduled. They will automatically become visible to institutes and students at the scheduled date and time.`
+              : `${publishResult?.publishedCount} results published, ${publishResult?.skippedCount} already published`}
+          </p>
+          <div className={`mt-3 flex items-center justify-center gap-4 text-xs font-semibold ${
+            isScheduled ? 'text-purple-700' : 'text-emerald-700'
+          }`}>
+            <span>📅 {publishDate ? new Date(publishDate).toLocaleDateString() : 'N/A'}</span>
+            <span>⏰ {publishTime}:{publishMinute} {publishAMPM}</span>
+            <span>📧 {sendNotifications ? (isScheduled ? 'Notifications deferred to release time' : 'Notifications Sent') : 'No Notifications'}</span>
+          </div>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">{isScheduled ? 'Scheduled' : 'Published'}</span>
+            <span className={`text-2xl font-black ${isScheduled ? 'text-purple-600' : 'text-emerald-600'}`}>{publishResult?.publishedCount || 0}</span>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Skipped</span>
+            <span className="text-2xl font-black text-amber-600">{publishResult?.skippedCount || 0}</span>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Total</span>
+            <span className="text-2xl font-black text-slate-800">{publishResult?.totalResults || 0}</span>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
+            <span className="text-[10px] uppercase font-black text-slate-400 block">Notifications</span>
+            <span className="text-2xl font-black text-blue-600">{sendNotifications ? (isScheduled ? '⏰ Deferred' : '✅ Sent') : '⏸️ Off'}</span>
+          </div>
+        </div>
+
+        {/* Generated Results Preview */}
+        {publishResult?.publishedResults?.length > 0 && (
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-slate-200 bg-slate-50/50">
+              <h4 className="text-sm font-bold text-slate-700">{isScheduled ? 'Scheduled Results' : 'Published Results'}</h4>
+            </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-200">
                   <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Percentage</th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Certificate</th>
                 </tr>
@@ -29619,7 +32166,6 @@ const AcademyPublishResults = () => {
                       {r.student?.firstName} {r.student?.lastName}
                       <span className="ml-2 text-[10px] font-mono text-slate-400">{r.student?.enrollmentId}</span>
                     </td>
-                    <td className="px-4 py-3 font-bold text-slate-800">{r.percentage}%</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                         r.resultStatus === 'PASS'
@@ -29659,6 +32205,7 @@ const AcademyPublishResults = () => {
       </div>
     </div>
   );
+};
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 text-left font-sans">
@@ -29806,6 +32353,9 @@ const AcademyPublishingDetails = () => {
           const courseTitle = courseObj.name || courseObj.courseName || r.courseName || 'Emergency Medicine';
 
           const pubDateObj = r.publishedDate ? new Date(r.publishedDate) : (r.createdAt ? new Date(r.createdAt) : new Date());
+          const isPublished = !!(r.isPublished || r.published);
+          const isFuture = pubDateObj > new Date();
+          const pubStatus = isPublished ? (isFuture ? 'Scheduled' : 'Published') : 'Scheduled';
 
           return {
             id: r._id || r.id || Math.random(),
@@ -29816,12 +32366,12 @@ const AcademyPublishingDetails = () => {
             date: pubDateObj.toISOString().split('T')[0],
             time: pubDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             ampm: '',
-            status: r.isPublished || r.published ? 'Published' : 'Scheduled',
+            status: pubStatus,
             autoPublish: false,
             studentsCount: 1,
             publishedBy: 'SEMI Board Controller',
             publishedAt: pubDateObj.toISOString(),
-            notificationSent: true,
+            notificationSent: !isFuture,
             results: r.subjects || []
           };
         });
@@ -30492,7 +33042,6 @@ const AcademyPublishingDetails = () => {
                         <tr className="bg-slate-50/70 border-b border-slate-100">
                           <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
                           <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider">Student Name</th>
-                          <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Marks</th>
                           <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
                         </tr>
                       </thead>
@@ -30503,7 +33052,6 @@ const AcademyPublishingDetails = () => {
                               {String(idx + 1).padStart(2, '0')}
                             </td>
                             <td className="px-3 py-2 font-bold text-slate-700">{result.name}</td>
-                            <td className="px-3 py-2 text-center font-bold text-slate-800">{result.marks}%</td>
                             <td className="px-3 py-2 text-center">
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${
                                 result.status === 'Passed' 
@@ -30829,7 +33377,7 @@ const AcademyRemittance = () => {
             timestamp: rev.createdAt ? new Date(rev.createdAt).getTime() : 0,
             status: 'Verified',
             payerName: rev.student ? `${rev.student.firstName} ${rev.student.lastName}` : 'Fellow Candidate',
-            details: { subjectsCount: rev.subjects?.length || 1, semester: rev.semester }
+            details: { subjectsCount: rev.subjects?.length || 1, examination: rev.examination }
           });
         }
       });
@@ -30855,7 +33403,7 @@ const AcademyRemittance = () => {
             timestamp: exam.createdAt ? new Date(exam.createdAt).getTime() : 0,
             status: 'Verified',
             payerName: exam.student ? `${exam.student.firstName} ${exam.student.lastName}` : 'Examinee',
-            details: { examType: exam.examType || 'Semester Exam' }
+            details: { examType: exam.examType || 'Examination' }
           });
         }
       });
@@ -31389,7 +33937,7 @@ const AcademyRevaluation = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [instituteFilter, setInstituteFilter] = useState('All');
-  const [semesterFilter, setSemesterFilter] = useState('All');
+  const [examinationFilter, setExaminationFilter] = useState('All');
   const [academicYearFilter, setAcademicYearFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [toast, setToast] = useState(null);
@@ -31423,7 +33971,7 @@ const AcademyRevaluation = () => {
       const params = { limit: 10000 };
       if (statusFilter !== 'All') params.status = statusFilter;
       if (instituteFilter !== 'All') params.institute = instituteFilter;
-      if (semesterFilter !== 'All') params.semester = parseInt(semesterFilter);
+      if (examinationFilter !== 'All') params.examination = parseInt(examinationFilter);
       if (academicYearFilter !== 'All') params.academicYear = academicYearFilter;
       if (searchQuery) params.search = searchQuery;
 
@@ -31437,7 +33985,7 @@ const AcademyRevaluation = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, instituteFilter, semesterFilter, academicYearFilter, searchQuery]);
+  }, [statusFilter, instituteFilter, examinationFilter, academicYearFilter, searchQuery]);
 
   const fetchData = useCallback(async () => {
     await Promise.all([fetchSummary(), fetchRequests()]);
@@ -31464,10 +34012,10 @@ const AcademyRevaluation = () => {
     return [...set].sort().reverse();
   }, [requests]);
 
-  const semesters = useMemo(() => {
+  const examinations = useMemo(() => {
     const set = new Set();
     requests.forEach((r) => {
-      if (r.semester) set.add(r.semester);
+      if (r.examination) set.add(r.examination);
     });
     return [...set].sort((a, b) => a - b);
   }, [requests]);
@@ -31483,8 +34031,8 @@ const AcademyRevaluation = () => {
       filtered = filtered.filter((r) => String(r.institute?._id || r.institute) === String(instituteFilter));
     }
 
-    if (semesterFilter !== 'All') {
-      filtered = filtered.filter((r) => String(r.semester) === String(semesterFilter));
+    if (examinationFilter !== 'All') {
+      filtered = filtered.filter((r) => String(r.examination) === String(examinationFilter));
     }
 
     if (academicYearFilter !== 'All') {
@@ -31492,11 +34040,11 @@ const AcademyRevaluation = () => {
     }
 
     return filtered;
-  }, [requests, statusFilter, instituteFilter, semesterFilter, academicYearFilter]);
+  }, [requests, statusFilter, instituteFilter, examinationFilter, academicYearFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, instituteFilter, semesterFilter, academicYearFilter]);
+  }, [searchQuery, statusFilter, instituteFilter, examinationFilter, academicYearFilter]);
 
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage) || 1;
   const paginatedRequests = useMemo(() => {
@@ -31519,25 +34067,12 @@ const AcademyRevaluation = () => {
     return new Date(date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  const getGrade = (marks, total = 100) => {
-    if (marks === null || marks === undefined || marks === '') return '';
-    const percentage = (marks / total) * 100;
-    if (percentage >= 90) return 'O';
-    if (percentage >= 80) return 'A+';
-    if (percentage >= 70) return 'A';
-    if (percentage >= 60) return 'B+';
-    if (percentage >= 50) return 'B';
-    if (percentage >= 40) return 'C';
-    if (percentage >= 35) return 'D';
-    return 'F';
-  };
-
   const getResultBadge = (finalResult) => {
     if (finalResult === 'CHANGED') {
-      return { label: 'Marks Changed', color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: <TrendingUp className="w-3.5 h-3.5" /> };
+      return { label: 'Result Changed', color: 'text-emerald-600 bg-emerald-50 border-emerald-200', icon: <TrendingUp className="w-3.5 h-3.5" /> };
     }
     if (finalResult === 'UNCHANGED') {
-      return { label: 'No Change', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: <Minus className="w-3.5 h-3.5" /> };
+      return { label: 'Result Unchanged', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: <Minus className="w-3.5 h-3.5" /> };
     }
     return { label: 'Pending', color: 'text-slate-400 bg-slate-50 border-slate-200', icon: <Clock className="w-3.5 h-3.5" /> };
   };
@@ -31628,8 +34163,8 @@ const AcademyRevaluation = () => {
       { label: 'Under Review', value: summary?.underReview || 0, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100', icon: <Eye className="w-5 h-5 text-blue-500" /> },
       { label: 'In Progress', value: summary?.inProgress || 0, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100', icon: <Activity className="w-5 h-5 text-purple-500" /> },
       { label: 'Completed', value: summary?.completed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" /> },
-      { label: 'Marks Changed', value: summary?.changed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: <TrendingUp className="w-5 h-5 text-emerald-500" /> },
-      { label: 'No Change', value: summary?.unchanged || 0, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100', icon: <Minus className="w-5 h-5 text-amber-500" /> },
+      { label: 'Result Changed', value: summary?.changed || 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: <TrendingUp className="w-5 h-5 text-emerald-500" /> },
+      { label: 'Result Unchanged', value: summary?.unchanged || 0, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100', icon: <Minus className="w-5 h-5 text-amber-500" /> },
       { label: 'Subjects', value: summary?.subjectsCount || 0, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100', icon: <BookOpen className="w-5 h-5 text-indigo-500" /> },
     ];
 
@@ -31737,16 +34272,16 @@ const AcademyRevaluation = () => {
         </select>
 
         <select
-          value={semesterFilter}
+          value={examinationFilter}
           onChange={(e) => {
-            setSemesterFilter(e.target.value);
+            setExaminationFilter(e.target.value);
             setCurrentPage(1);
           }}
           className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
         >
-          <option value="All">All Semesters</option>
-          {semesters.map((sem) => (
-            <option key={sem} value={sem}>Semester {sem}</option>
+          <option value="All">All Examinations</option>
+          {examinations.map((sem) => (
+            <option key={sem} value={sem}>Examination {sem}</option>
           ))}
         </select>
 
@@ -31776,7 +34311,7 @@ const AcademyRevaluation = () => {
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Request / Student</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Institute</th>
-            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
+            <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Examination</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Subjects</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Fee</th>
             <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
@@ -31828,7 +34363,7 @@ const AcademyRevaluation = () => {
                   </span>
                 </td>
                 <td className="px-4 py-3.5 text-center font-bold text-slate-700 text-[11px]">
-                  Sem {request.semester || 'N/A'}
+                  Exam {request.examination || 'N/A'}
                 </td>
                 <td className="px-4 py-3.5 text-center font-bold text-slate-700 text-[11px]">
                   {total > 0 && evaluated > 0 ? (
@@ -31977,7 +34512,7 @@ const AcademyRevaluation = () => {
             request,
             subjectCode: firstSubject?.subjectCode || '',
             subjectName: firstSubject?.subjectName || '',
-            revisedTotalMarks: '',
+            revisedStatus: '',
             evaluatorComments: '',
             isFinal: true,
           });
@@ -32187,13 +34722,14 @@ const AcademyRevaluation = () => {
       request,
       subjectCode,
       subjectName,
-      revisedTotalMarks,
+      revisedStatus,
       evaluatorComments,
       isFinal
     } = actionModal;
 
     const selectedSubject = request.subjects?.find(s => s.subjectCode === subjectCode);
-    const computedGrade = revisedTotalMarks === '' ? '' : getGrade(Number(revisedTotalMarks));
+    const revisedTotalMarks = revisedStatus === 'PASS' ? 100 : revisedStatus === 'FAIL' ? 50 : '';
+    const computedGrade = revisedStatus === 'PASS' ? 'A' : revisedStatus === 'FAIL' ? 'F' : '';
 
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150 overflow-y-auto">
@@ -32254,48 +34790,54 @@ const AcademyRevaluation = () => {
                 <option value="">Select a subject...</option>
                 {request.subjects?.map((subject) => (
                   <option key={subject.subjectCode} value={subject.subjectCode}>
-                    {subject.subjectName} ({subject.originalMarks}%)
+                    {subject.subjectName}
                   </option>
                 ))}
               </select>
               {selectedSubject && (
                 <div className="mt-2 flex items-center gap-3 text-[10px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-                  <span className="font-medium">Original Marks:</span>
-                  <span className="font-bold text-slate-700">{selectedSubject.originalMarks}%</span>
-                  <span className="text-slate-300">|</span>
-                  <span className="font-medium">Grade:</span>
-                  <span className="font-bold text-slate-700">{selectedSubject.originalGrade || 'N/A'}</span>
+                  <span className="font-medium">Original Result:</span>
+                  <span className={`font-bold ${(selectedSubject.originalMarks || 0) >= 50 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                    {(selectedSubject.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* Revised Marks */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
-                  Revised Marks <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={revisedTotalMarks}
-                  onChange={(e) => setActionModal((prev) => ({ ...prev, revisedTotalMarks: e.target.value }))}
-                  placeholder="0-100"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all"
-                />
+            {/* Revised Result */}
+            <div>
+              <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
+                Revised Result <span className="text-rose-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setActionModal((prev) => ({ ...prev, revisedStatus: 'PASS' }))}
+                  className={`px-4 py-3 rounded-xl border-2 text-center text-base font-black transition-all cursor-pointer ${
+                    revisedStatus === 'PASS'
+                      ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
+                      : 'bg-white border-slate-200 text-slate-400 hover:border-emerald-300'
+                  }`}
+                >
+                  PASS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActionModal((prev) => ({ ...prev, revisedStatus: 'FAIL' }))}
+                  className={`px-4 py-3 rounded-xl border-2 text-center text-base font-black transition-all cursor-pointer ${
+                    revisedStatus === 'FAIL'
+                      ? 'bg-rose-50 border-rose-400 text-rose-700'
+                      : 'bg-white border-slate-200 text-slate-400 hover:border-rose-300'
+                  }`}
+                >
+                  FAIL
+                </button>
               </div>
-              <div>
-                <label className="block text-[10px] uppercase font-black text-slate-500 mb-2">
-                  Revised Grade <span className="text-rose-500">*</span>
-                </label>
-                <div className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg font-black transition-all ${computedGrade ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-dashed border-slate-300 text-slate-400'}`}>
-                  {computedGrade || 'Auto'}
-                </div>
+              {revisedStatus && (
                 <p className="text-[9px] text-slate-400 font-medium mt-1.5">
-                  Auto-calculated from revised marks
+                  New result recording: {revisedStatus}
                 </p>
-              </div>
+              )}
             </div>
 
             {/* Comments */}
@@ -32323,7 +34865,7 @@ const AcademyRevaluation = () => {
               <div>
                 <span className="text-xs font-bold text-slate-700 block">Mark as Final & Republish</span>
                 <span className="text-[9px] text-slate-400 font-medium">
-                  This will update the student's original result with the revised marks
+                  This will update the student's original result with the revised result
                 </span>
               </div>
             </label>
@@ -32349,7 +34891,7 @@ const AcademyRevaluation = () => {
                 if (evaluatorComments.trim()) payload.evaluatorComments = evaluatorComments.trim();
                 handleMarksSubmit(request._id, payload);
               }}
-              disabled={submitting || !subjectCode || !revisedTotalMarks || !computedGrade}
+              disabled={submitting || !subjectCode || !revisedStatus}
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-emerald-500/20"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -32430,8 +34972,8 @@ const AcademyRevaluation = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[9px] text-slate-400 block">Semester</span>
-                      <span className="text-sm font-black text-slate-800">Sem {request.semester || 'N/A'}</span>
+                      <span className="text-[9px] text-slate-400 block">Examination</span>
+                      <span className="text-sm font-black text-slate-800">Exam {request.examination || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -32515,9 +35057,11 @@ const AcademyRevaluation = () => {
                               <span className="font-bold text-slate-800 block text-xs">{subject.subjectName}</span>
                               <span className="text-[9px] text-slate-400 font-mono">{subject.subjectCode}</span>
                             </div>
-                            <div className="text-right">
+                            <div className="text-center">
                               <span className="text-[10px] text-slate-400 block">Original</span>
-                              <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                              <span className={`text-sm font-black ${(subject.originalMarks || 0) >= 50 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                {(subject.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                              </span>
                               {hasResult && (
                                 <span className="block text-[8px] text-emerald-600 font-bold">✓ Reviewed</span>
                               )}
@@ -32549,22 +35093,22 @@ const AcademyRevaluation = () => {
                               </span>
                             </div>
                             <div className="flex items-center gap-4">
-                              <div className="text-right">
+                              <div className="text-center">
                                 <span className="text-[9px] text-slate-400 block">Original</span>
-                                <span className="text-xs font-black text-slate-600">{result.originalMarks}%</span>
+                                <span className={`text-xs font-black ${(result.originalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {(result.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                                </span>
                               </div>
-                              <div className="text-right">
+                              <div className="text-center">
                                 <span className="text-[9px] text-slate-400 block">Revised</span>
-                                <span className={`text-xs font-black ${result.marksChange > 0 ? 'text-emerald-600' : result.marksChange < 0 ? 'text-rose-600' : 'text-amber-600'}`}>
-                                  {result.revisedTotalMarks}%
+                                <span className={`text-xs font-black ${(result.revisedTotalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {(result.revisedTotalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
                                 </span>
                               </div>
                               <div className={`text-[10px] font-black px-2 py-1 rounded-lg ${
-                                result.marksChange > 0 ? 'bg-emerald-100 text-emerald-700' :
-                                result.marksChange < 0 ? 'bg-rose-100 text-rose-700' :
-                                'bg-amber-100 text-amber-700'
+                                (result.revisedTotalMarks || 0) >= 50 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                               }`}>
-                                {result.marksChange > 0 ? '+' : ''}{result.marksChange}%
+                                {(result.revisedTotalMarks || 0) >= 50 ? 'Cleared' : 'Failed'}
                               </div>
                               {!isApproved && isActionable && (
                                 <button
@@ -32591,17 +35135,21 @@ const AcademyRevaluation = () => {
                     </h5>
                     <div className="grid grid-cols-3 gap-3 mb-3">
                       <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
-                        <span className="text-[8px] uppercase font-black text-slate-400 block">Total Marks</span>
-                        <span className="text-base font-black text-slate-800">{request.result.totalMarks || 0}</span>
-                      </div>
-                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
-                        <span className="text-[8px] uppercase font-black text-slate-400 block">Percentage</span>
-                        <span className="text-base font-black text-slate-800">{request.result.percentage || 0}%</span>
-                      </div>
-                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
-                        <span className="text-[8px] uppercase font-black text-slate-400 block">Status</span>
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Overall Result</span>
                         <span className={`text-base font-black ${request.result.resultStatus === 'PASS' ? 'text-emerald-700' : request.result.resultStatus === 'SUPPLEMENTARY' ? 'text-amber-700' : 'text-rose-700'}`}>
                           {request.result.resultStatus || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Subjects Passed</span>
+                        <span className="text-base font-black text-emerald-700">
+                          {(request.result.subjects || []).filter((s) => s.grade !== 'ABSENT' && s.grade && s.grade !== 'F').length} / {(request.result.subjects || []).length}
+                        </span>
+                      </div>
+                      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 text-center">
+                        <span className="text-[8px] uppercase font-black text-slate-400 block">Revaluation</span>
+                        <span className="text-base font-black text-blue-700">
+                          {(request.result.subjects || []).filter((s) => s.isRevaluationCompleted || s.isRevaluationApplied).length}
                         </span>
                       </div>
                     </div>
@@ -32611,28 +35159,26 @@ const AcademyRevaluation = () => {
                           <thead>
                             <tr className="bg-slate-50/70 border-b border-slate-100">
                               <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject</th>
-                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
-                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                              <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
                               <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Reval</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50 bg-white">
                             {request.result.subjects.map((subject, idx) => {
                               const hasReval = subject.isRevaluationCompleted || subject.isRevaluationApplied;
+                              const grade = (subject.grade || '').toUpperCase();
+                              const passed = !['F', 'ABSENT', 'RA'].includes(grade);
                               return (
                                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                   <td className="px-3 py-2 font-bold text-slate-700">
                                     {subject.subjectName}
                                     <span className="text-[9px] text-slate-400 font-mono ml-1">{subject.subjectCode}</span>
                                   </td>
-                                  <td className="px-3 py-2 text-center font-bold text-slate-800">{subject.totalMarks || 0}</td>
                                   <td className="px-3 py-2 text-center">
                                     <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-bold border ${
-                                      (subject.totalMarks || 0) >= 70 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                                      (subject.totalMarks || 0) >= 50 ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                                      'bg-rose-50 border-rose-200 text-rose-700'
+                                      passed ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
                                     }`}>
-                                      {subject.grade || getGrade(subject.totalMarks)}
+                                      {subject.grade === 'ABSENT' ? 'ABSENT' : (passed ? 'PASS' : 'FAIL')}
                                     </span>
                                   </td>
                                   <td className="px-3 py-2 text-center">
@@ -32847,6 +35393,7 @@ import {
   UserCheck, 
   ClipboardList,
   FileSpreadsheet,
+  FileCheck2,
   BarChart3,
   Globe,           // For Publish Results
   RefreshCw,       // For Publishing Details
@@ -32874,6 +35421,7 @@ const NAV_GROUPS = [
     groupTitle: 'Verification & Fees',
     items: [
       { id: 'verification', path: '/academy/verification', label: 'Student Verification', Icon: UserCheck },
+      { id: 'academic-verification', path: '/academy/academic-verification', label: 'Thesis & Docs Verification', Icon: FileCheck2 },
       { id: 'eligibility', path: '/academy/eligibility', label: 'Exam Approvals', Icon: ClipboardList },
       { id: 'remittance', path: '/academy/remittance', label: 'Fee Payment Audit', Icon: CreditCard },
       { id: 'fee-config', path: '/academy/fee-config', label: 'Exam Fee Settings', Icon: Settings },
@@ -32982,16 +35530,14 @@ import {
   Download,
   Printer,
   Award,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Users,
   Calendar,
   Filter,
   X,
   BarChart3,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  CheckCircle2
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import marksService from '../../../api/marks';
@@ -33028,36 +35574,20 @@ const AcademyStudentMarks = () => {
           const rawMarks = s.marks || s.subjects || [];
           const subjects = rawMarks.length > 0
             ? rawMarks.map(m => {
-                const obtained = m.marksObtained ?? m.marks ?? 0;
-                const total = m.totalMarks || m.total || 100;
-                const percentage = total > 0 ? (obtained / total) * 100 : 0;
-                let grade = m.grade;
-                if (!grade) {
-                  if (percentage >= 90) grade = 'O';
-                  else if (percentage >= 80) grade = 'A+';
-                  else if (percentage >= 70) grade = 'A';
-                  else if (percentage >= 60) grade = 'B+';
-                  else if (percentage >= 50) grade = 'B';
-                  else if (percentage >= 40) grade = 'C';
-                  else grade = 'F';
-                }
+                const status = (m.status || m.result || '').toUpperCase();
                 return {
                   name: m.subjectName || m.name || `Subject ${idx + 1}`,
-                  marks: obtained,
-                  total,
-                  grade
+                  status: status === 'FAIL' || status === 'SUPPLEMENTARY' || status === 'REVALUATION_PENDING' ? 'FAIL' : 'PASS'
                 };
               })
             : [
-                { name: 'Anatomy', marks: 85, total: 100, grade: 'A' },
-                { name: 'Physiology', marks: 80, total: 100, grade: 'A' },
-                { name: 'Emergency Medicine', marks: 88, total: 100, grade: 'A' },
-                { name: 'Pharmacology', marks: 82, total: 100, grade: 'B+' }
+                { name: 'Anatomy', status: 'PASS' },
+                { name: 'Physiology', status: 'PASS' },
+                { name: 'Emergency Medicine', status: 'PASS' },
+                { name: 'Pharmacology', status: 'PASS' }
               ];
 
-          const totalObtained = subjects.reduce((acc, sub) => acc + (sub.marks || 0), 0);
-          const totalMax = subjects.reduce((acc, sub) => acc + (sub.total || 100), 0);
-          const computedPct = totalMax > 0 ? Math.round((totalObtained / totalMax) * 100) : 0;
+          const resultStatus = s.resultStatus || (subjects.some(sub => sub.status === 'FAIL') ? 'FAIL' : 'PASS');
 
           return {
             id: s._id || s.id || idx + 1,
@@ -33068,7 +35598,7 @@ const AcademyStudentMarks = () => {
             course: typeof s.course === 'object' ? (s.course?.name) : (s.course || 'Emergency Medicine'),
             email: s.email || 'N/A',
             phone: s.contactNumber || s.mobile || 'N/A',
-            percentage: s.percentage ?? computedPct,
+            resultStatus,
             subjects,
             attendance: s.attendancePercentage ?? s.attendance ?? 85,
             thesisStatus: s.thesisApproved ? 'Approved' : 'Pending'
@@ -33101,12 +35631,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'aarav.sharma@example.com',
       phone: '+91 98765 43210',
-      percentage: 87,
+      resultStatus: 'PASS',
       subjects: [
-        { name: 'Anatomy', marks: 92, total: 100, grade: 'A' },
-        { name: 'Physiology', marks: 85, total: 100, grade: 'A' },
-        { name: 'Emergency Medicine', marks: 88, total: 100, grade: 'A' },
-        { name: 'Pharmacology', marks: 82, total: 100, grade: 'B+' },
+        { name: 'Anatomy', status: 'PASS' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 85,
       thesisStatus: 'Approved'
@@ -33120,12 +35650,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'priya.nair@example.com',
       phone: '+91 98765 43211',
-      percentage: 76,
+      resultStatus: 'PASS',
       subjects: [
-        { name: 'Anatomy', marks: 78, total: 100, grade: 'B' },
-        { name: 'Physiology', marks: 72, total: 100, grade: 'B-' },
-        { name: 'Emergency Medicine', marks: 80, total: 100, grade: 'B+' },
-        { name: 'Pharmacology', marks: 74, total: 100, grade: 'B' },
+        { name: 'Anatomy', status: 'PASS' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 92,
       thesisStatus: 'Approved'
@@ -33139,12 +35669,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'rahul.verma@example.com',
       phone: '+91 98765 43212',
-      percentage: 76,
+      resultStatus: 'FAIL',
       subjects: [
-        { name: 'Anatomy', marks: 70, total: 100, grade: 'B-' },
-        { name: 'Physiology', marks: 75, total: 100, grade: 'B' },
-        { name: 'Emergency Medicine', marks: 82, total: 100, grade: 'A-' },
-        { name: 'Pharmacology', marks: 76, total: 100, grade: 'B' },
+        { name: 'Anatomy', status: 'FAIL' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 68,
       thesisStatus: 'Pending'
@@ -33158,12 +35688,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'neha.patel@example.com',
       phone: '+91 98765 43213',
-      percentage: 84,
+      resultStatus: 'PASS',
       subjects: [
-        { name: 'Anatomy', marks: 88, total: 100, grade: 'A' },
-        { name: 'Physiology', marks: 82, total: 100, grade: 'A-' },
-        { name: 'Emergency Medicine', marks: 85, total: 100, grade: 'A' },
-        { name: 'Pharmacology', marks: 81, total: 100, grade: 'A-' },
+        { name: 'Anatomy', status: 'PASS' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 76,
       thesisStatus: 'Approved'
@@ -33177,12 +35707,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'karan.malhotra@example.com',
       phone: '+91 98765 43214',
-      percentage: 62,
+      resultStatus: 'FAIL',
       subjects: [
-        { name: 'Anatomy', marks: 65, total: 100, grade: 'C+' },
-        { name: 'Physiology', marks: 58, total: 100, grade: 'C' },
-        { name: 'Emergency Medicine', marks: 68, total: 100, grade: 'B-' },
-        { name: 'Pharmacology', marks: 55, total: 100, grade: 'C' },
+        { name: 'Anatomy', status: 'FAIL' },
+        { name: 'Physiology', status: 'FAIL' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'FAIL' },
       ],
       attendance: 62,
       thesisStatus: 'Rejected'
@@ -33196,12 +35726,12 @@ const AcademyStudentMarks = () => {
       course: 'Emergency Medicine',
       email: 'ananya.sen@example.com',
       phone: '+91 98765 43215',
-      percentage: 91,
+      resultStatus: 'PASS',
       subjects: [
-        { name: 'Anatomy', marks: 95, total: 100, grade: 'A+' },
-        { name: 'Physiology', marks: 90, total: 100, grade: 'A+' },
-        { name: 'Emergency Medicine', marks: 92, total: 100, grade: 'A+' },
-        { name: 'Pharmacology', marks: 88, total: 100, grade: 'A' },
+        { name: 'Anatomy', status: 'PASS' },
+        { name: 'Physiology', status: 'PASS' },
+        { name: 'Emergency Medicine', status: 'PASS' },
+        { name: 'Pharmacology', status: 'PASS' },
       ],
       attendance: 94,
       thesisStatus: 'Approved'
@@ -33245,9 +35775,6 @@ const AcademyStudentMarks = () => {
     return [...filteredStudents].sort((a, b) => {
       let aVal = a[sortConfig.key];
       let bVal = b[sortConfig.key];
-      if (sortConfig.key === 'percentage') {
-        return sortConfig.direction === 'asc' ? (aVal || 0) - (bVal || 0) : (bVal || 0) - (aVal || 0);
-      }
       if (typeof aVal === 'string') {
         return sortConfig.direction === 'asc' 
           ? aVal.localeCompare(bVal || '') 
@@ -33260,10 +35787,9 @@ const AcademyStudentMarks = () => {
   // ─── Statistics ─────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const total = activeStudents.length;
-    const avgPercentage = total > 0 ? Math.round(activeStudents.reduce((sum, s) => sum + (s.percentage || 0), 0) / total) : 0;
-    const above75 = activeStudents.filter(s => (s.percentage || 0) >= 75).length;
-    const below60 = activeStudents.filter(s => (s.percentage || 0) < 60).length;
-    return { total, avgPercentage, above75, below60 };
+    const passed = activeStudents.filter(s => (s.resultStatus || 'PASS') === 'PASS').length;
+    const reappearing = total - passed;
+    return { total, passed, reappearing };
   }, [activeStudents]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
@@ -33295,36 +35821,11 @@ const AcademyStudentMarks = () => {
   };
 
   // ─── Render Helpers ────────────────────────────────────────────────────────
-  const getPercentageColor = (percentage) => {
-    if (percentage >= 80) return 'text-emerald-600';
-    if (percentage >= 60) return 'text-amber-600';
-    return 'text-rose-600';
-  };
-
-  const getPercentageBg = (percentage) => {
-    if (percentage >= 80) return 'bg-emerald-50 border-emerald-200 text-emerald-700';
-    if (percentage >= 60) return 'bg-amber-50 border-amber-200 text-amber-700';
-    return 'bg-rose-50 border-rose-200 text-rose-700';
-  };
-
-  const getGradeColor = (grade) => {
-    const map = {
-      'A+': 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      'A': 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      'A-': 'text-emerald-600 bg-emerald-50 border-emerald-200',
-      'B+': 'text-blue-600 bg-blue-50 border-blue-200',
-      'B': 'text-blue-600 bg-blue-50 border-blue-200',
-      'B-': 'text-amber-600 bg-amber-50 border-amber-200',
-      'C+': 'text-amber-600 bg-amber-50 border-amber-200',
-      'C': 'text-rose-600 bg-rose-50 border-rose-200',
-    };
-    return map[grade] || 'text-slate-500 bg-slate-50 border-slate-200';
-  };
-
-  const getStatusIcon = (percentage) => {
-    if (percentage >= 80) return <TrendingUp className="w-4 h-4" />;
-    if (percentage >= 60) return <Minus className="w-4 h-4" />;
-    return <TrendingDown className="w-4 h-4" />;
+  const getStatusBadge = (status) => {
+    const isPass = (status || 'PASS') === 'PASS';
+    return isPass
+      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+      : 'bg-rose-50 border-rose-200 text-rose-700';
   };
 
   return (
@@ -33378,24 +35879,17 @@ const AcademyStudentMarks = () => {
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Avg Percentage</span>
-            <Award className="w-4 h-4 text-emerald-500" />
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Passed</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
-          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.avgPercentage}%</p>
+          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.passed}</p>
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Above 75%</span>
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Reappearing</span>
+            <Award className="w-4 h-4 text-amber-500" />
           </div>
-          <p className="text-2xl font-black text-emerald-600 mt-1">{stats.above75}</p>
-        </div>
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Below 60%</span>
-            <TrendingDown className="w-4 h-4 text-rose-500" />
-          </div>
-          <p className="text-2xl font-black text-rose-600 mt-1">{stats.below60}</p>
+          <p className="text-2xl font-black text-amber-600 mt-1">{stats.reappearing}</p>
         </div>
       </div>
 
@@ -33511,11 +36005,11 @@ const AcademyStudentMarks = () => {
                 </th>
                 <th 
                   className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center cursor-pointer hover:text-slate-700 transition-colors group"
-                  onClick={() => handleSort('percentage')}
+                  onClick={() => handleSort('resultStatus')}
                 >
                   <div className="flex items-center justify-center gap-1">
-                    Percentage
-                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'percentage' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
+                    Result
+                    <ChevronDown className={`w-3 h-3 transition-transform ${sortConfig.key === 'resultStatus' && sortConfig.direction === 'desc' ? 'rotate-180' : ''}`} />
                   </div>
                 </th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-28">Actions</th>
@@ -33563,14 +36057,10 @@ const AcademyStudentMarks = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className={`text-sm font-black ${getPercentageColor(student.percentage)}`}>
-                        {student.percentage}%
-                      </span>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${getPercentageBg(student.percentage)}`}>
-                        {getStatusIcon(student.percentage)}
-                      </span>
-                    </div>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadge(student.resultStatus)}`}>
+                      {student.resultStatus === 'PASS' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                      {student.resultStatus === 'PASS' ? 'Pass' : 'Fail'}
+                    </span>
                   </td>
                   <td className="px-4 py-3.5 text-center">
                     <button
@@ -33611,15 +36101,11 @@ const AcademyStudentMarks = () => {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              ≥ 75% ({mockStudents.filter(s => s.percentage >= 75).length})
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-              60-74% ({mockStudents.filter(s => s.percentage >= 60 && s.percentage < 75).length})
+              Passed ({mockStudents.filter(s => (s.resultStatus || 'PASS') === 'PASS').length})
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-              &lt; 60% ({mockStudents.filter(s => s.percentage < 60).length})
+              Reappearing ({mockStudents.filter(s => (s.resultStatus || 'PASS') !== 'PASS').length})
             </span>
           </div>
         </div>
@@ -33659,9 +36145,9 @@ const AcademyStudentMarks = () => {
               {/* Quick Stats */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 text-center">
-                  <span className="text-[9px] uppercase font-black text-slate-400">Overall</span>
-                  <p className={`text-xl font-black ${getPercentageColor(selectedStudent.percentage)}`}>
-                    {selectedStudent.percentage}%
+                  <span className="text-[9px] uppercase font-black text-slate-400">Overall Result</span>
+                  <p className={`text-sm font-black ${selectedStudent.resultStatus === 'PASS' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {selectedStudent.resultStatus === 'PASS' ? 'PASS' : 'FAIL'}
                   </p>
                 </div>
                 <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 text-center">
@@ -33678,55 +36164,32 @@ const AcademyStudentMarks = () => {
                 </div>
               </div>
 
-              {/* Subject Marks Table */}
+              {/* Subject Results Table */}
               <div>
                 <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
-                  Subject-wise Marks
+                  Subject-wise Results
                 </h4>
                 <div className="overflow-x-auto border border-slate-100 rounded-2xl">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50/70 border-b border-slate-100">
                         <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject</th>
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Marks</th>
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
-                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                        <th className="px-4 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 bg-white">
                       {selectedStudent.subjects.map((subject, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-4 py-2.5 font-bold text-slate-700">{subject.name}</td>
-                          <td className="px-4 py-2.5 text-center font-bold text-slate-800">
-                            {subject.marks} / {subject.total}
-                          </td>
                           <td className="px-4 py-2.5 text-center">
-                            <span className={`font-bold ${getPercentageColor(Math.round((subject.marks / subject.total) * 100))}`}>
-                              {Math.round((subject.marks / subject.total) * 100)}%
-                            </span>
-                          </td>
-                          <td className="px-4 py-2.5 text-center">
-                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getGradeColor(subject.grade)}`}>
-                              {subject.grade}
+                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadge(subject.status)}`}>
+                              {subject.status === 'PASS' ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                              {subject.status === 'PASS' ? 'Pass' : 'Fail'}
                             </span>
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot>
-                      <tr className="bg-slate-50/70 border-t border-slate-200">
-                        <td className="px-4 py-2.5 font-black text-xs text-slate-700">Overall</td>
-                        <td className="px-4 py-2.5 text-center font-bold text-slate-800">
-                          {selectedStudent.subjects.reduce((sum, s) => sum + s.marks, 0)} / {selectedStudent.subjects.reduce((sum, s) => sum + s.total, 0)}
-                        </td>
-                        <td className="px-4 py-2.5 text-center">
-                          <span className={`font-black ${getPercentageColor(selectedStudent.percentage)}`}>
-                            {selectedStudent.percentage}%
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-center"></td>
-                      </tr>
-                    </tfoot>
                   </table>
                 </div>
               </div>
@@ -33796,26 +36259,26 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
   // Helper to safely format document URLs
   const getDocUrl = (url) => {
     if (!url) return null;
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const filename = url.replace(/\\/g, '/').split('/').pop();
-    return getUploadUrl(filename);
+    return getUploadUrl(url);
   };
 
   const docs = student.documents || {};
-  const sSemesters = student.semesters || [];
-  const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
-  
-  // Calculate attendance: root property OR latest semester OR average
+  const sExaminations = student.examinations || [];
+
+  const thesisDocUrl = sExaminations.find(sem => sem.thesisDocumentUrl)?.thesisDocumentUrl || null;
+  const thesisApprovedAny = sExaminations.some(sem => sem.thesisApproved);
+
+  // Calculate attendance: root property OR best (max) examination attendance
   const attendancePct = (student.attendancePercentage !== undefined && student.attendancePercentage !== null && student.attendancePercentage > 0)
     ? student.attendancePercentage
-    : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
+    : (sExaminations.length > 0 ? Math.max(...sExaminations.map(sem => sem.attendancePercentage || 0)) : 0);
 
   // Remittance status: student.remittedToAcademy OR razorpayPaymentId
   const isRemitted = Boolean(student.remittedToAcademy || student.razorpayPaymentId);
 
-  // Thesis status: approved if student.thesisApproved or any sem thesisApproved. Uploaded if any thesisDocumentUrl exists.
-  const isThesisApproved = Boolean(student.thesisApproved || sSemesters.some(s => s.thesisApproved));
-  const isThesisUploaded = Boolean(student.thesisUploaded || sSemesters.some(s => s.thesisDocumentUrl));
+  // Thesis status: approved if student.thesisApproved or any exam thesisApproved. Uploaded if any thesisDocumentUrl exists.
+  const isThesisApproved = Boolean(student.thesisApproved || sExaminations.some(s => s.thesisApproved));
+  const isThesisUploaded = Boolean(student.thesisUploaded || sExaminations.some(s => s.thesisDocumentUrl));
 
   return (
     <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -34008,15 +36471,15 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
             )}
           </div>
 
-          {/* Semester-Wise Detailed Breakdown (Fee, Attendance & Thesis) */}
+          {/* Examination-Wise Detailed Breakdown (Fee, Attendance & Thesis) */}
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-4">
             <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5 border-b border-slate-200/60 pb-2">
-              <Layers className="w-3.5 h-3.5 text-blue-600" /> Semester-Wise Breakdown (Fee, Attendance & Thesis)
+              <Layers className="w-3.5 h-3.5 text-blue-600" /> Examination-Wise Breakdown (Fee, Attendance & Thesis)
             </h4>
 
-            {sSemesters.length > 0 ? (
+            {sExaminations.length > 0 ? (
               <div className="space-y-3">
-                {sSemesters.map((sem) => {
+                {sExaminations.map((sem) => {
                   const semAtt = sem.attendancePercentage ?? 0;
                   const semAttValid = semAtt >= 75;
                   const semThesisDoc = sem.thesisDocumentUrl;
@@ -34024,10 +36487,10 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                   const semRemitted = isRemitted || sem.feeRemitted;
 
                   return (
-                    <div key={sem.semesterNumber} className="bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-sm space-y-3 text-xs">
+                    <div key={sem.examinationNumber} className="bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-sm space-y-3 text-xs">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                         <span className="font-extrabold text-blue-700 text-xs uppercase tracking-wider">
-                          Semester {sem.semesterNumber}
+                          Examination {sem.examinationNumber}
                         </span>
                         <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
                           semAttValid && (semThesisApproved || semThesisDoc) ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
@@ -34049,7 +36512,7 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                           </span>
                         </div>
 
-                        {/* 2. Semester Attendance */}
+                        {/* 2. Examination Attendance */}
                         <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-150 space-y-1">
                           <div className="flex justify-between items-center">
                             <span className="text-[9px] uppercase font-bold text-slate-400">Attendance</span>
@@ -34093,7 +36556,7 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                 })}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 italic">No semester breakdown records initialized for this candidate.</p>
+              <p className="text-xs text-slate-400 italic">No examination breakdown records initialized for this candidate.</p>
             )}
           </div>
 
@@ -34109,10 +36572,16 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                   href={getDocUrl(docs.passportPhotoUrl)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex justify-between items-center p-3 bg-slate-50 border border-slate-150 hover:border-blue-300 hover:bg-blue-50/20 rounded-xl transition-all group"
+                  className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-150 hover:border-blue-300 hover:bg-blue-50/20 rounded-xl transition-all group"
                 >
+                  <img
+                    src={getDocUrl(docs.passportPhotoUrl)}
+                    alt="Passport Size Photograph"
+                    className="w-12 h-12 object-cover rounded-lg border border-slate-200 bg-white flex-shrink-0"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
                   <span className="font-bold text-slate-700 text-[11px] block truncate">Passport Size Photograph</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-600 transition-colors ml-auto" />
                 </a>
               )}
 
@@ -34173,6 +36642,18 @@ const AcademyStudentModal = ({ student, isOpen, onClose }) => {
                 >
                   <span className="font-bold text-slate-700 text-[11px] block truncate">Signed Membership Form</span>
                   <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                </a>
+              )}
+
+              {thesisDocUrl && (
+                <a
+                  href={getDocUrl(thesisDocUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex justify-between items-center p-3 bg-indigo-50/60 border border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50 rounded-xl transition-all group"
+                >
+                  <span className="font-bold text-indigo-800 text-[11px] block truncate">📄 Thesis Document {thesisApprovedAny ? '✓' : '⏳'}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-indigo-600 group-hover:text-indigo-800 transition-colors" />
                 </a>
               )}
 
@@ -34425,6 +36906,10 @@ export default function AcademyStudentVerification({
       setActionRemarks('');
       setInspectingStudent(null);
       
+      if (statusToSet === 'Approved') setActiveTab('approved');
+      else if (statusToSet === 'Correction Required') setActiveTab('correction');
+      else if (statusToSet === 'Rejected') setActiveTab('rejected');
+
       // Refresh board data
       if (fetchBoardData) {
         await fetchBoardData();
@@ -35437,6 +37922,1089 @@ export default AcademyStudents;
 
 ```
 
+### `client/src/pages/academy/components/AcademyThesisVerification.jsx`
+
+```jsx
+import { useState, useMemo } from 'react';
+import {
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Inbox,
+  Clock,
+  AlertCircle,
+  Download,
+  ShieldCheck,
+  User,
+  Calendar,
+  Award,
+  Eye,
+  Search,
+  Users,
+  FileCheck2,
+  GraduationCap,
+  ExternalLink,
+  RotateCcw,
+  Check,
+  X,
+  ListChecks,
+  BookOpenCheck
+} from 'lucide-react';
+import Toast from '../../../Components/Toast';
+import ConfirmModal from '../../../Components/ConfirmModal';
+import academicService from '../../../api/academic';
+import { getUploadUrl } from '../../../api/apiClient';
+
+const ATTENDANCE_THRESHOLD = 75;
+
+export default function AcademyThesisVerification({
+  students = [],
+  fetchBoardData = () => {}
+}) {
+  const [activeTab, setActiveTab] = useState('pending');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterInstitute, setFilterInstitute] = useState('');
+  const [filterCourse, setFilterCourse] = useState('');
+  const [filterBatch, setFilterBatch] = useState('');
+  const [filterExam, setFilterExam] = useState('');
+
+  // Active record being reviewed in the modal (student + examination)
+  const [inspectingRecord, setInspectingRecord] = useState(null);
+
+  // Decision / action states
+  const [actionType, setActionType] = useState(null); // 'Certify' | 'Reject' | null
+  const [actionRemarks, setActionRemarks] = useState('');
+  const [attendanceInput, setAttendanceInput] = useState('');
+  const [isUpdatingAttendance, setIsUpdatingAttendance] = useState(false);
+  const [busyKey, setBusyKey] = useState('');
+  const [toast, setToast] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+
+  // Extract unique filter dropdown values
+  const institutes = useMemo(() => [...new Set(students.map(s => s.institute).filter(Boolean))].sort(), [students]);
+  const courses = useMemo(() => [...new Set(students.map(s => s.course).filter(Boolean))].sort(), [students]);
+  const batches = useMemo(() => [...new Set(students.map(s => s.batch).filter(Boolean))].sort(), [students]);
+
+  // Flatten students -> (student, examination) verification records
+  // Maintain distinct records for each examination so approved Exam 1 records
+  // stay certified and visible under the 'Certified' tab instead of being overwritten by an unstarted Exam 2.
+  const studentRecords = useMemo(() => {
+    const records = [];
+    (students || []).forEach(s => {
+      const exams = (s.examinations && s.examinations.length > 0)
+        ? s.examinations
+        : [{ examinationNumber: 1, attendancePercentage: 0, thesisApproved: false, eligibilityStatus: 'Pending' }];
+
+      const exam1 = exams.find(e => e.examinationNumber === 1);
+      const exam2 = exams.find(e => e.examinationNumber === 2);
+      const exam1Approved = exam1?.eligibilityStatus === 'Approved';
+
+      // Always include Examination 1
+      if (exam1) {
+        records.push({
+          ...s,
+          examinationNumber: 1,
+          attendancePercentage: Number(exam1.attendancePercentage ?? 0),
+          thesisApproved: Boolean(exam1.thesisApproved),
+          thesisDocumentUrl: exam1.thesisDocumentUrl || '',
+          eligibilityStatus: exam1.eligibilityStatus || 'Pending',
+          rejectionNotes: exam1.rejectionNotes || '',
+        });
+      }
+
+      // Include Examination 2 if:
+      // 1) Exam 2 has data (attendance > 0, thesis uploaded, thesis approved, or non-pending status)
+      // 2) OR Exam 1 is approved AND Exam 2 has active attendance/thesis submissions or user filtered for Exam 2
+      if (exam2) {
+        const hasExam2Data = (exam2.attendancePercentage !== undefined && exam2.attendancePercentage > 0) ||
+                             !!exam2.thesisDocumentUrl ||
+                             exam2.thesisApproved ||
+                             (exam2.eligibilityStatus && exam2.eligibilityStatus !== 'Pending');
+
+        if (hasExam2Data || (exam1Approved && (exam2.thesisDocumentUrl || exam2.attendancePercentage > 0))) {
+          records.push({
+            ...s,
+            examinationNumber: 2,
+            attendancePercentage: Number(exam2.attendancePercentage ?? 0),
+            thesisApproved: Boolean(exam2.thesisApproved),
+            thesisDocumentUrl: exam2.thesisDocumentUrl || '',
+            eligibilityStatus: exam2.eligibilityStatus || 'Pending',
+            rejectionNotes: exam2.rejectionNotes || '',
+          });
+        }
+      }
+    });
+    return records;
+  }, [students]);
+
+  const isReady = (record) => record.attendancePercentage >= ATTENDANCE_THRESHOLD && record.thesisApproved;
+
+  // Filter logic
+  const filteredRecords = useMemo(() => {
+    return studentRecords.filter(record => {
+      // Tab filter
+      if (activeTab === 'pending' && !(record.eligibilityStatus === 'Pending' && !isReady(record))) return false;
+      if (activeTab === 'ready' && !(record.eligibilityStatus === 'Pending' && isReady(record))) return false;
+      if (activeTab === 'certified' && record.eligibilityStatus !== 'Approved') return false;
+      if (activeTab === 'rejected' && record.eligibilityStatus !== 'Rejected') return false;
+
+      // Dropdown filters
+      if (filterInstitute && record.institute !== filterInstitute) return false;
+      if (filterCourse && record.course !== filterCourse) return false;
+      if (filterBatch && record.batch !== filterBatch) return false;
+      if (filterExam && String(record.examinationNumber) !== String(filterExam)) return false;
+
+      // Text search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const fullName = (record.fullName || `${record.firstName || ''} ${record.lastName || ''}`).toLowerCase();
+        return (
+          fullName.includes(q) ||
+          (record.enrollmentNo || record.enrollmentId || '').toLowerCase().includes(q) ||
+          (record.email || '').toLowerCase().includes(q) ||
+          (record.medicalCouncilRegistrationNumber || '').toLowerCase().includes(q) ||
+          (record.institute || '').toLowerCase().includes(q)
+        );
+      }
+
+      return true;
+    });
+  }, [studentRecords, activeTab, filterInstitute, filterCourse, filterBatch, filterExam, searchQuery]);
+
+  // Statistics counters
+  const stats = useMemo(() => {
+    const pending = studentRecords.filter(r => r.eligibilityStatus === 'Pending' && !isReady(r)).length;
+    const ready = studentRecords.filter(r => r.eligibilityStatus === 'Pending' && isReady(r)).length;
+    const certified = studentRecords.filter(r => r.eligibilityStatus === 'Approved').length;
+    const rejected = studentRecords.filter(r => r.eligibilityStatus === 'Rejected').length;
+    return { total: studentRecords.length, pending, ready, certified, rejected };
+  }, [studentRecords]);
+
+  const documentCount = (record) => {
+    const s = record.documents || {};
+    const certs = [s.nblsCertificateUrl, s.nclsCertificateUrl, s.ntlsCertificateUrl, s.nulsCertificateUrl].filter(Boolean).length;
+    return certs + (record.thesisDocumentUrl ? 1 : 0);
+  };
+
+  const showToast = (type, message) => setToast({ type, message });
+
+  // ─── Actions ─────────────────────────────────────────────────────────────
+  const handleOpenRecord = (record) => {
+    setInspectingRecord(record);
+    setActionType(null);
+    setActionRemarks(record.rejectionNotes || '');
+    setAttendanceInput(String(record.attendancePercentage || ''));
+  };
+
+  const handleUpdateAttendance = async () => {
+    if (!inspectingRecord) return;
+    const value = parseInt(attendanceInput, 10);
+    if (isNaN(value) || value < 0 || value > 100) {
+      showToast('error', 'Attendance must be a number between 0 and 100.');
+      return;
+    }
+    setIsUpdatingAttendance(true);
+    try {
+      const studentId = inspectingRecord._id || inspectingRecord.id;
+      await academicService.updateAcademicMetrics(studentId, {
+        examinationNumber: inspectingRecord.examinationNumber,
+        attendancePercentage: value,
+      });
+      showToast('success', `Attendance updated to ${value}% for ${inspectingRecord.fullName} (Exam ${inspectingRecord.examinationNumber}).`);
+      setInspectingRecord(prev => prev ? { ...prev, attendancePercentage: value } : prev);
+      if (fetchBoardData) await fetchBoardData();
+    } catch (err) {
+      console.error('Error updating attendance:', err);
+      showToast('error', err.parsedMessage || err.message || 'Failed to update attendance.');
+    } finally {
+      setIsUpdatingAttendance(false);
+    }
+  };
+
+  const handleThesisToggle = async (record, approved) => {
+    if (!record) return;
+    const key = `thesis-${approved ? 'approve' : 'revoke'}-${record.enrollmentNo || record._id || record.id}-${record.examinationNumber}`;
+    setBusyKey(key);
+    try {
+      const studentId = record._id || record.id;
+      await academicService.updateAcademicMetrics(studentId, {
+        examinationNumber: record.examinationNumber,
+        thesisApproved: approved,
+      });
+      showToast('success', approved
+        ? `Thesis approved for ${record.fullName} (Exam ${record.examinationNumber}).`
+        : `Thesis approval revoked for ${record.fullName} (Exam ${record.examinationNumber}).`);
+      // Optimistically sync the open modal + list
+      setInspectingRecord(prev => prev && (prev._id || prev.id) === studentId && prev.examinationNumber === record.examinationNumber
+        ? { ...prev, thesisApproved: approved }
+        : prev);
+      if (fetchBoardData) await fetchBoardData();
+    } catch (err) {
+      console.error('Error toggling thesis:', err);
+      showToast('error', err.parsedMessage || err.message || 'Failed to update thesis status.');
+    } finally {
+      setBusyKey('');
+    }
+  };
+
+  const handleCertify = async () => {
+    const rec = inspectingRecord;
+    if (!rec) return;
+    if (!isReady(rec)) {
+      showToast('warning', 'Cannot certify: attendance must be ≥ 75% and thesis must be approved.');
+      return;
+    }
+    setIsUpdatingAttendance(true);
+    try {
+      const studentId = rec._id || rec.id;
+      await academicService.updateAcademicMetrics(studentId, {
+        examinationNumber: rec.examinationNumber,
+        eligibilityStatus: 'Approved',
+      });
+      showToast('success', `${rec.fullName} (Exam ${rec.examinationNumber}) certified eligible for the board examination.`);
+      setInspectingRecord(null);
+      setActionType(null);
+      setActionRemarks('');
+      setActiveTab('certified');
+      if (fetchBoardData) await fetchBoardData();
+    } catch (err) {
+      console.error('Error certifying eligibility:', err);
+      showToast('error', err.parsedMessage || err.message || 'Failed to certify eligibility.');
+    } finally {
+      setIsUpdatingAttendance(false);
+    }
+  };
+
+  const handleReject = async () => {
+    const rec = inspectingRecord;
+    if (!rec) return;
+    if (!actionRemarks.trim()) {
+      showToast('error', 'Please provide specific remarks/reasons for rejection.');
+      return;
+    }
+    setBusyKey(`reject-${rec.enrollmentNo || rec._id || rec.id}`);
+    try {
+      const studentId = rec._id || rec.id;
+      await academicService.updateAcademicMetrics(studentId, {
+        examinationNumber: rec.examinationNumber,
+        eligibilityStatus: 'Rejected',
+        rejectionNotes: actionRemarks.trim(),
+      });
+      showToast('success', `Rejected ${rec.fullName} (Exam ${rec.examinationNumber}) with remarks recorded.`);
+      setInspectingRecord(null);
+      setActionType(null);
+      setActionRemarks('');
+      if (fetchBoardData) await fetchBoardData();
+    } catch (err) {
+      console.error('Error rejecting eligibility:', err);
+      showToast('error', err.parsedMessage || err.message || 'Failed to reject eligibility.');
+    } finally {
+      setBusyKey('');
+    }
+  };
+
+  const getStatusBadge = (record) => {
+    if (record.eligibilityStatus === 'Approved') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          Certified
+        </span>
+      );
+    }
+    if (record.eligibilityStatus === 'Rejected') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+          <XCircle className="w-3.5 h-3.5 text-red-600" />
+          Rejected
+        </span>
+      );
+    }
+    if (isReady(record)) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200">
+          <ShieldCheck className="w-3.5 h-3.5 text-sky-600" />
+          Ready to Certify
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+        <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+        Pending Review
+      </span>
+    );
+  };
+
+  const getAttendanceBadge = (value) => (
+    value >= ATTENDANCE_THRESHOLD ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'
+  );
+
+  const getThesisBadgeClass = (record) => {
+    if (record.thesisApproved) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    if (record.thesisDocumentUrl) return 'bg-sky-50 text-sky-700 border-sky-200';
+    return 'bg-slate-100 text-slate-500 border-slate-200';
+  };
+
+  const renderDocTile = ({ url, label, footer }) => {
+    const fullUrl = url ? getUploadUrl(url) : null;
+    return (
+      <div className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-primary-400 transition-all flex flex-col justify-between">
+        <div>
+          <div className="flex items-center justify-between mb-1.5 gap-2">
+            <span className="text-[11px] font-bold text-slate-800">{label}</span>
+            {fullUrl ? (
+              <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
+            ) : (
+              <span className="w-5 h-5 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">✗</span>
+            )}
+          </div>
+          <span className="text-[10px] text-slate-400">
+            {fullUrl ? 'Uploaded & available' : 'Not attached'}
+          </span>
+          {footer}
+        </div>
+        {fullUrl && (
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-2">
+            <a
+              href={fullUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 bg-slate-100 hover:bg-primary-50 text-slate-700 hover:text-primary-700 text-[11px] font-bold rounded-lg transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span>View</span>
+            </a>
+            <a
+              href={fullUrl}
+              download
+              className="inline-flex items-center justify-center p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+              title="Download document"
+            >
+              <Download className="w-3 h-3" />
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const documentSections = {
+    course: [
+      { key: 'nblsCertificateUrl', label: 'NBLS Certificate (Basic Life Support)' },
+      { key: 'nclsCertificateUrl', label: 'NCLS Certificate (Comprehensive Life Support)' },
+      { key: 'ntlsCertificateUrl', label: 'NTLS Certificate (Trauma Life Support)' },
+      { key: 'nulsCertificateUrl', label: 'NULS Certificate (Ultrasound Life Support)' },
+    ],
+  };
+
+  return (
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 font-sans text-slate-800">
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmConfig && (
+        <ConfirmModal
+          isOpen={true}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          confirmText={confirmConfig.confirmText || 'Confirm'}
+          type={confirmConfig.type || 'success'}
+          onConfirm={() => {
+            const cb = confirmConfig.onConfirm;
+            setConfirmConfig(null);
+            if (cb) cb();
+          }}
+          onCancel={() => setConfirmConfig(null)}
+        />
+      )}
+
+      {/* ─── Header & Title ────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-primary-600 mb-1">
+            <BookOpenCheck className="w-4 h-4" />
+            <span>Academic Department Verification</span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+            Thesis, Documents & Attendance
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Review and verify thesis submissions, course completion certificates, and attendance before certifying candidates for board examinations.
+          </p>
+        </div>
+
+        <button
+          onClick={() => fetchBoardData && fetchBoardData()}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all shadow-sm self-start md:self-auto"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Refresh Records</span>
+        </button>
+      </div>
+
+      {/* ─── Top KPI Cards ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {[
+          { id: 'all', label: 'Total Records', count: stats.total, sub: 'Across all examinations', Icon: ListChecks, activeCls: 'bg-slate-900 border-slate-900', inactiveCls: 'bg-white border-slate-200 hover:border-slate-300' },
+          { id: 'pending', label: 'Pending Review', count: stats.pending, sub: 'Missing attendance / thesis', Icon: Clock, activeCls: 'bg-amber-500 border-amber-500', inactiveCls: 'bg-amber-50/60 border-amber-200/80 hover:border-amber-300' },
+          { id: 'ready', label: 'Ready to Certify', count: stats.ready, sub: 'All criteria fulfilled', Icon: ShieldCheck, activeCls: 'bg-sky-600 border-sky-600', inactiveCls: 'bg-sky-50/60 border-sky-200/80 hover:border-sky-300' },
+          { id: 'certified', label: 'Certified', count: stats.certified, sub: 'Approved for board exam', Icon: CheckCircle2, activeCls: 'bg-emerald-600 border-emerald-600', inactiveCls: 'bg-emerald-50/60 border-emerald-200/80 hover:border-emerald-300' },
+          { id: 'rejected', label: 'Rejected', count: stats.rejected, sub: 'Flagged with remarks', Icon: XCircle, activeCls: 'bg-red-600 border-red-600', inactiveCls: 'bg-red-50/60 border-red-200/80 hover:border-red-300' },
+        ].map(card => {
+          const isActive = activeTab === card.id;
+          const Icon = card.Icon;
+          return (
+            <div
+              key={card.id}
+              onClick={() => setActiveTab(card.id)}
+              className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 ${isActive ? `${card.activeCls} text-white shadow-md -translate-y-0.5` : `${card.inactiveCls} shadow-sm`}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-bold uppercase tracking-wider ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
+                  {card.label}
+                </span>
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white/90' : 'text-slate-400'}`} />
+              </div>
+              <div className="text-2xl font-black mt-2 tracking-tight">{card.count}</div>
+              <span className={`text-[11px] font-semibold mt-0.5 block ${isActive ? 'text-white/70' : 'text-slate-400'}`}>
+                {card.sub}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ─── Search & Filters Bar ────────────────────────────────────────── */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 border-b border-slate-100">
+          {[
+            { id: 'pending', label: 'Pending Review', count: stats.pending, Icon: Clock, color: 'text-amber-600 bg-amber-50' },
+            { id: 'ready', label: 'Ready to Certify', count: stats.ready, Icon: ShieldCheck, color: 'text-sky-600 bg-sky-50' },
+            { id: 'certified', label: 'Certified', count: stats.certified, Icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
+            { id: 'rejected', label: 'Rejected', count: stats.rejected, Icon: XCircle, color: 'text-red-600 bg-red-50' },
+            { id: 'all', label: 'All Records', count: stats.total, Icon: Users, color: 'text-slate-600 bg-slate-100' },
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.Icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  isActive ? 'bg-primary-600 text-white shadow-md shadow-primary-600/20' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : ''}`} />
+                <span>{tab.label}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${isActive ? 'bg-primary-700/80 text-white' : tab.color}`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
+          {/* Search Box */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search candidate, reg no, email..."
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Institute Filter */}
+          <div>
+            <select
+              value={filterInstitute}
+              onChange={(e) => setFilterInstitute(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50 font-medium text-slate-700"
+            >
+              <option value="">All Institutes / Colleges</option>
+              {institutes.map(inst => <option key={inst} value={inst}>{inst}</option>)}
+            </select>
+          </div>
+
+          {/* Course Filter */}
+          <div>
+            <select
+              value={filterCourse}
+              onChange={(e) => setFilterCourse(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50 font-medium text-slate-700"
+            >
+              <option value="">All Courses</option>
+              {courses.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* Batch Filter */}
+          <div>
+            <select
+              value={filterBatch}
+              onChange={(e) => setFilterBatch(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50 font-medium text-slate-700"
+            >
+              <option value="">All Batches</option>
+              {batches.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+
+          {/* Examination Filter */}
+          <div>
+            <select
+              value={filterExam}
+              onChange={(e) => setFilterExam(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50/50 font-medium text-slate-700"
+            >
+              <option value="">All Examinations</option>
+              <option value="1">Examination 1</option>
+              <option value="2">Examination 2</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Verification Records Table ─────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {filteredRecords.length === 0 ? (
+          <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+              <Inbox className="w-7 h-7" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800">No Verification Records Found</h3>
+            <p className="text-xs text-slate-500 max-w-sm">
+              {searchQuery || filterInstitute || filterCourse || filterBatch || filterExam
+                ? 'No records match your current filter criteria. Try clearing some filters.'
+                : `There are currently no records under "${activeTab}" status.`}
+            </p>
+            {(searchQuery || filterInstitute || filterCourse || filterBatch || filterExam) && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilterInstitute('');
+                  setFilterCourse('');
+                  setFilterBatch('');
+                  setFilterExam('');
+                }}
+                className="mt-2 text-xs text-primary-600 font-bold hover:underline"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-black uppercase text-slate-500 tracking-wider">
+                  <th className="py-4 px-5">Student / Candidate</th>
+                  <th className="py-4 px-4">Examination</th>
+                  <th className="py-4 px-4">Attendance</th>
+                  <th className="py-4 px-4">Thesis</th>
+                  <th className="py-4 px-4">Documents</th>
+                  <th className="py-4 px-4">Eligibility Status</th>
+                  <th className="py-4 px-5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {filteredRecords.map((record, idx) => {
+                  const photoSrc = record.documents?.passportPhotoUrl ? getUploadUrl(record.documents.passportPhotoUrl) : null;
+                  const docCount = documentCount(record);
+                  const busy = busyKey === `thesis-approve-${record.enrollmentNo || record._id || record.id}-${record.examinationNumber}`;
+
+                  return (
+                    <tr key={`${record._id || record.id}-${record.examinationNumber}-${idx}`} className="hover:bg-slate-50/80 transition-colors group">
+                      {/* Student Candidate Info */}
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center font-bold text-slate-600 text-xs">
+                            {photoSrc ? (
+                              <img src={photoSrc} alt="Passport" className="w-full h-full object-cover" />
+                            ) : (
+                              <span>{(record.firstName?.[0] || 'S') + (record.lastName?.[0] || '')}</span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-slate-900 group-hover:text-primary-600 transition-colors">
+                              {record.fullName || `${record.firstName || ''} ${record.lastName || ''}`}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono mt-0.5">
+                              <span>{record.enrollmentNo || record.enrollmentId}</span>
+                              <span>•</span>
+                              <span className="truncate max-w-[140px]">{record.institute}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Examination */}
+                      <td className="py-4 px-4">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-[11px]">
+                          <GraduationCap className="w-3.5 h-3.5 text-primary-600" />
+                          <span>Exam {record.examinationNumber}</span>
+                        </div>
+                      </td>
+
+                      {/* Attendance */}
+                      <td className="py-4 px-4">
+                        <div>
+                          <span className="font-black text-slate-800">{record.attendancePercentage}%</span>
+                          <span className={`inline-flex ml-2 px-2 py-0.5 rounded-full text-[9px] font-black border ${getAttendanceBadge(record.attendancePercentage)}`}>
+                            {record.attendancePercentage >= ATTENDANCE_THRESHOLD ? 'Meets 75%' : 'Below 75%'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Thesis */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${getThesisBadgeClass(record)}`}>
+                            <FileText className="w-3 h-3" />
+                            {record.thesisApproved ? 'Approved' : record.thesisDocumentUrl ? 'Pending' : 'No Document'}
+                          </span>
+                          {!record.thesisApproved && record.thesisDocumentUrl && record.eligibilityStatus !== 'Rejected' && (
+                            <button
+                              onClick={() => handleThesisToggle(record, true)}
+                              disabled={busy}
+                              className="px-2 py-1 bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-lg transition-all disabled:opacity-50"
+                            >
+                              {busy ? '...' : 'Approve'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Documents */}
+                      <td className="py-4 px-4">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-[11px]">
+                          <FileCheck2 className="w-3.5 h-3.5 text-primary-600" />
+                          <span>{docCount} Uploads</span>
+                        </div>
+                      </td>
+
+                      {/* Eligibility Status */}
+                      <td className="py-4 px-4">
+                        <div>
+                          {getStatusBadge(record)}
+                          {record.rejectionNotes && (
+                            <p className="text-[10px] text-slate-500 mt-1 max-w-xs truncate italic">
+                              "{record.rejectionNotes}"
+                            </p>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Action Button */}
+                      <td className="py-4 px-5 text-right">
+                        <button
+                          onClick={() => handleOpenRecord(record)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-primary-50 hover:bg-primary-600 text-primary-700 hover:text-white font-bold text-xs rounded-xl transition-all shadow-sm border border-primary-200/60"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Review</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════════
+          VERIFICATION REVIEW MODAL
+          ════════════════════════════════════════════════════════════════════════ */}
+      {inspectingRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div
+            className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden my-auto animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-primary-950 to-slate-900 text-white flex items-center justify-between border-b border-primary-800">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {inspectingRecord.documents?.passportPhotoUrl ? (
+                    <img
+                      src={getUploadUrl(inspectingRecord.documents.passportPhotoUrl)}
+                      alt="Student"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-6 h-6 text-white/80" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-lg font-black tracking-tight text-white">
+                      {inspectingRecord.fullName || `${inspectingRecord.firstName || ''} ${inspectingRecord.lastName || ''}`}
+                    </h2>
+                    {getStatusBadge(inspectingRecord)}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-primary-200 mt-0.5 flex-wrap">
+                    <span>Enrollment ID: <strong className="text-white font-mono">{inspectingRecord.enrollmentNo || inspectingRecord.enrollmentId}</strong></span>
+                    <span>•</span>
+                    <span>Exam {inspectingRecord.examinationNumber}</span>
+                    <span>•</span>
+                    <span>{inspectingRecord.institute}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setInspectingRecord(null)}
+                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body - Scrollable */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-grow divide-y divide-slate-100">
+              {/* Previous Remarks Alert if exists */}
+              {inspectingRecord.rejectionNotes && (
+                <div className="p-4 rounded-2xl border text-xs flex items-start gap-3 bg-red-50 border-red-200 text-red-900">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-black block uppercase tracking-wider text-[10px]">
+                      Rejection / Audit Remarks:
+                    </strong>
+                    <p className="mt-1 leading-relaxed">{inspectingRecord.rejectionNotes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Section 1: Attendance Verification ─────────────────────────── */}
+              <div className="pt-2">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary-600" />
+                  <span>1. Attendance Verification</span>
+                </h3>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-black text-slate-800">
+                          Reported Attendance: {inspectingRecord.attendancePercentage}%
+                        </span>
+                        <span className={`text-[11px] font-bold ${inspectingRecord.attendancePercentage >= ATTENDANCE_THRESHOLD ? 'text-emerald-600' : 'text-red-500'}`}>
+                          {inspectingRecord.attendancePercentage >= ATTENDANCE_THRESHOLD ? 'Meets 75% minimum' : 'Below 75% minimum'}
+                        </span>
+                      </div>
+                      <div className="w-full h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${inspectingRecord.attendancePercentage >= ATTENDANCE_THRESHOLD ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                          style={{ width: `${Math.min(inspectingRecord.attendancePercentage, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Update Attendance %</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={attendanceInput}
+                          onChange={(e) => setAttendanceInput(e.target.value)}
+                          className="w-24 px-3 py-2 text-xs font-bold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+                          placeholder="e.g. 85"
+                        />
+                      </div>
+                      <button
+                        onClick={handleUpdateAttendance}
+                        disabled={isUpdatingAttendance}
+                        className="px-3.5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-md shadow-primary-600/20 transition-all disabled:opacity-50"
+                      >
+                        {isUpdatingAttendance ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-3">
+                    Attendance for <strong>Examination {inspectingRecord.examinationNumber}</strong> must be at or above 75% for eligibility certification.
+                  </p>
+                </div>
+              </div>
+
+              {/* ── Section 2: Thesis Verification ─────────────────────────────── */}
+              <div className="pt-6">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary-600" />
+                  <span>2. Thesis Verification</span>
+                </h3>
+                <div className={`p-5 rounded-2xl border-2 transition-all ${
+                  inspectingRecord.thesisApproved ? 'border-emerald-200 bg-emerald-50/30' : 'border-amber-200 bg-amber-50/30'
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${inspectingRecord.thesisApproved ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        <BookOpenCheck className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className={`text-sm font-black ${inspectingRecord.thesisApproved ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {inspectingRecord.thesisApproved ? 'Thesis Approved' : 'Thesis Awaiting Approval'}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                          {inspectingRecord.thesisDocumentUrl
+                            ? 'Thesis document has been submitted by the institute.'
+                            : 'No thesis document has been uploaded for this examination.'}
+                        </span>
+                      </div>
+                    </div>
+                    {inspectingRecord.thesisDocumentUrl && (
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={getUploadUrl(inspectingRecord.thesisDocumentUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:border-primary-400 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          View Thesis
+                        </a>
+                        <a
+                          href={getUploadUrl(inspectingRecord.thesisDocumentUrl)}
+                          download
+                          className="inline-flex items-center justify-center px-3 py-2 bg-white border border-slate-200 hover:border-primary-400 text-slate-700 rounded-xl transition-colors"
+                          title="Download thesis"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  {inspectingRecord.eligibilityStatus !== 'Rejected' && (
+                    <div className="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-end gap-2">
+                      {!inspectingRecord.thesisApproved ? (
+                        <button
+                          onClick={() => handleThesisToggle(inspectingRecord, true)}
+                          disabled={!inspectingRecord.thesisDocumentUrl || busyKey === `thesis-approve-${inspectingRecord.enrollmentNo || inspectingRecord._id || inspectingRecord.id}-${inspectingRecord.examinationNumber}`}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          {inspectingRecord.thesisDocumentUrl ? 'Approve Thesis' : 'Requires Document First'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleThesisToggle(inspectingRecord, false)}
+                          disabled={busyKey === `thesis-revoke-${inspectingRecord.enrollmentNo || inspectingRecord._id || inspectingRecord.id}-${inspectingRecord.examinationNumber}`}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-200 font-bold text-xs rounded-xl transition-all disabled:opacity-40"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Revoke Approval
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Section 3: Course Completion Certificates ─────────────────── */}
+              <div className="pt-6">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  <FileCheck2 className="w-4 h-4 text-primary-600" />
+                  <span>3. Course Completion Certificates (Pre-Examination Requirement)</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {documentSections.course.map(item => renderDocTile({
+                    ...item,
+                    url: (inspectingRecord.documents || {})[item.key],
+                  }))}
+                </div>
+              </div>
+
+              {/* ── Section 4: Certification Decision Panel ────────────────────── */}
+              <div className="pt-6">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-primary-600" />
+                  <span>4. Board Certification Decision</span>
+                </h3>
+
+                {inspectingRecord.eligibilityStatus === 'Approved' ? (
+                  <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+                    <p className="text-sm font-black text-emerald-800">Certified Eligible</p>
+                    <p className="text-xs text-emerald-700">
+                      This candidate has been certified for Examination {inspectingRecord.examinationNumber}.
+                    </p>
+                  </div>
+                ) : inspectingRecord.eligibilityStatus === 'Rejected' ? (
+                  <div className="p-5 rounded-2xl bg-red-50 border border-red-200 text-center space-y-2">
+                    <XCircle className="w-8 h-8 text-red-600 mx-auto" />
+                    <p className="text-sm font-black text-red-800">Rejected</p>
+                    <p className="text-xs text-red-700">This candidate has been flagged with remarks recorded.</p>
+                  </div>
+                ) : actionType === 'Reject' ? (
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase tracking-wider text-red-600">
+                        Confirm Rejection with Remarks
+                      </span>
+                      <button
+                        onClick={() => setActionType(null)}
+                        className="text-xs text-slate-400 hover:text-slate-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Remarks / Reason for Rejection <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={actionRemarks}
+                        onChange={(e) => setActionRemarks(e.target.value)}
+                        placeholder="e.g., Thesis content does not match the approved research protocol, please resubmit."
+                        className="w-full p-3 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 bg-white"
+                      />
+                    </div>
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setActionType(null)}
+                        className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyKey === `reject-${inspectingRecord.enrollmentNo || inspectingRecord._id || inspectingRecord.id}`}
+                        onClick={handleReject}
+                        className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-md shadow-red-600/25 transition-all flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {busyKey === `reject-${inspectingRecord.enrollmentNo || inspectingRecord._id || inspectingRecord.id}` ? (
+                          <span>Submitting...</span>
+                        ) : (
+                          <>
+                            <XCircle className="w-4 h-4" />
+                            <span>Confirm Rejection</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Eligibility checklist */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+                      {[
+                        {
+                          label: 'Attendance ≥ 75%',
+                          ok: inspectingRecord.attendancePercentage >= ATTENDANCE_THRESHOLD,
+                          detail: `${inspectingRecord.attendancePercentage}% reported`,
+                        },
+                        {
+                          label: 'Thesis Approved',
+                          ok: inspectingRecord.thesisApproved,
+                          detail: inspectingRecord.thesisApproved ? 'Board approved' : inspectingRecord.thesisDocumentUrl ? 'Awaiting approval' : 'No document',
+                        },
+                        {
+                          label: 'Course Certificates',
+                          ok: Boolean(
+                            (inspectingRecord.documents || {}).nblsCertificateUrl ||
+                            (inspectingRecord.documents || {}).nclsCertificateUrl ||
+                            (inspectingRecord.documents || {}).ntlsCertificateUrl ||
+                            (inspectingRecord.documents || {}).nulsCertificateUrl
+                          ),
+                          detail: 'At least one of NBLS / NCLS / NTLS / NULS required',
+                        },
+                      ].map(item => (
+                        <div key={item.label} className={`p-3.5 rounded-2xl border flex items-start gap-3 ${
+                          item.ok ? 'bg-emerald-50/60 border-emerald-200' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                          {item.ok ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div>
+                            <span className={`text-xs font-bold block ${item.ok ? 'text-emerald-800' : 'text-slate-600'}`}>{item.label}</span>
+                            <span className="text-[10px] text-slate-500 block mt-0.5">{item.detail}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => {
+                          const rec = inspectingRecord;
+                          if (!isReady(rec)) {
+                            showToast('warning', 'Cannot certify: attendance must be ≥ 75% and thesis must be approved.');
+                            return;
+                          }
+                          setConfirmConfig({
+                            title: 'Certify Candidate',
+                            message: `Are you sure you want to certify ${rec.fullName} (Examination ${rec.examinationNumber}) as eligible for the board examination?`,
+                            confirmText: 'Yes, Certify',
+                            type: 'success',
+                            onConfirm: handleCertify,
+                          });
+                        }}
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 transition-all -translate-y-0.5 active:translate-y-0"
+                      >
+                        <Award className="w-4 h-4" />
+                        <span>Certify Eligible for Board Exam</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setActionType('Reject');
+                          setActionRemarks(inspectingRecord.rejectionNotes || '');
+                        }}
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs rounded-xl shadow-sm transition-all"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        <span>Reject</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <span>Candidate ID: <strong className="font-mono text-slate-700">{inspectingRecord._id || inspectingRecord.id}</strong></span>
+              <button
+                onClick={() => setInspectingRecord(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-all"
+              >
+                Close Review
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
 ### `client/src/pages/academy/components/AcademyVerification.jsx`
 
 ```jsx
@@ -35500,14 +39068,14 @@ const AcademyVerification = ({
   const allStudentRecords = useMemo(() => {
     const records = [];
     students.forEach(s => {
-      if (s.semesters && Array.isArray(s.semesters)) {
-        s.semesters.forEach(sem => {
+      if (s.examinations && Array.isArray(s.examinations)) {
+        s.examinations.forEach(sem => {
           const hasData = (sem.attendancePercentage !== undefined && sem.attendancePercentage > 0) || !!sem.thesisDocumentUrl;
           const status = sem.eligibilityStatus || 'Pending';
           if (hasData || status !== 'Pending') {
             records.push({
               ...s,
-              semesterNumber: sem.semesterNumber,
+              examinationNumber: sem.examinationNumber,
               attendancePercentage: sem.attendancePercentage || 0,
               thesisApproved: sem.thesisApproved || false,
               thesisDocumentUrl: sem.thesisDocumentUrl || '',
@@ -35570,14 +39138,14 @@ const AcademyVerification = ({
 
   const activeRecord = useMemo(() => {
     if (!activeId) return currentRecords[0] || null;
-    return currentRecords.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId) || currentRecords[0] || null;
+    return currentRecords.find(s => `${s.enrollmentNo}_${s.examinationNumber}` === activeId) || currentRecords[0] || null;
   }, [currentRecords, activeId]);
 
   React.useEffect(() => {
     if (currentRecords.length > 0) {
       const first = currentRecords[0];
-      const newId = `${first.enrollmentNo}_${first.semesterNumber}`;
-      if (!activeId || !currentRecords.find(s => `${s.enrollmentNo}_${s.semesterNumber}` === activeId)) {
+      const newId = `${first.enrollmentNo}_${first.examinationNumber}`;
+      if (!activeId || !currentRecords.find(s => `${s.enrollmentNo}_${s.examinationNumber}` === activeId)) {
         setActiveId(newId);
       }
     } else {
@@ -35590,7 +39158,7 @@ const AcademyVerification = ({
     setIsThesisLoading(true);
     try {
       await academicService.updateAcademicMetrics(student._id || student.id, {
-        semesterNumber: student.semesterNumber,
+        examinationNumber: student.examinationNumber,
         thesisApproved: newStatus
       });
       setToast({ 
@@ -35624,12 +39192,12 @@ const AcademyVerification = ({
 
     setConfirmConfig({
       title: 'Certify Eligibility',
-      message: `Are you sure you want to certify ${student.fullName} (Semester ${student.semesterNumber}) as eligible for the final board examination?`,
+      message: `Are you sure you want to certify ${student.fullName} (Examination ${student.examinationNumber}) as eligible for the final board examination?`,
       type: 'success',
       confirmText: 'Yes, Certify',
       onConfirm: () => {
         setConfirmConfig(null);
-        onVerifyStudent(student.enrollmentNo, student.semesterNumber, 'Approved');
+        onVerifyStudent(student.enrollmentNo, student.examinationNumber, 'Approved');
         setShowRejectionForm(false);
         setRejectionNotes('');
       }
@@ -35643,7 +39211,7 @@ const AcademyVerification = ({
       setToast({ message: 'Please enter auditor rejection notes before submitting.', type: 'warning' });
       return;
     }
-    onVerifyStudent(activeRecord.enrollmentNo, activeRecord.semesterNumber, 'Rejected', rejectionNotes);
+    onVerifyStudent(activeRecord.enrollmentNo, activeRecord.examinationNumber, 'Rejected', rejectionNotes);
     setRejectionNotes('');
     setShowRejectionForm(false);
   };
@@ -35828,16 +39396,16 @@ const AcademyVerification = ({
             
             {currentRecords.length > 0 ? (
               currentRecords.map(s => {
-                const isActive = activeRecord?.enrollmentNo === s.enrollmentNo && activeRecord?.semesterNumber === s.semesterNumber;
+                const isActive = activeRecord?.enrollmentNo === s.enrollmentNo && activeRecord?.examinationNumber === s.examinationNumber;
                 const status = getStatusBadge(s.eligibilityStatus, s);
                 const criteria = getCriteriaStatus(s);
                 const isReady = criteria.attendance && criteria.thesis && s.eligibilityStatus === 'Pending';
                 
                 return (
                   <button
-                    key={`${s.enrollmentNo}_${s.semesterNumber}`}
+                    key={`${s.enrollmentNo}_${s.examinationNumber}`}
                     onClick={() => {
-                      setActiveId(`${s.enrollmentNo}_${s.semesterNumber}`);
+                      setActiveId(`${s.enrollmentNo}_${s.examinationNumber}`);
                       setShowRejectionForm(false);
                       setRejectionNotes('');
                     }}
@@ -35853,7 +39421,7 @@ const AcademyVerification = ({
                           {s.fullName}
                         </span>
                         <span className="text-[9px] text-slate-400 font-semibold block">
-                          {s.enrollmentNo} • Sem {s.semesterNumber}
+                          {s.enrollmentNo} • Exam {s.examinationNumber}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -35907,7 +39475,7 @@ const AcademyVerification = ({
                       <div>
                         <h3 className="text-lg font-black text-slate-900">{activeRecord.fullName}</h3>
                         <span className="text-[10px] text-slate-400 font-semibold">
-                          {activeRecord.enrollmentNo} • {activeRecord.course} • Sem {activeRecord.semesterNumber}
+                          {activeRecord.enrollmentNo} • {activeRecord.course} • Exam {activeRecord.examinationNumber}
                         </span>
                       </div>
                     </div>
@@ -36191,7 +39759,7 @@ const AcademyVerification = ({
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Student Profile</h3>
                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {viewingStudent.fullName} · Sem {viewingStudent.semesterNumber}
+                    {viewingStudent.fullName} · Exam {viewingStudent.examinationNumber}
                   </p>
                 </div>
               </div>
@@ -36232,8 +39800,8 @@ const AcademyVerification = ({
                     <span className="text-slate-800 font-bold">{viewingStudent.institute}</span>
                   </div>
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">Semester {viewingStudent.semesterNumber}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">Examination {viewingStudent.examinationNumber}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
@@ -36360,8 +39928,8 @@ import AcademyDashboard from '../components/AcademyDashboard';
 export default function AcademyDashboardPage() {
   const navigate = useNavigate();
   const context = useOutletContext() || {};
-  const dynamicMetrics = context.dynamicMetrics || {};
-  const allApplications = context.allApplications || [];
+  const dynamicMetrics = context.dynamicMetrics || context.metrics || {};
+  const allApplications = context.allApplications || context.applications || [];
 
   const setActiveTab = tab => {
     const routes = {
@@ -36938,11 +40506,9 @@ const InstitutePortal = () => {
     programCategory: 'Emergency Medicine',
     courseDuration: '2',
     durationType: 'Years',
-    semesters: [
-      { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-      { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-      { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-      { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] }
+    examinations: [
+      { examinationNumber: 1, examinationName: 'Examination 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }], monthsRequired: 0 },
+      { examinationNumber: 2, examinationName: 'Examination 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }], monthsRequired: 0 }
     ],
     examinationFee: '15000',
   });
@@ -37004,6 +40570,84 @@ const InstitutePortal = () => {
   const [selectedStudentFilterCourse, setSelectedStudentFilterCourse] = useState('All');
 
   // ─── DATA FETCHING ─────────────────────────────────────────────────────────────
+  const formatStudentRecord = useCallback((s) => {
+    const sExaminations = s.examinations || [];
+
+    const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
+      ? s.attendancePercentage
+      : (sExaminations.length > 0 ? Math.max(...sExaminations.map(sem => sem.attendancePercentage || 0)) : 0);
+
+    const isThesisApproved = Boolean(s.thesisApproved || sExaminations.some(sem => sem.thesisApproved));
+    const isThesisUploaded = Boolean(sExaminations.some(sem => sem.thesisDocumentUrl));
+    const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
+
+    // Normalize verification status safely
+    let vStatus = s.verificationStatus;
+    if (!vStatus && s.status === 'Approved') vStatus = 'Approved';
+    if (vStatus) {
+      const vLower = String(vStatus).trim().toLowerCase();
+      if (vLower === 'approved' || vLower === 'verified') vStatus = 'Approved';
+      else if (vLower.includes('correct')) vStatus = 'Correction Required';
+      else if (vLower.includes('reject')) vStatus = 'Rejected';
+      else if (vLower.includes('pending')) vStatus = 'Pending Verification';
+    } else {
+      vStatus = 'Pending Verification';
+    }
+
+    const courseObj = s.course;
+    const batchObj = s.batch;
+    const courseName = typeof courseObj === 'string' ? courseObj : (courseObj?.name || courseObj?.courseName || s.courseName || 'General Medicine');
+    const batchName = typeof batchObj === 'string' ? batchObj : (batchObj?.name || (batchObj?.year ? `Batch ${batchObj.year}` : (s.batchName || 'Batch 2026')));
+
+    return {
+      id: s._id || s.id,
+      _id: s._id || s.id,
+      fullName: s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Dr. Fellow',
+      firstName: s.firstName || '',
+      lastName: s.lastName || '',
+      email: s.email || '',
+      phone: s.contactNumber || s.phone || '',
+      qualification: s.qualification || '',
+      graduationYear: s.yearOfPassing?.toString() || s.graduationYear || '',
+      yearOfPassing: s.yearOfPassing,
+      enrollmentNo: s.enrollmentId || s.enrollmentNo || '',
+      enrollmentId: s.enrollmentId || s.enrollmentNo || '',
+      admissionDate: s.createdAt?.split('T')[0] || s.admissionDate || new Date().toISOString().split('T')[0],
+      status: isRemitted ? 'Completed' : (s.status || 'Active'),
+      remittedToAcademy: isRemitted,
+      verificationStatus: vStatus,
+      verificationRemarks: s.verificationRemarks || '',
+      verifiedAt: s.verifiedAt,
+      verifiedBy: s.verifiedBy,
+      correctionRequestedAt: s.correctionRequestedAt,
+      correctionResubmittedAt: s.correctionResubmittedAt,
+      attendancePercentage: attendancePct,
+      thesisApproved: isThesisApproved,
+      thesisUploaded: isThesisUploaded,
+      examinations: sExaminations,
+      courseId: courseObj?._id || courseObj?.id || courseObj || s.courseId,
+      batchId: batchObj?._id || batchObj?.id || batchObj || s.batchId,
+      courseName,
+      batchName,
+      course: courseObj,
+      batch: batchObj,
+      homeAddress: s.homeAddress || '',
+      contactNumber: s.contactNumber || s.phone || '',
+      courseDirector: s.courseDirector || '',
+      razorpayOrderId: s.razorpayOrderId || '',
+      razorpayPaymentId: s.razorpayPaymentId || '',
+      razorpaySignature: s.razorpaySignature || '',
+      medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber || '',
+      universityName: s.universityName || '',
+      mbbsQualification: s.mbbsQualification || '',
+      fmgeClearanceStatus: s.fmgeClearanceStatus || 'Not Applicable',
+      isForeignGraduate: Boolean(s.isForeignGraduate),
+      documents: s.documents || {},
+      isEligible: s.isEligible,
+      dateOfBirth: s.dateOfBirth,
+    };
+  }, []);
+
   const fetchERPData = useCallback(async () => {
     try {
       const coursesRes = await academicService.getCourses();
@@ -37021,7 +40665,7 @@ const InstitutePortal = () => {
           subjects: c.subjects || [],
           practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
           practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
-          semesters: c.semesters || [],
+          examinations: c.examinations || [],
           totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
           courseFee: c.courseFee || '0',
           registrationFee: c.registrationFee || '0',
@@ -37062,38 +40706,7 @@ const InstitutePortal = () => {
       const studentsRes = await academicService.listStudents();
       const studentsData = extractData(studentsRes) || [];
       if (Array.isArray(studentsData)) {
-        const formatted = studentsData.map(s => ({
-          id: s._id,
-          _id: s._id,
-          fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-          email: s.email,
-          phone: s.contactNumber,
-          qualification: s.qualification,
-          graduationYear: s.yearOfPassing?.toString() || '',
-          enrollmentNo: s.enrollmentId,
-          admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-          status: s.remittedToAcademy ? 'Completed' : 'Active',
-          remittedToAcademy: s.remittedToAcademy || false,
-          attendancePercentage: s.attendancePercentage || 0,
-          thesisApproved: s.thesisApproved || false,
-          courseId: s.course?._id || s.course,
-          batchId: s.batch?._id || s.batch,
-          courseName: s.course?.name || 'General Medicine',
-          batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-          homeAddress: s.homeAddress,
-          contactNumber: s.contactNumber,
-          courseDirector: s.courseDirector,
-          razorpayOrderId: s.razorpayOrderId,
-          razorpayPaymentId: s.razorpayPaymentId,
-          razorpaySignature: s.razorpaySignature,
-          medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
-          universityName: s.universityName,
-          mbbsQualification: s.mbbsQualification,
-          fmgeClearanceStatus: s.fmgeClearanceStatus,
-          isForeignGraduate: s.isForeignGraduate,
-          documents: s.documents || {},
-          semesters: s.semesters || [],
-        }));
+        const formatted = studentsData.map(formatStudentRecord);
         setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
       }
     } catch (err) {
@@ -37285,7 +40898,7 @@ const InstitutePortal = () => {
                 subjects: c.subjects || [],
                 practicalExamName: c.practicalExamName || 'Clinical OSCE & Practical Station Exam',
                 practicalExams: c.practicalExams && Array.isArray(c.practicalExams) ? c.practicalExams : [],
-                semesters: c.semesters || [],
+                examinations: c.examinations || [],
                 totalSubjects: c.subjects && Array.isArray(c.subjects) ? c.subjects.length : 0,
                 courseFee: c.courseFee || '0',
                 registrationFee: c.registrationFee || '0',
@@ -37320,52 +40933,7 @@ const InstitutePortal = () => {
           academicService.listStudents().then(res => {
             const data = extractData(res) || [];
             if (Array.isArray(data)) {
-              const formatted = data.map(s => {
-                const sSemesters = s.semesters || [];
-                const latestSem = sSemesters.length > 0 ? sSemesters[sSemesters.length - 1] : null;
-
-                const attendancePct = (s.attendancePercentage !== undefined && s.attendancePercentage !== null && s.attendancePercentage > 0)
-                  ? s.attendancePercentage
-                  : (latestSem && latestSem.attendancePercentage !== undefined ? latestSem.attendancePercentage : 0);
-
-                const isThesisApproved = Boolean(s.thesisApproved || sSemesters.some(sem => sem.thesisApproved));
-                const isThesisUploaded = Boolean(sSemesters.some(sem => sem.thesisDocumentUrl));
-                const isRemitted = Boolean(s.remittedToAcademy || s.razorpayPaymentId);
-
-                return {
-                  id: s._id,
-                  _id: s._id,
-                  fullName: `${s.firstName || ''} ${s.lastName || ''}`.trim(),
-                  email: s.email,
-                  phone: s.contactNumber,
-                  qualification: s.qualification,
-                  graduationYear: s.yearOfPassing?.toString() || '',
-                  enrollmentNo: s.enrollmentId,
-                  admissionDate: s.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-                  status: isRemitted ? 'Completed' : 'Active',
-                  remittedToAcademy: isRemitted,
-                  attendancePercentage: attendancePct,
-                  thesisApproved: isThesisApproved,
-                  thesisUploaded: isThesisUploaded,
-                  semesters: sSemesters,
-                  courseId: s.course?._id || s.course,
-                  batchId: s.batch?._id || s.batch,
-                  courseName: s.course?.name || 'General Medicine',
-                  batchName: s.batch?.year ? `Batch ${s.batch.year}` : 'Batch 2026',
-                  homeAddress: s.homeAddress,
-                  contactNumber: s.contactNumber,
-                  courseDirector: s.courseDirector,
-                  razorpayOrderId: s.razorpayOrderId,
-                  razorpayPaymentId: s.razorpayPaymentId,
-                  razorpaySignature: s.razorpaySignature,
-                  medicalCouncilRegistrationNumber: s.medicalCouncilRegistrationNumber,
-                  universityName: s.universityName,
-                  mbbsQualification: s.mbbsQualification,
-                  fmgeClearanceStatus: s.fmgeClearanceStatus,
-                  isForeignGraduate: s.isForeignGraduate,
-                  documents: s.documents || {},
-                };
-              });
+              const formatted = data.map(formatStudentRecord);
               setStudents(prev => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
             }
           }).catch(() => {});
@@ -37382,7 +40950,7 @@ const InstitutePortal = () => {
 
     const intervalId = setInterval(fetchCurrentPageData, 3000);
     return () => clearInterval(intervalId);
-  }, [user, currentStep, activeTab, fetchApplication, fetchERPData]);
+  }, [user, currentStep, activeTab, fetchApplication, fetchERPData, formatStudentRecord]);
 
 
 
@@ -38370,14 +41938,14 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
       return;
     }
 
-    // Ensure at least one subject exists across semesters
-    const hasSubjects = (courseForm.semesters || []).some(s => s.subjects && s.subjects.some(sub => sub.name?.trim()));
+    // Ensure at least one subject exists across examinations
+    const hasSubjects = (courseForm.examinations || []).some(s => s.subjects && s.subjects.some(sub => sub.name?.trim()));
     if (!hasSubjects) {
-      setErrorBanner('Please add at least one subject with a valid name in your semesters.');
+      setErrorBanner('Please add at least one subject with a valid name in your examinations.');
       return;
     }
 
-    const cleanedSemesters = (courseForm.semesters || []).map(s => ({
+    const cleanedExaminations = (courseForm.examinations || []).map(s => ({
       ...s,
       subjects: (s.subjects || []).filter(sub => sub && sub.name && sub.name.trim() !== ''),
       practicalExams: (s.practicalExams || []).filter(prac => prac && prac.name && prac.name.trim() !== ''),
@@ -38390,7 +41958,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         programCategory: courseForm.programCategory || 'Emergency Medicine',
         courseDuration: courseForm.courseDuration || '2',
         durationType: courseForm.durationType || 'Years',
-        semesters: cleanedSemesters,
+        examinations: cleanedExaminations,
         examinationFee: courseForm.examinationFee,
         description: `${courseForm.courseType || 'Postgraduate'} - ${courseForm.programCategory || 'Emergency Medicine'}`
       });
@@ -38404,11 +41972,9 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
         programCategory: 'Emergency Medicine',
         courseDuration: '2',
         durationType: 'Years',
-        semesters: [
-          { semesterNumber: 1, semesterName: 'Semester 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-          { semesterNumber: 2, semesterName: 'Semester 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-          { semesterNumber: 3, semesterName: 'Semester 3', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] },
-          { semesterNumber: 4, semesterName: 'Semester 4', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }] }
+        examinations: [
+          { examinationNumber: 1, examinationName: 'Examination 1', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }], monthsRequired: 0 },
+          { examinationNumber: 2, examinationName: 'Examination 2', subjects: [{ code: '', name: '' }], practicalExams: [{ code: '', name: '' }], monthsRequired: 0 }
         ],
         examinationFee: '15000'
       });
@@ -38874,6 +42440,7 @@ const handleVerifyEmail = useCallback(async (tokenArg) => {
             courses={courses}
             batches={batches}
             setActiveTab={setActiveTab}
+            fetchERPData={fetchERPData}
           />
         );
       case 'fees':
@@ -39903,12 +43470,12 @@ import { useState, useMemo, useCallback } from 'react';
 import { Search, Eye, BookOpen, X, ShieldCheck, Layers, Calendar, CheckCircle2, Award, GraduationCap } from 'lucide-react';
 import Pagination from '../../../Components/Pagination';
 
-// Helper to calculate required semester count based on course duration and durationType
-const getSemesterCount = (duration, durationType) => {
+// Helper to calculate required examination count based on course duration and durationType
+const getExaminationCount = (duration, durationType) => {
   const durVal = parseInt(duration, 10) || 1;
-  if (durationType === 'Years') return Math.max(1, durVal * 2);
-  if (durationType === 'Months') return Math.max(1, Math.ceil(durVal / 6));
-  return 1;
+  if (durationType === 'Years') return Math.min(2, Math.max(1, durVal * 2));
+  if (durationType === 'Months') return Math.min(2, Math.max(1, Math.ceil(durVal / 6)));
+  return Math.min(2, 1);
 };
 
 const InstituteERPCourses = ({ 
@@ -39968,7 +43535,7 @@ const InstituteERPCourses = ({
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">Standardized Course Catalog</h2>
           <p className="text-xs sm:text-sm text-blue-200/90 leading-relaxed">
-            All courses and semester-wise curricula are officially defined and standardized by the Society for Emergency Medicine, India (SEMI). You can browse the curriculum and initiate student batches for any approved course.
+              All courses and examination-wise curricula are officially defined and standardized by the Society for Emergency Medicine, India (SEMI). You can browse the curriculum and initiate student batches for any approved course.
           </p>
         </div>
 
@@ -39988,7 +43555,7 @@ const InstituteERPCourses = ({
             <h3 className="text-base font-black text-gray-900 uppercase tracking-wider">
               Academic Courses Catalog
             </h3>
-            <p className="text-xs text-gray-400 mt-0.5">Browse available programs and semester subject breakdowns</p>
+            <p className="text-xs text-gray-400 mt-0.5">Browse available programs and examination subject breakdowns</p>
           </div>
           <div className="relative max-w-xs w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -40014,7 +43581,7 @@ const InstituteERPCourses = ({
                 <th className="px-6 py-4 font-bold">Course Title</th>
                 <th className="px-6 py-4 font-bold">Program Type</th>
                 <th className="px-6 py-4 font-bold">Duration</th>
-                <th className="px-6 py-4 font-bold">Semesters</th>
+                <th className="px-6 py-4 font-bold">Examinations</th>
                 <th className="px-6 py-4 font-bold">Status</th>
                 <th className="px-6 py-4 font-bold text-center">Actions</th>
               </tr>
@@ -40027,9 +43594,9 @@ const InstituteERPCourses = ({
                   const code = course.courseCode || 'N/A';
                   const type = course.courseType || 'Fellowship';
                   const duration = `${course.courseDuration || '2'} ${course.durationType || 'Years'}`;
-                  const semCount = (course.semesters && course.semesters.length > 0)
-                    ? course.semesters.length
-                    : getSemesterCount(course.courseDuration, course.durationType);
+                  const semCount = (course.examinations && course.examinations.length > 0)
+                    ? course.examinations.length
+                    : getExaminationCount(course.courseDuration, course.durationType);
                   const isActive = (course.status || 'Active') === 'Active';
 
                   return (
@@ -40049,7 +43616,7 @@ const InstituteERPCourses = ({
                       <td className="px-6 py-4 text-gray-500">{duration}</td>
                       <td className="px-6 py-4">
                         <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
-                          {semCount} Semesters
+                          {semCount} Examinations
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -40143,19 +43710,19 @@ const InstituteERPCourses = ({
                 </div>
               </div>
 
-              {/* Semester breakdown */}
+              {/* Examination breakdown */}
               <div className="space-y-4">
                 <h4 className="text-xs font-black uppercase text-gray-700 tracking-wider flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-blue-600" />
-                  Standardized Semester Modules & Subjects
+                  Standardized Examination Modules & Subjects
                 </h4>
 
-                {viewingCourse.semesters && viewingCourse.semesters.length > 0 ? (
-                  viewingCourse.semesters.map((sem) => (
-                    <div key={sem.semesterNumber} className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                {viewingCourse.examinations && viewingCourse.examinations.length > 0 ? (
+                  viewingCourse.examinations.map((sem) => (
+                    <div key={sem.examinationNumber} className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3 shadow-sm">
                       <div className="flex justify-between items-center border-b border-gray-100 pb-2">
                         <span className="font-black text-blue-700 text-xs uppercase">
-                          Semester {sem.semesterNumber}: {sem.semesterName || `Semester ${sem.semesterNumber}`}
+                          Examination {sem.examinationNumber}: {sem.examinationName || `Examination ${sem.examinationNumber}`}
                         </span>
                       </div>
 
@@ -40182,10 +43749,17 @@ const InstituteERPCourses = ({
                           ))}
                         </div>
                       </div>
+
+                      {sem.monthsRequired != null && (
+                        <div className="pt-1">
+                          <span className="text-[10px] uppercase font-bold text-gray-400">Months Required:</span>{' '}
+                          <span className="text-xs font-bold text-gray-700">{sem.monthsRequired}</span>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-400 italic">No semester-wise subjects defined for this course.</p>
+                  <p className="text-gray-400 italic">No examination-wise subjects defined for this course.</p>
                 )}
               </div>
             </div>
@@ -41562,7 +45136,7 @@ export default InstituteERPEnrollment;
 
 ```jsx
 import { useState, useEffect, useMemo } from 'react';
-import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check, DollarSign } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, BookOpen, Users, AlertTriangle, ClipboardList, ArrowRight, Check, DollarSign, Clock } from 'lucide-react';
 import examService from '../../../api/exams';
 import academicService from '../../../api/academic';
 import Toast from '../../../Components/Toast';
@@ -41576,13 +45150,15 @@ const STEPS = [
 
 const InstituteERPExams = ({
   courses = [],
+  batches = [],
   students = [],
   examApplications = [],
   fetchERPData
 }) => {
   const [step, setStep] = useState(1);
   const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedBatchId, setSelectedBatchId] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
 
   const [viewingApp, setViewingApp] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -41610,7 +45186,7 @@ const InstituteERPExams = ({
       }
     };
     fetchFeeRecords();
-  }, [selectedSemester, selectedCourseId]);
+  }, [selectedExamination, selectedCourseId]);
 
   const [activePage, setActivePage] = useState(1);
   const itemsPerPage = 5;
@@ -41622,12 +45198,37 @@ const InstituteERPExams = ({
     }
   }, [courses, selectedCourseId]);
 
+  const courseBatches = useMemo(() => {
+    if (!selectedCourseId) return [];
+    return batches.filter(b => {
+      const bCourseId = b.course?._id || b.course?.id || b.course || b.courseId;
+      return String(bCourseId) === String(selectedCourseId);
+    });
+  }, [batches, selectedCourseId]);
+
+  useEffect(() => {
+    if (courseBatches.length > 0) {
+      const exists = courseBatches.some(b => String(b.id || b._id) === String(selectedBatchId));
+      if (!exists) {
+        setSelectedBatchId(courseBatches[0].id || courseBatches[0]._id);
+      }
+    } else {
+      setSelectedBatchId('');
+    }
+  }, [courseBatches, selectedBatchId]);
+
+  const selectedBatch = useMemo(() => {
+    return batches.find(b => String(b.id || b._id) === String(selectedBatchId));
+  }, [batches, selectedBatchId]);
+
   const filteredStudents = useMemo(() => {
     if (!selectedCourseId) return [];
-    return students.filter(s =>
-      String(s.courseId) === String(selectedCourseId)
-    );
-  }, [students, selectedCourseId]);
+    return students.filter(s => {
+      const matchCourse = String(s.courseId) === String(selectedCourseId);
+      const matchBatch = selectedBatchId ? String(s.batchId) === String(selectedBatchId) : true;
+      return matchCourse && matchBatch;
+    });
+  }, [students, selectedCourseId, selectedBatchId]);
 
   const filteredStudentIdsKey = filteredStudents
     .map((s) => s.id || s._id)
@@ -41637,7 +45238,7 @@ const InstituteERPExams = ({
   useEffect(() => {
     let cancelled = false;
     const fetchFeeConfig = async () => {
-      if (!selectedCourseId || !selectedSemester || filteredStudents.length === 0) {
+      if (!selectedCourseId || !selectedExamination || filteredStudents.length === 0) {
         setFeeConfig(null);
         setReappearanceMap({});
         return;
@@ -41645,7 +45246,7 @@ const InstituteERPExams = ({
       setFeeLoading(true);
       try {
         const [configRes] = await Promise.all([
-          examService.getFeeConfiguration(selectedCourseId, selectedSemester),
+          examService.getFeeConfiguration(selectedCourseId, selectedExamination),
         ]);
         const config = configRes?.data?.data || configRes?.data || configRes;
         if (!cancelled) setFeeConfig(config);
@@ -41655,7 +45256,7 @@ const InstituteERPExams = ({
           filteredStudents.map(async (s) => {
             const sid = s.id || s._id;
             try {
-              const res = await examService.checkExamFeeApplicability(sid, selectedSemester);
+              const res = await examService.checkExamFeeApplicability(sid, selectedExamination);
               const data = res?.data?.data || res?.data || res;
               if (data) map[sid] = data;
             } catch (err) {
@@ -41672,47 +45273,50 @@ const InstituteERPExams = ({
     };
     fetchFeeConfig();
     return () => { cancelled = true; };
-  }, [selectedCourseId, selectedSemester, filteredStudentIdsKey]);
+  }, [selectedCourseId, selectedExamination, filteredStudentIdsKey]);
 
-  const availableSemesters = useMemo(() => {
+  const availableExaminations = useMemo(() => {
     const sems = new Set();
     filteredStudents.forEach(s => {
-      if (s.semesters) {
-        s.semesters.forEach(sem => sems.add(sem.semesterNumber));
+      if (s.examinations) {
+        s.examinations.forEach(sem => sems.add(sem.examinationNumber));
       }
     });
     return Array.from(sems).sort((a, b) => a - b);
   }, [filteredStudents]);
 
   useEffect(() => {
-    if (availableSemesters.length > 0 && !selectedSemester) {
-      setSelectedSemester(availableSemesters[0].toString());
-    } else if (availableSemesters.length === 0) {
-      setSelectedSemester('');
+    if (availableExaminations.length > 0 && !selectedExamination) {
+      setSelectedExamination(availableExaminations[0].toString());
+    } else if (availableExaminations.length === 0) {
+      setSelectedExamination('');
     }
-  }, [availableSemesters, selectedSemester]);
+  }, [availableExaminations, selectedExamination]);
 
   const studentEligibility = useMemo(() => {
     const map = {};
-    if (!selectedSemester) return map;
+    if (!selectedExamination) return map;
     filteredStudents.forEach(s => {
-      const sem = s.semesters?.find(sm => sm.semesterNumber.toString() === selectedSemester.toString());
+      const sem = s.examinations?.find(sm => sm.examinationNumber.toString() === selectedExamination.toString());
       if (!sem) {
-        map[s.id || s._id] = { isEligible: false, reasonsText: `No record for Sem ${selectedSemester}` };
+        map[s.id || s._id] = { isEligible: false, reasonsText: `No record for Exam ${selectedExamination}` };
         return;
       }
-      const isVerified = s.verificationStatus === 'Approved';
+      const isVerified = (s.verificationStatus === 'Approved' || String(s.verificationStatus || s.status).toLowerCase() === 'approved');
       const isAttendanceOk = (sem.attendancePercentage || 0) >= 75;
+      const isThesisUploaded = !!sem.thesisDocumentUrl;
       const isThesisOk = !!sem.thesisApproved;
       const sid = s.id || s._id;
       const isExamFeePaid = feeRecords.some(r =>
         (r.student?._id === sid || r.student === sid || r.student?.id === sid || r.student === sid) &&
-        r.paymentPurpose === 'Examination fee' && r.semesterNumber?.toString() === selectedSemester.toString()
+        r.paymentPurpose === 'Examination fee' && r.examinationNumber?.toString() === selectedExamination.toString()
       );
-      // Fees are waived for first-attempt students; only reappearing students
-      // with an applicable fee must have paid.
-      const isReappearing = reappearanceMap[sid]?.isReappearing;
-      const feeRequired = isReappearing || feeConfig?.feeApplicableForFirstAttempt;
+      // The fee eligibility check only applies when a fee is set for this
+      // course/examination or the student is reappearing. The backend resolves
+      // this per student (reappearing with fee > 0, or first-attempt with an
+      // opted-in fee > 0) via checkExamFeeApplicability.
+      const isReappearing = !!reappearanceMap[sid]?.isReappearing;
+      const feeRequired = !!reappearanceMap[sid]?.examFeeApplicable;
       const isExamFeeSatisfied = feeRequired ? isExamFeePaid : true;
       const hasNbls = !!s.documents?.nblsCertificateUrl;
       const hasNcls = !!s.documents?.nclsCertificateUrl;
@@ -41725,7 +45329,7 @@ const InstituteERPExams = ({
       const reasons = [];
       if (!isVerified) reasons.push(`Verification pending (${s.verificationStatus || 'Pending'})`);
       if (!isAttendanceOk) reasons.push(`Attendance low (${sem.attendancePercentage || 0}%)`);
-      if (!isThesisOk) reasons.push("Thesis not uploaded");
+      if (!isThesisOk) reasons.push(isThesisUploaded ? "Thesis pending board approval" : "Thesis not uploaded");
       if (!isExamFeeSatisfied) reasons.push("Exam fee not paid");
       if (!isCourseCertsOk) {
         reasons.push("Missing Course Completion Certificate (at least one of NBLS, NCLS, NTLS, NULS required)");
@@ -41735,6 +45339,7 @@ const InstituteERPExams = ({
         isEligible,
         isVerified,
         isAttendanceOk,
+        isThesisUploaded,
         isThesisOk,
         isExamFeePaid,
         isExamFeeSatisfied,
@@ -41750,7 +45355,7 @@ const InstituteERPExams = ({
       };
     });
     return map;
-  }, [filteredStudents, feeRecords, selectedSemester, reappearanceMap, feeConfig]);
+  }, [filteredStudents, feeRecords, selectedExamination, reappearanceMap, feeConfig]);
 
   const eligibleStudentIds = useMemo(() => {
     return filteredStudents
@@ -41759,7 +45364,7 @@ const InstituteERPExams = ({
   }, [filteredStudents, studentEligibility]);
 
   const canProceedFrom = (s) => {
-    if (s === 1) return !!selectedCourseId && !!selectedSemester;
+    if (s === 1) return !!selectedCourseId && !!selectedBatchId && !!selectedExamination;
     if (s === 2) return eligibleStudentIds.length > 0;
     return true;
   };
@@ -41767,9 +45372,17 @@ const InstituteERPExams = ({
   const handleNext = () => {
     if (!canProceedFrom(step)) {
       if (step === 1) {
-        setToast({ message: 'Please select a course and semester.', type: 'warning' });
+        if (!selectedCourseId) {
+          setToast({ message: 'Please select a course.', type: 'warning' });
+        } else if (!selectedBatchId) {
+          setToast({ message: 'Please select an academic batch.', type: 'warning' });
+        } else if (!selectedExamination) {
+          setToast({ message: 'Please select an examination.', type: 'warning' });
+        } else {
+          setToast({ message: 'Please select course, batch, and examination.', type: 'warning' });
+        }
       } else if (step === 2) {
-        setToast({ message: 'No eligible students found. Cannot proceed to submit.', type: 'warning' });
+        setToast({ message: 'No eligible students found in this batch. Cannot proceed to submit.', type: 'warning' });
       }
       return;
     }
@@ -41791,10 +45404,10 @@ const InstituteERPExams = ({
       const courseSubjects = selectedCourse?.subjects || ['All'];
       const payload = {
         courseId: selectedCourseId,
-        semesterNumber: parseInt(selectedSemester),
+        batchId: selectedBatchId,
+        examinationNumber: parseInt(selectedExamination),
         studentIds: eligibleStudentIds,
         subjects: courseSubjects,
-        batchId: filteredStudents[0]?.batchId || filteredStudents[0]?.batch?._id || filteredStudents[0]?.batch,
       };
       await examService.applyForExam(payload);
       if (fetchERPData) {
@@ -41803,7 +45416,7 @@ const InstituteERPExams = ({
       setSuccessMsg('Exam Application submitted successfully to the Academic Board!');
       setStep(1);
       setSelectedCourseId('');
-      setSelectedSemester('');
+      setSelectedExamination('');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
@@ -41876,16 +45489,20 @@ const InstituteERPExams = ({
       <div>
         <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-blue-500" />
-          Select Course & Semester
+          Select Course, Batch & Examination
         </h3>
-        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Choose the course and semester to prepare exam applications</p>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Choose the course, batch, and examination to prepare exam applications</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Course *</label>
           <select
             value={selectedCourseId}
-            onChange={(e) => { setSelectedCourseId(e.target.value); setSelectedSemester(''); }}
+            onChange={(e) => { 
+              setSelectedCourseId(e.target.value); 
+              setSelectedBatchId('');
+              setSelectedExamination(''); 
+            }}
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
           >
             {courses.map(c => <option key={c.id || c._id} value={c.id || c._id}>{c.courseName || c.name}</option>)}
@@ -41893,29 +45510,50 @@ const InstituteERPExams = ({
           </select>
         </div>
         <div>
-          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Semester *</label>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Academic Batch *</label>
           <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(e.target.value)}
+            value={selectedBatchId}
+            onChange={(e) => { 
+              setSelectedBatchId(e.target.value); 
+              setSelectedExamination(''); 
+            }}
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
             required
           >
-            <option value="">Select Semester</option>
-            {availableSemesters.map(sem => (
-              <option key={sem} value={sem}>Semester {sem}</option>
+            <option value="">Select Batch</option>
+            {courseBatches.map(b => (
+              <option key={b.id || b._id} value={b.id || b._id}>
+                {b.name || `Batch ${b.year || ''}`}
+              </option>
+            ))}
+            {courseBatches.length === 0 && <option value="" disabled>No batches found for this course</option>}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Examination *</label>
+          <select
+            value={selectedExamination}
+            onChange={(e) => setSelectedExamination(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+            required
+          >
+            <option value="">Select Examination</option>
+            {availableExaminations.map(sem => (
+              <option key={sem} value={sem}>Examination {sem}</option>
             ))}
           </select>
         </div>
       </div>
-      {selectedCourseId && selectedSemester && (
+      {selectedCourseId && selectedBatchId && selectedExamination && (
         <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 flex items-center gap-3">
-          <GraduationCap className="w-8 h-8 text-blue-400" />
+          <GraduationCap className="w-8 h-8 text-blue-400 flex-shrink-0" />
           <div>
             <p className="text-sm font-extrabold text-slate-800">
               {courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected Course'}
+              <span className="text-indigo-600 font-black ml-2">({selectedBatch?.name || 'Batch'})</span>
             </p>
             <p className="text-[10px] font-bold text-slate-400">
-              Semester {selectedSemester} · {filteredStudents.length} student(s) enrolled
+              Examination {selectedExamination} · {filteredStudents.length} student(s) enrolled in this batch
             </p>
           </div>
         </div>
@@ -41932,12 +45570,14 @@ const InstituteERPExams = ({
         </h3>
         <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Verify each student's eligibility criteria</p>
       </div>
-      {selectedCourseId && selectedSemester && (
+      {selectedCourseId && selectedExamination && (
         <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 mb-2">
           <p className="text-xs font-bold text-slate-600">
             Course: <span className="text-slate-800">{courses.find(c => (c.id || c._id) === selectedCourseId)?.courseName || 'Selected'}</span>
             <span className="text-slate-300 mx-2">|</span>
-            Semester: <span className="text-slate-800">{selectedSemester}</span>
+            Batch: <span className="text-indigo-600 font-extrabold">{selectedBatch?.name || 'Selected Batch'}</span>
+            <span className="text-slate-300 mx-2">|</span>
+            Examination: <span className="text-slate-800">Examination {selectedExamination}</span>
           </p>
         </div>
       )}
@@ -41974,16 +45614,30 @@ const InstituteERPExams = ({
                   </td>
                   <td className="px-4 py-3 text-center">
                     {e ? (
-                      e.isThesisOk
-                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
-                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                      e.isThesisOk ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                      ) : e.isThesisUploaded ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-black" title="Thesis uploaded, awaiting board approval">
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          Uploaded
+                        </span>
+                      ) : (
+                        <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                      )
                     ) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {e ? (
-                      e.isExamFeePaid
-                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
-                        : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                      e.feeRequired ? (
+                        e.isExamFeePaid
+                          ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
+                          : <XCircle className="w-4 h-4 text-rose-400 mx-auto" />
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-500 text-[9px] uppercase font-black" title="No exam fee applies for this student">
+                          <CheckCircle2 className="w-3 h-3 text-slate-400" />
+                          Waived
+                        </span>
+                      )
                     ) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -42040,9 +45694,12 @@ const InstituteERPExams = ({
                           Eligible
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[9px] uppercase font-black" title={e.reasonsText}>
-                          <XCircle className="w-3 h-3" />
-                          Ineligible
+                        <span className="inline-flex flex-col items-center gap-0.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[9px] uppercase font-black">
+                            <XCircle className="w-3 h-3" />
+                            Ineligible
+                          </span>
+                          <span className="text-[8px] text-rose-400 font-semibold leading-tight max-w-[170px]">{e.reasonsText}</span>
                         </span>
                       )
                     ) : (
@@ -42055,7 +45712,7 @@ const InstituteERPExams = ({
             {filteredStudents.length === 0 && (
               <tr>
                 <td colSpan="5" className="px-6 py-12 text-center text-slate-400 font-medium">
-                  No students found for this course and semester.
+                  No students found for this course and examination.
                 </td>
               </tr>
             )}
@@ -42091,24 +45748,24 @@ const InstituteERPExams = ({
             <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Course</span>
             <span className="text-sm font-extrabold text-slate-800">{selectedCourse?.courseName || 'Selected Course'}</span>
           </div>
+          <div className="bg-indigo-50/40 border border-indigo-100 rounded-2xl p-4">
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Academic Batch</span>
+            <span className="text-sm font-extrabold text-indigo-800">{selectedBatch?.name || 'Selected Batch'}</span>
+          </div>
           <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4">
-            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Semester</span>
-            <span className="text-sm font-extrabold text-slate-800">Semester {selectedSemester}</span>
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Examination</span>
+            <span className="text-sm font-extrabold text-slate-800">Examination {selectedExamination}</span>
           </div>
           <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-4">
-            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Eligible Students</span>
-            <span className="text-sm font-extrabold text-emerald-700">{eligibleStudentIds.length}</span>
-          </div>
-          <div className="bg-slate-50/40 border border-slate-100 rounded-2xl p-4">
-            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Total Enrolled</span>
-            <span className="text-sm font-extrabold text-slate-700">{filteredStudents.length}</span>
+            <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block">Eligible Students (Batch)</span>
+            <span className="text-sm font-extrabold text-emerald-700">{eligibleStudentIds.length} / {filteredStudents.length}</span>
           </div>
         </div>
         <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-bold text-amber-800">Review before submitting</p>
-            <p className="text-[10px] text-amber-700 mt-0.5">This will create exam applications for all {eligibleStudentIds.length} eligible student(s). Ineligible students will be excluded.</p>
+            <p className="text-[10px] text-amber-700 mt-0.5">This will create an exam application specifically for {selectedBatch?.name || 'this batch'} for {eligibleStudentIds.length} eligible student(s). Ineligible students will be excluded.</p>
           </div>
         </div>
         {submitting && (
@@ -42207,7 +45864,7 @@ const InstituteERPExams = ({
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px]">
                     <th className="px-4 py-4 font-black w-12 text-center">#</th>
-                    <th className="px-4 py-4 font-black">Course</th>
+                    <th className="px-4 py-4 font-black">Course & Batch</th>
                     <th className="px-4 py-4 font-black text-center">Students</th>
                     <th className="px-4 py-4 font-black text-center">Status</th>
                     <th className="px-4 py-4 font-black text-center">Action</th>
@@ -42222,7 +45879,10 @@ const InstituteERPExams = ({
                         <td className="px-4 py-4 text-center font-mono font-bold text-slate-400">{serialNo}</td>
                         <td className="px-4 py-4">
                           <span className="font-bold text-slate-700 block">{app.course?.name || 'Course'}</span>
-                          <span className="text-[10px] text-slate-400">Sem {app.semesterNumber}</span>
+                          <span className="text-[10px] font-bold text-indigo-600 block">
+                            {app.batch?.name || (app.batch?.year ? `Batch ${app.batch.year}` : 'Batch')}
+                          </span>
+                          <span className="text-[10px] text-slate-400">Exam {app.examinationNumber}</span>
                         </td>
                         <td className="px-4 py-4 text-center font-bold text-slate-700">{app.students?.length || 0}</td>
                         <td className="px-4 py-4 text-center">
@@ -42323,10 +45983,26 @@ const InstituteERPExams = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  <div>
+                    <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Academic Batch</span>
+                    <span className="text-indigo-600 font-bold">{viewingApp.batch?.name || (viewingApp.batch?.year ? `Batch ${viewingApp.batch.year}` : 'N/A')}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-3">
+                <div className="flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-slate-400" />
                   <div>
-                    <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">{viewingApp.semesterNumber}</span>
+                    <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">Examination {viewingApp.examinationNumber}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  <div>
+                    <span className="block text-[9px] uppercase font-black text-slate-400 tracking-wider">Batch Candidates</span>
+                    <span className="text-slate-800 font-bold">{viewingApp.students?.length || 0} enrolled</span>
                   </div>
                 </div>
               </div>
@@ -42438,7 +46114,7 @@ const fmtDate = (val) => {
 
 const STEPS = [
   { num: 1, label: 'Select Student', icon: User },
-  { num: 2, label: 'Choose Semester', icon: FileText },
+  { num: 2, label: 'Choose Examination', icon: FileText },
   { num: 3, label: 'Enter Payment', icon: CreditCard },
   { num: 4, label: 'Review & Submit', icon: CheckCircle2 },
 ];
@@ -42447,8 +46123,8 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   const [step, setStep] = useState(1);
 
   const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
-  const [unpaidSemesters, setUnpaidSemesters] = useState([]);
+  const [selectedExamination, setSelectedExamination] = useState('');
+  const [unpaidExaminations, setUnpaidExaminations] = useState([]);
   const [feeType, setFeeType] = useState('Examination fee');
   const [amount, setAmount] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
@@ -42512,23 +46188,23 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   const resetForm = () => {
     setStep(1);
     setSelectedStudentId('');
-    setSelectedSemester('');
+    setSelectedExamination('');
     setAmount('');
     setFeeType('Examination fee');
     setPaymentDate(new Date().toISOString().split('T')[0]);
     setFeeCheck(null);
   };
 
-  // Resolve the applicable exam fee for the selected student + semester.
+    // Resolve the applicable exam fee for the selected student + examination.
   useEffect(() => {
-    if (!selectedStudentId || !selectedSemester) {
+    if (!selectedStudentId || !selectedExamination) {
       setFeeCheck(null);
       return;
     }
     let cancelled = false;
     setFeeCheckLoading(true);
     examService
-      .checkExamFeeApplicability(selectedStudentId, parseInt(selectedSemester))
+      .checkExamFeeApplicability(selectedStudentId, parseInt(selectedExamination))
       .then((res) => {
         if (cancelled) return;
         const data = res?.data?.data || res?.data || res;
@@ -42541,7 +46217,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         if (!cancelled) setFeeCheckLoading(false);
       });
     return () => { cancelled = true; };
-  }, [selectedStudentId, selectedSemester]);
+  }, [selectedStudentId, selectedExamination]);
 
   const eligibleStudents = students;
   const selectedStudent = students.find(s => s._id === selectedStudentId || s.id === selectedStudentId);
@@ -42549,27 +46225,27 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   useEffect(() => {
     setTimeout(() => {
       if (!selectedStudentId) {
-        setUnpaidSemesters([]);
+        setUnpaidExaminations([]);
         return;
       }
-      const paidSemesters = feeRecords
+      const paidExaminations = feeRecords
         .filter(r => (r.student?._id === selectedStudentId || r.student?.id === selectedStudentId || r.student === selectedStudentId) && r.paymentPurpose === feeType)
-        .map(r => Number(r.semesterNumber));
+        .map(r => Number(r.examinationNumber));
       const available = [1, 2, 3, 4, 5, 6]
-        .filter(num => !paidSemesters.includes(num))
-        .map(num => ({ semesterNumber: num }));
-      setUnpaidSemesters(available);
-      if (selectedSemester && paidSemesters.includes(Number(selectedSemester))) {
-        setSelectedSemester('');
+        .filter(num => !paidExaminations.includes(num))
+        .map(num => ({ examinationNumber: num }));
+      setUnpaidExaminations(available);
+      if (selectedExamination && paidExaminations.includes(Number(selectedExamination))) {
+        setSelectedExamination('');
       }
     }, 0);
-  }, [selectedStudentId, feeRecords, feeType, selectedSemester]);
+  }, [selectedStudentId, feeRecords, feeType, selectedExamination]);
 
   useEffect(() => {
     // Auto-fill the amount from the resolved exam fee configuration when a fee
     // is applicable; otherwise leave blank (fee waived / not payable).
     setTimeout(() => {
-      if (selectedStudent && selectedSemester) {
+      if (selectedStudent && selectedExamination) {
         if (feeCheck?.examFeeApplicable && Number(feeCheck.examFeeAmount) > 0) {
           setAmount(String(feeCheck.examFeeAmount).replace(/,/g, ''));
           return;
@@ -42577,7 +46253,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       }
       setAmount('');
     }, 0);
-  }, [selectedStudent, selectedSemester, feeCheck]);
+  }, [selectedStudent, selectedExamination, feeCheck]);
 
   // Exam fee is only payable when the resolved configuration deems it
   // applicable (reappearing with fee > 0, or first-attempt with opt-in).
@@ -42591,7 +46267,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
   const canProceedFrom = (s) => {
     if (s === 1) return !!selectedStudentId;
     if (s === 2) {
-      if (!selectedSemester) return false;
+      if (!selectedExamination) return false;
       // Allow proceeding to confirm fee status, but block paying a waived fee.
       return true;
     }
@@ -42618,12 +46294,12 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       setToast({ message: 'Please select a student.', type: 'warning' });
       return;
     }
-    if (!selectedSemester) {
-      setToast({ message: 'Please select a semester.', type: 'warning' });
+    if (!selectedExamination) {
+      setToast({ message: 'Please select an examination.', type: 'warning' });
       return;
     }
     if (isFeeWaived) {
-      setToast({ message: 'No exam fee is applicable for this student & semester (fee is waived). Payment cannot be recorded.', type: 'warning' });
+      setToast({ message: 'No exam fee is applicable for this student & examination (fee is waived). Payment cannot be recorded.', type: 'warning' });
       return;
     }
     const parsedAmount = parseFloat(amount);
@@ -42653,7 +46329,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         name: 'Semi Phase 3 Student Fees',
         description: `Fee Payment - ${feeType}`,
         paymentType: 'exam',
-        additionalData: { studentId: selectedStudentId, purpose: feeType, semester: selectedSemester },
+        additionalData: { studentId: selectedStudentId, purpose: feeType, examination: selectedExamination },
         prefill: { name: selectedStudent?.fullName || '', email: selectedStudent?.email || '' },
         onSuccess: async (response) => {
           try {
@@ -42663,7 +46339,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
               razorpay_signature: response.razorpay_signature,
             });
             await academicService.payStudentFees(selectedStudentId, {
-              semesterNumber: parseInt(selectedSemester),
+              examinationNumber: parseInt(selectedExamination),
               amount: parseFloat(amount),
               paymentMode: 'Razorpay Online',
               paymentDate,
@@ -42765,7 +46441,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Student *</label>
         <select
           value={selectedStudentId}
-          onChange={(e) => { setSelectedStudentId(e.target.value); setSelectedSemester(''); }}
+          onChange={(e) => { setSelectedStudentId(e.target.value); setSelectedExamination(''); }}
           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
           required
         >
@@ -42801,9 +46477,9 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       <div>
         <h3 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
           <FileText className="w-5 h-5 text-blue-500" />
-          Choose Semester
+          Choose Examination
         </h3>
-        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Select the semester for which fee is to be paid</p>
+        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">Select the examination for which fee is to be paid</p>
       </div>
       {selectedStudent && (
         <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 mb-2">
@@ -42814,30 +46490,30 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
           </p>
         </div>
       )}
-      {unpaidSemesters.length === 0 ? (
+      {unpaidExaminations.length === 0 ? (
         <div className="py-10 text-center">
           <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-300 mb-3" />
-          <p className="text-sm font-bold text-slate-500">All semesters paid for this student!</p>
+          <p className="text-sm font-bold text-slate-500">All examinations paid for this student!</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          {unpaidSemesters.map(sem => (
+          {unpaidExaminations.map(sem => (
             <button
-              key={sem.semesterNumber}
+              key={sem.examinationNumber}
               type="button"
-              onClick={() => setSelectedSemester(sem.semesterNumber)}
+              onClick={() => setSelectedExamination(sem.examinationNumber)}
               className={`py-4 rounded-2xl text-sm font-bold transition-all border cursor-pointer ${
-                String(selectedSemester) === String(sem.semesterNumber)
+                String(selectedExamination) === String(sem.examinationNumber)
                   ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20 scale-105'
                   : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-sm'
               }`}
             >
-              Sem {sem.semesterNumber}
+              Exam {sem.examinationNumber}
             </button>
           ))}
         </div>
       )}
-      {selectedSemester && (
+      {selectedExamination && (
         <div className={`rounded-2xl p-4 border ${isFeeWaived ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'} mt-3`}>
           {feeCheckLoading ? (
             <p className="text-[11px] font-bold text-slate-500 flex items-center gap-2">
@@ -42846,12 +46522,12 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
           ) : isFeeWaived ? (
             <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" />
-              No exam fee applicable for {isReappearing ? 'this reappearing student' : 'this first-attempt student'} in Sem {selectedSemester} — fee is waived. Payment cannot be recorded.
+              No exam fee applicable for {isReappearing ? 'this reappearing student' : 'this first-attempt student'} in Examination {selectedExamination} — fee is waived. Payment cannot be recorded.
             </p>
           ) : (
             <p className="text-[11px] font-bold text-amber-700 flex items-center gap-2">
               <CreditCard className="w-4 h-4" />
-              Exam fee of {fmtCurrency(feeCheck?.examFeeAmount)} is applicable for this {isReappearing ? 'reappearing' : 'first-attempt'} student in Sem {selectedSemester}.
+              Exam fee of {fmtCurrency(feeCheck?.examFeeAmount)} is applicable for this {isReappearing ? 'reappearing' : 'first-attempt'} student in Examination {selectedExamination}.
             </p>
           )}
         </div>
@@ -42872,7 +46548,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
           <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            No exam fee applicable for this {isReappearing ? 'reappearing' : 'first-attempt'} student & semester — the fee is waived. You cannot record a payment here.
+            No exam fee applicable for this {isReappearing ? 'reappearing' : 'first-attempt'} student & examination — the fee is waived. You cannot record a payment here.
           </p>
         </div>
       )}
@@ -42933,7 +46609,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
       { label: 'Student', value: selectedStudent?.fullName || '—' },
       { label: 'Enrollment No', value: selectedStudent?.enrollmentNo || '—' },
       { label: 'Course', value: selectedStudent?.course || selectedStudent?.courseName || '—' },
-      { label: 'Semester', value: `Semester ${selectedSemester}` },
+      { label: 'Examination', value: `Examination ${selectedExamination}` },
       { label: 'Fee Type', value: feeType },
       { label: 'Amount', value: fmtCurrency(amount) },
       { label: 'Payment Mode', value: 'Razorpay Online' },
@@ -43076,7 +46752,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                         <td className="px-6 py-4 font-mono font-bold text-blue-600">{enrollmentId}</td>
                         <td className="px-6 py-4 font-bold text-slate-700">
                           {rec.paymentPurpose}
-                          {rec.semesterNumber && <span className="block text-[10px] text-slate-400">Sem {rec.semesterNumber}</span>}
+                          {rec.examinationNumber && <span className="block text-[10px] text-slate-400">Exam {rec.examinationNumber}</span>}
                         </td>
                         <td className="px-6 py-4 font-mono font-bold text-slate-800">{fmtCurrency(rec.amount)}</td>
                         <td className="px-6 py-4 text-slate-600">{rec.paymentMode}</td>
@@ -43183,7 +46859,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Fee Purpose</span>
-                    <span className="text-slate-800 font-bold block mt-0.5">{viewingTx.paymentPurpose} {viewingTx.semesterNumber ? `(Sem ${viewingTx.semesterNumber})` : ''}</span>
+                    <span className="text-slate-800 font-bold block mt-0.5">{viewingTx.paymentPurpose} {viewingTx.examinationNumber ? `(Exam ${viewingTx.examinationNumber})` : ''}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Payment Mode</span>
@@ -43297,7 +46973,7 @@ const InstituteERPHallTicket = ({
   // Exam Details state - populated from selected exam application
   const [examDetails, setExamDetails] = useState({
     examType: '',
-    semesterLabel: '',
+    examinationLabel: '',
     headerTitle: '',
     organizationTitle: "Society for Emergency Medicine India (SEMI)",
     theoryCentre: '',
@@ -43356,8 +47032,8 @@ const InstituteERPHallTicket = ({
         }
 
         const courseName = app.course?.name || 'CCT-EM Fellowship';
-        const semesterNum = app.semesterNumber || 1;
-        const semesterLabel = `Semester ${semesterNum}`;
+        const examinationNum = app.examinationNumber || 1;
+        const examinationLabel = `Examination ${examinationNum}`;
 
         // Build subjects with dates from subjectSchedules
         const subjectSchedulesMap = {};
@@ -43388,7 +47064,7 @@ const InstituteERPHallTicket = ({
         setExamDetails(prev => ({
           ...prev,
           examType: courseName,
-          semesterLabel: semesterLabel,
+          examinationLabel: examinationLabel,
           headerTitle: `${courseName} Examination Hall Ticket - ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`,
           theoryCentre: app.examVenue || '',
           theoryAddress: app.examCenter || '',
@@ -43420,7 +47096,7 @@ const InstituteERPHallTicket = ({
           setSelectedBatchId(app.batch._id);
         }
 
-        setSuccessMsg(`✅ Loaded exam application: ${courseName} - ${semesterLabel} (${appStudents.length} students)`);
+        setSuccessMsg(`✅ Loaded exam application: ${courseName} - ${examinationLabel} (${appStudents.length} students)`);
       } catch (err) {
         console.error('Failed to fetch exam application details:', err);
         setErrorMsg(err.parsedMessage || err.message || 'Failed to load exam details. Please try again.');
@@ -43800,7 +47476,7 @@ const InstituteERPHallTicket = ({
       .filter(app => app.status === 'Approved' || app.status === 'SchedulePublished')
       .map(app => ({
         id: app._id,
-        label: `${app.course?.name || app.courseName || 'Course'} - Semester ${app.semesterNumber} (${app.students?.length || 0} students) ${app.examVenue ? '✅ Scheduled' : ''}`
+        label: `${app.course?.name || app.courseName || 'Course'} - Examination ${app.examinationNumber} (${app.students?.length || 0} students) ${app.examVenue ? '✅ Scheduled' : ''}`
       }));
   }, [examApplications]);
 
@@ -45039,12 +48715,12 @@ const InstituteERPMarksheet = ({
   fetchERPData,
   user
 }) => {
-  const [marksheetType, setMarksheetType] = useState('semester'); // 'semester' | 'cumulative'
+  const [marksheetType, setMarksheetType] = useState('examination'); // 'examination' | 'cumulative'
   const [activeTab, setActiveTab] = useState('generator'); // 'generator' | 'templates'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatchId, setSelectedBatchId] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('1');
+  const [selectedExamination, setSelectedExamination] = useState('1');
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -45064,11 +48740,11 @@ const InstituteERPMarksheet = ({
     controllerTitle: "Controller - Examinations, SEMI",
     controllerSignatureUrl: null,
     issueDate: new Date().toISOString().split('T')[0],
-    gradingScaleNote: "Grading: O (>=90%), A+ (80-89%), A (70-79%), B+ (60-69%), B (50-59%), C (40-49%), D (35-39%), F (<35%)",
+    gradingScaleNote: "Result: PASS / FAIL",
     instructions: [
       "This marksheet is an official statement of academic performance issued by SEMI.",
       "Any erasure or alteration invalidates this document.",
-      "Minimum passing mark in each subject is 50% for aggregate / 40% per theory paper."
+      "Result is declared as PASS or FAIL for each subject without disclosure of marks."
     ]
   });
 
@@ -45127,88 +48803,66 @@ const InstituteERPMarksheet = ({
     }));
   };
 
-  // Helper function to build marks structure for a candidate
+  // Helper function to build result structure for a candidate
   const getStudentMarksData = (student) => {
     const studentIdStr = String(student._id || student.id);
     const studentResults = results.filter(r => String(r.student?._id || r.student) === studentIdStr);
 
-    if (marksheetType === 'semester') {
-      const semNum = Number(selectedSemester);
-      const semResult = studentResults.find(r => Number(r.semester) === semNum);
+    if (marksheetType === 'examination') {
+      const examNum = Number(selectedExamination);
+      const semResult = studentResults.find(r => Number(r.examination) === examNum);
 
       let subjectsList = [];
       if (semResult && semResult.subjects && semResult.subjects.length > 0) {
-        subjectsList = semResult.subjects.map(s => ({
-          code: s.subjectCode || 'SUB',
-          name: s.subjectName || 'Subject',
-          internal: s.internalMarks || 0,
-          external: s.externalMarks || 0,
-          total: (s.internalMarks || 0) + (s.externalMarks || 0),
-          maxMarks: 100,
-          status: ((s.internalMarks || 0) + (s.externalMarks || 0)) >= 50 ? 'PASS' : 'FAIL'
-        }));
+        subjectsList = semResult.subjects.map(s => {
+          const subGrade = (s.grade || '').toUpperCase();
+          return {
+            code: s.subjectCode || 'SUB',
+            name: s.subjectName || 'Subject',
+            status: ['F', 'RA', 'ABSENT', 'WH'].includes(subGrade) ? 'FAIL' : 'PASS'
+          };
+        });
       } else {
-        // Fallback default subjects for template preview if no recorded exam result yet
         subjectsList = [
-          { code: 'EM-101', name: 'Basic Sciences & Emergency Resuscitation', internal: 24, external: 62, total: 86, maxMarks: 100, status: 'PASS' },
-          { code: 'EM-102', name: 'Surgical Emergencies & Trauma Care', internal: 22, external: 58, total: 80, maxMarks: 100, status: 'PASS' },
-          { code: 'EM-103', name: 'Medical & Cardiac Emergencies', internal: 25, external: 65, total: 90, maxMarks: 100, status: 'PASS' },
-          { code: 'EM-104', name: 'Pediatric & Neonatal Emergencies', internal: 21, external: 54, total: 75, maxMarks: 100, status: 'PASS' }
+          { code: 'EM-101', name: 'Basic Sciences & Emergency Resuscitation', status: 'PASS' },
+          { code: 'EM-102', name: 'Surgical Emergencies & Trauma Care', status: 'PASS' },
+          { code: 'EM-103', name: 'Medical & Cardiac Emergencies', status: 'PASS' },
+          { code: 'EM-104', name: 'Pediatric & Neonatal Emergencies', status: 'PASS' }
         ];
       }
 
-      const totalObtained = semResult ? (semResult.totalMarks || subjectsList.reduce((acc, curr) => acc + curr.total, 0)) : subjectsList.reduce((acc, curr) => acc + curr.total, 0);
-      const maxTotal = subjectsList.length * 100;
-      const percentage = semResult ? (semResult.percentage || Math.round((totalObtained / maxTotal) * 100)) : Math.round((totalObtained / maxTotal) * 100);
-      const resultStatus = semResult ? (semResult.resultStatus || (percentage >= 50 ? 'PASS' : 'FAIL')) : (percentage >= 50 ? 'PASS' : 'FAIL');
+      const overallStatus = semResult ? (semResult.resultStatus || 'PASS') : 'PASS';
 
       return {
-        type: 'Semester',
-        semesterLabel: `Semester ${selectedSemester}`,
+        type: 'Examination',
+        examinationLabel: `Examination ${selectedExamination}`,
         subjects: subjectsList,
-        totalObtained,
-        maxTotal,
-        percentage,
-        resultStatus
+        resultStatus: overallStatus
       };
     } else {
-      // Cumulative Total Semesters Marksheet
-      let semesterSummaries = [];
+      // Cumulative Total Examinations Statement
+      let examinationSummaries = [];
 
-      // Loop through sem 1 to 4 (or available results)
-      [1, 2, 3, 4].forEach(semNum => {
-        const semResult = studentResults.find(r => Number(r.semester) === semNum);
+      [1, 2].forEach(semNum => {
+        const semResult = studentResults.find(r => Number(r.examination) === semNum);
         if (semResult) {
-          semesterSummaries.push({
-            semesterLabel: `Semester ${semNum}`,
-            totalMarks: semResult.totalMarks || 0,
-            maxMarks: 400,
-            percentage: semResult.percentage || 0,
+          examinationSummaries.push({
+            examinationLabel: `Examination ${semNum}`,
             status: semResult.resultStatus || 'PASS'
           });
         } else {
-          // Default mock data for cumulative overview
-          semesterSummaries.push({
-            semesterLabel: `Semester ${semNum}`,
-            totalMarks: 320 + (semNum * 5),
-            maxMarks: 400,
-            percentage: 80 + semNum,
+          examinationSummaries.push({
+            examinationLabel: `Examination ${semNum}`,
             status: 'PASS'
           });
         }
       });
 
-      const grandTotalObtained = semesterSummaries.reduce((acc, curr) => acc + curr.totalMarks, 0);
-      const grandMaxMarks = semesterSummaries.reduce((acc, curr) => acc + curr.maxMarks, 0);
-      const overallPercentage = Math.round((grandTotalObtained / grandMaxMarks) * 100);
-      const overallStatus = semesterSummaries.every(s => s.status === 'PASS') ? 'PASS' : 'FAIL';
+      const overallStatus = examinationSummaries.every(s => s.status === 'PASS') ? 'PASS' : 'FAIL';
 
       return {
         type: 'Cumulative',
-        semesterSummaries,
-        grandTotalObtained,
-        grandMaxMarks,
-        overallPercentage,
+        examinationSummaries,
         overallStatus
       };
     }
@@ -45241,11 +48895,11 @@ const InstituteERPMarksheet = ({
         };
       });
 
-      setSuccessMsg(`🎉 Successfully generated ${generatedList.length} ${marksheetType === 'semester' ? 'Semester' : 'Cumulative'} Marksheet(s)!`);
+      setSuccessMsg(`🎉 Successfully generated ${generatedList.length} ${marksheetType === 'examination' ? 'Examination' : 'Cumulative'} Marksheet(s)!`);
       setViewingMarksheets(generatedList);
       setViewingBatchInfo({
         batchName: selectedBatchId ? `Selected Candidates (${generatedList.length})` : 'All Batches',
-        courseName: marksheetType === 'semester' ? `Semester ${selectedSemester} Marksheet` : 'Cumulative Total Semesters Marksheet'
+        courseName: marksheetType === 'examination' ? `Examination ${selectedExamination} Marksheet` : 'Cumulative Total Examinations Marksheet'
       });
     } catch (err) {
       console.error('Error generating marksheets:', err);
@@ -45272,7 +48926,7 @@ const InstituteERPMarksheet = ({
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Academic Marksheets</h2>
             <p className="text-xs text-slate-400 font-semibold mt-1">
-              Generate, customize form fields, and download semester and cumulative total sem marksheets
+              Generate, customize form fields, and download examination and cumulative total examination marksheets
             </p>
           </div>
         </div>
@@ -45281,14 +48935,14 @@ const InstituteERPMarksheet = ({
         <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
           <button
             type="button"
-            onClick={() => setMarksheetType('semester')}
+            onClick={() => setMarksheetType('examination')}
             className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-              marksheetType === 'semester' 
+              marksheetType === 'examination' 
                 ? 'bg-white text-emerald-700 shadow-sm' 
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Semester Marksheet
+            Examination Marksheet
           </button>
           <button
             type="button"
@@ -45299,7 +48953,7 @@ const InstituteERPMarksheet = ({
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Cumulative Total Sem Marksheet
+            Cumulative Total Exam Marksheet
           </button>
         </div>
       </div>
@@ -45368,16 +49022,16 @@ const InstituteERPMarksheet = ({
                 </select>
               </div>
 
-              {marksheetType === 'semester' && (
+              {marksheetType === 'examination' && (
                 <div>
-                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Semester</label>
+                  <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Examination</label>
                   <select
-                    value={selectedSemester}
-                    onChange={(e) => setSelectedSemester(e.target.value)}
+                    value={selectedExamination}
+                    onChange={(e) => setSelectedExamination(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white"
                   >
                     {[1, 2, 3, 4, 5, 6].map(sem => (
-                      <option key={sem} value={sem}>Semester {sem}</option>
+                      <option key={sem} value={sem}>Examination {sem}</option>
                     ))}
                   </select>
                 </div>
@@ -45685,16 +49339,15 @@ const InstituteERPMarksheet = ({
                   {/* Section II Academic Marks & Evaluation */}
                   <div className="space-y-1 pt-1">
                     <h4 className="text-xs font-bold italic underline font-sans">
-                      Section II. Performance Statement ({mItem.marksData.type === 'Semester' ? mItem.marksData.semesterLabel : 'Cumulative Total Semesters'}):
+                      Section II. Performance Statement ({mItem.marksData.type === 'Examination' ? mItem.marksData.examinationLabel : 'Cumulative Total Examinations'}):
                     </h4>
 
-                    {mItem.marksData.type === 'Semester' ? (
+                    {mItem.marksData.type === 'Examination' ? (
                       <table className="w-full border border-black text-xs font-sans border-collapse mt-2">
                         <thead>
                           <tr className="border-b border-black bg-slate-100 text-left font-bold">
                             <th className="p-2 border-r border-black w-16 text-center">Code</th>
                             <th className="p-2 border-r border-black">Subject Title</th>
-                            <th className="p-2 border-r border-black w-20 text-center">Total</th>
                             <th className="p-2 text-center w-16">Result</th>
                           </tr>
                         </thead>
@@ -45703,7 +49356,6 @@ const InstituteERPMarksheet = ({
                             <tr key={sIdx} className="border-b border-black last:border-b-0">
                               <td className="p-2 border-r border-black font-mono text-center">{sub.code}</td>
                               <td className="p-2 border-r border-black font-medium">{sub.name}</td>
-                              <td className="p-2 border-r border-black text-center font-mono font-bold">{sub.total}</td>
                               <td className="p-2 text-center font-bold">
                                 <span className={sub.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}>
                                   {sub.status}
@@ -45712,39 +49364,20 @@ const InstituteERPMarksheet = ({
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot>
-                          <tr className="border-t-2 border-black bg-slate-50 font-bold">
-                            <td colSpan="2" className="p-2 text-right border-r border-black uppercase text-[11px]">
-                              Aggregate Total Marks
-                            </td>
-                            <td className="p-2 text-center border-r border-black font-mono">
-                              {mItem.marksData.totalObtained} / {mItem.marksData.maxTotal}
-                            </td>
-                            <td className="p-2 text-center font-bold text-emerald-800">
-                              {mItem.marksData.percentage}%
-                            </td>
-                          </tr>
-                        </tfoot>
                       </table>
                     ) : (
-                      /* Cumulative Semester Summary Table */
+                      /* Cumulative Examination Summary Table */
                       <table className="w-full border border-black text-xs font-sans border-collapse mt-2">
                         <thead>
                           <tr className="border-b border-black bg-slate-100 text-left font-bold">
-                            <th className="p-2 border-r border-black">Semester</th>
-                            <th className="p-2 border-r border-black text-center">Max Marks</th>
-                            <th className="p-2 border-r border-black text-center">Marks Obtained</th>
-                            <th className="p-2 border-r border-black text-center">Percentage</th>
-                            <th className="p-2 text-center">Status</th>
+                            <th className="p-2 border-r border-black">Examination</th>
+                            <th className="p-2 text-center">Result</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {mItem.marksData.semesterSummaries.map((sem, sIdx) => (
+                          {mItem.marksData.examinationSummaries.map((sem, sIdx) => (
                             <tr key={sIdx} className="border-b border-black last:border-b-0">
-                              <td className="p-2 border-r border-black font-bold">{sem.semesterLabel}</td>
-                              <td className="p-2 border-r border-black text-center font-mono">{sem.maxMarks}</td>
-                              <td className="p-2 border-r border-black text-center font-mono font-bold">{sem.totalMarks}</td>
-                              <td className="p-2 border-r border-black text-center font-mono font-bold">{sem.percentage}%</td>
+                              <td className="p-2 border-r border-black font-bold">{sem.examinationLabel}</td>
                               <td className="p-2 text-center font-bold">
                                 <span className={sem.status === 'PASS' ? 'text-emerald-700' : 'text-rose-700'}>
                                   {sem.status}
@@ -45753,25 +49386,6 @@ const InstituteERPMarksheet = ({
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot>
-                          <tr className="border-t-2 border-black bg-slate-50 font-bold">
-                            <td className="p-2 text-right border-r border-black uppercase text-[11px]">
-                              Cumulative Grand Total
-                            </td>
-                            <td className="p-2 text-center border-r border-black font-mono">
-                              {mItem.marksData.grandMaxMarks}
-                            </td>
-                            <td className="p-2 text-center border-r border-black font-mono font-bold">
-                              {mItem.marksData.grandTotalObtained}
-                            </td>
-                            <td className="p-2 text-center border-r border-black font-bold text-emerald-800">
-                              {mItem.marksData.overallPercentage}%
-                            </td>
-                            <td className="p-2 text-center font-black text-emerald-700">
-                              {mItem.marksData.overallStatus}
-                            </td>
-                          </tr>
-                        </tfoot>
                       </table>
                     )}
                   </div>
@@ -46221,14 +49835,10 @@ import {
   Users,
   Calendar,
   Award,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   CheckCircle2,
   XCircle,
   FileSpreadsheet,
   Loader2,
-  BarChart3,
   Clock,
   X,
 } from 'lucide-react';
@@ -46250,7 +49860,7 @@ const InstituteERPResults = ({ user }) => {
   // ─── Filters ──────────────────────────────────────────────────────────────
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [resultStatusFilter, setResultStatusFilter] = useState('All');
 
@@ -46351,7 +49961,7 @@ const InstituteERPResults = ({ user }) => {
   }, [selectedCourse, filteredBatches, selectedBatch]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Get students for the selected batch (drives semester options)
+  // Get students for the selected batch (drives examination options)
   const studentsForBatch = useMemo(() => {
     if (!selectedBatch) return students;
     return students.filter(s => {
@@ -46360,29 +49970,29 @@ const InstituteERPResults = ({ user }) => {
     });
   }, [students, selectedBatch]);
 
-  // Get available semesters for the selected batch
-  const availableSemesters = useMemo(() => {
+  // Get available examinations for the selected batch
+  const availableExaminations = useMemo(() => {
     const semSet = new Set();
     studentsForBatch.forEach(s => {
-      if (s.semesters) {
-        s.semesters.forEach(sem => semSet.add(sem.semesterNumber));
+      if (s.examinations) {
+        s.examinations.forEach(sem => semSet.add(sem.examinationNumber));
       }
     });
     return Array.from(semSet).sort((a, b) => a - b);
   }, [studentsForBatch]);
 
-  // Auto-select first semester when batch changes and no valid semester is selected
+  // Auto-select first examination when batch changes and no valid examination is selected
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (selectedBatch && availableSemesters.length > 0) {
-      const currentSemExists = availableSemesters.includes(Number(selectedSemester));
-      if (!selectedSemester || !currentSemExists) {
-        setSelectedSemester(String(availableSemesters[0]));
+    if (selectedBatch && availableExaminations.length > 0) {
+      const currentSemExists = availableExaminations.includes(Number(selectedExamination));
+      if (!selectedExamination || !currentSemExists) {
+        setSelectedExamination(String(availableExaminations[0]));
       }
     } else if (!selectedBatch) {
-      setSelectedSemester('');
+      setSelectedExamination('');
     }
-  }, [selectedBatch, availableSemesters, selectedSemester]);
+  }, [selectedBatch, availableExaminations, selectedExamination]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Get student lookup map
@@ -46419,6 +50029,15 @@ const InstituteERPResults = ({ user }) => {
   const filteredResults = useMemo(() => {
     let filtered = [...results];
 
+    // Only show results that are published and whose scheduled publication time has passed
+    const now = new Date();
+    filtered = filtered.filter(r => {
+      const isPub = r.isPublished || r.published;
+      if (!isPub) return false;
+      if (r.publishedDate && new Date(r.publishedDate) > now) return false;
+      return true;
+    });
+
     // Filter by course
     if (selectedCourse) {
       const studentIdsInCourse = students
@@ -46435,9 +50054,9 @@ const InstituteERPResults = ({ user }) => {
       filtered = filtered.filter(r => studentIdsInBatch.includes(String(r.student?._id || r.student)));
     }
 
-    // Filter by semester
-    if (selectedSemester) {
-      filtered = filtered.filter(r => String(r.semester) === String(selectedSemester));
+    // Filter by examination
+    if (selectedExamination) {
+      filtered = filtered.filter(r => String(r.examination) === String(selectedExamination));
     }
 
     // Filter by status
@@ -46457,7 +50076,7 @@ const InstituteERPResults = ({ user }) => {
     }
 
     return filtered;
-  }, [results, selectedCourse, selectedBatch, selectedSemester, resultStatusFilter, searchQuery, students, studentMap]);
+  }, [results, selectedCourse, selectedBatch, selectedExamination, resultStatusFilter, searchQuery, students, studentMap]);
 
   // Pagination
   const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
@@ -46472,13 +50091,8 @@ const InstituteERPResults = ({ user }) => {
     const passed = filteredResults.filter(r => r.resultStatus === 'PASS').length;
     const failed = filteredResults.filter(r => r.resultStatus === 'FAIL').length;
     const supplementary = filteredResults.filter(r => r.resultStatus === 'SUPPLEMENTARY').length;
-    const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
 
-    const avgPercentage = total > 0
-      ? Math.round(filteredResults.reduce((sum, r) => sum + (r.percentage || 0), 0) / total)
-      : 0;
-
-    return { total, passed, failed, supplementary, passRate, avgPercentage };
+    return { total, passed, failed, supplementary };
   }, [filteredResults]);
 
   // ─── Handlers ────────────────────────────────────────────────────────────
@@ -46510,7 +50124,7 @@ const InstituteERPResults = ({ user }) => {
     }
 
     // Create CSV content
-    const headers = ['Enrollment ID', 'Student Name', 'Course', 'Batch', 'Semester', 'Total Marks', 'Percentage', 'Result'];
+    const headers = ['Enrollment ID', 'Student Name', 'Course', 'Batch', 'Examination', 'Result'];
     const rows = filteredResults.map(r => {
       const student = studentMap[r.student?._id || r.student];
       const course = courseMap[student?.course?._id || student?.course || student?.courseId];
@@ -46521,9 +50135,7 @@ const InstituteERPResults = ({ user }) => {
         student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'Unknown' : 'Unknown',
         course?.name || 'N/A',
         batch?.name || 'N/A',
-        r.semester || 'N/A',
-        r.totalMarks || 0,
-        r.percentage || 0,
+        r.examination || 'N/A',
         r.resultStatus || 'N/A',
       ];
     });
@@ -46549,32 +50161,6 @@ const InstituteERPResults = ({ user }) => {
       REVALUATION_PENDING: { label: 'Revaluation Pending', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" /> },
     };
     return map[status] || map.FAIL;
-  };
-
-  const getGradeColor = (percentage) => {
-    if (percentage >= 90) return 'text-emerald-600';
-    if (percentage >= 80) return 'text-emerald-500';
-    if (percentage >= 70) return 'text-blue-600';
-    if (percentage >= 60) return 'text-amber-600';
-    if (percentage >= 50) return 'text-amber-500';
-    return 'text-rose-600';
-  };
-
-  const getGradeIcon = (percentage) => {
-    if (percentage >= 80) return <TrendingUp className="w-4 h-4 text-emerald-600" />;
-    if (percentage >= 60) return <Minus className="w-4 h-4 text-amber-600" />;
-    return <TrendingDown className="w-4 h-4 text-rose-600" />;
-  };
-
-  const getGradeLetter = (percentage) => {
-    if (percentage >= 90) return 'O';
-    if (percentage >= 80) return 'A+';
-    if (percentage >= 70) return 'A';
-    if (percentage >= 60) return 'B+';
-    if (percentage >= 50) return 'B';
-    if (percentage >= 40) return 'C';
-    if (percentage >= 35) return 'D';
-    return 'F';
   };
 
   const getStudentName = (result) => {
@@ -46694,7 +50280,7 @@ const InstituteERPResults = ({ user }) => {
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
           <p className="text-2xl font-black text-emerald-600 mt-1">{stats.passed}</p>
-          <span className="text-[9px] text-emerald-600 font-medium">{stats.passRate}% Pass Rate</span>
+          <span className="text-[9px] text-emerald-600 font-medium">Cleared</span>
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
@@ -46706,11 +50292,11 @@ const InstituteERPResults = ({ user }) => {
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Avg Percentage</span>
-            <BarChart3 className="w-4 h-4 text-indigo-500" />
+            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Reappearing</span>
+            <Clock className="w-4 h-4 text-indigo-500" />
           </div>
-          <p className="text-2xl font-black text-indigo-600 mt-1">{stats.avgPercentage}%</p>
-          <span className="text-[9px] text-indigo-600 font-medium">Overall Average</span>
+          <p className="text-2xl font-black text-indigo-600 mt-1">{stats.failed + stats.supplementary}</p>
+          <span className="text-[9px] text-indigo-600 font-medium">Require Reappearance</span>
         </div>
       </div>
 
@@ -46730,7 +50316,7 @@ const InstituteERPResults = ({ user }) => {
                   setSelectedCourse(e.target.value);
                   // Reset dependent filters
                   setSelectedBatch('');
-                  setSelectedSemester('');
+                  setSelectedExamination('');
                   setCurrentPage(1);
                 }}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
@@ -46758,7 +50344,7 @@ const InstituteERPResults = ({ user }) => {
                 value={selectedBatch}
                 onChange={(e) => {
                   setSelectedBatch(e.target.value);
-                  setSelectedSemester('');
+                  setSelectedExamination('');
                   setCurrentPage(1);
                 }}
                 disabled={!selectedCourse || filteredBatches.length === 0}
@@ -46777,28 +50363,28 @@ const InstituteERPResults = ({ user }) => {
             </div>
           </div>
 
-          {/* Semester Filter - Dependent on Batch */}
+          {/* Examination Filter - Dependent on Batch */}
           <div>
             <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5">
-              Semester <span className="text-rose-500">*</span>
+              Examination <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <select
-                value={selectedSemester}
+                value={selectedExamination}
                 onChange={(e) => {
-                  setSelectedSemester(e.target.value);
+                  setSelectedExamination(e.target.value);
                   setCurrentPage(1);
                 }}
-                disabled={!selectedBatch || availableSemesters.length === 0}
+                disabled={!selectedBatch || availableExaminations.length === 0}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {availableSemesters.length > 0 ? (
-                  availableSemesters.map(sem => (
-                    <option key={sem} value={sem}>Semester {sem}</option>
+                {availableExaminations.length > 0 ? (
+                  availableExaminations.map(sem => (
+                    <option key={sem} value={sem}>Examination {sem}</option>
                   ))
                 ) : (
-                  <option value="">{selectedBatch ? 'No semesters available' : 'Select batch first'}</option>
+                  <option value="">{selectedBatch ? 'No examinations available' : 'Select batch first'}</option>
                 )}
               </select>
             </div>
@@ -46847,10 +50433,10 @@ const InstituteERPResults = ({ user }) => {
           <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">
             {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''}
           </span>
-          {(selectedSemester || resultStatusFilter !== 'All' || searchQuery) && (
+          {(selectedExamination || resultStatusFilter !== 'All' || searchQuery) && (
             <button
               onClick={() => {
-                setSelectedSemester('');
+                setSelectedExamination('');
                 setResultStatusFilter('All');
                 setSearchQuery('');
                 setCurrentPage(1);
@@ -46875,9 +50461,9 @@ const InstituteERPResults = ({ user }) => {
               Batch: {batches.find(b => String(b._id || b.id) === String(selectedBatch))?.name || 'Selected'}
             </span>
           )}
-          {selectedSemester && (
+          {selectedExamination && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 border border-purple-200 rounded-full text-[10px] font-bold text-purple-700">
-              Semester {selectedSemester}
+              Examination {selectedExamination}
             </span>
           )}
           {resultStatusFilter !== 'All' && (
@@ -46897,10 +50483,7 @@ const InstituteERPResults = ({ user }) => {
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Enrollment ID</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Marks</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Percentage</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Examination</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Result</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center w-32">Actions</th>
               </tr>
@@ -46909,8 +50492,6 @@ const InstituteERPResults = ({ user }) => {
               {paginatedResults.length > 0 ? (
                 paginatedResults.map((result, idx) => {
                   const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
-                  const percentage = result.percentage || 0;
-                  const grade = getGradeLetter(percentage);
                   const statusBadge = getResultBadge(result.resultStatus);
                   const studentName = getStudentName(result);
                   const enrollmentId = getStudentEnrollment(result);
@@ -46923,28 +50504,7 @@ const InstituteERPResults = ({ user }) => {
                       <td className="px-4 py-3.5 font-bold text-slate-800">{studentName}</td>
                       <td className="px-4 py-3.5 font-mono font-bold text-blue-600">{enrollmentId}</td>
                       <td className="px-4 py-3.5 text-center font-bold text-slate-700">
-                        Semester {result.semester || 'N/A'}
-                      </td>
-                      <td className="px-4 py-3.5 text-center font-bold text-slate-700">
-                        {result.totalMarks || 0}
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        <span className={`font-black text-sm ${getGradeColor(percentage)}`}>
-                          {percentage}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
-                          percentage >= 90 ? 'bg-emerald-100 border-emerald-200 text-emerald-700' :
-                          percentage >= 80 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                          percentage >= 70 ? 'bg-blue-100 border-blue-200 text-blue-700' :
-                          percentage >= 60 ? 'bg-amber-100 border-amber-200 text-amber-700' :
-                          percentage >= 50 ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                          'bg-rose-100 border-rose-200 text-rose-700'
-                        }`}>
-                          {getGradeIcon(percentage)}
-                          {grade}
-                        </span>
+                        Examination {result.examination || 'N/A'}
                       </td>
                       <td className="px-4 py-3.5 text-center">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold border ${statusBadge.color}`}>
@@ -46984,7 +50544,7 @@ const InstituteERPResults = ({ user }) => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="9" className="px-4 py-16 text-center">
+                  <td colSpan="6" className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Award className="w-12 h-12 text-slate-200 stroke-1" />
                       <p className="text-sm font-bold text-slate-500">No results found</p>
@@ -47059,8 +50619,8 @@ const InstituteERPResults = ({ user }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">Semester {viewingResult.semester || 'N/A'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">Examination {viewingResult.examination || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Year</span>
@@ -47070,43 +50630,36 @@ const InstituteERPResults = ({ user }) => {
               </div>
 
               {/* Result Summary */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3 text-center">
-                  <span className="text-[8px] uppercase font-black text-slate-400 block">Total Marks</span>
-                  <span className="text-lg font-black text-slate-800">{viewingResult.totalMarks || 0}</span>
-                </div>
-                <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-3 text-center">
-                  <span className="text-[8px] uppercase font-black text-slate-400 block">Percentage</span>
-                  <span className={`text-lg font-black ${getGradeColor(viewingResult.percentage || 0)}`}>
-                    {viewingResult.percentage || 0}%
-                  </span>
-                </div>
-                <div className={`rounded-xl p-3 text-center ${
-                  viewingResult.resultStatus === 'PASS' ? 'bg-emerald-50/50 border border-emerald-100' :
-                  viewingResult.resultStatus === 'FAIL' ? 'bg-rose-50/50 border border-rose-100' :
-                  viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'bg-amber-50/50 border border-amber-100' :
-                  'bg-blue-50/50 border border-blue-100'
+              <div className={`rounded-2xl p-6 text-center border-2 ${
+                viewingResult.resultStatus === 'PASS' ? 'bg-emerald-50/60 border-emerald-200' :
+                viewingResult.resultStatus === 'FAIL' ? 'bg-rose-50/60 border-rose-200' :
+                viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'bg-amber-50/60 border-amber-200' :
+                'bg-blue-50/60 border-blue-200'
+              }`}>
+                <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider block mb-2">Final Result</span>
+                <span className={`text-2xl font-black ${
+                  viewingResult.resultStatus === 'PASS' ? 'text-emerald-700' :
+                  viewingResult.resultStatus === 'FAIL' ? 'text-rose-700' :
+                  viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'text-amber-700' :
+                  'text-blue-700'
                 }`}>
-                  <span className="text-[8px] uppercase font-black text-slate-400 block">Result</span>
-                  <span className={`text-lg font-black ${
-                    viewingResult.resultStatus === 'PASS' ? 'text-emerald-700' :
-                    viewingResult.resultStatus === 'FAIL' ? 'text-rose-700' :
-                    viewingResult.resultStatus === 'SUPPLEMENTARY' ? 'text-amber-700' :
-                    'text-blue-700'
-                  }`}>
-                    {viewingResult.resultStatus === 'PASS' ? '✅ Pass' :
-                     viewingResult.resultStatus === 'FAIL' ? '❌ Fail' :
-                     viewingResult.resultStatus === 'SUPPLEMENTARY' ? '🔄 Supplementary' :
-                     '⏳ Revaluation Pending'}
-                  </span>
-                </div>
+                  {viewingResult.resultStatus === 'PASS' ? '✅ Pass' :
+                   viewingResult.resultStatus === 'FAIL' ? '❌ Fail' :
+                   viewingResult.resultStatus === 'SUPPLEMENTARY' ? '🔄 Supplementary' :
+                   '⏳ Revaluation Pending'}
+                </span>
+                {(viewingResult.resultStatus === 'FAIL' || viewingResult.resultStatus === 'SUPPLEMENTARY') && (
+                  <p className="text-[10px] font-bold text-rose-600 mt-2">
+                    This candidate is required to reappear for the examination.
+                  </p>
+                )}
               </div>
 
-              {/* Subject-wise Marks */}
+              {/* Subject-wise Pass/Fail */}
               {viewingResult.subjects && viewingResult.subjects.length > 0 && (
                 <div>
                   <h4 className="text-[10px] uppercase font-black text-slate-400 tracking-wider mb-3 border-b border-slate-100 pb-2">
-                    Subject-wise Marks
+                    Subject-wise Status
                   </h4>
                   <div className="overflow-x-auto border border-slate-100 rounded-2xl">
                     <table className="w-full text-left border-collapse text-xs">
@@ -47115,16 +50668,13 @@ const InstituteERPResults = ({ user }) => {
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">#</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Code</th>
                           <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider">Subject Name</th>
-                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Total</th>
-                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Grade</th>
+                          <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50 bg-white">
                         {viewingResult.subjects.map((subject, idx) => {
-                          const total = subject.totalMarks || 0;
-                          const gradeColor = total >= 70 ? 'text-emerald-700' : total >= 50 ? 'text-amber-700' : 'text-rose-700';
-                          const gradeBg = total >= 70 ? 'bg-emerald-50 border-emerald-200' : total >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-rose-50 border-rose-200';
-
+                          const subGrade = (subject.grade || '').toUpperCase();
+                          const subPass = !['F', 'RA', 'ABSENT', 'WH'].includes(subGrade);
                           return (
                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="px-3 py-2.5 text-center font-mono font-bold text-slate-400">
@@ -47132,29 +50682,18 @@ const InstituteERPResults = ({ user }) => {
                               </td>
                               <td className="px-3 py-2.5 font-mono font-bold text-slate-600">{subject.subjectCode || 'N/A'}</td>
                               <td className="px-3 py-2.5 font-bold text-slate-700">{subject.subjectName || 'N/A'}</td>
-                              <td className="px-3 py-2.5 text-center font-bold text-slate-800">{total}</td>
                               <td className="px-3 py-2.5 text-center">
-                                <span className={`inline-flex px-2.5 py-0.5 rounded-lg text-[9px] font-bold border ${gradeBg} ${gradeColor}`}>
-                                  {total >= 90 ? 'O' : total >= 80 ? 'A+' : total >= 70 ? 'A' : total >= 60 ? 'B+' : total >= 50 ? 'B' : total >= 40 ? 'C' : total >= 35 ? 'D' : 'F'}
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold border ${
+                                  subPass ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
+                                }`}>
+                                  {subPass ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                  {subPass ? 'Pass' : 'Fail'}
                                 </span>
                               </td>
                             </tr>
                           );
                         })}
                       </tbody>
-                      <tfoot>
-                        <tr className="bg-slate-50/70 border-t border-slate-200">
-                          <td colSpan="3" className="px-3 py-2.5 font-black text-xs text-slate-700 text-right">
-                            Overall Total
-                          </td>
-                          <td className="px-3 py-2.5 text-center font-black text-slate-800">{viewingResult.totalMarks || 0}</td>
-                          <td className="px-3 py-2.5 text-center">
-                            <span className={`font-black text-sm ${getGradeColor(viewingResult.percentage || 0)}`}>
-                              {viewingResult.percentage || 0}%
-                            </span>
-                          </td>
-                        </tr>
-                      </tfoot>
                     </table>
                   </div>
                 </div>
@@ -47261,11 +50800,14 @@ import {
   ChevronUp,
   Filter,
   CheckSquare,
+  Repeat,
+  GraduationCap,
 } from 'lucide-react';
 import Toast from '../../../Components/Toast';
 import ConfirmModal from '../../../Components/ConfirmModal';
 import revaluationService from '../../../api/revaluation';
 import academicService from '../../../api/academic';
+import examService from '../../../api/exams';
 import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
 import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
 import Pagination from '../../../Components/Pagination';
@@ -47276,7 +50818,7 @@ const InstituteERPRevaluation = () => {
   const [batches, setBatches] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
   const [eligibleStudents, setEligibleStudents] = useState([]);
   const [selectedSubjects, setSelectedSubjects] = useState({});
   const [requests, setRequests] = useState([]);
@@ -47297,6 +50839,13 @@ const InstituteERPRevaluation = () => {
   const [singleStudentMode, setSingleStudentMode] = useState(false);
   const [selectedSingleStudent, setSelectedSingleStudent] = useState(null);
   const itemsPerPage = 10;
+
+  // ─── Arrear / Reappearing Exam State ──────────────────────────────────────
+  const [arrearTab, setArrearTab] = useState('revaluation');
+  const [arrearStudents, setArrearStudents] = useState([]);
+  const [arrearSelectedStudents, setArrearSelectedStudents] = useState([]);
+  const [arrearLoading, setArrearLoading] = useState(false);
+  const [arrearSubmitting, setArrearSubmitting] = useState(false);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -47358,17 +50907,28 @@ const InstituteERPRevaluation = () => {
       const res = await revaluationService.getEligibleStudents({
         courseId: selectedCourse,
         batchId: selectedBatch,
-        semester: selectedSemester,
+        examination: selectedExamination,
       });
       const data = res.data?.data || res.data || [];
+      const list = Array.isArray(data) ? data : [];
+      // Ensure pass students are not shown - only failed students can apply for revaluation
+      const failedOnly = list.filter((student) => {
+        if (student.resultStatus === 'PASS') {
+          const subjects = student.allSubjects || student.subjects || [];
+          return subjects.some(
+            (s) => ['F', 'RA', 'WH'].includes(s.originalGrade) || ((s.originalMarks || 0) < 40 && s.originalGrade !== 'ABSENT')
+          );
+        }
+        return true;
+      });
 
       // Initialize selectedSubjects for all students with empty sets
       const initialSubjects = {};
-      data.forEach((student) => {
+      failedOnly.forEach((student) => {
         initialSubjects[student.studentId] = new Set();
       });
 
-      setEligibleStudents(Array.isArray(data) ? data : []);
+      setEligibleStudents(failedOnly);
       setSelectedSubjects(initialSubjects);
       setExpandedStudent(null);
       setSelectedSingleStudent(null);
@@ -47378,14 +50938,14 @@ const InstituteERPRevaluation = () => {
       setToast({ message: err.parsedMessage || 'Failed to load eligible students', type: 'error' });
       setEligibleStudents([]);
     }
-  }, [selectedCourse, selectedBatch, selectedSemester]);
+  }, [selectedCourse, selectedBatch, selectedExamination]);
 
   const fetchSingleStudentEligibility = useCallback(async (studentId) => {
     const token = localStorage.getItem('token') || localStorage.getItem('semi_token') || localStorage.getItem('semi_institute_token');
     if (!token) return;
     try {
       const res = await revaluationService.getSingleStudentEligibility(studentId, {
-        semester: selectedSemester,
+        examination: selectedExamination,
       });
       const data = res.data?.data || res.data;
       if (data) {
@@ -47400,7 +50960,7 @@ const InstituteERPRevaluation = () => {
       console.error('Error fetching student eligibility:', err);
       setToast({ message: err.parsedMessage || 'Failed to load student eligibility', type: 'error' });
     }
-  }, [selectedSemester]);
+  }, [selectedExamination]);
 
   // ─── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -47414,10 +50974,10 @@ const InstituteERPRevaluation = () => {
   }, [statusFilter, searchQuery, selectedCourse, selectedBatch, fetchRequests]);
 
   useEffect(() => {
-    if (!selectedCourse || !selectedBatch || !selectedSemester) return;
+    if (!selectedCourse || !selectedBatch || !selectedExamination) return;
     const timer = setTimeout(() => fetchEligibleStudents(), 0);
     return () => clearTimeout(timer);
-  }, [selectedCourse, selectedBatch, selectedSemester, fetchEligibleStudents]);
+  }, [selectedCourse, selectedBatch, selectedExamination, fetchEligibleStudents]);
 
   // ─── Payment Recovery ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -47429,7 +50989,7 @@ const InstituteERPRevaluation = () => {
         try {
           const res = await revaluationService.getPaymentStatus(
             pendingState.additionalData.studentId,
-            pendingState.additionalData.semester
+            pendingState.additionalData.examination
           );
           const data = res.data?.data || res.data;
           if (data && data.paymentStatus === 'Completed') {
@@ -47552,7 +51112,7 @@ const InstituteERPRevaluation = () => {
     try {
       const orderRes = await revaluationService.createRazorpayOrder({
         studentId: studentId,
-        semester: student.semester,
+        examination: student.examination,
         totalFee: totalFee,
         requestId: 'pending',
         subjects: selectedSubjectDetails,
@@ -47569,11 +51129,11 @@ const InstituteERPRevaluation = () => {
         currency: orderData.currency,
         keyId: orderData.keyId,
         name: 'SEMI Revaluation Fee',
-        description: `Revaluation - ${student.name} (Sem ${student.semester})`,
+        description: `Revaluation - ${student.name} (Exam ${student.examination})`,
         paymentType: 'revaluation',
         additionalData: {
           studentId: studentId,
-          semester: student.semester,
+          examination: student.examination,
           purpose: 'Revaluation fee',
         },
         prefill: {
@@ -47599,7 +51159,7 @@ const InstituteERPRevaluation = () => {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               studentId: studentId,
-              semester: student.semester,
+              examination: student.examination,
               subjects: subjectsData,
               academicYear: student.academicYear,
               instituteId: student.instituteId,
@@ -47631,7 +51191,7 @@ const InstituteERPRevaluation = () => {
           } catch (verifyErr) {
             console.error('Verification failed:', verifyErr);
             try {
-              const statusRes = await revaluationService.getPaymentStatus(studentId, student.semester);
+              const statusRes = await revaluationService.getPaymentStatus(studentId, student.examination);
               const statusData = statusRes.data?.data || statusRes.data;
               if (statusData && statusData.paymentStatus === 'Completed') {
                 clearPaymentState();
@@ -47700,8 +51260,8 @@ const InstituteERPRevaluation = () => {
     setSingleStudentMode(false);
   };
 
-  const handleSemesterChange = (e) => {
-    setSelectedSemester(e.target.value);
+  const handleExaminationChange = (e) => {
+    setSelectedExamination(e.target.value);
     setSelectedSubjects({});
     setEligibleStudents([]);
     setSelectedSingleStudent(null);
@@ -47758,10 +51318,10 @@ const InstituteERPRevaluation = () => {
     if (grade === 'ABSENT') {
       return { label: 'ABSENT', color: 'bg-slate-100 text-slate-500 border-slate-200', icon: <XCircle className="w-3 h-3 text-slate-400" /> };
     }
-    if (marks >= 40) {
-      return { label: 'PASS', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3 h-3 text-emerald-500" /> };
+    if (['F', 'RA', 'WH'].includes(grade) || marks < 40) {
+      return { label: 'FAIL', color: 'bg-rose-100 text-rose-700 border-rose-200', icon: <AlertCircle className="w-3 h-3 text-rose-500" /> };
     }
-    return { label: 'FAIL', color: 'bg-rose-100 text-rose-700 border-rose-200', icon: <AlertCircle className="w-3 h-3 text-rose-500" /> };
+    return { label: 'PASS', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <CheckCircle2 className="w-3 h-3 text-emerald-500" /> };
   };
 
   const getResultBadge = (finalResult) => {
@@ -47810,7 +51370,7 @@ const InstituteERPRevaluation = () => {
               </div>
               <div>
                 <h3 className="text-lg font-black text-slate-800">{student.name}</h3>
-                <p className="text-xs text-slate-400 font-mono">{student.enrollmentId} • Sem {student.semester}</p>
+                <p className="text-xs text-slate-400 font-mono">{student.enrollmentId} • Exam {student.examination}</p>
               </div>
             </div>
             <div className="text-right">
@@ -47823,7 +51383,7 @@ const InstituteERPRevaluation = () => {
           <div className="mt-4 border-t border-slate-100 pt-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">
-                Select Subjects for Revaluation
+                Select Failed Subjects for Revaluation
               </span>
               <button
                 onClick={() => toggleAllSubjectsForStudent(student.studentId, allSubjects)}
@@ -47842,7 +51402,6 @@ const InstituteERPRevaluation = () => {
                 const isEligible = subject.isEligible !== false;
                 const isSelected = selectedCodes.has(subject.subjectCode);
                 const status = getSubjectStatusBadge(subject);
-                const marks = subject.originalMarks || 0;
 
                 return (
                   <div
@@ -47881,11 +51440,6 @@ const InstituteERPRevaluation = () => {
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-xs font-bold ${
-                        marks >= 40 ? 'text-emerald-600' : marks >= 35 ? 'text-amber-600' : 'text-rose-600'
-                      } ${!isEligible ? 'opacity-50' : ''}`}>
-                        {marks}%
-                      </span>
                       <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black border ${status.color}`}>
                         {status.icon}
                         {status.label}
@@ -47979,7 +51533,11 @@ const InstituteERPRevaluation = () => {
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-mono text-slate-400">{student.enrollmentId}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-300" />
-                        <span className="text-[10px] font-medium text-slate-500">Sem {student.semester}</span>
+                        <span className="text-[10px] font-medium text-slate-500">Exam {student.examination}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300" />
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                          {student.resultStatus === 'SUPPLEMENTARY' ? 'SUPPLEMENTARY' : 'FAILED'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -48086,13 +51644,11 @@ const InstituteERPRevaluation = () => {
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-3.5 h-3.5 text-slate-400" />
                     <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">
-                      All Subjects — Click any subject to toggle selection
+                      Failed Subjects — Select for Revaluation
                     </span>
-                    {hasAbsentSubjects && (
-                      <span className="text-[8px] text-slate-400 font-medium bg-slate-200/50 px-2 py-0.5 rounded-full">
-                        Absent disabled
-                      </span>
-                    )}
+                    <span className="text-[8px] text-slate-400 font-medium bg-slate-200/50 px-2 py-0.5 rounded-full">
+                      Passed & Absent disabled
+                    </span>
                   </div>
                   <button
                     onClick={(e) => {
@@ -48114,7 +51670,6 @@ const InstituteERPRevaluation = () => {
                     const isEligible = subject.isEligible !== false;
                     const isSelected = (selectedSubjects[student.studentId] || new Set()).has(subject.subjectCode);
                     const status = getSubjectStatusBadge(subject);
-                    const marks = subject.originalMarks || 0;
 
                     return (
                       <div
@@ -48157,11 +51712,6 @@ const InstituteERPRevaluation = () => {
                         </div>
 
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className={`text-xs font-bold ${
-                            marks >= 40 ? 'text-emerald-600' : marks >= 35 ? 'text-amber-600' : 'text-rose-600'
-                          } ${!isEligible ? 'opacity-50' : ''}`}>
-                            {marks}%
-                          </span>
                           <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black border ${status.color}`}>
                             {status.icon}
                             {status.label}
@@ -48174,7 +51724,7 @@ const InstituteERPRevaluation = () => {
 
                 <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium border-t border-slate-100 pt-2.5">
                   <span>
-                    {totalEligible} eligible · {allSubjects.length - totalEligible} absent (disabled)
+                    {totalEligible} eligible failed subject{totalEligible !== 1 ? 's' : ''} · {allSubjects.length - totalEligible} passed/absent
                   </span>
                   <span className="flex items-center gap-1">
                     <CreditCard className="w-3 h-3" />
@@ -48212,6 +51762,245 @@ const InstituteERPRevaluation = () => {
       })}
     </div>
   );
+
+  // ─── Arrear / Reappearing Exam Handlers ─────────────────────────────────────
+  const fetchArrearStudents = useCallback(async () => {
+    if (!selectedCourse || !selectedBatch || !selectedExamination) {
+      setArrearStudents([]);
+      return;
+    }
+    setArrearLoading(true);
+    try {
+      const res = await revaluationService.getReappearingStudents({
+        courseId: selectedCourse,
+        batchId: selectedBatch,
+        examination: selectedExamination,
+      });
+      const data = res.data?.data || res.data || [];
+      setArrearStudents(Array.isArray(data) ? data : []);
+      setArrearSelectedStudents([]);
+    } catch (err) {
+      console.error('Error fetching arrear students:', err);
+      setToast({ message: err.parsedMessage || err.message || 'Failed to load arrear students', type: 'error' });
+    } finally {
+      setArrearLoading(false);
+    }
+  }, [selectedCourse, selectedBatch, selectedExamination]);
+
+  useEffect(() => {
+    if (arrearTab === 'arrear') {
+      fetchArrearStudents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrearTab, fetchArrearStudents]);
+
+  const handleArrearExamSubmit = async () => {
+    if (arrearSelectedStudents.length === 0) {
+      setToast({ message: 'Please select at least one student for the arrear exam.', type: 'warning' });
+      return;
+    }
+    const unpaidStudents = arrearStudents.filter(s => arrearSelectedStudents.includes(s.studentId) && !s.hasPayment);
+    if (unpaidStudents.length > 0) {
+      setToast({
+        message: `${unpaidStudents.length} selected student(s) have not paid the exam fee. Please collect the exam fee first.`,
+        type: 'warning',
+      });
+      return;
+    }
+
+    setArrearSubmitting(true);
+    try {
+      const subjectCodes = selectedCourseSubjectsForArrear(arrearStudents).slice(0, 20);
+      const payload = {
+        courseId: selectedCourse,
+        examinationNumber: parseInt(selectedExamination),
+        batchId: selectedBatch,
+        studentIds: JSON.stringify(arrearSelectedStudents),
+        subjects: subjectCodes.length > 0 ? JSON.stringify(subjectCodes) : JSON.stringify(['General']),
+      };
+
+      await examService.applyForExam(payload);
+
+      setToast({
+        message: `Arrear exam application submitted for ${arrearSelectedStudents.length} student(s)!`,
+        type: 'success',
+      });
+      await fetchArrearStudents();
+      setArrearSelectedStudents([]);
+      setArrearTab('revaluation');
+    } catch (err) {
+      console.error('Arrear exam submission failed:', err);
+      setToast({ message: err.parsedMessage || err.message || 'Failed to submit arrear exam application.', type: 'error' });
+    } finally {
+      setArrearSubmitting(false);
+    }
+  };
+
+  const selectedCourseSubjectsForArrear = (studentsList) => {
+    const seen = new Set();
+    const subjects = [];
+    (studentsList || []).forEach(s => {
+      (s.failedSubjects || []).forEach(sub => {
+        const key = sub.subjectCode || sub.subjectName;
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          subjects.push(sub.subjectCode || sub.subjectName);
+        }
+      });
+    });
+    return subjects;
+  };
+
+  const renderArrearExamSection = () => {
+    const subjectCodes = selectedCourseSubjectsForArrear(arrearStudents);
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-amber-600 to-orange-600 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/20">
+          <div className="flex items-center gap-3">
+            <Repeat className="w-6 h-6 shrink-0" />
+            <div>
+              <h3 className="text-lg font-black tracking-tight">Arrear / Reappearing Exam Applications</h3>
+              <p className="text-xs text-amber-100 font-medium">
+                Students who failed or got supplementary in previous exams need to apply for an arrear exam.
+                Exam fees are recorded separately; only students who have paid can be applied.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between border-b border-slate-100 pb-4 mb-4 gap-3">
+            <div>
+              <h4 className="text-sm font-black text-slate-800">Reappearing Students</h4>
+              <p className="text-[10px] text-slate-400">{arrearStudents.length} students eligible for arrear exam</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {arrearStudents.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setArrearSelectedStudents(prev =>
+                      prev.length === arrearStudents.length
+                        ? []
+                        : arrearStudents.map(s => s.studentId)
+                    );
+                  }}
+                  className="px-3 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                >
+                  {arrearSelectedStudents.length === arrearStudents.length ? 'Deselect All' : 'Select All'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={fetchArrearStudents}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                title="Refresh"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {arrearLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+            </div>
+          ) : arrearStudents.length === 0 ? (
+            <div className="py-12 text-center text-slate-400">
+              <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-300 mb-3" />
+              <p className="text-sm font-bold text-slate-500">No students need arrear exams</p>
+              <p className="text-xs text-slate-400 mt-1">All students have passed this examination.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+              {arrearStudents.map((student) => {
+                const isSelected = arrearSelectedStudents.includes(student.studentId);
+                const failedSubjects = student.failedSubjects || [];
+                return (
+                  <div
+                    key={student.studentId}
+                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-amber-500 bg-amber-50/60 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                    }`}
+                    onClick={() => {
+                      setArrearSelectedStudents(prev =>
+                        prev.includes(student.studentId)
+                          ? prev.filter(id => id !== student.studentId)
+                          : [...prev, student.studentId]
+                      );
+                    }}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
+                          isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300 bg-white'
+                        }`}>
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                        <div>
+                          <span className="text-sm font-black text-slate-800">{student.name}</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs font-mono text-slate-400">{student.enrollmentId}</span>
+                            <span className="text-xs text-slate-300">•</span>
+                            <span className="text-xs text-amber-600 font-bold">
+                              {failedSubjects.length} subject{failedSubjects.length > 1 ? 's' : ''} to reappear
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {failedSubjects.slice(0, 2).map((sub, idx) => (
+                          <span key={idx} className="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200 font-bold">
+                            {sub.subjectName || sub.subjectCode}
+                            {sub.originalGrade ? ` (${sub.originalGrade})` : ''}
+                          </span>
+                        ))}
+                        {failedSubjects.length > 2 && (
+                          <span className="text-[10px] text-slate-400 font-bold">+{failedSubjects.length - 2}</span>
+                        )}
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                          student.hasPayment
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-100 text-amber-700 border border-amber-200'
+                        }`}>
+                          {student.hasPayment ? 'Fee Paid' : 'Fee Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {arrearStudents.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-xs font-bold text-slate-600">
+                <span>{arrearSelectedStudents.length} student{arrearSelectedStudents.length !== 1 ? 's' : ''} selected</span>
+                {subjectCodes.length > 0 && (
+                  <span className="text-slate-400">{subjectCodes.length} subject(s) for arrear</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleArrearExamSubmit}
+                disabled={arrearSubmitting || arrearSelectedStudents.length === 0}
+                className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-amber-500/20 cursor-pointer"
+              >
+                {arrearSubmitting ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                ) : (
+                  <><GraduationCap className="w-4 h-4" /> Apply for Arrear Exam</>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // ─── Main Render ───────────────────────────────────────────────────────────
   if (loading) {
@@ -48268,6 +52057,34 @@ const InstituteERPRevaluation = () => {
         </div>
       </div>
 
+      {/* ─── Section Tab Switcher ──────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-fit">
+        <button
+          type="button"
+          onClick={() => setArrearTab('revaluation')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            arrearTab === 'revaluation'
+              ? 'bg-white text-blue-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Award className="w-4 h-4 inline mr-1.5" />
+          Revaluation
+        </button>
+        <button
+          type="button"
+          onClick={() => setArrearTab('arrear')}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            arrearTab === 'arrear'
+              ? 'bg-white text-amber-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Repeat className="w-4 h-4 inline mr-1.5" />
+          Arrear / Reappearing Exam
+        </button>
+      </div>
+
       {/* ─── Toast ───────────────────────────────────────────────────────────── */}
       {toast && (
         <Toast
@@ -48308,6 +52125,10 @@ const InstituteERPRevaluation = () => {
       )}
 
       {/* ─── Main Content ───────────────────────────────────────────────────── */}
+      {arrearTab === 'arrear' ? (
+        renderArrearExamSection()
+      ) : (
+        <>
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -48319,7 +52140,7 @@ const InstituteERPRevaluation = () => {
                 {singleStudentMode ? 'Student Revaluation' : 'Select Students'}
               </h3>
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                {singleStudentMode ? selectedSingleStudent?.name : `${eligibleStudents.length} eligible students`}
+                {singleStudentMode ? selectedSingleStudent?.name : `${eligibleStudents.length} failed students eligible`}
               </p>
             </div>
           </div>
@@ -48381,17 +52202,17 @@ const InstituteERPRevaluation = () => {
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                  Semester <span className="text-rose-500">*</span>
+                  Examination <span className="text-rose-500">*</span>
                 </label>
                 <select
-                  value={selectedSemester}
-                  onChange={handleSemesterChange}
+                  value={selectedExamination}
+                  onChange={handleExaminationChange}
                   disabled={!selectedBatch}
                   className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer disabled:opacity-50 shadow-sm hover:border-slate-300"
                 >
-                  <option value="">Select Semester</option>
+                  <option value="">Select Examination</option>
                   {[1, 2, 3, 4, 5, 6].map((sem) => (
-                    <option key={sem} value={sem}>Semester {sem}</option>
+                    <option key={sem} value={sem}>Examination {sem}</option>
                   ))}
                 </select>
               </div>
@@ -48422,8 +52243,8 @@ const InstituteERPRevaluation = () => {
                     <Users className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black tracking-tight">{eligibleStudents.length} Students</h3>
-                    <p className="text-xs text-blue-200 font-medium">with published results for this semester</p>
+                    <h3 className="text-lg font-black tracking-tight">{eligibleStudents.length} Failed Students</h3>
+                    <p className="text-xs text-blue-200 font-medium">eligible to apply for revaluation</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
@@ -48446,15 +52267,14 @@ const InstituteERPRevaluation = () => {
 
             {renderStudentCards()}
           </>
-        ) : selectedCourse && selectedBatch && selectedSemester ? (
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 border-2 border-amber-200 rounded-2xl p-12 text-center">
-            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-amber-200">
-              <AlertCircle className="w-10 h-10 text-amber-500" />
+        ) : selectedCourse && selectedBatch && selectedExamination ? (
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 border-2 border-emerald-200 rounded-2xl p-12 text-center">
+            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-emerald-200">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
-            <h3 className="text-lg font-black text-amber-800">No Students Found</h3>
-            <p className="text-sm text-amber-600 mt-2 max-w-md mx-auto">
-              No students with published results found for the selected batch and semester.
-              Students must have published results to apply for revaluation.
+            <h3 className="text-lg font-black text-emerald-800">No Failed Students Found</h3>
+            <p className="text-sm text-emerald-600 mt-2 max-w-md mx-auto">
+              All students have passed this examination. Revaluation and reappear are only applicable for failed students.
             </p>
           </div>
         ) : (
@@ -48464,7 +52284,7 @@ const InstituteERPRevaluation = () => {
             </div>
             <h3 className="text-lg font-black text-slate-600">Select Filters</h3>
             <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
-              Choose a course, batch, and semester above to view students with published results.
+              Choose a course, batch, and examination above to view students with published results.
             </p>
           </div>
         )}
@@ -48523,7 +52343,7 @@ const InstituteERPRevaluation = () => {
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider w-12 text-center">#</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Request ID</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider">Student</th>
-                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Semester</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Examination</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Subjects</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Fee</th>
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
@@ -48562,7 +52382,7 @@ const InstituteERPRevaluation = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-center font-bold text-slate-700">
-                      Sem {request.semester || 'N/A'}
+                      Exam {request.examination || 'N/A'}
                     </td>
                     <td className="px-4 py-3.5 text-center font-bold text-slate-700">
                       {request.subjects?.length || 0}
@@ -48614,6 +52434,8 @@ const InstituteERPRevaluation = () => {
           itemsPerPage={itemsPerPage}
         />
       </div>
+        </>
+      )}
 
       {/* ─── Request Detail Modal ───────────────────────────────────────────── */}
       {isModalOpen && viewingRequest && (
@@ -48657,8 +52479,8 @@ const InstituteERPRevaluation = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">Semester {viewingRequest.semester || 'N/A'}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">Examination {viewingRequest.examination || 'N/A'}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Academic Year</span>
@@ -48720,21 +52542,17 @@ const InstituteERPRevaluation = () => {
                           <span className="text-[10px] text-slate-400 font-mono">{subject.subjectCode}</span>
                         </div>
                         <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <span className="text-[10px] text-slate-400 block">Original Marks</span>
-                            <span className="text-sm font-black text-slate-700">{subject.originalMarks}%</span>
+                          <div className="text-center">
+                            <span className="text-[10px] text-slate-400 block">Original</span>
+                            <span className={`text-sm font-black ${(subject.originalMarks || 0) >= 50 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                              {(subject.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                            </span>
                           </div>
                           {subject.evaluated && (
-                            <div className="text-right">
-                              <span className="text-[10px] text-slate-400 block">Revised Marks</span>
-                              <span className={`text-sm font-black ${
-                                (subject.revisedMarks || 0) > subject.originalMarks
-                                  ? 'text-emerald-600'
-                                  : (subject.revisedMarks || 0) < subject.originalMarks
-                                    ? 'text-rose-600'
-                                    : 'text-amber-600'
-                              }`}>
-                                {subject.revisedMarks}%
+                            <div className="text-center">
+                              <span className="text-[10px] text-slate-400 block">Revised</span>
+                              <span className={`text-sm font-black ${(subject.revisedMarks || subject.revisedTotalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {(subject.revisedMarks || subject.revisedTotalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
                               </span>
                             </div>
                           )}
@@ -48779,22 +52597,22 @@ const InstituteERPRevaluation = () => {
                           </span>
                         </div>
                         <div className="flex items-center gap-4">
-                          <div className="text-right">
+                          <div className="text-center">
                             <span className="text-[10px] text-slate-400 block">Original</span>
-                            <span className="text-sm font-black text-slate-600">{result.originalMarks}%</span>
+                            <span className={`text-sm font-black ${(result.originalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {(result.originalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
+                            </span>
                           </div>
-                          <div className="text-right">
+                          <div className="text-center">
                             <span className="text-[10px] text-slate-400 block">Revised</span>
-                            <span className={`text-sm font-black ${result.marksChange > 0 ? 'text-emerald-600' : result.marksChange < 0 ? 'text-rose-600' : 'text-amber-600'}`}>
-                              {result.revisedTotalMarks}%
+                            <span className={`text-sm font-black ${(result.revisedTotalMarks || 0) >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {(result.revisedTotalMarks || 0) >= 50 ? 'PASS' : 'FAIL'}
                             </span>
                           </div>
                           <div className={`text-xs font-black px-2 py-1 rounded-lg ${
-                            result.marksChange > 0 ? 'bg-emerald-100 text-emerald-700' :
-                            result.marksChange < 0 ? 'bg-rose-100 text-rose-700' :
-                            'bg-amber-100 text-amber-700'
+                            (result.revisedTotalMarks || 0) >= 50 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                           }`}>
-                            {result.marksChange > 0 ? '+' : ''}{result.marksChange}%
+                            {(result.revisedTotalMarks || 0) >= 50 ? 'Cleared' : 'Failed'}
                           </div>
                         </div>
                       </div>
@@ -49143,17 +52961,17 @@ import academicService from '../../../api/academic';
 
 import ConfirmModal from '../../../Components/ConfirmModal';
 
-const isSemComplete = (sem) => {
+const isExamComplete = (sem) => {
   return (sem.attendancePercentage || 0) >= 75 && !!sem.thesisApproved;
 };
 
-const getVisibleSemesters = (semesters) => {
-  if (!semesters || semesters.length === 0) return [];
-  const sorted = [...semesters].sort((a, b) => a.semesterNumber - b.semesterNumber);
+const getVisibleExaminations = (examinations) => {
+  if (!examinations || examinations.length === 0) return [];
+  const sorted = [...examinations].sort((a, b) => a.examinationNumber - b.examinationNumber);
   const visible = [];
   for (const sem of sorted) {
     visible.push(sem);
-    if (!isSemComplete(sem)) break;
+    if (!isExamComplete(sem)) break;
   }
   return visible;
 };
@@ -49165,7 +52983,7 @@ const InstituteERPStudentDetails = ({
 }) => {
   // ─── State ──────────────────────────────────────────────────────────────────
   const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  const [selectedExamination, setSelectedExamination] = useState('');
   const [attendance, setAttendance] = useState('');
   const [studentSearchText, setStudentSearchText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -49182,8 +53000,26 @@ const InstituteERPStudentDetails = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Course completion certificates upload (NBLS / NCLS / NTLS / NULS)
+  const CERT_FIELDS = [
+    { key: 'nblsCertificate', label: 'NBLS (Basic Life Support)', icon: '🩺' },
+    { key: 'nclsCertificate', label: 'NCLS (Comprehensive Life Support)', icon: '❤️' },
+    { key: 'ntlsCertificate', label: 'NTLS (Trauma Life Support)', icon: '🩹' },
+    { key: 'nulsCertificate', label: 'NULS (Ultrasound Life Support)', icon: '📡' },
+  ];
+  const [certFiles, setCertFiles] = useState({});
+
+  const selectCertFile = (field, file) => {
+    setToast(null);
+    if (file && file.size > 10 * 1024 * 1024) {
+      setToast({ message: 'File size must be under 10MB.', type: 'warning' });
+      return;
+    }
+    setCertFiles(prev => ({ ...prev, [field]: file || null }));
+  };
+
   const [viewingStudent, setViewingStudent] = useState(null);
-  const [viewingSemester, setViewingSemester] = useState(null);
+  const [viewingExamination, setViewingExamination] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [toast, setToast] = useState(null);
@@ -49206,13 +53042,13 @@ const InstituteERPStudentDetails = ({
       if (!groups[studentId]) {
         groups[studentId] = {
           ...s,
-          semesters: []
+          examinations: []
         };
       }
-      if (s.semesters && s.semesters.length > 0) {
-        s.semesters.forEach(sem => {
-          groups[studentId].semesters.push({
-            semesterNumber: sem.semesterNumber,
+      if (s.examinations && s.examinations.length > 0) {
+        s.examinations.forEach(sem => {
+          groups[studentId].examinations.push({
+            examinationNumber: sem.examinationNumber,
             attendancePercentage: sem.attendancePercentage ?? 0,
             thesisApproved: sem.thesisApproved ?? false,
             thesisDocumentUrl: sem.thesisDocumentUrl || '',
@@ -49220,7 +53056,7 @@ const InstituteERPStudentDetails = ({
           });
         });
       }
-      groups[studentId].semesters.sort((a, b) => a.semesterNumber - b.semesterNumber);
+      groups[studentId].examinations.sort((a, b) => a.examinationNumber - b.examinationNumber);
     });
     return Object.values(groups);
   }, [students]);
@@ -49248,12 +53084,12 @@ const InstituteERPStudentDetails = ({
     
     if (filterStatus === 'Complete') {
       result = result.filter(g => {
-        const visible = getVisibleSemesters(g.semesters);
+        const visible = getVisibleExaminations(g.examinations);
         return visible.length > 0 && visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
       });
     } else if (filterStatus === 'Incomplete') {
       result = result.filter(g => {
-        const visible = getVisibleSemesters(g.semesters);
+        const visible = getVisibleExaminations(g.examinations);
         return visible.some(s => s.attendancePercentage < 75 || !s.thesisApproved);
       });
     }
@@ -49290,27 +53126,28 @@ const InstituteERPStudentDetails = ({
   // ─── Student Selection ──────────────────────────────────────────────────────
   const handleStudentSelect = (studentId) => {
     setSelectedStudentId(studentId);
+    setCertFiles({});
     const student = students.find(s => String(s.id) === studentId || String(s._id) === studentId);
     if (student) {
       setStudentSearchText(`${student.enrollmentNo || `STUD00${student.id}`} - ${student.fullName}`);
-      if (student.semesters && student.semesters.length > 0) {
-        const firstSem = student.semesters.find(s => s.attendancePercentage > 0 || s.thesisDocumentUrl);
+      if (student.examinations && student.examinations.length > 0) {
+        const firstSem = student.examinations.find(s => s.attendancePercentage > 0 || s.thesisDocumentUrl);
         if (firstSem) {
-          setSelectedSemester(firstSem.semesterNumber);
+          setSelectedExamination(firstSem.examinationNumber);
           setAttendance(firstSem.attendancePercentage || '');
         } else {
-          setSelectedSemester(student.semesters[0]?.semesterNumber || '');
+          setSelectedExamination(student.examinations[0]?.examinationNumber || '');
           setAttendance('');
         }
       }
     }
   };
 
-  const handleSemesterChange = (semNum) => {
-    setSelectedSemester(semNum);
+  const handleExaminationChange = (semNum) => {
+    setSelectedExamination(semNum);
     const student = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
-    if (student && student.semesters) {
-      const sem = student.semesters.find(s => String(s.semesterNumber) === String(semNum));
+    if (student && student.examinations) {
+      const sem = student.examinations.find(s => String(s.examinationNumber) === String(semNum));
       if (sem) setAttendance(sem.attendancePercentage || '');
       else setAttendance('');
     }
@@ -49373,8 +53210,8 @@ const InstituteERPStudentDetails = ({
   // ─── Submit Handler ────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedStudentId || !selectedSemester) {
-      setToast({ message: 'Please select a student and semester.', type: 'warning' });
+    if (!selectedStudentId || !selectedExamination) {
+      setToast({ message: 'Please select a student and examination.', type: 'warning' });
       return;
     }
 
@@ -49389,7 +53226,7 @@ const InstituteERPStudentDetails = ({
 
     try {
       const payload = {
-        semesterNumber: parseInt(selectedSemester),
+        examinationNumber: parseInt(selectedExamination),
         attendancePercentage: attendanceNum
       };
       if (uploadedFile) {
@@ -49398,6 +53235,13 @@ const InstituteERPStudentDetails = ({
 
       await academicService.updateAcademicMetrics(selectedStudentId, payload);
 
+      const selectedCerts = Object.entries(certFiles).filter(([, f]) => f instanceof File);
+      if (selectedCerts.length > 0) {
+        const certFormData = new FormData();
+        selectedCerts.forEach(([k, v]) => certFormData.append(k, v));
+        await academicService.uploadCourseCertificates(selectedStudentId, certFormData);
+      }
+
       setSuccessMsg('\uD83C\uDF89 Student details updated successfully!');
       setTimeout(() => setSuccessMsg(null), 4000);
 
@@ -49405,10 +53249,11 @@ const InstituteERPStudentDetails = ({
 
       setSelectedStudentId('');
       setStudentSearchText('');
-      setSelectedSemester('');
+      setSelectedExamination('');
       setAttendance('');
       setUploadedFile(null);
       setUploadProgress(0);
+      setCertFiles({});
 
     } catch (err) {
       setErrorMsg(err.response?.data?.message || err.message || 'Failed to submit details');
@@ -49419,16 +53264,16 @@ const InstituteERPStudentDetails = ({
   };
 
   // ─── View Student Details ──────────────────────────────────────────────────
-  const handleViewStudent = (student, semester) => {
+  const handleViewStudent = (student, examination) => {
     setViewingStudent(student);
-    setViewingSemester(semester);
+    setViewingExamination(examination);
   };
 
   // ─── Delete Record ─────────────────────────────────────────────────────────
   const handleDeleteRecord = (studentId, semNum) => {
     setConfirmConfig({
       title: 'Clear Academic Record',
-      message: `Are you sure you want to clear this student's attendance and thesis records for Semester ${semNum}?`,
+      message: `Are you sure you want to clear this student's attendance and thesis records for Examination ${semNum}?`,
       type: 'danger',
       confirmText: 'Clear Record',
       onConfirm: async () => {
@@ -49436,7 +53281,7 @@ const InstituteERPStudentDetails = ({
         setIsSubmitting(true);
         try {
           await academicService.updateAcademicMetrics(studentId, {
-            semesterNumber: semNum,
+            examinationNumber: semNum,
             clearAttendance: true,
             clearThesis: true,
           });
@@ -49460,11 +53305,17 @@ const InstituteERPStudentDetails = ({
 
   // ─── Render Helpers ────────────────────────────────────────────────────────
   const getStatusBadge = (record) => {
-    const isComplete = (record.attendancePercentage || 0) >= 75 && record.thesisApproved;
-    if (isComplete) {
-      return { label: 'Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+    const attendanceOk = (record.attendancePercentage || 0) >= 75;
+    if (record.thesisApproved) {
+      if (attendanceOk) {
+        return { label: 'Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+      }
+      return { label: 'Attendance Pending', color: 'bg-amber-100 text-amber-700 border-amber-200' };
     }
-    return { label: 'Incomplete', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    if (record.thesisDocumentUrl) {
+      return { label: 'Awaiting Approval', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    }
+    return { label: 'Incomplete', color: 'bg-rose-100 text-rose-700 border-rose-200' };
   };
 
   const getThesisStatus = (record) => {
@@ -49477,9 +53328,9 @@ const InstituteERPStudentDetails = ({
     return { label: 'Missing', color: 'text-slate-400', icon: <AlertCircle className="w-3.5 h-3.5 text-slate-400" /> };
   };
 
-  const getOverallStatus = (semesters) => {
-    if (!semesters || semesters.length === 0) return { label: 'No Data', color: 'bg-slate-100 text-slate-500' };
-    const visible = getVisibleSemesters(semesters);
+  const getOverallStatus = (examinations) => {
+    if (!examinations || examinations.length === 0) return { label: 'No Data', color: 'bg-slate-100 text-slate-500' };
+    const visible = getVisibleExaminations(examinations);
     const allComplete = visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
     if (allComplete) {
       return { label: 'All Complete', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
@@ -49487,6 +53338,10 @@ const InstituteERPStudentDetails = ({
     const someComplete = visible.some(s => s.attendancePercentage >= 75 && s.thesisApproved);
     if (someComplete) {
       return { label: 'Partial', color: 'bg-amber-100 text-amber-700 border-amber-200' };
+    }
+    const awaitingApproval = visible.some(s => !s.thesisApproved && s.thesisDocumentUrl);
+    if (awaitingApproval) {
+      return { label: 'Awaiting Approval', color: 'bg-blue-100 text-blue-700 border-blue-200' };
     }
     return { label: 'Incomplete', color: 'bg-rose-100 text-rose-700 border-rose-200' };
   };
@@ -49511,7 +53366,7 @@ const InstituteERPStudentDetails = ({
       )}
       {students.length > 0 && studentGroups.length === 0 && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-bold text-amber-800">
-          Debug: {students.length} students received but 0 groups created. Check if students have a `semesters` array.
+          Debug: {students.length} students received but 0 groups created. Check if students have an `examinations` array.
         </div>
       )}
       {/* ─── PAGE HEADER ────────────────────────────────────────────────────── */}
@@ -49523,7 +53378,7 @@ const InstituteERPStudentDetails = ({
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Student Academic Records</h2>
             <p className="text-xs text-slate-400 font-semibold mt-1">
-              {filteredGroups.length} students · {studentGroups.reduce((acc, g) => acc + g.semesters.length, 0)} records
+              {filteredGroups.length} students · {studentGroups.reduce((acc, g) => acc + g.examinations.length, 0)} records
             </p>
           </div>
         </div>
@@ -49532,7 +53387,7 @@ const InstituteERPStudentDetails = ({
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">All Complete</span>
             <span className="text-lg font-black text-emerald-600">
               {studentGroups.filter(g => {
-                const visible = getVisibleSemesters(g.semesters);
+                const visible = getVisibleExaminations(g.examinations);
                 return visible.length > 0 && visible.every(s => s.attendancePercentage >= 75 && s.thesisApproved);
               }).length}
             </span>
@@ -49541,7 +53396,7 @@ const InstituteERPStudentDetails = ({
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Partial</span>
             <span className="text-lg font-black text-amber-600">
               {studentGroups.filter(g => {
-                const visible = getVisibleSemesters(g.semesters);
+                const visible = getVisibleExaminations(g.examinations);
                 return visible.some(s => s.attendancePercentage >= 75 && s.thesisApproved) &&
                   visible.some(s => s.attendancePercentage < 75 || !s.thesisApproved);
               }).length}
@@ -49551,7 +53406,7 @@ const InstituteERPStudentDetails = ({
             <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Incomplete</span>
             <span className="text-lg font-black text-rose-600">
               {studentGroups.filter(g => {
-                const visible = getVisibleSemesters(g.semesters);
+                const visible = getVisibleExaminations(g.examinations);
                 return visible.length > 0 && visible.every(s => s.attendancePercentage < 75 || !s.thesisApproved);
               }).length}
             </span>
@@ -49625,7 +53480,7 @@ const InstituteERPStudentDetails = ({
           {/* Student Cards */}
           <div className="space-y-3">
             {paginatedGroups.map((group) => {
-              const overallStatus = getOverallStatus(group.semesters);
+              const overallStatus = getOverallStatus(group.examinations);
               const studentKey = group._id || group.id || group.enrollmentNo;
               const isExpanded = expandedStudentId === (group._id || group.id);
 
@@ -49637,7 +53492,7 @@ const InstituteERPStudentDetails = ({
                   }`}
                 >
                   {(() => {
-                    const visibleSemesters = getVisibleSemesters(group.semesters);
+                    const visibleExaminations = getVisibleExaminations(group.examinations);
                     return (
                   <>
                   {/* ─── Card Header (always visible) ──────────────────────── */}
@@ -49664,7 +53519,7 @@ const InstituteERPStudentDetails = ({
                             {overallStatus.label}
                           </span>
                           <span className="text-[10px] text-slate-400 font-medium">
-                            {visibleSemesters.length} semester{visibleSemesters.length > 1 ? 's' : ''}
+                            {visibleExaminations.length} examination{visibleExaminations.length > 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>
@@ -49673,13 +53528,13 @@ const InstituteERPStudentDetails = ({
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {/* Quick status dots */}
                       <div className="flex items-center gap-1">
-                        {visibleSemesters.map((sem, idx) => {
-                          const isComplete = isSemComplete(sem);
+                        {visibleExaminations.map((sem, idx) => {
+                          const isComplete = isExamComplete(sem);
                           return (
                             <div 
-                              key={sem._id || sem.semesterNumber || `sem-dot-${idx}`}
+                              key={sem._id || sem.examinationNumber || `sem-dot-${idx}`}
                               className={`w-2.5 h-2.5 rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                              title={`Sem ${sem.semesterNumber}: ${isComplete ? 'Complete' : 'Incomplete'}`}
+                              title={`Exam ${sem.examinationNumber}: ${isComplete ? 'Complete' : 'Incomplete'}`}
                             />
                           );
                         })}
@@ -49701,7 +53556,7 @@ const InstituteERPStudentDetails = ({
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
                             <tr className="bg-slate-50/70 border-b border-slate-100">
-                              <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Sem</th>
+                              <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Exam</th>
                               <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Attendance</th>
                               <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Thesis</th>
                               <th className="px-3 py-2.5 text-[9px] font-black uppercase text-slate-400 tracking-wider text-center">Status</th>
@@ -49709,15 +53564,15 @@ const InstituteERPStudentDetails = ({
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
-                            {visibleSemesters.map((sem) => {
+                            {visibleExaminations.map((sem) => {
                               const status = getStatusBadge(sem);
                               const thesis = getThesisStatus(sem);
-                              const isComplete = isSemComplete(sem);
+                              const isComplete = isExamComplete(sem);
 
                               return (
-                                <tr key={sem.semesterNumber} className="hover:bg-slate-50/50 transition-colors">
+                                <tr key={sem.examinationNumber} className="hover:bg-slate-50/50 transition-colors">
                                   <td className="px-3 py-3 text-center font-bold text-slate-700">
-                                    Sem {sem.semesterNumber}
+                                    Exam {sem.examinationNumber}
                                   </td>
                                   <td className="px-3 py-3 text-center">
                                     <span className={`font-bold ${isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
@@ -49751,7 +53606,7 @@ const InstituteERPStudentDetails = ({
                                     <div className="flex items-center justify-center gap-1">
                                       <button
                                         type="button"
-                                        onClick={() => handleViewStudent(group, sem.semesterNumber)}
+                                        onClick={() => handleViewStudent(group, sem.examinationNumber)}
                                         className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
                                         title="View Details"
                                       >
@@ -49761,7 +53616,7 @@ const InstituteERPStudentDetails = ({
                                         type="button"
                                         onClick={() => {
                                           const targetId = group._id || group.id;
-                                          handleDeleteRecord(targetId, sem.semesterNumber);
+                                          handleDeleteRecord(targetId, sem.examinationNumber);
                                         }}
                                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
                                         title="Clear Record"
@@ -49828,7 +53683,7 @@ const InstituteERPStudentDetails = ({
           <div>
             <h3 className="text-base font-black text-slate-800 tracking-tight">Update Record</h3>
             <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-0.5">
-              Enter attendance and upload thesis
+              Enter attendance, upload thesis & course completion certificates
             </p>
           </div>
 
@@ -49866,35 +53721,35 @@ const InstituteERPStudentDetails = ({
               </datalist>
             </div>
 
-            {/* Semester Selection */}
+            {/* Examination Selection */}
             {selectedStudentId && (
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
-                  Select Semester <span className="text-rose-500">*</span>
+                  Select Examination <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {(() => {
                     const student = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
-                    const selectableSems = getVisibleSemesters(student?.semesters || []);
+                    const selectableSems = getVisibleExaminations(student?.examinations || []);
                     if (selectableSems.length === 0) return null;
                     return selectableSems.map(sem => {
                       const hasSem = true;
-                      const semNum = sem.semesterNumber;
+                      const semNum = sem.examinationNumber;
                       return (
                         <button
                           key={semNum}
                           type="button"
-                          onClick={() => handleSemesterChange(semNum)}
+                          onClick={() => handleExaminationChange(semNum)}
                           disabled={!hasSem}
                           className={`flex-1 min-w-[30%] py-2.5 rounded-xl text-xs font-bold transition-all border ${
-                            String(selectedSemester) === String(semNum)
+                            String(selectedExamination) === String(semNum)
                               ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
                               : hasSem
                                 ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:border-slate-300'
                                 : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed opacity-50'
                           }`}
                         >
-                          Sem {semNum}
+                          Exam {semNum}
                         </button>
                       );
                     });
@@ -49904,7 +53759,7 @@ const InstituteERPStudentDetails = ({
             )}
 
             {/* Attendance */}
-            {selectedSemester && (
+            {selectedExamination && (
               <div>
                 <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
                   Attendance Percentage <span className="text-rose-500">*</span>
@@ -49968,18 +53823,60 @@ const InstituteERPStudentDetails = ({
                 >
                   <UploadCloud className="w-7 h-7 text-blue-500" />
                   <span className="text-xs font-bold text-blue-600">Click or drag to upload</span>
-                  <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">PDF, DOCX, ZIP (Max 10MB)</span>
+                  <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">PDF, DOCX (Max 10MB)</span>
                   <input
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileSelect}
                     className="hidden"
-                    accept=".pdf,.docx,.zip"
+                    accept=".pdf,.docx"
                   />
                 </div>
               )}
               <p className="text-[9px] text-slate-400 font-medium mt-1.5">
                 Upload thesis document (optional if only updating attendance)
+              </p>
+            </div>
+
+            {/* Course Completion Certificates (NBLS / NCLS / NTLS / NULS) */}
+            <div>
+              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">
+                Course Completion Certificates
+              </label>
+              <div className="grid grid-cols-1 gap-2.5">
+                {CERT_FIELDS.map(cert => {
+                  const currentStudent = students.find(s => String(s.id) === selectedStudentId || String(s._id) === selectedStudentId);
+                  const currentUrl = currentStudent?.documents?.[`${cert.key}Url`];
+                  return (
+                    <div key={cert.key} className="flex items-center gap-2.5 p-2.5 bg-white border rounded-xl transition-all">
+                      <span className="text-lg flex-shrink-0">{cert.icon}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-600 truncate">{cert.label}</span>
+                        <span className={`block text-[10px] font-bold ${currentUrl ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {currentUrl
+                            ? '✓ Linked'
+                            : certFiles[cert.key] ? `Selected: ${certFiles[cert.key].name}` : 'Not uploaded'}
+                        </span>
+                      </div>
+                      <label className={`flex-none px-2.5 py-1.5 bg-slate-50 border border-dashed border-slate-300 hover:border-indigo-400 rounded-lg transition-all cursor-pointer ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <span className="text-[9px] font-bold text-slate-600">{certFiles[cert.key] ? 'Change' : 'Choose'}</span>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                          className="hidden"
+                          disabled={isSubmitting}
+                          onChange={(e) => {
+                            selectCertFile(cert.key, e.target.files[0] || null);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[9px] text-slate-400 font-medium mt-1.5">
+                Upload mandatory course completion certificates (min 1 required for exam eligibility).
               </p>
             </div>
 
@@ -50008,8 +53905,8 @@ const InstituteERPStudentDetails = ({
       </div>
 
       {/* ─── VIEW DETAILS MODAL ────────────────────────────────────────────── */}
-      {viewingStudent && viewingSemester && (() => {
-        const semData = (viewingStudent.semesters || []).find(s => String(s.semesterNumber) === String(viewingSemester));
+      {viewingStudent && viewingExamination && (() => {
+        const semData = (viewingStudent.examinations || []).find(s => String(s.examinationNumber) === String(viewingExamination));
         const semAttendance = semData?.attendancePercentage || 0;
         const semThesisApproved = semData?.thesisApproved || false;
         const semThesisUrl = semData?.thesisDocumentUrl || '';
@@ -50026,13 +53923,13 @@ const InstituteERPStudentDetails = ({
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Academic Record</h3>
                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                    {viewingStudent.fullName} · Sem {viewingSemester}
+                    {viewingStudent.fullName} · Exam {viewingExamination}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => { setViewingStudent(null); setViewingSemester(null); }}
+                onClick={() => { setViewingStudent(null); setViewingExamination(null); }}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
               >
                 <X className="w-5 h-5" />
@@ -50054,8 +53951,8 @@ const InstituteERPStudentDetails = ({
 
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                   <div>
-                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Semester</span>
-                    <span className="text-slate-800 font-bold">{viewingSemester}</span>
+                    <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Examination</span>
+                    <span className="text-slate-800 font-bold">{viewingExamination}</span>
                   </div>
                   <div>
                     <span className="block text-[8px] uppercase font-black text-slate-400 tracking-wider">Attendance</span>
@@ -50122,7 +54019,7 @@ const InstituteERPStudentDetails = ({
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
               <button
                 type="button"
-                onClick={() => { setViewingStudent(null); setViewingSemester(null); }}
+                onClick={() => { setViewingStudent(null); setViewingExamination(null); }}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all"
               >
                 Close
@@ -50166,8 +54063,9 @@ export default InstituteERPStudentDetails;
 
 ```jsx
 import { useState, useMemo } from 'react';
-import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone } from 'lucide-react';
+import { Search, Plus, Trash2, Eye, Pencil, X, User, Mail, Phone, UploadCloud, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getUploadUrl } from '../../../api/apiClient';
+import academicService from '../../../api/academic';
 import InstituteStudentEditModal from './InstituteStudentEditModal';
 import Pagination from '../../../Components/Pagination';
 
@@ -50185,12 +54083,69 @@ const InstituteERPStudents = ({
   onUpdateStudent,
   courses,
   batches,
-  setActiveTab
+  setActiveTab,
+  fetchERPData
 }) => {
   const [selectedStudentForView, setSelectedStudentForView] = useState(null);
   const [selectedStudentForEdit, setSelectedStudentForEdit] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Course completion certificates quick-upload (NBLS / NCLS / NTLS / NULS)
+  const [certFiles, setCertFiles] = useState({});
+  const [certUploading, setCertUploading] = useState(false);
+  const [certSuccess, setCertSuccess] = useState('');
+  const [certError, setCertError] = useState('');
+
+  const CERT_FIELDS = [
+    { key: 'nblsCertificate', label: 'NBLS (Basic Life Support)', icon: '🩺' },
+    { key: 'nclsCertificate', label: 'NCLS (Comprehensive Life Support)', icon: '❤️' },
+    { key: 'ntlsCertificate', label: 'NTLS (Trauma Life Support)', icon: '🩹' },
+    { key: 'nulsCertificate', label: 'NULS (Ultrasound Life Support)', icon: '📡' },
+  ];
+
+  const selectCertFile = (field, file) => {
+    setCertError('');
+    setCertSuccess('');
+    if (file && file.size > 10 * 1024 * 1024) {
+      setCertError('File is too large. Maximum size is 10MB.');
+      return;
+    }
+    setCertFiles(prev => ({ ...prev, [field]: file || null }));
+  };
+
+  const uploadCertificates = async () => {
+    const selected = Object.entries(certFiles).filter(([, f]) => f instanceof File);
+    if (selected.length === 0) {
+      setCertError('Select at least one certificate file to upload.');
+      return;
+    }
+    if (!selectedStudentForView) return;
+    setCertUploading(true);
+    setCertError('');
+    setCertSuccess('');
+    try {
+      const formData = new FormData();
+      selected.forEach(([k, v]) => formData.append(k, v));
+      const res = await academicService.uploadCourseCertificates(
+        selectedStudentForView._id || selectedStudentForView.id,
+        formData
+      );
+      const data = res?.data?.data || res?.data || {};
+      const newDocs = { ...(selectedStudentForView.documents || {}), ...(data.documents || {}) };
+      setSelectedStudentForView(prev => (prev ? { ...prev, documents: newDocs } : prev));
+      setCertFiles({});
+      if (fetchERPData) await fetchERPData();
+      const hasLinked = newDocs.nblsCertificateUrl || newDocs.nclsCertificateUrl || newDocs.ntlsCertificateUrl || newDocs.nulsCertificateUrl;
+      setCertSuccess(hasLinked
+        ? 'Certificates uploaded and linked to this fellow. Exam eligibility certificate requirement is now satisfied.'
+        : 'Certificates uploaded successfully.');
+    } catch (err) {
+      setCertError(err?.parsedMessage || err?.message || 'Failed to upload certificates. Please try again.');
+    } finally {
+      setCertUploading(false);
+    }
+  };
 
   const getDocUrl = (url) => {
     if (!url) return '';
@@ -50205,6 +54160,15 @@ const InstituteERPStudents = ({
     return Array.from(new Set(students.map(s => s.courseName || (typeof s.course === 'string' ? s.course : (s.course?.name || s.course?.courseName || ''))).filter(Boolean)));
   }, [students]);
 
+  const normalizeStatus = (status) => {
+    if (!status) return 'Pending Verification';
+    const s = String(status).trim().toLowerCase();
+    if (s === 'approved' || s === 'verified') return 'Approved';
+    if (s.includes('correct')) return 'Correction Required';
+    if (s.includes('reject')) return 'Rejected';
+    return 'Pending Verification';
+  };
+
   const filteredList = useMemo(() => {
     return students.filter(s => {
       const name = s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim();
@@ -50216,13 +54180,12 @@ const InstituteERPStudents = ({
                             email.toLowerCase().includes(studentSearch.toLowerCase()) ||
                             regNo.toLowerCase().includes(studentSearch.toLowerCase());
       
-      const vStatus = s.verificationStatus || 'Pending Verification';
+      const vStatus = normalizeStatus(s.verificationStatus || s.status);
       const matchesStatus = studentFilter === 'All' || 
         (studentFilter === 'Approved' && vStatus === 'Approved') ||
         (studentFilter === 'Pending' && vStatus === 'Pending Verification') ||
         (studentFilter === 'Correction' && vStatus === 'Correction Required') ||
-        (studentFilter === 'Rejected' && vStatus === 'Rejected') ||
-        s.status === studentFilter;
+        (studentFilter === 'Rejected' && vStatus === 'Rejected');
       
       const bName = s.batchName || (typeof s.batch === 'string' ? s.batch : (s.batch?.name || (s.batch?.year ? `Batch ${s.batch.year}` : ''))) || '';
       const matchesBatch = selectedStudentFilterBatch === 'All' || bName === selectedStudentFilterBatch || String(s.batchId || s.batch?._id) === String(selectedStudentFilterBatch);
@@ -50236,7 +54199,7 @@ const InstituteERPStudents = ({
 
   // Count candidates needing correction
   const correctionCount = useMemo(() => {
-    return students.filter(s => s.verificationStatus === 'Correction Required').length;
+    return students.filter(s => normalizeStatus(s.verificationStatus || s.status) === 'Correction Required').length;
   }, [students]);
 
   // Reset page when filters change
@@ -50250,7 +54213,8 @@ const InstituteERPStudents = ({
     return filteredList.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredList, currentPage]);
 
-  const getVerificationBadge = (vStatus) => {
+  const getVerificationBadge = (rawStatus) => {
+    const vStatus = normalizeStatus(rawStatus);
     switch (vStatus) {
       case 'Approved':
         return (
@@ -50411,7 +54375,7 @@ const InstituteERPStudents = ({
                 const name = student.fullName || 'Dr. Arjun Kumar';
                 const course = student.courseName || student.course || 'General Medicine';
                 const studentId = student._id || student.id;
-                const vStatus = student.verificationStatus || 'Pending Verification';
+                const vStatus = normalizeStatus(student.verificationStatus || student.status);
 
                 return (
                   <tr key={studentId || idx} className="hover:bg-slate-50/30 transition-colors">
@@ -50523,7 +54487,7 @@ const InstituteERPStudents = ({
                 <div>
                   <span className="text-2xl font-black text-slate-900 block leading-tight">{selectedStudentForView.fullName}</span>
                   <div className="flex flex-wrap gap-2.5 items-center mt-2">
-                    {getVerificationBadge(selectedStudentForView.verificationStatus || 'Pending Verification')}
+                    {getVerificationBadge(selectedStudentForView.verificationStatus || selectedStudentForView.status)}
                     <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
                       {selectedStudentForView.status || 'Active'}
                     </span>
@@ -50537,9 +54501,9 @@ const InstituteERPStudents = ({
               {/* Verification Audit Alert if Remarks Present */}
               {selectedStudentForView.verificationRemarks && (
                 <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
-                  selectedStudentForView.verificationStatus === 'Correction Required'
+                  normalizeStatus(selectedStudentForView.verificationStatus || selectedStudentForView.status) === 'Correction Required'
                     ? 'bg-purple-50 border-purple-200 text-purple-900'
-                    : selectedStudentForView.verificationStatus === 'Rejected'
+                    : normalizeStatus(selectedStudentForView.verificationStatus || selectedStudentForView.status) === 'Rejected'
                     ? 'bg-red-50 border-red-200 text-red-900'
                     : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                 }`}>
@@ -50799,6 +54763,95 @@ const InstituteERPStudents = ({
                             </div>
                           );
                         })}
+                      </div>
+
+                      {/* Quick upload for course completion certificates */}
+                      <div className="mt-5 p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3">
+                        <div className="flex items-center gap-2">
+                          <UploadCloud className="w-4 h-4 text-indigo-500" />
+                          <span className="text-[11px] uppercase font-black tracking-widest text-indigo-700">
+                            Upload Course Completion Certificates
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {CERT_FIELDS.map(cert => {
+                            const alreadyUploaded = !!selectedStudentForView.documents?.[`${cert.key}Url`];
+                            return (
+                              <label
+                                key={cert.key}
+                                className={`flex items-center gap-2.5 px-3 py-2.5 bg-white border rounded-xl transition-all cursor-pointer ${
+                                  alreadyUploaded
+                                    ? 'border-emerald-200 hover:border-emerald-400'
+                                    : 'border-dashed border-slate-300 hover:border-indigo-400'
+                                }`}
+                              >
+                                <span className="text-lg">{cert.icon}</span>
+                                <div className="min-w-0 flex-1">
+                                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-600 truncate">{cert.label}</span>
+                                  <span className={`block text-[10px] font-bold ${alreadyUploaded ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                    {alreadyUploaded
+                                      ? '✓ Linked'
+                                      : certFiles[cert.key] ? `Selected: ${certFiles[cert.key].name}` : 'Choose file to upload'}
+                                  </span>
+                                </div>
+                                <input
+                                  type="file"
+                                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                  className="hidden"
+                                  disabled={certUploading}
+                                  onChange={(e) => {
+                                    selectCertFile(cert.key, e.target.files[0] || null);
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </label>
+                            );
+                          })}
+                        </div>
+
+                        {certError && (
+                          <div className="flex items-start gap-2 p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-[11px] font-bold text-rose-700">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>{certError}</span>
+                          </div>
+                        )}
+                        {certSuccess && (
+                          <div className="flex items-start gap-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] font-bold text-emerald-700">
+                            <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>{certSuccess}</span>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center justify-end gap-2.5">
+                          <span className="text-[10px] text-slate-400 font-semibold mr-auto">
+                            At least 1 certificate required for exam eligibility.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedStudentForEdit(selectedStudentForView)}
+                            className="px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-all cursor-pointer"
+                          >
+                            Open Full Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={uploadCertificates}
+                            disabled={certUploading}
+                            className="px-4 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            {certUploading ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <UploadCloud className="w-3.5 h-3.5" />
+                                Upload Selected
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -52469,6 +56522,9 @@ import Toast from '../../../Components/Toast';
 
 const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, setUploadProgress }) => {
   const [toast, setToast] = useState(null);
+
+  const ACCEPTED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
   const MANDATORY_DOCUMENTS = [
     { key: 'equipmentList', label: 'Emergency Department Equipment List *' },
     { key: 'facultyList', label: 'Emergency Department Faculty List (EM Qualified) *' },
@@ -52480,6 +56536,11 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
   ];
 
   const handleFileUpload = (key, file) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!ACCEPTED_EXTENSIONS.includes(`.${ext}`)) {
+      setToast({ message: `Unsupported file type (.${ext}). Please upload a PDF, Word, Excel, PowerPoint, image, or text file.`, type: 'error' });
+      return;
+    }
     if (file.size > 2 * 1024 * 1024) {
       setToast({ message: 'File size must be under 2MB', type: 'error' });
       return;
@@ -52541,6 +56602,7 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
                         type="file"
                         id={`change-file-${doc.key}`}
                         className="hidden"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,image/jpeg,image/png,image/webp,image/gif"
                         onChange={(e) => {
                           const file = e.target.files[0];
                           if (file) {
@@ -52580,6 +56642,7 @@ const Step3DocumentsUpload = ({ uploadedDocs, setUploadedDocs, uploadProgress, s
                       type="file"
                       id={`file-${doc.key}`}
                       className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,image/jpeg,image/png,image/webp,image/gif"
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {
@@ -52641,6 +56704,11 @@ const Step4PaymentSubmit = ({
   };
 
   const handleSignatureFileUpload = (file) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!['pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff', 'heic'].includes(ext)) {
+      setToast({ message: `Unsupported file type (.${ext}). Please upload a signature image or PDF file.`, type: 'error' });
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       setToast({ message: 'Signature file must be under 5MB.', type: 'error' });
       return;
@@ -53049,26 +57117,14 @@ const ResultsDisplay = ({ data, onBack }) => {
     ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     : 'N/A';
 
-  const getGradeStyle = (grade) => {
-    switch (grade) {
-      case 'O':
-      case 'A+':
-      case 'A':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'B+':
-      case 'B':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'C':
-      case 'D':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'RA':
-      case 'F':
-      case 'ABSENT':
-      case 'WH':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
-      default:
-        return 'bg-slate-50 text-slate-700 border-slate-200';
-    }
+  const resultStatus = (result?.resultStatus || '').toUpperCase();
+  const isPass = resultStatus === 'PASS';
+
+  const getStatusLabel = () => {
+    if (resultStatus === 'PASS') return 'Pass';
+    if (resultStatus === 'SUPPLEMENTARY') return 'Supplementary';
+    if (resultStatus === 'REVALUATION_PENDING') return 'Revaluation Pending';
+    return 'Fail';
   };
 
   return (
@@ -53135,7 +57191,7 @@ const ResultsDisplay = ({ data, onBack }) => {
               {student.institute?.orgName || 'Dr MGR Institute'}
             </h2>
             <p className="text-sm font-bold text-blue-700 uppercase tracking-wide">
-              {getOrdinal(result.semester)} Semester Exam Results {result.academicYear || 2026}
+              {getOrdinal(result.examination)} Examination Exam Results {result.academicYear || 2026}
             </p>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-200/60 mt-1">
               <Award className="w-3.5 h-3.5" />
@@ -53178,126 +57234,91 @@ const ResultsDisplay = ({ data, onBack }) => {
               <AlertCircle className="w-12 h-12 text-amber-500 mx-auto stroke-1.5" />
               <h3 className="text-lg font-black text-amber-900">Results Not Yet Published</h3>
               <p className="text-xs text-amber-800 max-w-md mx-auto leading-relaxed">
-                Your examination result for this semester is currently under evaluation by the governing board and will be published {result.publishedDate ? `on ${new Date(result.publishedDate).toLocaleDateString()}` : 'shortly'}.
+                Your examination result for this examination is currently under evaluation by the governing board and will be published {result.publishedDate ? `on ${new Date(result.publishedDate).toLocaleDateString()}` : 'shortly'}.
               </p>
             </div>
           ) : (
             <div className="space-y-6">
-              
-              {/* Subject Marks Table */}
-              <div className="overflow-hidden border border-slate-200 rounded-2xl shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-wider">
-                        <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200">Sem</th>
-                        <th className="py-3.5 px-4 text-center w-28 border-r border-slate-200">Sub-Code</th>
-                        <th className="py-3.5 px-6 border-r border-slate-200">Subject Name</th>
-                        <th className="py-3.5 px-4 text-center w-20 border-r border-slate-200" title="Total Marks">Marks</th>
-                        <th className="py-3.5 px-4 text-center w-20 border-r border-slate-200">Grade</th>
-                        <th className="py-3.5 px-4 text-center w-24">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-150 bg-white font-bold text-slate-800">
-                      {result.subjects.map((subject, index) => {
-                        const isPass = subject.grade !== 'F' && subject.grade !== 'RA' && subject.grade !== 'ABSENT' && subject.grade !== 'WH';
-                        const subjectNameCapitalized = subject.subjectName 
-                          ? subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1) 
-                          : 'N/A';
 
-                        return (
-                          <tr key={index} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200 text-slate-500 font-mono">
-                              {result.semester}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200">
-                              <span className="font-mono text-[10px] font-black uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                                {subject.subjectCode}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-6 border-r border-slate-200 font-extrabold text-slate-900">
-                              {subjectNameCapitalized}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200 font-black text-slate-900">
-                              {subject.totalMarks ?? '-'}
-                            </td>
-                            <td className="py-3.5 px-4 text-center border-r border-slate-200">
-                              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black border ${getGradeStyle(subject.grade)}`}>
-                                {subject.grade}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-center">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                isPass 
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
-                              }`}>
-                                {isPass ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-rose-600" />}
-                                {isPass ? 'Pass' : 'Fail'}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+              {/* Overall Result Status */}
+              <div className={`rounded-3xl border-2 p-8 text-center shadow-sm ${
+                isPass ? 'border-emerald-200 bg-emerald-50/60' : 'border-rose-200 bg-rose-50/60'
+              }`}>
+                <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full border-4 mb-4 ${
+                  isPass ? 'border-emerald-300 bg-emerald-100' : 'border-rose-300 bg-rose-100'
+                }`}>
+                  {isPass ? (
+                    <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                  ) : (
+                    <XCircle className="w-10 h-10 text-rose-600" />
+                  )}
                 </div>
+                <h4 className={`text-2xl sm:text-3xl font-black uppercase tracking-widest ${
+                  isPass ? 'text-emerald-700' : 'text-rose-700'
+                }`}>
+                  {getStatusLabel()}
+                </h4>
+                <p className={`text-xs font-bold mt-2 ${
+                  isPass ? 'text-emerald-600/80' : 'text-rose-600/80'
+                }`}>
+                  {isPass
+                    ? `Congratulations! You have successfully cleared the ${getOrdinal(result.examination)} examination.`
+                    : `The candidate did not clear the ${getOrdinal(result.examination)} examination and is required to reappear.`}
+                </p>
               </div>
 
-              {/* Legend Box */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1.5 font-medium text-slate-600">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-[10px]">RA</span>
-                  <span>- Re-Appear (Subject failed / backlog)</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-[10px]">WH</span>
-                  <span>- Withheld due to non-payment of examination fees or non-submission of progress norms</span>
-                </div>
-              </div>
-
-              {/* Grading Scale Matrix */}
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">National Grading Scale Matrix</h4>
+              {/* Subject-wise Pass/Fail */}
+              {(result.subjects || []).length > 0 && (
                 <div className="overflow-hidden border border-slate-200 rounded-2xl shadow-sm">
-                  <table className="w-full text-center border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                        <th className="py-2.5 px-3 border-r border-slate-200">Marks Range</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">90-100</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">80-89</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">70-79</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">60-69</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">55-59</th>
-                        <th className="py-2.5 px-3 border-r border-slate-200">50-54</th>
-                        <th className="py-2.5 px-3">0-49</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-150 font-bold text-slate-800 bg-white">
-                      <tr>
-                        <td className="py-2.5 px-3 border-r border-slate-200 bg-slate-50 text-slate-600 font-black">Grade</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-emerald-700">O</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-emerald-700">A+</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-emerald-700">A</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-blue-700">B+</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-blue-700">B</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-amber-700">C</td>
-                        <td className="py-2.5 px-3 text-rose-700">RA</td>
-                      </tr>
-                      <tr>
-                        <td className="py-2.5 px-3 border-r border-slate-200 bg-slate-50 text-slate-600 font-black">Grade Point</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">10</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">9</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">8</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">7</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">6</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">5</td>
-                        <td className="py-2.5 px-3">0</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-wider">
+                          <th className="py-3.5 px-4 text-center w-16 border-r border-slate-200">Exam</th>
+                          <th className="py-3.5 px-4 text-center w-28 border-r border-slate-200">Sub-Code</th>
+                          <th className="py-3.5 px-6 border-r border-slate-200">Subject Name</th>
+                          <th className="py-3.5 px-4 text-center w-24">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-150 bg-white font-bold text-slate-800">
+                        {result.subjects.map((subject, index) => {
+                          const subGrade = (subject.grade || '').toUpperCase();
+                          const subPass = subGrade !== 'F' && subGrade !== 'RA' && subGrade !== 'ABSENT' && subGrade !== 'WH';
+                          const subjectNameCapitalized = subject.subjectName
+                            ? subject.subjectName.charAt(0).toUpperCase() + subject.subjectName.slice(1)
+                            : 'N/A';
+
+                          return (
+                            <tr key={index} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200 text-slate-500 font-mono">
+                                {result.examination}
+                              </td>
+                              <td className="py-3.5 px-4 text-center border-r border-slate-200">
+                                <span className="font-mono text-[10px] font-black uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+                                  {subject.subjectCode}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-6 border-r border-slate-200 font-extrabold text-slate-900">
+                                {subjectNameCapitalized}
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                  subPass
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                }`}>
+                                  {subPass ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-rose-600" />}
+                                  {subPass ? 'Pass' : 'Fail'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
 
             </div>
           )}
@@ -53401,7 +57422,7 @@ const ResultsLogin = ({ onSearch, isLoading, error }) => {
                 EXAMINATION RESULTS
               </h2>
               <p className="text-xs text-slate-500 font-semibold mt-1">
-                Enter your Student ID and Registered Date of Birth to view your official semester scorecard
+                Enter your Student ID and Registered Date of Birth to view your official examination scorecard
               </p>
             </div>
           </div>

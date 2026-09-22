@@ -306,10 +306,10 @@ const InstituteERPStudents = ({
             <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-600">
               {paginatedList.map((student, idx) => {
                 const serialNo = String((currentPage - 1) * itemsPerPage + idx + 1).padStart(2, '0');
-                const batch = student.batchName || student.batch || 'Batch 2026-A';
+                const batch = student.batchName || (typeof student.batch === 'string' ? student.batch : student.batch?.name) || 'Batch 2026-A';
                 const appId = student.enrollmentNo || student.applicationId || student.enrollmentId || `SEMI00${student.id || idx}`;
                 const name = student.fullName || 'Dr. Arjun Kumar';
-                const course = student.courseName || student.course || 'General Medicine';
+                const course = student.courseName || (typeof student.course === 'string' ? student.course : student.course?.name) || 'General Medicine';
                 const studentId = student._id || student.id;
                 const vStatus = normalizeStatus(student.verificationStatus || student.status);
 

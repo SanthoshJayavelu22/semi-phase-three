@@ -6,13 +6,30 @@ import examService from '../../../api/exams';
 import { initiateRazorpayPayment, getPaymentState, clearPaymentState } from '../../../utils/razorpay';
 import { PaymentStatusChecker } from '../../../Components/PaymentStatusChecker';
 
-const fmtCurrency = (val) =>
-  Number(val).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const fmtCurrency = (val) => {
+  const num = Number(val);
+  if (isNaN(num)) return '₹0';
+  return num.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+};
 
 const fmtDate = (val) => {
   if (!val) return 'N/A';
   try { return new Date(val).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
   catch { return val; }
+};
+
+const getCourseDisplayName = (student) => {
+  if (!student) return 'N/A';
+  if (typeof student.courseName === 'string' && student.courseName.trim()) {
+    return student.courseName;
+  }
+  if (typeof student.course === 'string' && student.course.trim()) {
+    return student.course;
+  }
+  if (student.course && typeof student.course === 'object') {
+    return student.course.name || student.course.courseName || 'N/A';
+  }
+  return 'N/A';
 };
 
 const STEPS = [
@@ -367,7 +384,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
             </div>
             <div>
               <p className="text-sm font-extrabold text-slate-800">{selectedStudent.fullName || 'Unnamed Student'}</p>
-              <p className="text-[10px] font-mono font-bold text-slate-400">{selectedStudent.enrollmentNo || 'N/A'} · {selectedStudent.course || selectedStudent.courseName || 'N/A'}</p>
+              <p className="text-[10px] font-mono font-bold text-slate-400">{selectedStudent.enrollmentNo || 'N/A'} · {getCourseDisplayName(selectedStudent)}</p>
             </div>
           </div>
         </div>
@@ -389,7 +406,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
           <p className="text-xs font-bold text-slate-600">
             Student: <span className="text-slate-800">{selectedStudent.fullName}</span>
             <span className="text-slate-300 mx-2">|</span>
-            Course: <span className="text-slate-800">{selectedStudent.course || selectedStudent.courseName || 'N/A'}</span>
+            Course: <span className="text-slate-800">{getCourseDisplayName(selectedStudent)}</span>
           </p>
         </div>
       )}
@@ -511,7 +528,7 @@ const InstituteERPFees = ({ students = [], courses = [] }) => {
     const reviewItems = [
       { label: 'Student', value: selectedStudent?.fullName || '—' },
       { label: 'Enrollment No', value: selectedStudent?.enrollmentNo || '—' },
-      { label: 'Course', value: selectedStudent?.course || selectedStudent?.courseName || '—' },
+      { label: 'Course', value: getCourseDisplayName(selectedStudent) },
       { label: 'Examination', value: `Examination ${selectedExamination}` },
       { label: 'Fee Type', value: feeType },
       { label: 'Amount', value: fmtCurrency(amount) },

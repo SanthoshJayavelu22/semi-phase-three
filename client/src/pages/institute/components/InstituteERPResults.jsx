@@ -217,7 +217,7 @@ const InstituteERPResults = ({ user }) => {
     // Filter by course
     if (selectedCourse) {
       const studentIdsInCourse = students
-        .filter(s => String(s.course?._id || s.course || s.courseId) === String(selectedCourse))
+        .filter(s => String(s.courseId || s.course?._id || s.course || '') === String(selectedCourse))
         .map(s => s._id || s.id);
       filtered = filtered.filter(r => studentIdsInCourse.includes(String(r.student?._id || r.student)));
     }
@@ -225,7 +225,7 @@ const InstituteERPResults = ({ user }) => {
     // Filter by batch
     if (selectedBatch) {
       const studentIdsInBatch = students
-        .filter(s => String(s.batch?._id || s.batch || s.batchId) === String(selectedBatch))
+        .filter(s => String(s.batchId || s.batch?._id || s.batch || '') === String(selectedBatch))
         .map(s => s._id || s.id);
       filtered = filtered.filter(r => studentIdsInBatch.includes(String(r.student?._id || r.student)));
     }
@@ -303,8 +303,8 @@ const InstituteERPResults = ({ user }) => {
     const headers = ['Enrollment ID', 'Student Name', 'Course', 'Batch', 'Examination', 'Result'];
     const rows = filteredResults.map(r => {
       const student = studentMap[r.student?._id || r.student];
-      const course = courseMap[student?.course?._id || student?.course || student?.courseId];
-      const batch = batchMap[student?.batch?._id || student?.batch || student?.batchId];
+      const course = courseMap[student?.courseId || student?.course?._id || student?.course];
+      const batch = batchMap[student?.batchId || student?.batch?._id || student?.batch];
 
       return [
         student?.enrollmentId || 'N/A',
@@ -351,14 +351,14 @@ const InstituteERPResults = ({ user }) => {
 
   const getStudentCourse = (result) => {
     const student = studentMap[result.student?._id || result.student];
-    const course = courseMap[student?.course?._id || student?.course || student?.courseId];
-    return course?.name || 'N/A';
+    const course = courseMap[student?.courseId || student?.course?._id || student?.course];
+    return course?.name || student?.courseName || 'N/A';
   };
 
   const getStudentBatch = (result) => {
     const student = studentMap[result.student?._id || result.student];
-    const batch = batchMap[student?.batch?._id || student?.batch || student?.batchId];
-    return batch?.name || 'N/A';
+    const batch = batchMap[student?.batchId || student?.batch?._id || student?.batch];
+    return batch?.name || student?.batchName || 'N/A';
   };
 
   // ─── Loading State ──────────────────────────────────────────────────────

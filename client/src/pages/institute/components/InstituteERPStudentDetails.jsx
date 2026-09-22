@@ -146,11 +146,11 @@ const InstituteERPStudentDetails = ({
     }
     
     if (filterBatch !== 'All') {
-      result = result.filter(g => (g.batchName || g.batch) === filterBatch);
+      result = result.filter(g => (g.batchName || (typeof g.batch === 'string' ? g.batch : g.batch?.name)) === filterBatch);
     }
     
     if (filterCourse !== 'All') {
-      result = result.filter(g => (g.courseName || g.course) === filterCourse);
+      result = result.filter(g => (g.courseName || (typeof g.course === 'string' ? g.course : g.course?.name)) === filterCourse);
     }
     
     if (filterStatus === 'Complete') {
@@ -172,7 +172,7 @@ const InstituteERPStudentDetails = ({
   const uniqueBatches = useMemo(() => {
     const batches = new Set();
     students.forEach(s => {
-      const b = s.batchName || s.batch;
+      const b = s.batchName || (typeof s.batch === 'string' ? s.batch : s.batch?.name);
       if (b) batches.add(b);
     });
     return ['All', ...Array.from(batches)];
@@ -181,7 +181,7 @@ const InstituteERPStudentDetails = ({
   const uniqueCourses = useMemo(() => {
     const courses = new Set();
     students.forEach(s => {
-      const c = s.courseName || s.course;
+      const c = s.courseName || (typeof s.course === 'string' ? s.course : s.course?.name);
       if (c) courses.add(c);
     });
     return ['All', ...Array.from(courses)];
@@ -582,10 +582,10 @@ const InstituteERPStudentDetails = ({
                           <span className="text-sm font-black text-slate-800 truncate">{group.fullName}</span>
                           <span className="text-[10px] font-mono font-bold text-slate-400">{group.enrollmentNo}</span>
                           <span className="text-[10px] text-slate-300">·</span>
-                          <span className="text-[10px] font-semibold text-slate-500">{group.batchName || group.batch}</span>
+                          <span className="text-[10px] font-semibold text-slate-500">{group.batchName || (typeof group.batch === 'string' ? group.batch : group.batch?.name) || 'N/A'}</span>
                         </div>
                         <div className="flex items-center gap-3 mt-0.5">
-                          <span className="text-[10px] text-slate-400 font-medium">{group.courseName || group.course}</span>
+                          <span className="text-[10px] text-slate-400 font-medium">{group.courseName || (typeof group.course === 'string' ? group.course : group.course?.name) || 'N/A'}</span>
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black border ${overallStatus.color}`}>
                             {overallStatus.label}
                           </span>
